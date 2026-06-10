@@ -471,6 +471,24 @@ export class Game {
     this.phaseT = 0;
   }
 
+  /** Send everyone who won't be in the next personnel jogging to the bench. */
+  clearField(possTeam) {
+    for (const team of ['home', 'away']) {
+      let i = 0;
+      for (const role in this.players[team]) {
+        const a = this.players[team][role];
+        const onField = team === possTeam ? OFF_ROLES.includes(role) : DEF_ROLES.includes(role);
+        if (onField) { i++; continue; }
+        const zSide = team === 'home' ? 28.0 : -28.0;
+        a.engagedWith = null; a.hasBall = false; a.tuck = 0; a.look = null;
+        a.benchSpot = [-16 + (i % 12) * 2.4, zSide + Math.floor(i / 12) * 1.0, team === 'home' ? Math.PI : 0];
+        const d = Math.hypot(a.pos.x - a.benchSpot[0], a.pos.z - a.benchSpot[1]);
+        if (a.state !== 'spectate') a.state = d < 2 ? 'spectate' : 'toBench';
+        i++;
+      }
+    }
+  }
+
   startDrive(team, losX, note = '') {
     const m = this.match;
     // overtime is sudden death: any lead at a change of drive ends it
@@ -481,6 +499,7 @@ export class Game {
     m.down = 1;
     m.toGo = Math.min(10, 50 - m.losX * m.dir);
     this.placeBallAt(m.losX, 0);
+    this.clearField(team);
     this.updateHudBar();
     this.drawScoreboard();
     if (note) this.hud.banner(team === 'home' ? 'YOUR DRIVE' : `${this.rival.mascot.toUpperCase()} BALL`, note, 1800);
@@ -713,9 +732,16 @@ export class Game {
 
     const benchPark = (a, i) => {
       const zSide = a.team === 'home' ? 28.0 : -28.0;
-      a.state = 'spectate';
       a.group.visible = !this.lowSpec;
-      this._spots.set(a, [-16 + (i % 12) * 2.4, zSide + Math.floor(i / 12) * 1.0, a.team === 'home' ? Math.PI : 0]);
+      a.benchSpot = [-16 + (i % 12) * 2.4, zSide + Math.floor(i / 12) * 1.0, a.team === 'home' ? Math.PI : 0];
+      const d = Math.hypot(a.pos.x - a.benchSpot[0], a.pos.z - a.benchSpot[1]);
+      if (d < 2 || !a.group.visible) {
+        a.state = 'spectate';
+        a.warp(a.benchSpot[0], a.benchSpot[1], a.benchSpot[2]);
+        a.anim.play(Math.random() < 0.25 ? 'cheer' : 'idle', { startAt: Math.random() });
+      } else {
+        a.state = 'toBench'; // hustle off the field
+      }
     };
     // offense
     let bi = 0;
@@ -739,7 +765,7 @@ export class Game {
       if (this.defPlay.press && (role === 'CB1' || role === 'CB2')) ax = 1.6;
       // CBs line over the receivers
       if (role === 'CB1' || role === 'CB2') az = (play.align[role === 'CB1' ? 'WR1' : 'WR2']?.[1] ?? az) + (az > 0 ? -0.8 : 0.8);
-      this._spots.set(a, [m.losX + ax * -dir, az * dir, dir > 0 ? -Math.PI / 2 : Math.PI / 2]);
+      this._spots.set(a, [m.losX + ax * dir, az * dir, dir > 0 ? -Math.PI / 2 : Math.PI / 2]);
       a.state = 'toSpot';
       a.group.visible = true;
     }
@@ -748,6 +774,19 @@ export class Game {
     this._spots.set(this.ref, [m.losX - 9 * dir, -14 * dir, dir > 0 ? Math.PI / 2 : -Math.PI / 2]);
     this.user = null;
     this.hud.hint('');
+  }
+
+  /** Walk a 'toBench' athlete toward the sideline; settle him when he arrives. */
+  benchWalk(a, dt) {
+    if (a.seek(a.benchSpot[0], a.benchSpot[1], 0.62) < 0.6) {
+      a.stop();
+      a.vel.set(0, 0);
+      a.state = 'spectate';
+      a.facing = a.benchSpot[2];
+      a.anim.play(Math.random() < 0.25 ? 'cheer' : 'idle', { startAt: Math.random() });
+    }
+    a.move(dt);
+    a.anim.update(dt);
   }
 
   allLinedUp() {
@@ -863,11 +902,11 @@ export class Game {
       if (dp.zone[role]) {
         a.state = 'zone';
         const [zx, zz] = dp.zone[role];
-        a.zoneSpot = [m.losX + zx * -dir, zz * dir];
+        a.zoneSpot = [m.losX + zx * dir, zz * dir];
         continue;
       }
       a.state = 'zone';
-      a.zoneSpot = [m.losX + 6 * -dir, a.pos.z];
+      a.zoneSpot = [m.losX + 6 * dir, a.pos.z];
     }
 
     // run plays: schedule the exchange
@@ -947,6 +986,7 @@ export class Game {
     // motion + anim
     for (const a of this.allAthletes) {
       if (a.state === 'spectate') { a.anim.update(dt); continue; }
+      if (a.state === 'toBench') { this.benchWalk(a, dt); continue; }
       if (a.state === 'down') {
         a.downTimer -= dt;
         a.stop();
@@ -1036,6 +1076,17 @@ export class Game {
         if (!wp) { a.state = 'improv'; break; }
         const d = a.seek(wp[0], wp[1], 0.96);
         if (d < 0.6) a.wpIndex++;
+        break;
+      }
+      case 'track': {
+        // ball's in the air for me: break off and play it
+        if (this.ballMode !== 'flight') { a.state = 'improv'; break; }
+        const land = this.ballLanding();
+        if (!land) { a.seek(this.ball.position.x, this.ball.position.z, 1); break; }
+        if (a.seek(land.x, land.z, 1) < 0.5) {
+          a.stop();
+          a.faceToward(this.ball.position.x, this.ball.position.z);
+        }
         break;
       }
       case 'improv': {
@@ -1258,7 +1309,7 @@ export class Game {
         if (!t) { a.state = 'zone'; a.zoneSpot = [a.pos.x, a.pos.z]; break; }
         if (ballLive && this.ballMeta.target === t) { a.state = 'ballhawk'; break; }
         const cushion = a.cushion * (a.maxSpd >= t.maxSpd ? 0.6 : 1.3);
-        const tx = t.pos.x + t.vel.x * 0.22 - dir * cushion;
+        const tx = t.pos.x + t.vel.x * 0.22 + dir * cushion;
         const tz = t.pos.z + t.vel.y * 0.22;
         const d = a.seek(tx, tz, 1);
         if (d < 1.2) { a.seek(tx, tz, 0.4); }
@@ -1471,25 +1522,28 @@ export class Game {
     let to, tFlight;
     if (target) {
       const dist0 = Math.hypot(target.pos.x - from.x, target.pos.z - from.z);
-      tFlight = THREE.MathUtils.clamp(dist0 / 21, 0.45, 1.85);
+      tFlight = THREE.MathUtils.clamp(dist0 / 23, 0.4, 1.7);
       // lead the receiver along his route (two passes to converge flight time)
       to = this.predictReceiver(target, tFlight);
-      tFlight = THREE.MathUtils.clamp(Math.hypot(to.x - from.x, to.z - from.z) / 21, 0.4, 1.9);
+      tFlight = THREE.MathUtils.clamp(Math.hypot(to.x - from.x, to.z - from.z) / 23, 0.38, 1.75);
       to = this.predictReceiver(target, tFlight);
       // accuracy noise
       const acc = (qb.info.arm ?? 75) / 99;
-      const moving = qb.vel.length() > 2 ? 1.8 : 1;
-      const err = (1.15 - acc) * moving;
+      const moving = qb.vel.length() > 2 ? 1.7 : 1;
+      const err = (1.15 - acc) * moving * 0.8;
       to.x += rand(-err, err) * 1.6;
       to.z += rand(-err, err) * 1.6;
       to.x = THREE.MathUtils.clamp(to.x, -EZ_BACK + 1, EZ_BACK - 1);
+      to.z = THREE.MathUtils.clamp(to.z, -SIDE + 0.8, SIDE - 0.8);
+      // the targeted receiver works back to the ball from here on
+      if (!['down', 'engaged'].includes(target.state)) target.state = 'track';
     } else {
       // throwaway toward the sideline
       to = v3(qb.pos.x + m.dir * 8, 0.5, Math.sign(qb.pos.z || 1) * (SIDE + 6));
       tFlight = 0.9;
     }
     const dist = Math.hypot(to.x - from.x, to.z - from.z);
-    tFlight = THREE.MathUtils.clamp(dist / 21, 0.4, 1.9);
+    tFlight = THREE.MathUtils.clamp(dist / 23, 0.38, 1.75);
     this.ballVel.set(
       (to.x - from.x) / tFlight,
       (to.y - from.y + 0.5 * G * tFlight * tFlight) / tFlight,
@@ -1566,8 +1620,9 @@ export class Game {
       }
       const bp = this.ball.position;
       for (const c of candidates) {
-        const reach = v3(c.pos.x, 1.45, c.pos.z);
-        if (bp.distanceTo(reach) < 1.05 && bp.y < 2.6) {
+        const reach = v3(c.pos.x, Math.min(1.45, Math.max(0.6, bp.y)), c.pos.z);
+        const radius = c === meta.target ? 1.4 : 1.0;
+        if (bp.distanceTo(reach) < radius && bp.y < 2.9) {
           this.resolveCatch(c, meta);
           return;
         }
@@ -1618,9 +1673,9 @@ export class Game {
       return;
     }
     // offensive catch attempt
-    let prob = 0.62 + (catcher.info.hands / 99) * 0.33;
-    if (contested) prob -= 0.38;
-    if (this.ballVel.length() > 24) prob -= 0.08;
+    let prob = 0.8 + (catcher.info.hands / 99) * 0.18;
+    if (contested) prob -= 0.30;
+    if (this.ballVel.length() > 27) prob -= 0.07;
     if (Math.random() < prob) {
       this.giveBall(catcher, 'tuck');
       catcher.tuck = 1;
@@ -1658,7 +1713,7 @@ export class Game {
     // camera-relative: the camera always looks down the offense's drive,
     // so W = away from camera (upfield), D = screen-right
     const dir = this.match.dir;
-    const wx = ix * dir, wz = -iz * dir;
+    const wx = ix * dir, wz = iz * dir;
     const sprint = k.has('ShiftLeft') || k.has('ShiftRight');
     const mag = Math.hypot(wx, wz);
     if (a.state === 'qb-user') {
@@ -2062,19 +2117,29 @@ export class Game {
         break;
       }
       case 'lineup': {
-        for (const [a, s] of this._spots) {
+        for (const a of this.allAthletes) {
+          if (a.state === 'toBench') { this.benchWalk(a, dt); continue; }
           if (a.state !== 'toSpot') { a.anim.update(dt); continue; }
+          const s = this._spots.get(a);
           const d = a.seek(s[0], s[1], 0.55);
           if (d < 0.35) { a.stop(); a.vel.set(0, 0); a.facing = s[2]; }
           a.move(dt);
           a.anim.update(dt);
         }
-        for (const a of this.allAthletes) if (a.state === 'spectate') a.anim.update(dt);
-        if (this.allLinedUp() || this.phaseT > 3.2) this.setAtLine();
+        if (this.ref.state === 'toSpot') {
+          const s = this._spots.get(this.ref);
+          if (this.ref.seek(s[0], s[1], 0.55) < 0.4) { this.ref.stop(); this.ref.vel.set(0, 0); this.ref.facing = s[2]; }
+          this.ref.move(dt);
+          this.ref.anim.update(dt);
+        }
+        if (this.allLinedUp() || this.phaseT > 3.6) this.setAtLine();
         break;
       }
       case 'set': {
-        for (const a of this.allAthletes) a.anim.update(dt);
+        for (const a of this.allAthletes) {
+          if (a.state === 'toBench') { this.benchWalk(a, dt); continue; }
+          a.anim.update(dt);
+        }
         this.ref.anim.update(dt);
         // CPU snaps on its own count
         if (this.match.poss === 'away') {
@@ -2088,6 +2153,7 @@ export class Game {
       case 'td':
       case 'final': {
         for (const a of this.allAthletes) {
+          if (a.state === 'toBench' && this.phase !== 'final') { this.benchWalk(a, dt); continue; }
           if (a.state === 'down') {
             a.downTimer -= dt;
             if (a.downTimer <= 0 && a.anim.name !== 'getUp') { a.anim.play('getUp'); a.state = 'watch'; }
@@ -2108,7 +2174,10 @@ export class Game {
         break;
       }
       case 'playcall': {
-        for (const a of this.allAthletes) a.anim.update(dt);
+        for (const a of this.allAthletes) {
+          if (a.state === 'toBench') { this.benchWalk(a, dt); continue; }
+          a.anim.update(dt);
+        }
         break;
       }
     }
