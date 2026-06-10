@@ -22,9 +22,15 @@ crowd, light towers, working scoreboard, painted end zones, your logo at midfiel
 
 ## Run it
 
+**Windows:** double-click **`play.bat`** — it finds Python, starts the server,
+and opens the game in your browser. (If Python isn't installed it tells you
+where to get it.)
+
+**Mac/Linux:**
+
 ```bash
 cd plank
-python3 serve.py                # or: python serve.py on Windows
+python3 serve.py
 # open http://localhost:8000
 ```
 
