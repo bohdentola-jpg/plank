@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import {
   mkCanvas, tex, fieldCanvas, grassTileCanvas, concreteCanvas, skyCanvas,
-  bannerCanvas, shade, contrastText,
+  daySkyCanvas, bannerCanvas, shade, contrastText,
 } from './textures.js';
 import { buildSchool } from './school.js';
 
@@ -328,17 +328,17 @@ function buildCrowd(stands, school) {
 }
 
 /** Build the whole scene around the field. Returns refs for live elements. */
-export function buildStadium(scene, school, rival, logoCv) {
+export function buildStadium(scene, school, rival, logoCv, { daytime = false } = {}) {
   const group = new THREE.Group();
   scene.add(group);
 
   // sky + fog + ground
   const sky = new THREE.Mesh(
     new THREE.SphereGeometry(420, 24, 16),
-    new THREE.MeshBasicMaterial({ map: tex(skyCanvas()), side: THREE.BackSide, fog: false })
+    new THREE.MeshBasicMaterial({ map: tex(daytime ? daySkyCanvas() : skyCanvas()), side: THREE.BackSide, fog: false })
   );
   group.add(sky);
-  scene.fog = new THREE.Fog('#101524', 120, 400);
+  scene.fog = daytime ? new THREE.Fog('#c2d4e8', 220, 520) : new THREE.Fog('#101524', 120, 400);
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(800, 800),
     new THREE.MeshPhongMaterial({ map: tex(grassTileCanvas('#23461f'), { repeat: [90, 90] }) })
@@ -348,14 +348,16 @@ export function buildStadium(scene, school, rival, logoCv) {
   ground.receiveShadow = true;
   group.add(ground);
 
-  // moon
-  const moon = glowSprite('#e8ecf4', 34);
+  // moon (night) or sun glare (day)
+  const moon = glowSprite(daytime ? '#fff6d0' : '#e8ecf4', daytime ? 60 : 34);
   moon.position.set(-160, 150, -220);
   group.add(moon);
-  const moonDisc = new THREE.Mesh(new THREE.CircleGeometry(9, 20), new THREE.MeshBasicMaterial({ color: '#dde4ee', fog: false }));
-  moonDisc.position.copy(moon.position);
-  moonDisc.lookAt(0, 0, 0);
-  group.add(moonDisc);
+  if (!daytime) {
+    const moonDisc = new THREE.Mesh(new THREE.CircleGeometry(9, 20), new THREE.MeshBasicMaterial({ color: '#dde4ee', fog: false }));
+    moonDisc.position.copy(moon.position);
+    moonDisc.lookAt(0, 0, 0);
+    group.add(moonDisc);
+  }
 
   // the field
   const fieldTex = tex(fieldCanvas({
@@ -390,8 +392,10 @@ export function buildStadium(scene, school, rival, logoCv) {
   const home = buildStands(1, school);
   const away = buildStands(-1, school);
   group.add(home.group, away.group);
-  const crowd = buildCrowd([home, away], school);
-  group.add(crowd.bodies, crowd.heads);
+  const crowd = daytime
+    ? { bodies: null, heads: null, setExcitement() {}, update() {} }
+    : buildCrowd([home, away], school);
+  if (!daytime) group.add(crowd.bodies, crowd.heads);
 
   // light towers
   const towers = [];
@@ -475,9 +479,9 @@ export function buildStadium(scene, school, rival, logoCv) {
   group.add(schoolGlow);
 
   // ---- lighting
-  const hemi = new THREE.HemisphereLight('#5b6c96', '#1c2415', 0.85);
+  const hemi = new THREE.HemisphereLight(daytime ? '#bcd2f0' : '#5b6c96', daytime ? '#5a6a48' : '#1c2415', daytime ? 1.15 : 0.85);
   scene.add(hemi);
-  const key = new THREE.DirectionalLight('#f4ead2', 2.1);
+  const key = new THREE.DirectionalLight(daytime ? '#fff4dc' : '#f4ead2', daytime ? 2.6 : 2.1);
   key.position.set(34, 52, 26);
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
@@ -488,12 +492,14 @@ export function buildStadium(scene, school, rival, logoCv) {
   key.shadow.camera.far = 140;
   key.shadow.bias = -0.0008;
   scene.add(key);
-  const rim = new THREE.DirectionalLight('#aebcf0', 0.7);
+  const rim = new THREE.DirectionalLight(daytime ? '#dce8ff' : '#aebcf0', daytime ? 0.5 : 0.7);
   rim.position.set(-40, 40, -30);
   scene.add(rim);
-  const moonLight = new THREE.DirectionalLight('#7888b8', 0.35);
-  moonLight.position.copy(moon.position);
-  scene.add(moonLight);
+  if (!daytime) {
+    const moonLight = new THREE.DirectionalLight('#7888b8', 0.35);
+    moonLight.position.copy(moon.position);
+    scene.add(moonLight);
+  }
 
   return { group, scoreboard, crowd, towers, sky, keyLight: key };
 }

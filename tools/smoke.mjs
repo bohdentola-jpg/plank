@@ -139,5 +139,38 @@ await step('audio module parses', async () => {
   await import('../src/audio.js');
 });
 
+await step('franchise', async () => {
+  const f = await import('../src/franchise.js');
+  const fr = f.newFranchise();
+  if (fr.schedule.length !== 8) throw new Error('bad schedule');
+  const opp = f.currentOpponent(fr);
+  if (!opp.roster.length) throw new Error('no opp roster');
+  f.applyDecision(fr, { morale: 2, adTrust: -5 });
+  const ev = f.recordResult(fr, { won: true, home: 21, away: 7, oppName: 'Testville Tigers' });
+  if (fr.week !== 2) throw new Error('week did not advance');
+  for (let w = 2; w <= 8; w++) f.recordResult(fr, { won: true, home: 20, away: 10, oppName: 'X' });
+  if (!f.madePlayoffs(fr)) throw new Error('should be in playoffs');
+  f.recordResult(fr, { won: true, home: 20, away: 10, oppName: 'P1' });
+  f.recordResult(fr, { won: true, home: 20, away: 10, oppName: 'P2' });
+  f.recordResult(fr, { won: true, home: 20, away: 10, oppName: 'P3' });
+  if (!fr.trophies.includes('state')) throw new Error('no state trophy: ' + fr.trophies);
+  if (!fr.seasonOver) throw new Error('season should be over');
+  const fresh = f.rollNewSeason(fr);
+  if (!fresh.trophies.includes('state')) throw new Error('trophies must carry over');
+  if (!f.practiceBonusFor('routes', 0.9)) throw new Error('practice bonus');
+});
+
+await step('plays count + custom art', async () => {
+  const m = await import('../src/plays.js');
+  if (m.OFFENSE_PLAYS.length < 16) throw new Error('expected 16+ plays, got ' + m.OFFENSE_PLAYS.length);
+  // a custom-style rawZ play renders art
+  m.drawPlayArt({
+    id: 'c1', name: 'Custom', type: 'pass', rawZ: true, custom: true,
+    align: { QB: [-5, 0], RB: [-5, -2], FB: [-1, -7], WR1: [-1, -13], WR2: [-1.5, 11], TE: [-0.7, 4] },
+    assignments: { WR1: { route: [[6, 2], [12, -4]] }, RB: { block: true } },
+    paths: {}, targets: ['WR1'],
+  });
+});
+
 console.log(failures ? `\n${failures} failure(s)` : '\nall smoke checks passed');
 process.exit(failures ? 1 : 0);

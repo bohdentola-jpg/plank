@@ -215,10 +215,22 @@ class Hud {
 
 // ============================================================ Game
 export class Game {
-  constructor(container, appState, { onExit = () => {}, onRematch = () => {} } = {}) {
+  constructor(container, appState, {
+    onExit = () => {}, onRematch = () => {}, onGameEnd = null, onDrillEnd = null,
+    mode = 'match', drill = null, daytime = false, playbook = null,
+    weekLabel = null, modifiers = null,
+  } = {}) {
     this.appState = appState;
     this.onExit = onExit;
     this.onRematch = onRematch;
+    this.onGameEnd = onGameEnd;
+    this.onDrillEnd = onDrillEnd;
+    this.mode = mode;
+    this.drillType = drill;
+    this.daytime = daytime || mode === 'drill';
+    this.playbook = playbook || OFFENSE_PLAYS;
+    this.weekLabel = weekLabel;
+    this.modifiers = modifiers;
     this.container = container;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -244,7 +256,7 @@ export class Game {
     this.homeLogo = logoCanvas(school.logoId, { fg: school.colors.secondary, bg: school.colors.primary, line: '#101014', letter });
     this.awayLogo = logoCanvas(rival.logoId, { fg: rival.colors.secondary, bg: rival.colors.primary, line: '#101014', letter: rival.name[0] });
 
-    this.stadium = buildStadium(this.scene, school, rival, this.homeLogo);
+    this.stadium = buildStadium(this.scene, school, rival, this.homeLogo, { daytime: this.daytime });
 
     // kits: home in school uniform, visitors in road whites
     this.kits = {
@@ -258,9 +270,19 @@ export class Game {
     };
 
     // build athletes for every play role on both teams
+    let homeRoster = appState.roster;
+    if (this.modifiers) {
+      const m = this.modifiers;
+      const buff = (v, k) => Math.max(35, Math.min(99, v + (m.flat || 0) + (m.attrs?.[k] || 0)));
+      homeRoster = homeRoster.map((pl) => ({
+        ...pl,
+        spd: buff(pl.spd, 'spd'), str: buff(pl.str, 'str'), hands: buff(pl.hands, 'hands'),
+        iq: buff(pl.iq, 'iq'), arm: buff(pl.arm, 'arm'),
+      }));
+    }
     this.players = { home: {}, away: {} };
     for (const team of ['home', 'away']) {
-      const roster = team === 'home' ? appState.roster : rival.roster;
+      const roster = team === 'home' ? homeRoster : rival.roster;
       const picked = rosterPick(roster);
       for (const role of [...OFF_ROLES, ...DEF_ROLES, 'K']) {
         const info = picked[role];
@@ -322,6 +344,7 @@ export class Game {
     this._fpsEma = 60;
     this.lowSpec = false;
 
+    this.drill = null;
     this.hud = new Hud(document);
     this.keys = new Set();
     this._onKeyDown = (e) => this.keyDown(e);
@@ -343,7 +366,8 @@ export class Game {
     this._raf = null;
     this.disposed = false;
 
-    this.showMatchup();
+    if (this.mode === 'drill') this.startDrill();
+    else this.showMatchup();
     this.loop();
   }
 
@@ -366,6 +390,15 @@ export class Game {
   }
 
   updateHudBar() {
+    if (this.mode === 'drill') {
+      const d = this.drill;
+      if (d) {
+        this.hud.el.score.innerHTML = `<span class="chip" style="background:${this.school.colors.primary}">PRACTICE</span> <b>${d.title}</b>`;
+        this.hud.el.situation.textContent = d.subtitle || '';
+        this.hud.el.clock.textContent = d.total > 1 ? `REP ${Math.min(d.rep + 1, d.total)}/${d.total} · SCORE ${d.score}` : d.scoreLabel || '';
+      }
+      return;
+    }
     const m = this.match;
     this.hud.setBar({
       homeAbbr: this.abbr(this.school.name), awayAbbr: this.abbr(this.rival.name),
@@ -445,7 +478,7 @@ export class Game {
   showMatchup() {
     const el = this.hud.el.matchup;
     el.innerHTML = `
-      <div class="mu-week">WEEK 1 · FRIDAY NIGHT</div>
+      <div class="mu-week">${this.weekLabel || 'WEEK 1 · FRIDAY NIGHT'}</div>
       <div class="mu-teams">
         <div class="mu-team" style="border-color:${this.rival.colors.primary}">
           <div class="mu-name">${this.rival.name.toUpperCase()}</div>
@@ -515,7 +548,7 @@ export class Game {
     // CPU picks its side immediately
     if (userOnOffense) {
       this.defPlay = this.cpuPickDefense();
-      const cards = OFFENSE_PLAYS.map((p) => ({ id: p.id, name: p.name, desc: p.desc, art: drawPlayArt(p) }));
+      const cards = this.playbook.map((p) => ({ id: p.id, name: p.name, desc: p.desc, art: drawPlayArt(p) }));
       if (m.down === 4) {
         const kickDist = Math.round(50 - m.losX * m.dir + 17);
         if (kickDist <= 48) cards.push({ id: '__fg', name: `FG (${kickDist} yd)`, desc: 'Send out the kicking unit.' });
@@ -535,7 +568,7 @@ export class Game {
     if (id === '__fg') { this.hud.hidePlaycall(); this.startKick('FG'); return; }
     const userOnOffense = this.match.poss === 'home';
     if (userOnOffense) {
-      this.offPlay = OFFENSE_PLAYS.find((p) => p.id === id);
+      this.offPlay = this.playbook.find((p) => p.id === id);
     } else {
       this.defPlay = DEFENSE_PLAYS.find((p) => p.id === id);
     }
@@ -561,6 +594,7 @@ export class Game {
     const id = pool[(Math.random() * pool.length) | 0];
     return OFFENSE_PLAYS.find((p) => p.id === id);
   }
+  // (CPU keeps its classic playsheet; the user's full book includes customs)
 
   cpuPickDefense() {
     const m = this.match;
@@ -571,10 +605,16 @@ export class Game {
 
   // -------------------------------------------------- downs / scoring
   endPlay(reason, spotX, spotZ = 0) {
+    if (this.mode === 'drill') { this.drillRepEnd(reason); return; }
     if (this.phase !== 'live') return;
     this.setPhase('dead');
     sfx.whistle();
     this.hud.clearIcons();
+    for (const a of this.allAthletes) {
+      if (['throwHold', 'throwRelease', 'snapCatch', 'handoff'].includes(a.anim.name)) {
+        a.anim.play('ready', { fade: 0.25 });
+      }
+    }
     this.playResult = { reason, spotX: THREE.MathUtils.clamp(spotX, -59.5, 59.5), spotZ };
     const m = this.match;
     m.clock = Math.max(0, m.clock - 14); // between-play runoff
@@ -662,6 +702,7 @@ export class Game {
   }
 
   touchdown(team) {
+    if (this.mode === 'drill') { this.drillRepEnd('td'); return; }
     const m = this.match;
     m[team] += 6;
     this.setPhase('td');
@@ -697,17 +738,23 @@ export class Game {
     const won = m.home > m.away;
     this.hud.hideBanner();
     const el = this.hud.el.final;
+    const buttons = this.onGameEnd
+      ? `<button id="fin-exit">BACK TO THE OFFICE ▸</button>`
+      : `<button id="fin-rematch">REMATCH</button>
+         <button id="fin-exit">BACK TO LOCKER ROOM</button>`;
     el.innerHTML = `
       <div class="fin-head ${won ? 'won' : 'lost'}">${won ? 'VICTORY' : 'TOUGH LOSS'}</div>
       <div class="fin-score">${this.school.name.toUpperCase()} ${m.home} — ${m.away} ${this.rival.name.toUpperCase()}</div>
-      <div class="fin-sub">${won ? `The ${this.school.mascot} are 1–0. The whole town's talking.` : `The ${this.school.mascot} will bounce back. Hit the film room.`}</div>
-      <div class="fin-buttons">
-        <button id="fin-rematch">REMATCH</button>
-        <button id="fin-exit">BACK TO LOCKER ROOM</button>
-      </div>`;
+      <div class="fin-sub">${won ? `The ${this.school.mascot} take it. The whole town's talking.` : `The ${this.school.mascot} will bounce back. Hit the film room.`}</div>
+      <div class="fin-buttons">${buttons}</div>`;
     el.classList.add('show');
-    document.getElementById('fin-rematch').onclick = () => { el.classList.remove('show'); this.onRematch(); };
-    document.getElementById('fin-exit').onclick = () => { el.classList.remove('show'); this.onExit(); };
+    const rematchBtn = document.getElementById('fin-rematch');
+    if (rematchBtn) rematchBtn.onclick = () => { el.classList.remove('show'); this.onRematch(); };
+    document.getElementById('fin-exit').onclick = () => {
+      el.classList.remove('show');
+      if (this.onGameEnd) this.onGameEnd({ won, home: m.home, away: m.away });
+      else this.onExit();
+    };
     // field scene
     for (const a of this.allAthletes) {
       if (a.state === 'spectate') continue;
@@ -877,8 +924,10 @@ export class Game {
       if (asg?.route) {
         a.state = 'route';
         const sx = a.pos.x, sz = a.pos.z;
-        a.waypoints = asg.route.map(([dx, dzi]) => [sx + dx * dir, sz + dzi * insideOf(sz) ]);
+        const inz = play.rawZ ? dir : insideOf(sz);
+        a.waypoints = asg.route.map(([dx, dzi]) => [sx + dx * dir, sz + dzi * inz]);
         a.wpIndex = 0;
+        a.routeDelay = asg.delay || 0;
         continue;
       }
       if (asg?.leadBlock || (play.paths && play.paths[role])) {
@@ -967,10 +1016,14 @@ export class Game {
           this.spin = 6;
         }
       } else if (this.holder === qb) {
-        qb.anim.play('handoff');
-        qb.faceToward(rb.pos.x, rb.pos.z);
-        if (Math.hypot(qb.pos.x - rb.pos.x, qb.pos.z - rb.pos.z) < 1.15) {
-          this.completeExchange(rb);
+        if (play.drawDelay && this.liveT < play.drawDelay) {
+          qb.anim.play('throwHold'); // selling the pass
+        } else {
+          qb.anim.play('handoff');
+          qb.faceToward(rb.pos.x, rb.pos.z);
+          if (Math.hypot(qb.pos.x - rb.pos.x, qb.pos.z - rb.pos.z) < 1.15) {
+            this.completeExchange(rb);
+          }
         }
       }
     }
@@ -1060,6 +1113,7 @@ export class Game {
   }
 
   interceptDead(defender) {
+    if (this.mode === 'drill') { this.drillRepEnd('int'); return; }
     // defender with the ball tackled/out: his team takes over there
     this.setPhase('dead');
     sfx.whistle();
@@ -1072,6 +1126,12 @@ export class Game {
     const m = this.match, dir = m.dir;
     switch (a.state) {
       case 'route': {
+        if (a.routeDelay > 0) {
+          a.routeDelay -= dt;
+          a.stop();
+          a.anim.play('block');
+          break;
+        }
         const wp = a.waypoints[a.wpIndex];
         if (!wp) { a.state = 'improv'; break; }
         const d = a.seek(wp[0], wp[1], 0.96);
@@ -1103,7 +1163,8 @@ export class Game {
       case 'mesh': {
         const wp = a.waypoints[a.wpIndex];
         if (!wp) { a.stop(); break; }
-        const frac = this._exchange?.done ? 1 : 0.82;
+        const frac = this._exchange?.done ? 1
+          : (this.offPlay.drawDelay && this.liveT < this.offPlay.drawDelay) ? 0.4 : 0.82;
         const d = a.seek(wp[0], wp[1], frac);
         if (d < 0.7) a.wpIndex = Math.min(a.wpIndex + 1, a.waypoints.length - 1);
         break;
@@ -1208,6 +1269,7 @@ export class Game {
     const atSpot = Math.hypot(a.pos.x - drop[0], a.pos.z - drop[1]) < 0.7;
     if (!atSpot && this.liveT < 1.6) {
       a.seek(drop[0], drop[1], 0.8);
+      a.anim.play('backpedal', { rate: 1.1 });
     } else {
       a.stop();
       a.anim.play('throwHold');
@@ -1677,6 +1739,7 @@ export class Game {
     if (contested) prob -= 0.30;
     if (this.ballVel.length() > 27) prob -= 0.07;
     if (Math.random() < prob) {
+      if (this.drill) this.drill.caught = true;
       this.giveBall(catcher, 'tuck');
       catcher.tuck = 1;
       sfx.catchPop();
@@ -1720,6 +1783,8 @@ export class Game {
       if (mag > 0) {
         a._desired.set(wx / mag, wz / mag).multiplyScalar(a.maxSpd * (sprint ? 0.78 : 0.55));
         a.look = null;
+        const spd = a.vel.length();
+        a.anim.play(spd > 4.2 ? 'run' : 'jog', { rate: 0.8 + spd / 7 });
       } else {
         a.stop();
         a.anim.play('throwHold');
@@ -1996,6 +2061,159 @@ export class Game {
     }
   }
 
+  // -------------------------------------------------- practice drills
+  hideAllAthletes() {
+    for (const a of this.allAthletes) {
+      a.state = 'spectate';
+      a.group.visible = false;
+      a.engagedWith = null;
+      a.hasBall = false;
+      a.tuck = 0;
+      a.vel.set(0, 0);
+      a.warp(-30 + Math.random() * 8, a.team === 'home' ? 30 : -30, 0);
+    }
+    this.ref.group.visible = false;
+    this.engagements = [];
+    this.user = null;
+    this.holder = null;
+    this.ballMode = 'ground';
+  }
+
+  startDrill() {
+    const titles = {
+      routes: ['ROUTE TREE', 'Throw with 1 when he breaks open. 5 reps.'],
+      gauntlet: ['THE GAUNTLET', 'One carry. WASD + SHIFT, SPACE to juke. Get to the house.'],
+      hits: ['HIT STICK', 'You are the MIKE. Stop the back before 20 yards. 3 reps.'],
+    };
+    const t = titles[this.drillType] || titles.routes;
+    this.drill = {
+      type: this.drillType, title: t[0], subtitle: t[1],
+      rep: 0, total: this.drillType === 'routes' ? 5 : this.drillType === 'hits' ? 3 : 1,
+      score: 0, caught: false, yards: 0, done: false,
+    };
+    this.hud.banner(t[0], t[1], 3000);
+    this.updateHudBar();
+    this.after(1.4, () => this.drillRepStart());
+  }
+
+  drillRepStart() {
+    const d = this.drill;
+    if (!d || d.done) return;
+    this.hideAllAthletes();
+    this.playDead = false;
+    d.caught = false;
+    const m = this.match;
+    m.clock = 999;
+    this.setPhase('live');
+    this.liveT = 0;
+    const show = (a, x, z, face, state) => {
+      a.group.visible = true;
+      a.warp(x, z, face);
+      a.state = state;
+      return a;
+    };
+    if (d.type === 'routes') {
+      m.poss = 'home'; m.dir = 1; m.losX = -20;
+      this.offPlay = { type: 'pass', targets: ['WR1'], assignments: {}, align: {}, rawZ: true };
+      const qb = show(this.players.home.QB, -25, 0, Math.PI / 2, 'qb-user');
+      qb.anim.play('ready');
+      const wr = show(this.players.home.WR1, -20.8, -10, Math.PI / 2, 'route');
+      const routes = [
+        [[5, 0], [6, 4.5]],            // slant-in
+        [[5, 0], [6, -4]],             // out
+        [[9, 0], [8, 0.5]],            // curl
+        [[14, 0], [30, 0.5]],          // go
+        [[3, 0], [6, 6], [14, 6.5]],   // drag-up
+      ];
+      const r = routes[d.rep % routes.length];
+      wr.waypoints = r.map(([dx, dz]) => [wr.pos.x + dx, wr.pos.z + dz]);
+      wr.wpIndex = 0;
+      wr.routeDelay = 0;
+      const cb = show(this.players.away.CB1, -14.5, -10.3, -Math.PI / 2, 'man');
+      cb.manTarget = wr;
+      cb.cushion = 1.0;
+      this.giveBall(qb, 'hand');
+      this.targetsLive = [wr];
+      this.user = qb;
+      this.hud.hint('<b>1</b> throw when he breaks · <b>WASD</b> drift the pocket');
+    } else if (d.type === 'gauntlet') {
+      m.poss = 'home'; m.dir = 1; m.losX = -40;
+      this.offPlay = { type: 'run', targets: [], assignments: {}, align: {} };
+      const rb = show(this.players.home.RB, -40, 0, Math.PI / 2, 'user-carry');
+      rb.tuck = 1;
+      this.giveBall(rb, 'tuck');
+      this.user = rb;
+      const defs = ['DE1', 'OLB1', 'MLB', 'OLB2', 'CB1', 'SS'];
+      defs.forEach((role, i) => {
+        const z = (i % 2 ? 1 : -1) * (2 + (i % 3) * 2.5);
+        show(this.players.away[role], -28 + i * 9, z, -Math.PI / 2, 'pursuit');
+      });
+      this.hud.hint('<b>WASD</b> run · <b>SHIFT</b> sprint · <b>SPACE</b> juke');
+    } else if (d.type === 'hits') {
+      m.poss = 'away'; m.dir = -1; m.losX = -15;
+      this.offPlay = { type: 'run', targets: [], assignments: {}, align: {} };
+      const rb = show(this.players.away.RB, -15, (Math.random() - 0.5) * 8, -Math.PI / 2, 'carry');
+      rb.tuck = 1;
+      this.giveBall(rb, 'tuck');
+      show(this.players.away.FB, -17, rb.pos.z - 1.2, -Math.PI / 2, 'lead-block').waypoints = [[-24, rb.pos.z - 1]];
+      this.players.away.FB.wpIndex = 0;
+      const mlb = show(this.players.home.MLB, -30, 0, Math.PI / 2, 'user-def');
+      this.user = mlb;
+      this.hud.hint('<b>WASD</b> pursue · <b>SHIFT</b> sprint · <b>SPACE</b> dive tackle');
+    }
+    this.updateHudBar();
+  }
+
+  drillRepEnd(reason) {
+    const d = this.drill;
+    if (!d || d.done || this.phase !== 'live') return;
+    this.setPhase('dead');
+    sfx.whistle();
+    const m = this.match;
+    if (d.type === 'routes') {
+      const good = d.caught;
+      if (good) d.score++;
+      this.hud.banner(good ? 'COMPLETE!' : 'INCOMPLETE', '', 1400, good ? 'good' : '');
+    } else if (d.type === 'gauntlet') {
+      const yards = Math.round(Math.max(0, (this.holder?.pos.x ?? -40) + 40));
+      d.yards = reason === 'td' ? 90 : Math.min(90, yards);
+      d.score = d.yards;
+      d.scoreLabel = `${d.yards} YARDS`;
+      this.hud.banner(reason === 'td' ? 'TO THE HOUSE!' : `${d.yards} YARDS`, reason === 'td' ? 'Coach is grinning.' : 'Wrapped up.', 1800, reason === 'td' ? 'good' : '');
+    } else if (d.type === 'hits') {
+      const carrier = this.holder;
+      const stopped = reason === 'tackle' && carrier && carrier.pos.x > -35;
+      if (stopped) d.score++;
+      this.hud.banner(stopped ? 'BIG STOP!' : 'HE GOT LOOSE', '', 1400, stopped ? 'good' : 'bad');
+    }
+    d.rep++;
+    this.updateHudBar();
+    if (d.rep >= d.total) {
+      d.done = true;
+      const frac = d.type === 'routes' ? d.score / d.total
+        : d.type === 'gauntlet' ? Math.min(1, d.yards / 60)
+        : d.score / d.total;
+      this.after(1.8, () => {
+        this.hud.banner('DRILL COMPLETE', `Coach's grade: ${Math.round(frac * 100)}%`, 2400, frac >= 0.6 ? 'good' : '');
+        this.after(2.4, () => { if (this.onDrillEnd) this.onDrillEnd(frac); else this.onExit(); });
+      });
+    } else {
+      this.after(1.6, () => this.drillRepStart());
+    }
+  }
+
+  // breach check for the hits drill + rep watchdog
+  updateDrill(dt) {
+    const d = this.drill;
+    if (!d || d.done || this.phase !== 'live') return;
+    if (d.type === 'hits' && this.holder && this.holder.team === 'away' && this.holder.pos.x < -40) {
+      this.drillRepEnd('breach');
+    }
+    if (d.type === 'routes' && this.liveT > 9) this.drillRepEnd('stall');
+    if (d.type === 'gauntlet' && this.liveT > 25) this.drillRepEnd('stall');
+    if (d.type === 'hits' && this.liveT > 14) this.drillRepEnd('breach');
+  }
+
   // -------------------------------------------------- camera
   updateCamera(dt) {
     const m = this.match;
@@ -2148,7 +2366,7 @@ export class Game {
         }
         break;
       }
-      case 'live': this.updateLive(dt); break;
+      case 'live': this.updateLive(dt); if (this.mode === 'drill') this.updateDrill(dt); break;
       case 'dead':
       case 'td':
       case 'final': {

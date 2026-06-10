@@ -91,6 +91,134 @@ export const OFFENSE_PLAYS = [
   },
 ];
 
+export const MORE_OFFENSE = [
+  {
+    id: 'slam', name: 'HB Slam', type: 'run', shotgun: false,
+    desc: 'Off-tackle power behind the tight end.',
+    align: { QB: [-1.6, 0], FB: [-4.2, 0.8], RB: [-6.4, 0], WR1: [-0.9, -13], WR2: [-1.5, 11], TE: [-0.7, 3.9] },
+    carrier: 'RB',
+    handoff: { x: -2.4, z: 0.4 },
+    paths: { RB: [[1.5, 1.4], [4, 3.2], [10, 4.5], [40, 5.5]], FB: [[1.8, 2.2], [3.5, 3.2]] },
+    assignments: { WR1: { route: [[12, 0]] }, WR2: { block: true }, TE: { block: true }, FB: { leadBlock: true } },
+    targets: [],
+  },
+  {
+    id: 'counter', name: 'HB Counter', type: 'run', shotgun: false,
+    desc: 'One step right, then hit it back left.',
+    align: { QB: [-1.6, 0], FB: [-4.2, -0.8], RB: [-6.4, 0.8], WR1: [-0.9, -13], WR2: [-1.5, 11], TE: [-0.7, 3.9] },
+    carrier: 'RB',
+    handoff: { x: -2.6, z: 0.6 },
+    paths: { RB: [[0.5, 2], [2, -1.5], [5, -4.5], [12, -6.5], [40, -8]], FB: [[1.5, -2.5], [3.5, -4]] },
+    assignments: { WR1: { block: true }, WR2: { route: [[12, 0]] }, TE: { block: true }, FB: { leadBlock: true } },
+    targets: [],
+  },
+  {
+    id: 'draw', name: 'HB Draw', type: 'run', shotgun: true, drawDelay: 1.0,
+    desc: 'Show pass, slip him the ball late.',
+    align: { QB: [-5.2, 0], RB: [-5.2, -1.9], FB: [-0.9, 7.5], WR1: [-0.9, -13], WR2: [-1.5, 11], TE: [-0.7, 3.9] },
+    carrier: 'RB',
+    handoff: { x: -5.0, z: -1.0 },
+    paths: { RB: [[-4.6, -0.8], [2, 0.5], [10, 1], [40, 1.5]] },
+    assignments: { WR1: { route: [[14, 0], [30, 0]] }, WR2: { route: [[14, 0], [30, 0]] }, TE: { route: [[10, 1.5]] }, FB: { route: [[8, 0]] } },
+    targets: [],
+  },
+  {
+    id: 'endaround', name: 'End Around', type: 'run', shotgun: false,
+    desc: 'Hide the ball. Let your fastest kid hit the corner.',
+    align: { QB: [-1.6, 0], FB: [-4.2, 0], RB: [-6.4, 0], WR1: [-0.9, -13], WR2: [-1.5, 11], TE: [-0.7, 3.9] },
+    carrier: 'WR1',
+    handoff: { x: -3.0, z: -1.5 },
+    paths: { WR1: [[-3.2, -7], [-3.8, -1], [-2.5, 6], [2, 11], [12, 14], [40, 15]], RB: [[2, 0.8], [5, 1.5]], FB: [[1.5, 4], [3, 7]] },
+    assignments: { WR2: { block: true }, TE: { block: true }, FB: { leadBlock: true }, RB: { leadBlock: true } },
+    targets: [],
+  },
+  {
+    id: 'outs', name: 'Quick Outs', type: 'pass', shotgun: true,
+    desc: 'Five yards and the sideline. Clock killer.',
+    align: { QB: [-5.2, 0], RB: [-5.2, 1.9], FB: [-0.9, -7.5], WR1: [-0.9, -13], WR2: [-1.5, 11], TE: [-0.7, 3.9] },
+    carrier: null,
+    assignments: {
+      WR1: { route: [[5, 0], [6, -4.5]] },
+      WR2: { route: [[5, 0], [6, -4.5]] },
+      TE:  { route: [[6, 1.5], [12, 3]] },
+      RB:  { route: [[1, -4], [2, -8]] },
+      FB:  { route: [[4, -1], [5, -5]] },
+    },
+    targets: ['WR1', 'WR2', 'TE', 'RB'],
+  },
+  {
+    id: 'smash', name: 'Smash', type: 'pass', shotgun: true,
+    desc: 'Hitch underneath, corner over the top.',
+    align: { QB: [-5.2, 0], RB: [-5.2, -1.9], FB: [-0.9, -7.5], WR1: [-0.9, -13], WR2: [-1.5, 11], TE: [-0.7, 3.9] },
+    carrier: null,
+    assignments: {
+      WR1: { route: [[5.5, 0], [5, 0.5]] },
+      WR2: { route: [[10, 0], [19, -7]] },
+      TE:  { route: [[2, -1], [5, -8], [6, -13]] },
+      RB:  { route: [[1, -4], [2.5, -8.5]] },
+      FB:  { route: [[5.5, 0], [5, 0.5]] },
+    },
+    targets: ['WR1', 'WR2', 'TE', 'RB'],
+  },
+  {
+    id: 'mesh', name: 'Mesh Drags', type: 'pass', shotgun: true,
+    desc: 'Crossers underneath — rub the man coverage off.',
+    align: { QB: [-5.2, 0], RB: [-5.2, 1.9], FB: [-0.9, 7.5], WR1: [-0.9, -13], WR2: [-1.5, 11], TE: [-0.7, 3.9] },
+    carrier: null,
+    assignments: {
+      WR1: { route: [[2.5, 0], [4.5, 11], [5.5, 23]] },
+      WR2: { route: [[6, 0], [8, 12], [9, 24]] },
+      TE:  { route: [[10, 0], [18, -7]] },
+      RB:  { route: [[1, -4], [2.5, -9]] },
+      FB:  { route: [[12, 1], [26, 2]] },
+    },
+    targets: ['WR1', 'WR2', 'TE', 'RB'],
+  },
+  {
+    id: 'sluggo', name: 'Sluggo Seam', type: 'pass', shotgun: false, playAction: true,
+    desc: 'Slant-and-go. Make the corner bite, then run past him.',
+    align: { QB: [-1.6, 0], FB: [-4.2, 0], RB: [-6.4, 0], WR1: [-0.9, -13], WR2: [-1.5, 11], TE: [-0.7, 3.9] },
+    carrier: null,
+    assignments: {
+      WR1: { route: [[2.5, 0], [5.5, 4], [16, 4.5], [32, 5]] },
+      WR2: { route: [[5.5, 0], [5, 0.5]] },
+      TE:  { route: [[11, 1.5], [27, 3]] },
+      RB:  { block: true },
+      FB:  { block: true },
+    },
+    targets: ['WR1', 'WR2', 'TE'],
+  },
+  {
+    id: 'screen', name: 'HB Screen', type: 'pass', shotgun: true,
+    desc: 'Let the rush come, dump it over their heads.',
+    align: { QB: [-5.2, 0], RB: [-5.2, -1.9], FB: [-0.9, 7.5], WR1: [-0.9, -13], WR2: [-1.5, 11], TE: [-0.7, 3.9] },
+    carrier: null,
+    assignments: {
+      WR1: { route: [[12, 0], [26, 1]] },
+      WR2: { route: [[12, 0], [26, 1]] },
+      TE:  { route: [[10, 1.5], [22, 3]] },
+      RB:  { route: [[-1, -3.5], [0.5, -7]], delay: 0.9 },
+      FB:  { route: [[12, -1]] },
+    },
+    targets: ['RB', 'WR1', 'WR2', 'TE'],
+  },
+  {
+    id: 'fade', name: 'Goal Line Fade', type: 'pass', shotgun: false,
+    desc: 'Back-shoulder ball to the corner of the end zone.',
+    align: { QB: [-1.6, 0], FB: [-4.2, 0], RB: [-6.4, 0], WR1: [-0.9, -13], WR2: [-1.5, 11], TE: [-0.7, 3.9] },
+    carrier: null,
+    assignments: {
+      WR1: { route: [[3, -1.5], [11, -3]] },
+      WR2: { route: [[3, -1.5], [11, -3]] },
+      TE:  { route: [[2, -1], [4, -7]] },
+      RB:  { block: true },
+      FB:  { block: true },
+    },
+    targets: ['WR1', 'WR2', 'TE'],
+  },
+];
+OFFENSE_PLAYS.push(...MORE_OFFENSE);
+
 export const DEFENSE_PLAYS = [
   {
     id: 'base', name: '4-3 Base', desc: 'Sound man coverage, four-man rush.',
@@ -109,6 +237,18 @@ export const DEFENSE_PLAYS = [
     rush: ['DE1', 'DT1', 'DT2', 'DE2'],
     man: {},
     zone: { CB1: [3, -11], CB2: [3, 11], OLB1: [6, -5], MLB: [7, 0], OLB2: [6, 5], FS: [15, -8], SS: [15, 8] },
+  },
+  {
+    id: 'cover3', name: 'Cover 3', desc: 'Three deep, four under. Bend, don\'t break.',
+    rush: ['DE1', 'DT1', 'DT2', 'DE2'],
+    man: {},
+    zone: { CB1: [13, -12], CB2: [13, 12], FS: [15, 0], OLB1: [5, -7], MLB: [6, 0], OLB2: [5, 7], SS: [4, 11] },
+  },
+  {
+    id: 'manfree', name: 'Man Free', desc: 'Lock them up, safety over the top, extra rusher.',
+    rush: ['DE1', 'DT1', 'DT2', 'DE2', 'SS'],
+    man: { CB1: 'WR1', CB2: 'WR2', OLB2: 'TE', MLB: 'RB', OLB1: 'FB' },
+    zone: { FS: [14, 0] },
   },
   {
     id: 'goalline', name: 'Goal Line', desc: 'All eleven in the box. Nothing inside.',
@@ -178,7 +318,7 @@ export function drawPlayArt(play) {
   };
   // OL
   for (const k in OL_ALIGN) O(OL_ALIGN[k][0], OL_ALIGN[k][1]);
-  const inside = (z) => (z <= 0 ? 1 : -1);
+  const inside = (z) => (play.rawZ ? 1 : (z <= 0 ? 1 : -1));
   for (const role in play.align) {
     const [ax, az] = play.align[role];
     const [cx, cy] = O(ax, az);

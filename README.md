@@ -15,6 +15,15 @@ numbers, and attribute re-rolls until the depth chart feels right.
 in a stadium your school overlooks from the hill behind the west end zone. Animated
 crowd, light towers, working scoreboard, painted end zones, your logo at midfield.
 
+**And it's a career.** Your week starts in a 3D coach's office overlooking the field
+in daylight — click the **helmet** to play Friday's game, the **papers** for weekly
+decisions (eligibility scandals, booster deals, the AD on line one), the **window**
+to run practice drills (Route Tree, the Gauntlet, Hit Stick — grades become Friday
+boosts), the **whiteboard** to open the play designer, the **trophy shelf** for the
+season. An 8-game schedule, playoffs, a State title, an AD trust meter that can get
+you fired, and a paint can to redecorate the whole office. The season starts at
+training camp; the playbook has 17 plays plus whatever you draw up yourself.
+
 | | |
 | --- | --- |
 | ![School builder](docs/school-builder.png) | ![Uniform lab](docs/uniform-lab.png) |

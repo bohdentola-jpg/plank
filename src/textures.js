@@ -100,6 +100,35 @@ export function grassTileCanvas(base = '#2e6b2f') {
   return cv;
 }
 
+// ---------------------------------------------------------------- day sky
+export function daySkyCanvas() {
+  const cv = mkCanvas(1024, 512);
+  const ctx = cv.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, 512);
+  g.addColorStop(0.00, '#3d7edb');
+  g.addColorStop(0.45, '#74a8e8');
+  g.addColorStop(0.75, '#aecdf0');
+  g.addColorStop(1.00, '#dce8f4');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 1024, 512);
+  // puffy cumulus
+  for (let i = 0; i < 14; i++) {
+    const y = 120 + Math.random() * 220, x = Math.random() * 1024;
+    const s = 30 + Math.random() * 70;
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    for (let j = 0; j < 5; j++) {
+      ctx.beginPath();
+      ctx.ellipse(x + (j - 2) * s * 0.45, y + Math.abs(j - 2) * 6, s * (0.6 - Math.abs(j - 2) * 0.08), s * 0.32, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(180,200,225,0.5)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + s * 0.22, s * 1.05, s * 0.14, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  return cv;
+}
+
 // ---------------------------------------------------------------- dusk sky
 export function skyCanvas() {
   const cv = mkCanvas(1024, 512);
