@@ -473,6 +473,8 @@ export class Game {
 
   startDrive(team, losX, note = '') {
     const m = this.match;
+    // overtime is sudden death: any lead at a change of drive ends it
+    if (m.qtr > 4 && m.home !== m.away) { this.endGame(); return; }
     m.poss = team;
     m.dir = team === 'home' ? 1 : -1;
     m.losX = THREE.MathUtils.clamp(losX, -49, 49);
@@ -722,7 +724,7 @@ export class Game {
       a.engagedWith = null; a.hasBall = false; a.tuck = 0; a.look = null;
       if (role === 'K' || DEF_ROLES.includes(role)) { benchPark(a, bi++); continue; }
       const align = OL_ALIGN[role] || play.align[role];
-      this._spots.set(a, [m.losX + align[0] * dir, align[1] * dir, dir > 0 ? 0 : Math.PI]);
+      this._spots.set(a, [m.losX + align[0] * dir, align[1] * dir, dir > 0 ? Math.PI / 2 : -Math.PI / 2]);
       a.state = 'toSpot';
       a.group.visible = true;
     }
@@ -737,13 +739,13 @@ export class Game {
       if (this.defPlay.press && (role === 'CB1' || role === 'CB2')) ax = 1.6;
       // CBs line over the receivers
       if (role === 'CB1' || role === 'CB2') az = (play.align[role === 'CB1' ? 'WR1' : 'WR2']?.[1] ?? az) + (az > 0 ? -0.8 : 0.8);
-      this._spots.set(a, [m.losX + ax * -dir, az * dir, dir > 0 ? Math.PI : 0]);
+      this._spots.set(a, [m.losX + ax * -dir, az * dir, dir > 0 ? -Math.PI / 2 : Math.PI / 2]);
       a.state = 'toSpot';
       a.group.visible = true;
     }
     // ref trails the play
     this.ref.state = 'toSpot';
-    this._spots.set(this.ref, [m.losX - 9 * dir, -14 * dir, dir > 0 ? 0 : Math.PI]);
+    this._spots.set(this.ref, [m.losX - 9 * dir, -14 * dir, dir > 0 ? Math.PI / 2 : -Math.PI / 2]);
     this.user = null;
     this.hud.hint('');
   }
@@ -948,6 +950,12 @@ export class Game {
       if (a.state === 'down') {
         a.downTimer -= dt;
         a.stop();
+        // slide out any momentum from the hit
+        if (a.vel.lengthSq() > 0.01) {
+          a.pos.x += a.vel.x * dt;
+          a.pos.z += a.vel.y * dt;
+          a.vel.multiplyScalar(Math.max(0, 1 - dt * 5));
+        }
         if (a.downTimer <= 0 && this.phase === 'live') { a.state = a.postDownState || 'pursuit'; a.anim.play('getUp', { fade: 0.2 }); }
         a.anim.update(dt);
         continue;
@@ -1156,7 +1164,7 @@ export class Game {
       if (lead) a.faceToward(lead.a.pos.x, lead.a.pos.z);
     }
     const pressure = this.nearestOpponent(a, (d) => ['rush', 'pursuit'].includes(d.state));
-    const pressured = pressure && pressure.d < 2.6;
+    const pressured = pressure && pressure.d < 2.3;
     if (this.offPlay.type === 'run') return; // sneak handled as carry
     if (!a.qbDecided && (a.scanT <= 0 || pressured) && this.liveT > 0.9) {
       const best = this.bestTarget(a);
@@ -1309,7 +1317,7 @@ export class Game {
     const strDiff = (blocker.info.str - defender.info.str) / 99;
     this.engagements.push({
       blk: blocker, def: defender, mode,
-      shed: rand(1.2, 2.6) + strDiff * 1.8,
+      shed: rand(2.0, 3.8) + strDiff * 1.8,
     });
   }
 
@@ -1352,6 +1360,7 @@ export class Game {
   // -------------------------------------------------- tackling
   attemptTackle(tackler, carrier, { dive = false } = {}) {
     if (this.phase !== 'live' || this.playDead) return;
+    if (carrier.state === 'throwing') return; // ball's already coming out
     if (tackler.tackleCd > this.t) return;
     tackler.tackleCd = this.t + 0.9;
     const jukeBonus = carrier.jukeT > 0 ? 0.30 : 0;
@@ -1380,14 +1389,17 @@ export class Game {
     tackler.state = 'tackling';
     tackler.anim.play('tackleLunge', { force: true });
     tackler.faceToward(carrier.pos.x, carrier.pos.z);
-    tackler.vel.set(0, 0);
+    // crash through the contact
+    const tdx = carrier.pos.x - tackler.pos.x, tdz = carrier.pos.z - tackler.pos.z;
+    const tdd = Math.hypot(tdx, tdz) || 1;
+    tackler.vel.set((tdx / tdd) * 5.5, (tdz / tdd) * 5.5);
     // carrier falls based on the hit direction
     const hitFromFront = (carrier.vel.x * (tackler.pos.x - carrier.pos.x) + carrier.vel.y * (tackler.pos.z - carrier.pos.z)) > 0;
     carrier.state = 'down';
     carrier.downTimer = 2.2;
     carrier.postDownState = 'watch';
     carrier.anim.play(hitFromFront ? 'fallBack' : 'fallFwd', { force: true });
-    carrier.vel.set(0, 0);
+    carrier.vel.multiplyScalar(hitFromFront ? -0.1 : 0.35); // fall through the hit
     if (this.user === carrier || this.user === tackler) this.user = null;
     for (const role in this.players[oppTeam]) {
       const d = this.players[oppTeam][role];
@@ -1433,6 +1445,23 @@ export class Game {
     });
   }
 
+  /** Where will this receiver be in tt seconds? Follows his route if he's on one. */
+  predictReceiver(target, tt) {
+    if (target.state !== 'route' || !target.waypoints?.length || target.wpIndex >= target.waypoints.length) {
+      return v3(target.pos.x + target.vel.x * tt * 0.92, 1.35, target.pos.z + target.vel.y * tt * 0.92);
+    }
+    let px = target.pos.x, pz = target.pos.z;
+    let rem = tt * target.maxSpd * 0.94;
+    let i = target.wpIndex;
+    while (rem > 0 && i < target.waypoints.length) {
+      const [wx, wz] = target.waypoints[i];
+      const d = Math.hypot(wx - px, wz - pz);
+      if (d > rem) { px += ((wx - px) / d) * rem; pz += ((wz - pz) / d) * rem; rem = 0; }
+      else { px = wx; pz = wz; rem -= d; i++; }
+    }
+    return v3(px, 1.35, pz);
+  }
+
   releaseBall(qb, target) {
     const m = this.match;
     this.holder = null;
@@ -1443,12 +1472,10 @@ export class Game {
     if (target) {
       const dist0 = Math.hypot(target.pos.x - from.x, target.pos.z - from.z);
       tFlight = THREE.MathUtils.clamp(dist0 / 21, 0.45, 1.85);
-      // lead the receiver
-      to = v3(
-        target.pos.x + target.vel.x * tFlight * 0.92,
-        1.35,
-        target.pos.z + target.vel.y * tFlight * 0.92
-      );
+      // lead the receiver along his route (two passes to converge flight time)
+      to = this.predictReceiver(target, tFlight);
+      tFlight = THREE.MathUtils.clamp(Math.hypot(to.x - from.x, to.z - from.z) / 21, 0.4, 1.9);
+      to = this.predictReceiver(target, tFlight);
       // accuracy noise
       const acc = (qb.info.arm ?? 75) / 99;
       const moving = qb.vel.length() > 2 ? 1.8 : 1;
@@ -1488,6 +1515,18 @@ export class Game {
       return;
     }
     if (this.ballMode !== 'flight' && this.ballMode !== 'kickfly') return;
+    // substep so a fast ball can't tunnel through catch radii on slow frames
+    let rem = dt;
+    while (rem > 0.0001) {
+      const h = Math.min(rem, 0.033);
+      rem -= h;
+      const before = this.ballMode;
+      this.stepBall(h);
+      if (this.ballMode !== before) break;
+    }
+  }
+
+  stepBall(dt) {
     // physics
     this.ballVel.y -= G * dt;
     this.ball.position.addScaledVector(this.ballVel, dt);
@@ -1616,9 +1655,10 @@ export class Game {
     if (k.has('KeyS') || k.has('ArrowDown')) ix -= 1;
     if (k.has('KeyA') || k.has('ArrowLeft')) iz -= 1;
     if (k.has('KeyD') || k.has('ArrowRight')) iz += 1;
-    // camera-relative: W = upfield for the user's drive direction
-    const dir = a.team === 'home' ? this.match.dir : -this.match.dir;
-    const wx = ix * dir, wz = (dir > 0 ? iz : -iz);
+    // camera-relative: the camera always looks down the offense's drive,
+    // so W = away from camera (upfield), D = screen-right
+    const dir = this.match.dir;
+    const wx = ix * dir, wz = -iz * dir;
     const sprint = k.has('ShiftLeft') || k.has('ShiftRight');
     const mag = Math.hypot(wx, wz);
     if (a.state === 'qb-user') {
@@ -1746,7 +1786,7 @@ export class Game {
     this.lineupSpecial(team);
     punter.state = 'kick-script';
     punter.group.visible = true;
-    punter.warp(m.losX - 12 * m.dir, 0, m.dir > 0 ? 0 : Math.PI);
+    punter.warp(m.losX - 12 * m.dir, 0, m.dir > 0 ? Math.PI / 2 : -Math.PI / 2);
     this.placeBallAt(m.losX, 0);
     this._kick = { type: 'PUNT', team, t: 0, launched: false, kicker: punter };
     this.giveBall(punter, 'hand');
@@ -1766,7 +1806,7 @@ export class Game {
     const holdX = spotX - 2.8 * dir;
     kicker.state = 'kick-script';
     kicker.group.visible = true;
-    kicker.warp(holdX - 2.2 * dir, 1.1, dir > 0 ? 0 : Math.PI);
+    kicker.warp(holdX - 2.2 * dir, 1.1, dir > 0 ? Math.PI / 2 : -Math.PI / 2);
     this.placeBallAt(holdX, 0, 0.14);
     this.ball.rotation.set(0, 0, Math.PI / 2 - 0.12);
     this._kick = { type, team, dir, t: 0, launched: false, kicker, holdX };
@@ -1829,7 +1869,7 @@ export class Game {
         k.launched = true;
         kicker.stop();
         kicker.vel.set(0, 0);
-        kicker.facing = k.dir > 0 ? 0 : Math.PI;
+        kicker.facing = k.dir > 0 ? Math.PI / 2 : -Math.PI / 2;
         kicker.anim.play('kick', { force: true });
         this.after(KICK_CONTACT_S, () => {
           sfx.kickThump();

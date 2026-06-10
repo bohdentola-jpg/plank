@@ -2,6 +2,8 @@
 
 A 2000s high school football game in the browser — full 3D, no install, no build step.
 
+![Friday night under the lights](docs/friday-night.png)
+
 **Build your school.** Name it, pick the colors, design the logo, and raise the actual
 building — style, floors, wings, gymnasium, cupola, marquee sign, bus fleet.
 
@@ -12,6 +14,11 @@ numbers, and attribute re-rolls until the depth chart feels right.
 **Then it's Friday night.** Full 11-on-11 under the lights against a generated rival,
 in a stadium your school overlooks from the hill behind the west end zone. Animated
 crowd, light towers, working scoreboard, painted end zones, your logo at midfield.
+
+| | |
+| --- | --- |
+| ![School builder](docs/school-builder.png) | ![Uniform lab](docs/uniform-lab.png) |
+| ![Touchdown celebration](docs/touchdown.png) | ![Defense](docs/defense.png) |
 
 ## Run it
 

@@ -1,12 +1,12 @@
 // The three build screens: School, Uniform, Team — each with a live 3D preview.
 import * as THREE from 'three';
-import { MASCOTS, COLOR_PRESETS, genRoster, genPlayerName, irange } from './names.js';
+import { MASCOTS, COLOR_PRESETS, genRoster } from './names.js';
 import { LOGO_IDS, LOGO_LABELS, logoCanvas } from './logos.js';
 import { buildSchool } from './school.js';
 import { makeKit, buildPlayer } from './playerModel.js';
 import { Animator } from './animation.js';
 import { makeClips } from './clips.js';
-import { grassTileCanvas, tex, contrastText } from './textures.js';
+import { grassTileCanvas, tex } from './textures.js';
 import { sfx } from './audio.js';
 
 const CLIPS = makeClips();
@@ -37,11 +37,14 @@ class PreviewApp {
     const hemi = new THREE.HemisphereLight('#7a8cc0', '#1e2415', 0.95);
     this.scene.add(hemi);
     const key = new THREE.DirectionalLight('#ffe8c4', 1.9);
-    key.position.set(12, 18, 10);
+    key.position.set(radius * 0.8, radius * 1.4, radius * 0.7);
     key.castShadow = true;
-    key.shadow.mapSize.set(1024, 1024);
-    key.shadow.camera.left = -24; key.shadow.camera.right = 24;
-    key.shadow.camera.top = 24; key.shadow.camera.bottom = -24;
+    key.shadow.mapSize.set(2048, 2048);
+    const sb = Math.max(6, radius * 0.9);
+    key.shadow.camera.left = -sb; key.shadow.camera.right = sb;
+    key.shadow.camera.top = sb; key.shadow.camera.bottom = -sb;
+    key.shadow.camera.far = radius * 5;
+    key.shadow.bias = -0.0006;
     this.scene.add(key);
     const rim = new THREE.DirectionalLight('#7a9aff', 0.8);
     rim.position.set(-14, 10, -12);
@@ -401,12 +404,20 @@ export class UniformBuilder {
     const g = new THREE.Group();
     g.add(rig.group);
     const podium = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.5, 1.7, 0.18, 24),
-      new THREE.MeshPhongMaterial({ color: '#23242c', shininess: 40 })
+      new THREE.CylinderGeometry(1.45, 1.65, 0.16, 28),
+      new THREE.MeshPhongMaterial({ color: '#46506a', shininess: 60, specular: '#9aa4c4' })
     );
-    podium.position.y = -0.09;
+    podium.position.y = 0.08; // proud of the grass — no coplanar z-fighting
     podium.receiveShadow = true;
     g.add(podium);
+    const podiumTrim = new THREE.Mesh(
+      new THREE.TorusGeometry(1.55, 0.045, 8, 32),
+      new THREE.MeshPhongMaterial({ color: '#f2b705', shininess: 80 })
+    );
+    podiumTrim.rotation.x = Math.PI / 2;
+    podiumTrim.position.y = 0.16;
+    g.add(podiumTrim);
+    rig.group.position.y = 0.16;
     this.anim = new Animator(rig, CLIPS);
     this.anim.play(this._showcase[this._clipIdx], { fade: 0 });
     this.preview.setContent(g);

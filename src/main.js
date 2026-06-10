@@ -95,14 +95,17 @@ class App {
     scene.background = new THREE.Color('#0a1024');
     scene.fog = new THREE.Fog('#0a1024', 14, 50);
     const cam = new THREE.PerspectiveCamera(40, holder.clientWidth / holder.clientHeight, 0.1, 100);
-    scene.add(new THREE.HemisphereLight('#6a7cb0', '#141a10', 0.9));
-    const key = new THREE.DirectionalLight('#ffe8c4', 2.2);
+    scene.add(new THREE.HemisphereLight('#8a9cd8', '#1c2415', 1.3));
+    const key = new THREE.DirectionalLight('#ffe8c4', 3.2);
     key.position.set(6, 10, 6);
     key.castShadow = true;
     scene.add(key);
-    const rim = new THREE.DirectionalLight('#6a8aff', 1.2);
+    const rim = new THREE.DirectionalLight('#7a9aff', 1.8);
     rim.position.set(-8, 6, -6);
     scene.add(rim);
+    const glow = new THREE.PointLight('#ffd890', 30, 18);
+    glow.position.set(0, 4, 3);
+    scene.add(glow);
     const ground = new THREE.Mesh(
       new THREE.CircleGeometry(30, 32),
       new THREE.MeshPhongMaterial({ color: '#1d3a1c' })
@@ -138,9 +141,16 @@ class App {
       }
       const dt = Math.min(clock.getDelta(), 0.05);
       t += dt;
+      // self-heal if we were built while hidden
+      const cv = renderer.domElement;
+      if (holder.clientWidth && cv.width !== Math.round(holder.clientWidth * renderer.getPixelRatio())) {
+        cam.aspect = holder.clientWidth / holder.clientHeight;
+        cam.updateProjectionMatrix();
+        renderer.setSize(holder.clientWidth, holder.clientHeight);
+      }
       for (const a of anims) a.update(dt);
-      cam.position.set(Math.sin(t * 0.14) * 7.5, 2.2 + Math.sin(t * 0.4) * 0.2, Math.cos(t * 0.14) * 7.5);
-      cam.lookAt(0, 1.3, 0);
+      cam.position.set(2.2 + Math.sin(t * 0.14) * 4.4, 1.9 + Math.sin(t * 0.4) * 0.15, Math.cos(t * 0.14) * 6.2);
+      cam.lookAt(0.4, 1.25, 0);
       renderer.render(scene, cam);
       requestAnimationFrame(tick);
     };
@@ -299,8 +309,8 @@ const params = new URLSearchParams(location.search);
 if (params.has('gallery')) {
   galleryMode();
 } else {
+  showScreen('title'); // layout first so the title hero scene gets a real size
   const app = new App();
-  showScreen('title');
   if (params.has('quick')) app.toGame();
   window.__app = app;
 }
