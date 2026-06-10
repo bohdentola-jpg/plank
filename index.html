@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Friday Night Gridiron '04</title>
+<link rel="stylesheet" href="styles.css" />
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============================ TITLE ============================ -->
+  <section class="screen" id="scr-title">
+    <div id="title-3d"></div>
+    <div class="title-overlay">
+      <div class="title-card">
+        <div class="title-kicker">PLANK GAMES PRESENTS</div>
+        <h1 class="title-word">FRIDAY NIGHT<br/><span>GRIDIRON</span> <em class="yr">'04</em></h1>
+        <div class="title-sub">BUILD YOUR SCHOOL · SUIT UP YOUR TEAM · WIN THE NIGHT</div>
+        <div class="title-menu">
+          <button id="title-new" class="menu-btn">★ NEW SEASON — BUILD YOUR SCHOOL</button>
+          <button id="title-quick" class="menu-btn">QUICK PLAY — WESTFIELD FALCONS</button>
+          <button id="title-continue" class="menu-btn">CONTINUE — YOUR SAVED PROGRAM</button>
+        </div>
+        <div class="title-foot">WASD MOVE · SHIFT SPRINT · SPACE SNAP/JUKE · 1-4 THROW · E SWITCH · M MUTE</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ BUILDERS ============================ -->
+  <section class="screen builder" id="scr-school">
+    <header class="ribbon"><span class="step">STEP 1 OF 3</span> YOUR SCHOOL</header>
+    <div class="builder-body">
+      <div class="panel"></div>
+      <div class="preview3d"></div>
+    </div>
+  </section>
+
+  <section class="screen builder" id="scr-uniform">
+    <header class="ribbon"><span class="step">STEP 2 OF 3</span> THE UNIFORM</header>
+    <div class="builder-body">
+      <div class="panel"></div>
+      <div class="preview3d"></div>
+    </div>
+  </section>
+
+  <section class="screen builder" id="scr-team">
+    <header class="ribbon"><span class="step">STEP 3 OF 3</span> THE ROSTER</header>
+    <div class="builder-body">
+      <div class="panel wide"></div>
+      <div class="preview3d"></div>
+    </div>
+  </section>
+
+  <!-- ============================ GAME ============================ -->
+  <section class="screen" id="scr-game">
+    <div id="game-holder"></div>
+
+    <div id="hud-bar">
+      <div id="hud-score"></div>
+      <div id="hud-situation"></div>
+      <div id="hud-clock"></div>
+    </div>
+
+    <div id="hud-banner"><div class="main"></div><div class="sub"></div></div>
+
+    <div id="icons"></div>
+
+    <div id="playcall">
+      <div class="pc-title"></div>
+      <div class="grid"></div>
+      <div class="pc-foot">CLICK A CARD OR PRESS ITS NUMBER</div>
+    </div>
+
+    <div id="hud-hint"></div>
+
+    <div id="matchup" class="big-overlay"></div>
+    <div id="final" class="big-overlay"></div>
+
+    <div id="pause" class="big-overlay">
+      <div class="pause-card">
+        <h2>TIMEOUT</h2>
+        <button id="pause-resume" class="menu-btn">BACK TO THE GAME</button>
+        <button id="pause-exit" class="menu-btn">QUIT TO TITLE</button>
+        <div class="pause-keys">WASD move · SHIFT sprint · SPACE snap / juke / dive · 1-4 throw · E switch · M mute · ESC pause</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
