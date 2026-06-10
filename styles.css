@@ -74,6 +74,10 @@ input, select { font-family: inherit; }
   border-color: var(--gold);
 }
 .title-foot { margin-top: 26px; font-size: 12px; letter-spacing: 0.18em; color: #66719a; }
+.title-build {
+  margin-top: 10px; font-size: 11px; letter-spacing: 0.4em; font-weight: 700;
+  color: var(--gold); opacity: 0.8;
+}
 
 /* ============================ BUILDERS ============================ */
 .builder { background: #0c1228; flex-direction: column; }

@@ -24,12 +24,15 @@ crowd, light towers, working scoreboard, painted end zones, your logo at midfiel
 
 ```bash
 cd plank
-python3 -m http.server 8000     # or: npx http-server -p 8000
+python3 serve.py                # or: python serve.py on Windows
 # open http://localhost:8000
 ```
 
-Any static file server works (ES modules need http://, not file://). Three.js is
-vendored — no npm install required to play.
+`serve.py` is a tiny no-cache static server so updates always show up after a
+refresh. Any static server works too (`python3 -m http.server 8000`,
+`npx http-server`) — ES modules need http://, not file://. Three.js is
+vendored — no npm install required to play. The title screen shows the BUILD
+number so you can confirm which version you're running.
 
 ## How to play
 

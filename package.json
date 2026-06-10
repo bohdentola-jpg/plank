@@ -4,7 +4,7 @@
   "description": "Friday Night Gridiron '04 — build your high school, build your team, play under the lights. A 2000s high school football 3D game.",
   "type": "module",
   "scripts": {
-    "start": "python3 -m http.server 8000",
+    "start": "python3 serve.py",
     "shot": "node tools/shot.mjs",
     "smoke": "node tools/smoke.mjs"
   },
