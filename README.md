@@ -61,6 +61,12 @@ number so you can confirm which version you're running.
 | Defense | **E** switch defender · **WASD** pursue · **SPACE** dive tackle |
 | Anytime | **ESC** pause · **M** mute |
 
+**Controller (PS5 DualSense, Xbox, anything standard):** plug it in over USB and
+press any button — the game announces it. **Left stick** moves (analog speed),
+**✕** snaps/jukes/dives, **□ ✕ ◯ △** throw to the matching receiver icons,
+**R2** sprints, **L1** switches defenders, **D-pad + ✕** picks plays,
+**OPTIONS** pauses. Menus and the office stay mouse-driven.
+
 Four 3-minute quarters. Touchdowns, extra points, field goals, punts, sacks,
 interceptions, broken tackles, gang tackles, overtime. No penalties — refs swallow
 their whistles on Friday night.

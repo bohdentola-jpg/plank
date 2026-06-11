@@ -418,3 +418,10 @@ input, select { font-family: inherit; }
 .ed-dot { width: 13px; height: 13px; border-radius: 50%; }
 .ed-status { margin-left: auto; font-size: 11px; color: var(--steel); letter-spacing: 0.12em; }
 .ed-lib { margin-top: 4px; }
+
+/* gamepad play-call selection */
+.playcard.sel {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px var(--gold), 0 8px 20px rgba(0,0,0,0.6);
+  transform: translateY(-5px);
+}

@@ -9,6 +9,7 @@ import { OFFENSE_PLAYS, DEFENSE_PLAYS, OL_ALIGN, DEF_ALIGN, drawPlayArt, drawDef
 import { logoCanvas } from './logos.js';
 import { contrastText, shade } from './textures.js';
 import { sfx } from './audio.js';
+import { PadInput, BTN, PAD_GLYPHS, THROW_BUTTONS } from './gamepad.js';
 
 const CLIPS = makeClips();
 const GOAL = 50, EZ_BACK = 60, SIDE = 160 / 6; // 26.67
@@ -191,7 +192,21 @@ class Hud {
     this.el.playcall.classList.add('show');
     this._pcCards = cards;
     this._pcCb = cb;
+    this._pcSel = 0;
+    this._pcHighlight();
   }
+  _pcHighlight() {
+    const kids = [...this.el.playGrid.children];
+    kids.forEach((k, i) => k.classList.toggle('sel', i === this._pcSel));
+    kids[this._pcSel]?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+  navPlaycall(d) {
+    if (!this._pcCards?.length) return;
+    this._pcSel = Math.max(0, Math.min(this._pcCards.length - 1, (this._pcSel ?? 0) + d));
+    sfx.chime();
+    this._pcHighlight();
+  }
+  confirmPlaycall() { this.pickPlay(this._pcSel ?? 0); }
   hidePlaycall() { this.el.playcall.classList.remove('show'); this._pcCb = null; }
   pickPlay(i) {
     if (this._pcCb && this._pcCards[i]) { sfx.chime(); this._pcCb(this._pcCards[i].id); }
@@ -345,6 +360,8 @@ export class Game {
     this.lowSpec = false;
 
     this.drill = null;
+    this.pad = new PadInput();
+    this._padSprint = false;
     this.hud = new Hud(document);
     this.keys = new Set();
     this._onKeyDown = (e) => this.keyDown(e);
@@ -1773,6 +1790,12 @@ export class Game {
     if (k.has('KeyS') || k.has('ArrowDown')) ix -= 1;
     if (k.has('KeyA') || k.has('ArrowLeft')) iz -= 1;
     if (k.has('KeyD') || k.has('ArrowRight')) iz += 1;
+    // left stick takes over when it's deflected (analog speed)
+    if (this.pad.connected && (this.pad.lx || this.pad.ly)) {
+      iz = this.pad.lx;
+      ix = -this.pad.ly;
+    }
+    const stickMag = Math.min(1, Math.hypot(ix, iz)) || 0;
     // camera-relative: the camera always looks down the offense's drive,
     // so W = away from camera (upfield), D = screen-right
     const dir = this.match.dir;
@@ -1781,7 +1804,7 @@ export class Game {
     const mag = Math.hypot(wx, wz);
     if (a.state === 'qb-user') {
       if (mag > 0) {
-        a._desired.set(wx / mag, wz / mag).multiplyScalar(a.maxSpd * (sprint ? 0.78 : 0.55));
+        a._desired.set(wx / mag, wz / mag).multiplyScalar(a.maxSpd * (sprint ? 0.78 : 0.55) * stickMag);
         a.look = null;
         const spd = a.vel.length();
         a.anim.play(spd > 4.2 ? 'run' : 'jog', { rate: 0.8 + spd / 7 });
@@ -1798,7 +1821,7 @@ export class Game {
     }
     if (a.state === 'user-carry' || a.state === 'return') {
       if (mag > 0) {
-        a._desired.set(wx / mag, wz / mag).multiplyScalar(a.maxSpd * (sprint ? 1 : 0.72));
+        a._desired.set(wx / mag, wz / mag).multiplyScalar(a.maxSpd * (sprint ? 1 : 0.72) * stickMag);
       } else {
         a._desired.multiplyScalar(0.86);
       }
@@ -1808,7 +1831,7 @@ export class Game {
     if (a.state === 'user-def' || (a.team !== this.match.poss && ['man', 'zone', 'rush', 'pursuit', 'ballhawk'].includes(a.state) && a === this.user)) {
       a.state = 'user-def';
       if (mag > 0) {
-        a._desired.set(wx / mag, wz / mag).multiplyScalar(a.maxSpd * (sprint ? 1 : 0.75));
+        a._desired.set(wx / mag, wz / mag).multiplyScalar(a.maxSpd * (sprint ? 1 : 0.75) * stickMag);
       } else {
         a._desired.multiplyScalar(0.8);
       }
@@ -1878,7 +1901,7 @@ export class Game {
       if (p.z > 1) return;
       const near = this.nearestOpponent(t);
       list.push({
-        key: i + 1,
+        key: this.pad.connected ? PAD_GLYPHS[i] : i + 1,
         x: (p.x * 0.5 + 0.5) * w,
         y: (-p.y * 0.5 + 0.5) * h,
         label: `${t.role} #${t.info.num}`,
@@ -2260,6 +2283,47 @@ export class Game {
     cam.lookAt(this._camLook);
   }
 
+  // -------------------------------------------------- gamepad
+  handlePad() {
+    const p = this.pad;
+    p.poll();
+    if (!p.connected) {
+      if (this._padSprint) { this.keys.delete('ShiftLeft'); this._padSprint = false; }
+      return;
+    }
+    if (p.justConnected) this.hud.banner('🎮 CONTROLLER CONNECTED', 'Stick: move · ✕: snap/juke · □✕◯△: throw · R2: sprint · L1: switch · OPTIONS: pause', 3200);
+    // sprint on the right trigger (hold)
+    const sprinting = p.r2 > 0.3 || p.l2 > 0.3;
+    if (sprinting && !this._padSprint) { this.keys.add('ShiftLeft'); this._padSprint = true; }
+    if (!sprinting && this._padSprint) { this.keys.delete('ShiftLeft'); this._padSprint = false; }
+
+    for (const b of p.edges) {
+      sfx.ensure();
+      if (b === BTN.OPTIONS) { this.togglePause(); continue; }
+      if (this.paused) continue;
+      if (this.phase === 'playcall') {
+        if (b === BTN.LEFT || b === BTN.UP) this.hud.navPlaycall(-1);
+        else if (b === BTN.RIGHT || b === BTN.DOWN) this.hud.navPlaycall(1);
+        else if (b === BTN.CROSS) this.hud.confirmPlaycall();
+        continue;
+      }
+      if (this.phase === 'set') {
+        if (b === BTN.CROSS && this.match.poss === 'home') this.snap();
+        continue;
+      }
+      if (this.phase === 'live') {
+        if (b === BTN.L1) { this.switchDefender(); continue; }
+        const isQb = this.user?.state === 'qb-user';
+        if (isQb) {
+          const ti = THROW_BUTTONS.indexOf(b);
+          if (ti >= 0) this.userThrow(ti);
+        } else if (b === BTN.CROSS) {
+          this.userJuke();
+        }
+      }
+    }
+  }
+
   // -------------------------------------------------- input
   keyDown(e) {
     if (e.repeat) return;
@@ -2313,6 +2377,7 @@ export class Game {
     this._raf = requestAnimationFrame(() => this.loop());
     const raw = this.clock.getDelta();
     const dt = Math.min(raw, 0.05) * this.timeScale;
+    this.handlePad(); // poll even while paused so OPTIONS can unpause
     if (this.paused) { this.renderer.render(this.scene, this.camera); return; }
     this.t += dt;
     this.phaseT += dt;
