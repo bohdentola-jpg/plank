@@ -71,6 +71,60 @@ function skinMat(tone) {
   return skinCache.get(tone);
 }
 
+// a real face: eyes, brows, eye-black, painted onto the head sphere.
+// Sphere UV: front (+z) sits at u=0.25, eyes just above the equator.
+const faceCache = new Map();
+function faceMat(tone) {
+  if (faceCache.has(tone)) return faceCache.get(tone);
+  const cv = mkCanvas(256, 128);
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = tone;
+  ctx.fillRect(0, 0, 256, 128);
+  // subtle shading at the back of the head
+  ctx.fillStyle = 'rgba(0,0,0,0.10)';
+  ctx.fillRect(150, 0, 106, 128);
+  ctx.fillRect(0, 0, 22, 128);
+  const cx = 64; // u = 0.25 → front center
+  // brows
+  ctx.strokeStyle = 'rgba(30,18,10,0.85)';
+  ctx.lineWidth = 3.4;
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(cx + s * 14, 50);
+    ctx.quadraticCurveTo(cx + s * 9, 47.5, cx + s * 4.5, 49.5);
+    ctx.stroke();
+  }
+  // eyes
+  for (const s of [-1, 1]) {
+    ctx.fillStyle = '#f2ede4';
+    ctx.beginPath();
+    ctx.ellipse(cx + s * 9, 57, 4.6, 3.1, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#241a12';
+    ctx.beginPath();
+    ctx.arc(cx + s * 8.4, 57.4, 1.9, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // eye black (it's 2004)
+  ctx.fillStyle = 'rgba(20,16,14,0.8)';
+  for (const s of [-1, 1]) ctx.fillRect(cx + s * 5.4 - 3.4, 63.5, 6.8, 3.4);
+  // nose + mouth hints
+  ctx.strokeStyle = 'rgba(60,36,22,0.55)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx, 60); ctx.lineTo(cx, 68); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx - 6, 76); ctx.quadraticCurveTo(cx, 78.5, cx + 6, 76); ctx.stroke();
+  const m = new THREE.MeshPhongMaterial({ map: tex(cv), shininess: 6 });
+  faceCache.set(tone, m);
+  return m;
+}
+
+/** A small sphere parented at a joint pivot so bent limbs never show gaps. */
+function jointBall(r, m) {
+  const b = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), m);
+  b.castShadow = true;
+  return b;
+}
+
 /** Build one posable player. info: { num, build, skin, accessories } */
 export function buildPlayer(kit, info = {}) {
   const b = BUILDS[info.build || 'avg'];
@@ -103,20 +157,33 @@ export function buildPlayer(kit, info = {}) {
   torso.position.y = 0.02;
   chest.add(torso);
 
-  // shoulder pads
-  const padR = 0.135 * b.shoulder * (b.torso * 0.5 + 0.5);
+  // shoulder pads: one connected shell across both shoulders + hanging flaps
+  const padW = 0.27 * b.shoulder;
+  const padShell = new THREE.Mesh(new THREE.CapsuleGeometry(0.105 * b.torso, padW * 2, 4, 12), kit.jersey);
+  padShell.rotation.z = Math.PI / 2; // lie across the shoulders
+  padShell.scale.set(1, 1, 0.92);
+  padShell.position.set(0, 0.20, 0);
+  padShell.castShadow = true;
+  chest.add(padShell);
+  // front/back plates tie the shell into the torso
+  for (const zs of [-1, 1]) {
+    const plate = new THREE.Mesh(new THREE.CapsuleGeometry(0.085 * b.torso, padW * 1.7, 3, 10), kit.jersey);
+    plate.rotation.z = Math.PI / 2;
+    plate.scale.set(1, 1, 0.55);
+    plate.position.set(0, 0.135, zs * 0.085 * b.torso);
+    plate.castShadow = true;
+    chest.add(plate);
+  }
+  // arm flaps draping over the shoulder caps
   for (const s of [-1, 1]) {
-    const pad = new THREE.Mesh(new THREE.SphereGeometry(padR, 12, 10), kit.jersey);
-    pad.scale.set(1.25, 0.62, 1.05);
-    pad.position.set(s * 0.21 * b.shoulder, 0.20, 0);
-    pad.castShadow = true;
-    chest.add(pad);
-    if (kit.u.style === 'panel') {
-      const cap = new THREE.Mesh(new THREE.SphereGeometry(padR * 1.02, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.4), kit.trim);
-      cap.scale.copy(pad.scale);
-      cap.position.copy(pad.position);
-      chest.add(cap);
-    }
+    const flap = new THREE.Mesh(
+      new THREE.SphereGeometry(0.105 * b.shoulder, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.6),
+      kit.u.style === 'panel' ? kit.trim : kit.jersey
+    );
+    flap.scale.set(1.05, 0.95, 1.0);
+    flap.position.set(s * (padW + 0.035), 0.185, 0);
+    flap.castShadow = true;
+    chest.add(flap);
   }
   // collar
   const collar = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.022, 8, 16), kit.trim);
@@ -166,8 +233,8 @@ export function buildPlayer(kit, info = {}) {
   head.position.y = 0.115;
   neck.add(head);
 
-  const face = new THREE.Mesh(new THREE.SphereGeometry(0.105, 12, 10), skin);
-  face.position.set(0, -0.015, 0.03);
+  const face = new THREE.Mesh(new THREE.SphereGeometry(0.107, 16, 12), faceMat(info.skin || '#c68863'));
+  face.position.set(0, -0.018, 0.032);
   head.add(face);
 
   const shellScale = new THREE.Vector3(1, 1.06, 1.16);
@@ -176,23 +243,63 @@ export function buildPlayer(kit, info = {}) {
   shell.position.y = 0.02;
   shell.castShadow = true;
   head.add(shell);
+  // ear flaps: the shell wraps down over the ears and jaw
+  for (const s of [-1, 1]) {
+    const flapH = new THREE.Mesh(new THREE.SphereGeometry(0.115, 12, 10), kit.helmet);
+    flapH.scale.set(0.55, 1.0, 1.05);
+    flapH.position.set(s * 0.105, -0.045, 0.005);
+    flapH.castShadow = true;
+    head.add(flapH);
+    // ear hole ring
+    const earRing = new THREE.Mesh(new THREE.TorusGeometry(0.022, 0.006, 6, 10), phong('#1c1d22'));
+    earRing.rotation.y = Math.PI / 2;
+    earRing.position.set(s * 0.165, -0.05, -0.005);
+    head.add(earRing);
+  }
+  // rear skirt: coverage down the back of the skull
+  const skirt = new THREE.Mesh(new THREE.SphereGeometry(0.148, 14, 10), kit.helmet);
+  skirt.scale.set(0.96, 0.95, 0.95);
+  skirt.position.set(0, -0.035, -0.03);
+  skirt.castShadow = true;
+  head.add(skirt);
 
-  // facemask: two horizontal arcs + vertical bars
-  for (const [y, arc] of [[-0.02, 1.45], [-0.075, 1.30]]) {
-    const bar = new THREE.Mesh(new THREE.TorusGeometry(0.135, 0.0115, 6, 18, arc), kit.mask);
+  // facemask: three horizontal arcs (brow, mid, jaw) + verticals + side arms
+  for (const [y, arc, rad] of [[-0.008, 1.5, 0.138], [-0.06, 1.36, 0.138], [-0.105, 1.2, 0.132]]) {
+    const bar = new THREE.Mesh(new THREE.TorusGeometry(rad, 0.0115, 6, 18, arc), kit.mask);
     bar.rotation.x = Math.PI / 2;
     bar.rotation.z = Math.PI / 2 - arc / 2;
-    bar.position.set(0, y, 0.038);
+    bar.position.set(0, y, 0.042);
     head.add(bar);
   }
-  for (const x of [-0.062, 0, 0.062]) {
-    const v = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.085, 6), kit.mask);
-    v.position.set(x, -0.048, Math.sqrt(Math.max(0, 0.135 * 0.135 - x * x)) + 0.040);
+  for (const x of [-0.066, 0, 0.066]) {
+    const v = new THREE.Mesh(new THREE.CylinderGeometry(0.0095, 0.0095, 0.115, 6), kit.mask);
+    v.position.set(x, -0.055, Math.sqrt(Math.max(0, 0.135 * 0.135 - x * x)) + 0.044);
     head.add(v);
   }
+  // side arms anchoring the cage to the ear flaps
+  for (const s of [-1, 1]) {
+    const armM = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.095, 6), kit.mask);
+    armM.rotation.z = Math.PI / 2;
+    armM.rotation.y = s * 0.5;
+    armM.position.set(s * 0.115, -0.055, 0.095);
+    head.add(armM);
+  }
+  // chinstrap: two angled straps meeting in a cup
+  const strapMat = phong('#e8e6de', { shin: 10 });
+  for (const s of [-1, 1]) {
+    const strap = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.085, 0.016), strapMat);
+    strap.position.set(s * 0.085, -0.115, 0.062);
+    strap.rotation.z = s * 0.65;
+    strap.rotation.x = -0.25;
+    head.add(strap);
+  }
+  const cup = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 6), strapMat);
+  cup.scale.set(1.15, 0.8, 0.7);
+  cup.position.set(0, -0.135, 0.085);
+  head.add(cup);
   // brow bumper
   const brow = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.022, 0.02), phong('#1c1d22'));
-  brow.position.set(0, 0.045, 0.165);
+  brow.position.set(0, 0.045, 0.168);
   head.add(brow);
 
   // helmet stripe(s) over the crown
@@ -234,8 +341,9 @@ export function buildPlayer(kit, info = {}) {
     const sh = new THREE.Group();
     sh.position.set(s * 0.265 * b.shoulder, 0.185, 0);
     chest.add(sh);
-    const sleeve = capsule(0.062 * b.limb, 0.16, kit.jersey);
-    sleeve.position.y = -0.10;
+    sh.add(jointBall(0.068 * b.limb, kit.jersey)); // shoulder stays connected
+    const sleeve = capsule(0.062 * b.limb, 0.19, kit.jersey);
+    sleeve.position.y = -0.115;
     sh.add(sleeve);
     // sleeve trim bands
     if (kit.u.style === 'classic') {
@@ -249,8 +357,9 @@ export function buildPlayer(kit, info = {}) {
     const el = new THREE.Group();
     el.position.y = -0.30;
     sh.add(el);
-    const fore = capsule(0.05 * b.limb, 0.16, skin);
-    fore.position.y = -0.10;
+    el.add(jointBall(0.054 * b.limb, skin)); // elbow filler
+    const fore = capsule(0.05 * b.limb, 0.185, skin);
+    fore.position.y = -0.105;
     el.add(fore);
     // wristband
     const wrist = new THREE.Mesh(new THREE.TorusGeometry(0.046, 0.014, 6, 12), phong('#f4f4f2'));
@@ -276,8 +385,9 @@ export function buildPlayer(kit, info = {}) {
     const th = new THREE.Group();
     th.position.set(s * 0.115, -0.04, 0);
     hips.add(th);
-    const thigh = capsule(0.094 * b.limb, 0.24, kit.pants, 1, 1.06);
-    thigh.position.y = -0.18;
+    th.add(jointBall(0.098 * b.limb, kit.pants)); // hip stays sealed
+    const thigh = capsule(0.094 * b.limb, 0.28, kit.pants, 1, 1.06);
+    thigh.position.y = -0.195;
     th.add(thigh);
     // pant side stripe
     if (kit.u.pantsStripe !== kit.u.pants) {
@@ -288,8 +398,9 @@ export function buildPlayer(kit, info = {}) {
     const knee = new THREE.Group();
     knee.position.y = -0.46;
     th.add(knee);
-    const calfPant = capsule(0.066 * b.limb, 0.07, kit.pants);
-    calfPant.position.y = -0.045;
+    knee.add(jointBall(0.072 * b.limb, kit.pants)); // knee filler
+    const calfPant = capsule(0.066 * b.limb, 0.10, kit.pants);
+    calfPant.position.y = -0.055;
     knee.add(calfPant);
     const sock = capsule(0.058 * b.limb, 0.17, kit.sock);
     sock.position.y = -0.24;

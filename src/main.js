@@ -17,6 +17,7 @@ import { Animator } from './animation.js';
 import { makeClips } from './clips.js';
 import { logoCanvas } from './logos.js';
 import { sfx } from './audio.js';
+import { PadUI } from './padui.js';
 
 const SAVE_KEY = 'fng04_save_v2';
 const OLD_SAVE_KEY = 'fng04_save_v1';
@@ -552,6 +553,8 @@ if (params.has('gallery')) {
 } else {
   showScreen('title');
   const app = new App();
+  const padUI = new PadUI(() => (app.current && app.current.padFocusHotspot ? app.current : null));
+  window.__padui = padUI;
   if (params.has('quick')) app.toExhibition();
   if (params.has('office')) {
     app.state.franchise = { ...newFranchise(), campDone: true };

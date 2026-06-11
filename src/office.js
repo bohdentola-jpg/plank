@@ -72,7 +72,7 @@ export class Office {
     container.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(54, container.clientWidth / container.clientHeight, 0.05, 900);
+    this.camera = new THREE.PerspectiveCamera(62, container.clientWidth / container.clientHeight, 0.05, 900);
 
     const school = state.school;
     this.logoCv = logoCanvas(school.logoId, {
@@ -318,7 +318,8 @@ export class Office {
     face.rotation.y = -Math.PI / 2;
     face.position.x = -0.04;
     board.add(face);
-    board.position.set(3.42, 1.7, 0.2);
+    board.position.set(2.96, 1.8, -1.55);
+    board.rotation.y = 0.45; // angled toward the desk
     g.add(this.hotspot(board, 'THE PLAYBOOK — design your own plays', () => this.cb.onPlaybook()));
 
     // ------------------------------------------------ trophy shelf → standings
@@ -351,7 +352,8 @@ export class Office {
       cup.position.set(0, 2.07, -0.5 + i * 0.5);
       shelf.add(cup);
     });
-    shelf.position.set(-3.38, 0, -0.6);
+    shelf.position.set(-2.96, 0, -1.55);
+    shelf.rotation.y = -0.45;
     g.add(this.hotspot(shelf, 'SEASON & TROPHIES', () => this.cb.onStandings()));
 
     // pennant + poster + clock on back wall
@@ -363,17 +365,17 @@ export class Office {
     pctx.font = `900 36px Impact, sans-serif`;
     pctx.fillText(school.mascot.toUpperCase().slice(0, 9), 14, 76);
     const pen = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.65), new THREE.MeshBasicMaterial({ map: tex(penCv), transparent: true }));
-    pen.position.set(-1.7, 2.3, 2.62);
-    pen.rotation.y = Math.PI;
+    pen.position.set(-3.42, 2.45, -0.6);
+    pen.rotation.y = Math.PI / 2;
     g.add(pen);
     const poster = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 1.27), new THREE.MeshPhongMaterial({ map: tex(posterCanvas(st.poster, school)), shininess: 4 }));
-    poster.position.set(1.3, 1.8, 2.62);
-    poster.rotation.y = Math.PI;
+    poster.position.set(3.42, 1.8, 0.1);
+    poster.rotation.y = -Math.PI / 2;
     g.add(poster);
 
     // file cabinet + radio (mute) + paint can (decorate)
     const cab = box(0.55, 1.15, 0.6, mat('#9aa0a8', { shin: 40 }));
-    cab.position.set(2.9, 0.575, 2.3);
+    cab.position.set(3.05, 0.575, -0.7);
     g.add(cab);
     const radio = new THREE.Group();
     const rbody = box(0.4, 0.18, 0.16, mat('#3a2c1c', { shin: 50 }));
@@ -385,7 +387,8 @@ export class Office {
       knob.position.set(x, 1.24, 0.09);
       radio.add(knob);
     }
-    radio.position.set(2.9, 0, 2.3);
+    radio.position.set(3.05, 0, -0.7);
+    radio.rotation.y = -0.7;
     g.add(this.hotspot(radio, 'THE RADIO — sound on/off', () => {
       sfx.setMuted(!sfx.muted);
       this.setHeader();
@@ -401,7 +404,8 @@ export class Office {
     brush.position.set(0.12, 0.09, 0.05);
     brush.rotation.z = -0.4;
     paint.add(brush);
-    paint.position.set(-2.9, 0, 2.1);
+    paint.position.set(3.08, 1.15, -1.05);
+    paint.scale.setScalar(0.85);
     g.add(this.hotspot(paint, 'DECORATE THE OFFICE', () => this.cb.onDecorate()));
 
     // plant (optional)
@@ -431,7 +435,8 @@ export class Office {
     const dframe = box(1.04, 2.2, 0.05, mat('#d8d4c8'));
     dframe.position.set(0, 1.08, 0.04);
     doorG.add(dframe);
-    doorG.position.set(0.6, 0, 2.66);
+    doorG.position.set(3.4, 0, 0.95);
+    doorG.rotation.y = -Math.PI / 2;
     g.add(this.hotspot(doorG, 'LEAVE THE OFFICE — back to title', () => this.cb.onExit()));
 
     // place the room over the home stands like a press box;
@@ -498,6 +503,29 @@ export class Office {
       </div>`;
   }
 
+  /** Controller focus: highlight hotspot i and park the tooltip on it. */
+  padFocusHotspot(i) {
+    const g = this.hotspots[(i % this.hotspots.length + this.hotspots.length) % this.hotspots.length];
+    if (!g) return;
+    const ref = g.userData.hotspotRef;
+    if (this.hovered && this.hovered.group !== ref.group) this.hovered.group.scale.setScalar(this.hovered.baseScale);
+    this.hovered = { ...ref, ref, baseScale: ref.group.scale.x };
+    if (this.tooltip) {
+      const v = new THREE.Vector3();
+      ref.group.getWorldPosition(v);
+      v.project(this.camera);
+      const r = this.container.getBoundingClientRect();
+      this.tooltip.textContent = ref.label;
+      this.tooltip.style.display = 'block';
+      this.tooltip.style.left = `${(v.x * 0.5 + 0.5) * r.width}px`;
+      this.tooltip.style.top = `${(-v.y * 0.5 + 0.5) * r.height - 30}px`;
+    }
+  }
+
+  padActivate() {
+    if (this.hovered) { sfx.chime(); this.hovered.action(); }
+  }
+
   checkHover() {
     if (!this._mouse) return;
     this.raycaster.setFromCamera(this._mouse, this.camera);
@@ -545,8 +573,8 @@ export class Office {
     if (this.bobHead) this.bobHead.rotation.z = Math.sin(this.t * 2.4) * 0.12;
     // coach's eye with parallax
     const px = this._mx * 0.35, py = this._my * 0.2;
-    this.camera.position.set(0 + px * 0.6, 11.5 + py * -0.3, 41.0);
-    this.camera.lookAt(px * 1.7, 9.45 - py * 1.1, 32.0);
+    this.camera.position.set(0 + px * 0.6, 11.55 + py * -0.3, 41.75);
+    this.camera.lookAt(px * 2.0, 9.4 - py * 1.1, 32.0);
     this.renderer.render(this.scene, this.camera);
   }
 

@@ -196,14 +196,23 @@ export class SchoolBuilder {
     p.appendChild(el('h2', 'panel-title', 'BUILD YOUR SCHOOL'));
 
     const idGrid = el('div', 'form-grid');
-    idGrid.appendChild(field('TOWN / SCHOOL NAME', textInput(s.name, (v) => { s.name = v || 'Westfield'; this.queueRebuild(); })));
-    idGrid.appendChild(field('MASCOT', select(MASCOTS.map((m) => m.name), s.mascot, (v) => {
-      s.mascot = v;
-      s.logoId = MASCOTS.find((m) => m.name === v)?.logo || s.logoId;
-      this.renderLogoGrid();
+    idGrid.appendChild(field('TEAM / SCHOOL NAME', textInput(s.name, (v) => { s.name = v || 'Westfield'; this.queueRebuild(); })));
+    idGrid.appendChild(field('MASCOT — type anything', textInput(s.mascot, (v) => {
+      s.mascot = v || 'Falcons';
+      const match = MASCOTS.find((m) => m.name.toLowerCase() === v.trim().toLowerCase());
+      if (match) { s.logoId = match.logo; this.renderLogoGrid(); }
       this.queueRebuild();
-    })));
+    }, 16)));
     p.appendChild(idGrid);
+    const sugg = el('div', 'preset-row');
+    for (const m of MASCOTS.slice(0, 8)) {
+      const b = el('button', 'seg', m.name.toUpperCase());
+      b.style.fontSize = '10.5px';
+      b.style.padding = '5px 8px';
+      b.onclick = () => { s.mascot = m.name; s.logoId = m.logo; sfx.chime(); this.render(); this.rebuild(); };
+      sugg.appendChild(b);
+    }
+    p.appendChild(sugg);
 
     // colors
     p.appendChild(el('h3', 'panel-sub', 'SCHOOL COLORS'));

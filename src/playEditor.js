@@ -34,6 +34,7 @@ export class PlayEditor {
     this.sel = 'WR1';
     this.dragging = null;
     this.canvas = document.createElement('canvas');
+    this.canvas.className = 'pad-target';
     this.holder.innerHTML = '';
     this.holder.appendChild(this.canvas);
     this._onResize = () => this.layout();

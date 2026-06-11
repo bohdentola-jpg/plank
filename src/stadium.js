@@ -54,38 +54,37 @@ function goalpost(x) {
   const g = new THREE.Group();
   const mat = new THREE.MeshPhongMaterial({ color: '#e8c422', shininess: 50 });
   const dir = Math.sign(x);
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 2.2, 8), mat);
-  base.position.set(0, 1.1, 0);
+  const crossY = 3.88;
+  // gooseneck: vertical base behind the end line, one clean slanted arm up
+  // to the crossbar center
+  const baseX = dir * 1.5;
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.15, 2.1, 10), mat);
+  base.position.set(baseX, 1.05, 0);
   g.add(base);
-  // gooseneck
-  const neck = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.11, 8, 12, Math.PI / 2), mat);
-  neck.rotation.y = dir > 0 ? Math.PI : 0;
-  neck.rotation.z = Math.PI / 2;
-  neck.position.set(dir * -1.2, 2.2, 0);
-  g.add(neck);
-  const crossY = 3.33;
-  const riser = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.2, 8), mat);
-  riser.position.set(0, 2.8 + 0.55, 0);
-  g.add(riser);
+  const armLen = Math.hypot(baseX, crossY - 2.1);
+  const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, armLen, 10), mat);
+  arm.position.set(baseX / 2, (2.1 + crossY) / 2, 0);
+  arm.rotation.z = Math.atan2(baseX, crossY - 2.1);
+  g.add(arm);
   const cross = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 7.78, 8), mat);
   cross.rotation.x = Math.PI / 2;
-  cross.position.set(0, crossY + 0.55, 0);
+  cross.position.set(0, crossY, 0);
   g.add(cross);
   for (const s of [-1, 1]) {
     const upr = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 6.7, 8), mat);
-    upr.position.set(0, crossY + 0.55 + 3.35, s * 3.89);
+    upr.position.set(0, crossY + 3.35, s * 3.89);
     g.add(upr);
     const flagCv = mkCanvas(32, 24);
     const fctx = flagCv.getContext('2d');
     fctx.fillStyle = '#cc4422';
     fctx.fillRect(0, 0, 32, 24);
     const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.35), new THREE.MeshBasicMaterial({ map: tex(flagCv), side: THREE.DoubleSide }));
-    flag.position.set(0, crossY + 0.55 + 6.7, s * 3.89 + (s > 0 ? 0.3 : -0.3));
+    flag.position.set(0, crossY + 6.7, s * 3.89 + (s > 0 ? 0.3 : -0.3));
     g.add(flag);
   }
   // pad
-  const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.34, 2.0, 10), new THREE.MeshPhongMaterial({ color: '#2255aa' }));
-  pad.position.y = 1.0;
+  const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.34, 1.9, 10), new THREE.MeshPhongMaterial({ color: '#2255aa' }));
+  pad.position.set(dir * 1.5, 0.95, 0);
   g.add(pad);
   g.position.x = x;
   return g;

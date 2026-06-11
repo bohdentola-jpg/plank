@@ -10,6 +10,9 @@ export const BTN = {
 };
 
 const DEADZONE = 0.18;
+let announcedOnce = false;
+export function padAnnounced() { return announcedOnce; }
+export function markPadAnnounced() { announcedOnce = true; }
 
 export class PadInput {
   constructor() {
@@ -23,6 +26,8 @@ export class PadInput {
     this._prev = [];
     this._seen = false;
   }
+
+  down(i) { return !!this._prev[i]; }
 
   poll() {
     this.edges.length = 0;

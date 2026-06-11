@@ -9,7 +9,7 @@ import { OFFENSE_PLAYS, DEFENSE_PLAYS, OL_ALIGN, DEF_ALIGN, drawPlayArt, drawDef
 import { logoCanvas } from './logos.js';
 import { contrastText, shade } from './textures.js';
 import { sfx } from './audio.js';
-import { PadInput, BTN, PAD_GLYPHS, THROW_BUTTONS } from './gamepad.js';
+import { PadInput, BTN, PAD_GLYPHS, THROW_BUTTONS, padAnnounced, markPadAnnounced } from './gamepad.js';
 
 const CLIPS = makeClips();
 const GOAL = 50, EZ_BACK = 60, SIDE = 160 / 6; // 26.67
@@ -211,7 +211,7 @@ class Hud {
   pickPlay(i) {
     if (this._pcCb && this._pcCards[i]) { sfx.chime(); this._pcCb(this._pcCards[i].id); }
   }
-  hint(text) { this.el.hint.innerHTML = text; }
+  hint() { this.el.hint.innerHTML = ''; } // controls live in the pause menu now
   icons(list) {
     // list: [{key, x, y, label, hot}]
     const holder = this.el.icons;
@@ -641,6 +641,7 @@ export class Game {
       if (gain >= m.toGo && reason !== 'incomplete') {
         this.hud.banner('FIRST DOWN', `${gain >= 0 ? '+' : ''}${gain} yards`, 1700, 'good');
         sfx.firstDown();
+        if (m.poss === 'home') { this.stadium.crowd.setExcitement(0.55); sfx.crowd(0.4); }
       } else {
         this.hud.banner(reason === 'oob' ? 'OUT OF BOUNDS' : 'TACKLE', `${gain >= 0 ? '+' : ''}${gain} yards`, 1500);
       }
@@ -840,9 +841,17 @@ export class Game {
     this.hud.hint('');
   }
 
-  /** Walk a 'toBench' athlete toward the sideline; settle him when he arrives. */
+  /** Walk a 'toBench' athlete off: straight to the sideline first, then along
+   * the apron to his spot — never diagonally through the formation. */
   benchWalk(a, dt) {
-    if (a.seek(a.benchSpot[0], a.benchSpot[1], 0.62) < 0.6) {
+    const zSide = Math.sign(a.benchSpot[1]) * 28.6;
+    let d;
+    if (Math.abs(a.pos.z) < 27.4) {
+      d = a.seek(a.pos.x, zSide, 0.85); // shortest path off the field
+    } else {
+      d = a.seek(a.benchSpot[0], a.benchSpot[1], 0.7);
+    }
+    if (d < 0.6 && Math.abs(a.pos.z) >= 27.4 && Math.hypot(a.pos.x - a.benchSpot[0], a.pos.z - a.benchSpot[1]) < 0.8) {
       a.stop();
       a.vel.set(0, 0);
       a.state = 'spectate';
@@ -895,6 +904,11 @@ export class Game {
     const def = this.players[m.poss === 'home' ? 'away' : 'home'];
     const dir = m.dir;
     sfx.hike();
+    for (const a of this.allAthletes) {
+      if (a.state === 'toBench' && Math.abs(a.pos.z) < 26.8) {
+        a.warp(a.pos.x, Math.sign(a.benchSpot[1]) * 28.6, a.benchSpot[2]);
+      }
+    }
     this.setPhase('live');
     this.liveT = 0;
     this.playDead = false;
@@ -1208,6 +1222,16 @@ export class Game {
         if (a.jukeT > 0) a.jukeT -= dt;
         break;
       }
+      case 'pursuit': {
+        // we threw a pick — run him down
+        const ret = this.holder;
+        if (!ret || ret.team === a.team) { a.stop(); break; }
+        const dd = Math.hypot(a.pos.x - ret.pos.x, a.pos.z - ret.pos.z);
+        const lead = Math.min(dd / a.maxSpd, 0.6);
+        a.seek(ret.pos.x + ret.vel.x * lead, ret.pos.z + ret.vel.y * lead, 1);
+        if (dd < 1.05) this.attemptTackle(a, ret);
+        break;
+      }
       case 'fade-out': {
         const wp = a.waypoints[0];
         if (wp && a.seek(wp[0], wp[1], 0.5) < 1) { a.stop(); a.state = 'watch'; }
@@ -1373,6 +1397,11 @@ export class Game {
     // once somebody is running with the ball, everyone rallies
     const carrierLoose = carrier && ['carry', 'user-carry', 'return'].includes(carrier.state) && carrier.team !== a.team;
     if (carrierLoose && !['down', 'engaged', 'user-def', 'diving'].includes(a.state)) a.state = 'pursuit';
+    // ball in the air near me: go get it
+    if (ballLive && ['man', 'zone'].includes(a.state)) {
+      const land = this.ballLanding();
+      if (land && Math.hypot(land.x - a.pos.x, land.z - a.pos.z) < 8) a.state = 'ballhawk';
+    }
 
     switch (a.state) {
       case 'rush': {
@@ -1387,25 +1416,44 @@ export class Game {
         const t = a.manTarget;
         if (!t) { a.state = 'zone'; a.zoneSpot = [a.pos.x, a.pos.z]; break; }
         if (ballLive && this.ballMeta.target === t) { a.state = 'ballhawk'; break; }
-        const cushion = a.cushion * (a.maxSpd >= t.maxSpd ? 0.6 : 1.3);
-        const tx = t.pos.x + t.vel.x * 0.22 + dir * cushion;
-        const tz = t.pos.z + t.vel.y * 0.22;
+        // my man stayed in to block — green dog: convert to rush
+        if (this.liveT > 1.2 && ['block', 'stay-block', 'lead-block', 'engaged'].includes(t.state)) {
+          a.state = 'rush';
+          break;
+        }
+        const cushion = a.cushion * (a.maxSpd >= t.maxSpd ? 0.55 : 1.2);
+        const tx = t.pos.x + t.vel.x * 0.3 + dir * cushion;
+        const tz = t.pos.z + t.vel.y * 0.3;
         const d = a.seek(tx, tz, 1);
-        if (d < 1.2) { a.seek(tx, tz, 0.4); }
+        if (d < 1.0) { a.seek(tx, tz, 0.5); }
         if (d < 2.0 && Math.abs(t.vel.x) + Math.abs(t.vel.y) < 2) a.anim.play('backpedal');
         break;
       }
       case 'zone': {
         if (ballLive) {
           const land = this.ballLanding();
-          if (land && Math.hypot(land.x - a.zoneSpot[0], land.z - a.zoneSpot[1]) < 8) { a.state = 'ballhawk'; break; }
+          if (land && Math.hypot(land.x - a.pos.x, land.z - a.pos.z) < 10) { a.state = 'ballhawk'; break; }
         }
-        const d = a.seek(a.zoneSpot[0], a.zoneSpot[1], 0.9);
-        if (d < 0.8) {
+        // shade toward the most dangerous receiver in my area, drift with the QB
+        const qb = this.players[m.poss].QB;
+        let sx = a.zoneSpot[0], sz = a.zoneSpot[1];
+        let nearRec = null, nd = 9;
+        for (const r of this.targetsLive) {
+          if (['down', 'engaged', 'block', 'stay-block'].includes(r.state)) continue;
+          const dd = Math.hypot(r.pos.x - a.zoneSpot[0], r.pos.z - a.zoneSpot[1]);
+          if (dd < nd) { nd = dd; nearRec = r; }
+        }
+        if (nearRec) {
+          sx = (a.zoneSpot[0] + nearRec.pos.x + nearRec.vel.x * 0.3) / 2;
+          sz = (a.zoneSpot[1] + nearRec.pos.z + nearRec.vel.y * 0.3) / 2;
+        } else if (this.holder === qb) {
+          sz = a.zoneSpot[1] + (qb.pos.z - a.zoneSpot[1]) * 0.25; // mirror the QB drift
+        }
+        const d = a.seek(sx, sz, 0.95);
+        if (d < 0.7) {
           a.stop();
-          const qb = this.players[m.poss].QB;
           a.faceToward(qb.pos.x, qb.pos.z);
-          a.anim.play('backpedal', { rate: 0.7 });
+          a.anim.play('backpedal', { rate: 0.75 });
         }
         break;
       }
@@ -1421,6 +1469,21 @@ export class Game {
         const lead = Math.min(dd / a.maxSpd, 0.6);
         a.seek(carrier.pos.x + carrier.vel.x * lead, carrier.pos.z + carrier.vel.y * lead, 1);
         if (dd < 1.05) this.attemptTackle(a, carrier);
+        break;
+      }
+      case 'return': {
+        // took it the other way — sprint for our end zone, weave off pursuit
+        const cd = -dir;
+        let tz2 = a.pos.z * 0.6;
+        const avoid2 = new THREE.Vector2();
+        for (const o of Object.values(this.players[a.team === 'home' ? 'away' : 'home'])) {
+          if (['down', 'engaged', 'spectate'].includes(o.state)) continue;
+          const dx = a.pos.x - o.pos.x, dz = a.pos.z - o.pos.z;
+          const dd = Math.hypot(dx, dz);
+          if (dd < 5 && dd > 0.01) avoid2.add(new THREE.Vector2(dx / dd, dz / dd).multiplyScalar((5 - dd) / 5));
+        }
+        tz2 = THREE.MathUtils.clamp(tz2 + avoid2.y * 7, -SIDE + 1.5, SIDE - 1.5);
+        a.seek(cd * 60, tz2, 1);
         break;
       }
       case 'diving': {
@@ -1735,8 +1798,9 @@ export class Game {
         catcher.state = 'return';
         catcher.anim.play(this.ball.position.y > 1.7 ? 'catchHigh' : 'catchLow', { force: true });
         sfx.catchPop();
-        this.hud.banner('INTERCEPTED!', `${catcher.info.name} jumps the route`, 2000, m.poss === 'home' ? 'bad' : 'good');
-        this.stadium.crowd.setExcitement(m.poss === 'home' ? 0.3 : 0.9);
+        this.hud.banner('INTERCEPTED!', `${catcher.info.name} jumps the route — he's got room!`, 2000, m.poss === 'home' ? 'bad' : 'good');
+        this.stadium.crowd.setExcitement(m.poss === 'home' ? 0.35 : 0.95);
+        sfx.crowd(m.poss === 'home' ? 0.2 : 0.8);
         if (catcher.team === 'home') { this.user = catcher; this.hud.hint('Take it back! <b>SHIFT</b> sprint'); }
         // possession flips live: pursuit flips too
         for (const a of Object.values(this.players[m.poss])) {
@@ -1767,7 +1831,8 @@ export class Game {
         this.user = catcher;
         this.hud.hint('<b>SHIFT</b> sprint · <b>SPACE</b> juke');
       }
-      this.stadium.crowd.setExcitement(catcher.team === 'home' ? 0.6 : 0.25);
+      this.stadium.crowd.setExcitement(catcher.team === 'home' ? 0.65 : 0.25);
+      sfx.crowd(catcher.team === 'home' ? 0.5 : 0.15);
       // instant TD check happens in updateLive
     } else {
       // drop / breakup
@@ -1959,17 +2024,18 @@ export class Game {
   }
 
   lineupSpecial(team) {
-    // park everyone; kicking unit handled separately
+    // everyone hustles to the bench; the kicking unit gets placed afterwards
     for (const t of ['home', 'away']) {
       let i = 0;
       for (const role in this.players[t]) {
         const a = this.players[t][role];
         const zSide = t === 'home' ? 28.0 : -28.0;
         a.engagedWith = null; a.hasBall = false; a.tuck = 0;
-        a.state = 'spectate';
         a.group.visible = !this.lowSpec;
-        a.warp(-16 + (i % 12) * 2.4, zSide + Math.floor(i / 12) * 1.0, t === 'home' ? Math.PI : 0);
-        a.anim.play(Math.random() < 0.3 ? 'cheer' : 'idle', { startAt: Math.random() });
+        a.benchSpot = [-16 + (i % 12) * 2.4, zSide + Math.floor(i / 12) * 1.0, t === 'home' ? Math.PI : 0];
+        const d = Math.hypot(a.pos.x - a.benchSpot[0], a.pos.z - a.benchSpot[1]);
+        if (a.state !== 'spectate') a.state = (d < 2 || !a.group.visible) ? 'spectate' : 'toBench';
+        if (a.state === 'spectate' && d >= 2) a.warp(a.benchSpot[0], a.benchSpot[1], a.benchSpot[2]);
         i++;
       }
     }
@@ -2133,6 +2199,12 @@ export class Game {
       a.group.visible = true;
       a.warp(x, z, face);
       a.state = state;
+      a.downTimer = 0;
+      a.slowTimer = 0;
+      a.jukeT = 0;
+      a.tuck = 0;
+      a.engagedWith = null;
+      a.anim.play('ready', { fade: 0, force: true }); // clear falls/getups completely
       return a;
     };
     if (d.type === 'routes') {
@@ -2291,15 +2363,31 @@ export class Game {
       if (this._padSprint) { this.keys.delete('ShiftLeft'); this._padSprint = false; }
       return;
     }
-    if (p.justConnected) this.hud.banner('🎮 CONTROLLER CONNECTED', 'Stick: move · ✕: snap/juke · □✕◯△: throw · R2: sprint · L1: switch · OPTIONS: pause', 3200);
+    if (p.justConnected && !padAnnounced()) {
+      markPadAnnounced();
+      this.hud.banner('🎮 CONTROLLER CONNECTED', 'Stick: move · ✕: snap/juke · □✕◯△: throw · R2: sprint · L1: switch', 2600);
+    }
     // sprint on the right trigger (hold)
     const sprinting = p.r2 > 0.3 || p.l2 > 0.3;
     if (sprinting && !this._padSprint) { this.keys.add('ShiftLeft'); this._padSprint = true; }
     if (!sprinting && this._padSprint) { this.keys.delete('ShiftLeft'); this._padSprint = false; }
 
+    // overlay navigation (pause menu / final screen)
+    const overlayButtons = this.paused
+      ? [document.getElementById('pause-resume'), document.getElementById('pause-exit')].filter(Boolean)
+      : this.phase === 'final'
+        ? [...document.querySelectorAll('#final .fin-buttons button')]
+        : null;
     for (const b of p.edges) {
       sfx.ensure();
       if (b === BTN.OPTIONS) { this.togglePause(); continue; }
+      if (overlayButtons?.length) {
+        if (b === BTN.UP || b === BTN.LEFT) this._ovSel = ((this._ovSel ?? 0) - 1 + overlayButtons.length) % overlayButtons.length;
+        if (b === BTN.DOWN || b === BTN.RIGHT) this._ovSel = ((this._ovSel ?? 0) + 1) % overlayButtons.length;
+        overlayButtons.forEach((el, i) => el.classList.toggle('pad-focus', i === (this._ovSel ?? 0)));
+        if (b === BTN.CROSS) overlayButtons[this._ovSel ?? 0]?.click();
+        continue;
+      }
       if (this.paused) continue;
       if (this.phase === 'playcall') {
         if (b === BTN.LEFT || b === BTN.UP) this.hud.navPlaycall(-1);
@@ -2452,7 +2540,11 @@ export class Game {
       case 'kick':
       case 'punt': {
         this.updateKickScene(dt);
-        for (const a of this.allAthletes) if (a !== this._kick?.kicker) a.anim.update(dt);
+        for (const a of this.allAthletes) {
+          if (a === this._kick?.kicker) continue;
+          if (a.state === 'toBench') { this.benchWalk(a, dt); continue; }
+          a.anim.update(dt);
+        }
         if (this.ballMode === 'kickfly') this.updateBall(dt);
         break;
       }
