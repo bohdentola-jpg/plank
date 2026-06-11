@@ -11,7 +11,7 @@ import {
   weeklyDecision, adDecision, applyDecision, practiceBonusFor,
   wins, losses, DRILLS,
 } from './franchise.js';
-import { OFFENSE_PLAYS } from './plays.js';
+import { OFFENSE_PLAYS, sanitizePlay } from './plays.js';
 import { makeKit, buildPlayer } from './playerModel.js';
 import { Animator } from './animation.js';
 import { makeClips } from './clips.js';
@@ -115,7 +115,8 @@ class App {
   }
 
   playbook() {
-    return [...OFFENSE_PLAYS, ...(this.state.customPlays || [])];
+    const customs = (this.state.customPlays || []).map(sanitizePlay).filter(Boolean);
+    return [...OFFENSE_PLAYS, ...customs];
   }
 
   bindTitle() {

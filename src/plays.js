@@ -265,8 +265,35 @@ export const DEF_ALIGN = {
   CB1: [5.5, -12.5], CB2: [5.5, 10.5], FS: [12, -1.5], SS: [8.5, 4.5],
 };
 
+/** Clean a (custom) play so empty assignments can never break art or the
+ * sim: empty routes become blocks, targets only list real routes, and a
+ * run play must have a usable carrier path. Returns null if unusable. */
+export function sanitizePlay(play) {
+  try {
+    const p = JSON.parse(JSON.stringify(play));
+    p.assignments = p.assignments || {};
+    for (const role of Object.keys(p.assignments)) {
+      const asg = p.assignments[role];
+      if (asg?.route && !asg.route.length) {
+        delete asg.route;
+        if (!asg.block && !asg.leadBlock) asg.block = true;
+      }
+    }
+    if (p.carrier && p.assignments[p.carrier]) delete p.assignments[p.carrier].route;
+    p.targets = (p.targets || []).filter((r) => p.assignments[r]?.route?.length);
+    if (p.type === 'pass' && !p.targets.length) return null;
+    if (p.type === 'run') {
+      if (!p.carrier || !p.paths?.[p.carrier]?.length) return null;
+      p.targets = [];
+    }
+    if (!p.align?.QB) return null;
+    return p;
+  } catch { return null; }
+}
+
 // ------------------------------------------------------------- play art
 function arrow(ctx, pts, color, dashed = false) {
+  if (!pts || pts.length < 2) return; // nothing to draw, nothing to crash
   ctx.strokeStyle = color;
   ctx.lineWidth = 3;
   ctx.lineJoin = 'round';
@@ -323,7 +350,7 @@ export function drawPlayArt(play) {
     const [ax, az] = play.align[role];
     const [cx, cy] = O(ax, az);
     const asg = play.assignments?.[role];
-    if (asg?.route) {
+    if (asg?.route?.length) {
       const pts = [[cx, cy]];
       let wx = ax, wz = az;
       for (const [dx, dzi] of asg.route) {
@@ -339,7 +366,7 @@ export function drawPlayArt(play) {
       ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ex, ey); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(ex - 6, ey); ctx.lineTo(ex + 6, ey); ctx.stroke();
     }
-    if (play.paths?.[role] && play.carrier === role) {
+    if (play.paths?.[role]?.length && play.carrier === role) {
       const pts = [[cx, cy]];
       for (const [dx, dz] of play.paths[role]) {
         const [qx, qy] = px(ax + Math.min(dx, 24), dz);

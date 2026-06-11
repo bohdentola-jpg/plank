@@ -565,7 +565,11 @@ export class Game {
     // CPU picks its side immediately
     if (userOnOffense) {
       this.defPlay = this.cpuPickDefense();
-      const cards = this.playbook.map((p) => ({ id: p.id, name: p.name, desc: p.desc, art: drawPlayArt(p) }));
+      const cards = this.playbook.map((p) => {
+        let art = null;
+        try { art = drawPlayArt(p); } catch { /* a bad custom play never bricks the menu */ }
+        return { id: p.id, name: p.name, desc: p.desc, art };
+      });
       if (m.down === 4) {
         const kickDist = Math.round(50 - m.losX * m.dir + 17);
         if (kickDist <= 48) cards.push({ id: '__fg', name: `FG (${kickDist} yd)`, desc: 'Send out the kicking unit.' });
@@ -952,7 +956,7 @@ export class Game {
         a.wpIndex = 0;
         continue;
       }
-      if (asg?.route) {
+      if (asg?.route?.length) {
         a.state = 'route';
         const sx = a.pos.x, sz = a.pos.z;
         const inz = play.rawZ ? dir : insideOf(sz);

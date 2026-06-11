@@ -1,7 +1,7 @@
 // The play designer: a chalkboard where you drag your skill players into an
 // alignment, draw routes/paths waypoint by waypoint, and save plays into your
 // game-day playbook.
-import { OL_ALIGN, drawPlayArt } from './plays.js';
+import { OL_ALIGN, drawPlayArt, sanitizePlay } from './plays.js';
 import { sfx } from './audio.js';
 
 const ROLES = ['QB', 'RB', 'FB', 'WR1', 'WR2', 'TE'];
@@ -328,10 +328,15 @@ export class PlayEditor {
         return;
       }
       play.desc = 'Drawn up in your office.';
+      const clean = sanitizePlay(play);
+      if (!clean) {
+        alert('This play needs a bit more chalk — give someone a route or a path.');
+        return;
+      }
       const book = this.state.customPlays;
       const i = book.findIndex((x) => x.id === play.id);
-      if (i >= 0) book[i] = JSON.parse(JSON.stringify(play));
-      else book.push(JSON.parse(JSON.stringify(play)));
+      if (i >= 0) book[i] = clean;
+      else book.push(clean);
       sfx.firstDown();
       this.play = blankPlay();
       this.sel = 'WR1';
