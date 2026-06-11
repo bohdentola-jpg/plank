@@ -43,9 +43,10 @@ python3 serve.py
 # open http://localhost:8000
 ```
 
-`serve.py` is a tiny no-cache static server so updates always show up after a
-refresh. Any static server works too (`python3 -m http.server 8000`,
-`npx http-server`) — ES modules need http://, not file://. Three.js is
+`serve.py` is a tiny no-cache static server: updates always show after a
+refresh, it opens the game in your browser by itself, and if the port is busy
+(a forgotten old window) it just picks the next free one and says so. Any
+static server works too — ES modules need http://, not file://. Three.js is
 vendored — no npm install required to play. The title screen shows the BUILD
 number so you can confirm which version you're running.
 

@@ -2,12 +2,12 @@
 title Friday Night Gridiron '04
 cd /d "%~dp0"
 
-rem ---- find a working Python (py launcher first, then real python)
+rem ---- find a Python that actually runs (test by executing, not by PATH lookup)
 set PY=
-where py >/dev/null 2>/dev/null && set PY=py
-if not defined PY (
-  python -V >/dev/null 2>/dev/null && set PY=python
-)
+py -V >/dev/null 2>/dev/null && set PY=py
+if not defined PY python -V >/dev/null 2>/dev/null && set PY=python
+if not defined PY python3 -V >/dev/null 2>/dev/null && set PY=python3
+
 if not defined PY (
   echo.
   echo  Python is needed to run the game server and wasn't found.
@@ -20,12 +20,9 @@ if not defined PY (
   exit /b
 )
 
-rem ---- open the browser once the server has had a moment to start
-start "" /min cmd /c "timeout /t 2 >/dev/null & start http://localhost:8000"
-
 echo.
-echo  FRIDAY NIGHT GRIDIRON '04
-echo  Keep this window open while you play. Close it (or press Ctrl+C) to stop.
+echo  Starting the game server with "%PY%"...
+echo  Your browser will open by itself in a moment.
 echo.
 %PY% serve.py
 pause
