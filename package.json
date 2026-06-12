@@ -6,7 +6,9 @@
   "scripts": {
     "start": "python3 serve.py",
     "shot": "node tools/shot.mjs",
-    "smoke": "node tools/smoke.mjs"
+    "smoke": "node tools/smoke.mjs && node tools/smoke-rimcity.mjs",
+    "smoke:varsity": "node tools/smoke.mjs",
+    "smoke:rimcity": "node tools/smoke-rimcity.mjs"
   },
   "dependencies": {
     "three": "^0.160.0"

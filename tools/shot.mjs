@@ -3,6 +3,7 @@
 //   node tools/shot.mjs "?gallery" gallery.png --wait 2500
 //   node tools/shot.mjs "?quick" game.png --wait 6000 --keys "Space@4000"
 //   node tools/shot.mjs "" title.png --eval "..." --series 3@1500
+//   node tools/shot.mjs "/rimcity/?quick" hoops.png      (leading / = full path)
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
@@ -15,7 +16,7 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
 const server = createServer(async (req, res) => {
   try {
     let p = req.url.split('?')[0];
-    if (p === '/') p = '/index.html';
+    if (p.endsWith('/')) p += 'index.html';
     const data = await readFile(join(root, p));
     res.writeHead(200, { 'content-type': MIME[extname(p)] || 'application/octet-stream' });
     res.end(data);
@@ -44,7 +45,8 @@ const page = await browser.newPage({ viewport: { width, height } });
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log(`[page ${m.type()}]`, m.text()); });
 page.on('pageerror', (e) => console.log('[pageerror]', e.message));
 
-await page.goto(`http://127.0.0.1:${port}/index.html${query}`);
+const target = query.startsWith('/') ? query : `/index.html${query}`;
+await page.goto(`http://127.0.0.1:${port}${target}`);
 
 if (keys) {
   for (const spec of keys.split(',')) {

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RIM CITY — 2-on-2 Arcade Basketball</title>
+<link rel="stylesheet" href="styles.css" />
+<script type="importmap">
+{ "imports": { "three": "../vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============================ BOOT ============================ -->
+  <div id="boot">
+    <img id="boot-logo" alt="RIM CITY" />
+    <div class="boot-press">PRESS ANY BUTTON</div>
+    <div class="boot-sub">EB SPORTS PRESENTS · THE BLACKTOP MOVED INDOORS</div>
+  </div>
+
+  <!-- ============================ TITLE ============================ -->
+  <section class="screen" id="scr-title">
+    <div id="title-3d"></div>
+    <div class="title-overlay">
+      <div class="title-card">
+        <div class="title-kicker">EB SPORTS · IT'S IN THE PAINT</div>
+        <img id="title-logo" alt="RIM CITY" />
+        <div class="title-menu">
+          <button id="t-run" class="menu-btn">🔥 THE RUN — NINE CREWS. ONE CROWN.</button>
+          <button id="t-quick" class="menu-btn">EXHIBITION — ONE GAME, ANY CREW</button>
+          <button id="t-versus" class="menu-btn">VERSUS — SETTLE IT ON THE COUCH</button>
+          <button id="t-reset" class="menu-btn small" style="display:none">ABANDON CURRENT RUN</button>
+        </div>
+        <div class="title-build">RIM CITY · BUILD 1 · PLAYS GREAT WITH A PS5 PAD</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ CREW SELECT ============================ -->
+  <section class="screen" id="scr-select">
+    <header class="ribbon"><span id="select-title">PICK YOUR CREW</span></header>
+    <div id="select-grid"></div>
+  </section>
+
+  <!-- ============================ THE RUN ============================ -->
+  <section class="screen" id="scr-ladder">
+    <header class="ribbon"><span>THE RUN — BEAT EVERY CREW IN THE CITY</span></header>
+    <div id="ladder-wrap"><div id="ladder"></div></div>
+  </section>
+
+  <!-- ============================ GAME ============================ -->
+  <section class="screen" id="scr-game">
+    <div id="game-holder"></div>
+
+    <div id="hud-bar">
+      <div class="hud-team" id="hud-away"></div>
+      <div id="hud-mid"></div>
+      <div class="hud-team" id="hud-home"></div>
+    </div>
+
+    <div id="hud-banner"><div class="main"></div><div class="sub"></div></div>
+    <div id="hud-hint"></div>
+    <div id="shot-meter"><b></b></div>
+
+    <div id="matchup" class="big-overlay"></div>
+    <div id="final" class="big-overlay"></div>
+
+    <div id="pause" class="big-overlay">
+      <div class="pause-card">
+        <h2>TIMEOUT</h2>
+        <button id="pause-resume" class="menu-btn">BACK TO THE GAME</button>
+        <button id="pause-mute" class="menu-btn">SOUND: ON</button>
+        <button id="pause-voice" class="menu-btn">ANNOUNCER: ON</button>
+        <button id="pause-exit" class="menu-btn">QUIT TO TITLE</button>
+        <div class="pause-keys">
+          KEYBOARD — WASD move · SHIFT turbo · SPACE shoot/block (hold &amp; release at the top) ·
+          E pass/steal · F alley-oop/switch · Q spin/shove · M mute · ESC pause<br/>
+          🎮 PAD — stick move · R2 turbo · ✕ shoot/block · □ pass/steal · △ alley-oop · ◯ spin/shove · L1 switch · OPTIONS pause
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
