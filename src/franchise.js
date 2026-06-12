@@ -40,6 +40,7 @@ export function genSchedule() {
       quality: Math.round(-2 + w * 1.1),      // they get tougher
       homecoming: w === 5,
       rivalryGame: w === 8,
+      homeGame: w % 2 === 1, // odd weeks under your lights, even weeks on the road
     });
   }
   return games;
@@ -80,11 +81,13 @@ export function weekLabel(fr, school) {
   if (fr.week <= 8) {
     const g = fr.schedule[fr.week - 1];
     const tag = g.homecoming ? ' · HOMECOMING' : g.rivalryGame ? ' · THE RIVALRY GAME' : '';
-    return `WEEK ${fr.week}${tag} — FRIDAY: VS ${g.name.toUpperCase()} ${g.mascot.toUpperCase()}`;
+    return `WEEK ${fr.week}${tag} — FRIDAY: ${g.homeGame ? 'VS' : 'AT'} ${g.name.toUpperCase()} ${g.mascot.toUpperCase()}`;
   }
   const round = ['DISTRICT QUARTERFINAL', 'DISTRICT FINAL', 'STATE CHAMPIONSHIP'][fr.week - 9];
   return `${round} — WIN OR GO HOME`;
 }
+
+export function isHomeWeek(fr) { return fr.week <= 8 ? fr.schedule[fr.week - 1].homeGame !== false : true; }
 
 export function currentOpponent(fr) {
   if (fr.week <= 8) return rivalFor(fr.schedule[fr.week - 1]);

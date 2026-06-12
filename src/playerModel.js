@@ -25,6 +25,42 @@ function capsule(r, len, mat, sx = 1, sz = 1) {
   return m;
 }
 
+/** A sculpted limb: smooth taper with muscle bulge, built on a lathe.
+ * Hangs from y=0 (the joint) down to y=-len. */
+function limb(r0, rMid, r1, len, mat, bulgeAt = 0.32) {
+  const pts = [];
+  const N = 10;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    let r;
+    if (t < bulgeAt) {
+      const k = t / bulgeAt;
+      r = r0 + (rMid - r0) * Math.sin(k * Math.PI / 2);
+    } else {
+      const k = (t - bulgeAt) / (1 - bulgeAt);
+      r = rMid + (r1 - rMid) * (k * k * 0.6 + k * 0.4);
+    }
+    pts.push(new THREE.Vector2(Math.max(0.012, r), -t * len));
+  }
+  const m = new THREE.Mesh(new THREE.LatheGeometry(pts, 16), mat);
+  m.castShadow = true;
+  return m;
+}
+
+/** A contoured torso: waist → chest swell → shoulder taper. */
+function torsoMesh(rWaist, rChest, h, mat, zScale = 0.78) {
+  const pts = [];
+  const profile = [
+    [0.30, rWaist], [0.05, rWaist * 1.02], [-0.25, rChest * 0.99],
+    [-0.45, rChest], [-0.62, rChest * 0.92], [-0.72, rChest * 0.72],
+  ];
+  for (const [y, r] of profile) pts.push(new THREE.Vector2(r, -y * h));
+  const m = new THREE.Mesh(new THREE.LatheGeometry(pts, 18), mat);
+  m.scale.z = zScale;
+  m.castShadow = true;
+  return m;
+}
+
 const BUILDS = {
   slim: { torso: 0.92, shoulder: 0.95, limb: 0.92, belly: 0 },
   avg:  { torso: 1.00, shoulder: 1.00, limb: 1.00, belly: 0 },
@@ -165,8 +201,9 @@ export function buildPlayer(kit, info = {}) {
   const chest = new THREE.Group();
   chest.position.y = 0.26;
   spine.add(chest);
-  const torso = capsule(0.175 * b.torso, 0.26, kit.jersey, 1.06, 0.78);
-  torso.position.y = 0.02;
+  const torso = torsoMesh(0.155 * b.torso, 0.182 * b.torso, 0.46, kit.jersey, 0.78);
+  torso.scale.x = 1.06;
+  torso.position.y = -0.07; // waist sits on the belly, shoulder taper under the pads
   chest.add(torso);
 
   // shoulder pads: one connected shell across both shoulders + hanging flaps
@@ -396,8 +433,7 @@ export function buildPlayer(kit, info = {}) {
     sh.position.set(s * 0.265 * b.shoulder, 0.185, 0);
     chest.add(sh);
     sh.add(jointBall(0.068 * b.limb, kit.jersey)); // shoulder stays connected
-    const sleeve = capsule(0.062 * b.limb, 0.19, kit.jersey);
-    sleeve.position.y = -0.115;
+    const sleeve = limb(0.066 * b.limb, 0.062 * b.limb, 0.047 * b.limb, 0.315, kit.jersey, 0.22);
     sh.add(sleeve);
     // sleeve trim bands
     if (kit.u.style === 'classic') {
@@ -411,9 +447,8 @@ export function buildPlayer(kit, info = {}) {
     const el = new THREE.Group();
     el.position.y = -0.30;
     sh.add(el);
-    el.add(jointBall(0.054 * b.limb, skin)); // elbow filler
-    const fore = capsule(0.05 * b.limb, 0.185, skin);
-    fore.position.y = -0.105;
+    el.add(jointBall(0.05 * b.limb, skin)); // elbow filler
+    const fore = limb(0.046 * b.limb, 0.054 * b.limb, 0.032 * b.limb, 0.27, skin, 0.3);
     el.add(fore);
     // wristband
     const wrist = new THREE.Mesh(new THREE.TorusGeometry(0.046, 0.014, 6, 12), phong('#f4f4f2'));
@@ -440,8 +475,8 @@ export function buildPlayer(kit, info = {}) {
     th.position.set(s * 0.115, -0.04, 0);
     hips.add(th);
     th.add(jointBall(0.098 * b.limb, kit.pants)); // hip stays sealed
-    const thigh = capsule(0.094 * b.limb, 0.28, kit.pants, 1, 1.06);
-    thigh.position.y = -0.195;
+    const thigh = limb(0.098 * b.limb, 0.096 * b.limb, 0.066 * b.limb, 0.49, kit.pants, 0.3);
+    thigh.scale.z = 1.06;
     th.add(thigh);
     // pant side stripe
     if (kit.u.pantsStripe !== kit.u.pants) {
@@ -452,12 +487,11 @@ export function buildPlayer(kit, info = {}) {
     const knee = new THREE.Group();
     knee.position.y = -0.46;
     th.add(knee);
-    knee.add(jointBall(0.072 * b.limb, kit.pants)); // knee filler
-    const calfPant = capsule(0.066 * b.limb, 0.10, kit.pants);
-    calfPant.position.y = -0.055;
+    knee.add(jointBall(0.07 * b.limb, kit.pants)); // knee filler
+    const calfPant = limb(0.066 * b.limb, 0.063 * b.limb, 0.058 * b.limb, 0.13, kit.pants, 0.5);
     knee.add(calfPant);
-    const sock = capsule(0.058 * b.limb, 0.17, kit.sock);
-    sock.position.y = -0.24;
+    const sock = limb(0.06 * b.limb, 0.069 * b.limb, 0.035 * b.limb, 0.34, kit.sock, 0.28);
+    sock.position.y = -0.1;
     knee.add(sock);
     const ankle = new THREE.Group();
     ankle.position.y = -0.42;

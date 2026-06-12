@@ -3,6 +3,9 @@
 // Skippable with any key / click / ✕.
 import * as THREE from 'three';
 import { buildSchool } from './school.js';
+import { makeKit, buildPlayer } from './playerModel.js';
+import { Animator } from './animation.js';
+import { makeClips } from './clips.js';
 import { buildStadium } from './stadium.js';
 import { mkCanvas, tex } from './textures.js';
 import { sfx } from './audio.js';
@@ -210,6 +213,45 @@ export class Intro {
     this.section = 1;
   }
 
+  buildHeroes() {
+    const s = this.freshScene('#05070f');
+    s.fog = new THREE.Fog('#05070f', 6, 30);
+    s.add(new THREE.HemisphereLight('#3a4a78', '#0a0c08', 0.55));
+    const key = new THREE.DirectionalLight('#ffe8c4', 2.6);
+    key.position.set(4, 7, 5);
+    key.castShadow = true;
+    s.add(key);
+    const rim = new THREE.DirectionalLight('#6a8aff', 3.2);
+    rim.position.set(-6, 4, -7);
+    s.add(rim);
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(40, 24), new THREE.MeshPhongMaterial({ color: '#15240f' }));
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    s.add(ground);
+    const kit = makeKit({
+      jersey: '#14306e', pants: '#f2f1ec', helmet: '#14306e', sleeve: '#f2b705',
+      numberFill: '#f4f4f2', numberStroke: '#f2b705', pantsStripe: '#14306e',
+      helmetStripe: '#f2b705', facemask: '#2d2f33', socks: '#14306e', style: 'classic',
+    }, null);
+    const CLIPS = makeClips();
+    this.heroAnims = [];
+    const place = (build, num, clip, x, z, face, rate = 1) => {
+      const rig = buildPlayer(kit, { num, build, skin: ['#8d5a3b', '#c68863', '#5d3a26'][num % 3], look: { eyeBlack: true } });
+      rig.group.position.set(x, 0, z);
+      rig.group.rotation.y = face;
+      s.add(rig.group);
+      const a = new Animator(rig, CLIPS);
+      a.play(clip, { fade: 0 });
+      a.rate = rate;
+      this.heroAnims.push({ a, clip });
+    };
+    // three hero vignettes spaced apart: lineman, QB, sprinter at camera
+    place('huge', 72, 'stance3', 0, 0, 0.35, 0.7);
+    place('avg', 7, 'throwHold', 60, 0, -0.25, 0.65);
+    place('slim', 23, 'sprint', 120, 0, 0.05, 1);
+    this.section = 2;
+  }
+
   buildFinale() {
     const s = this.freshScene('#0a0f22');
     const school = {
@@ -219,7 +261,7 @@ export class Intro {
     };
     const logo = mkCanvas(64, 64); // tiny blank; midfield logo not the star here
     this.stadiumRef = buildStadium(s, school, { name: 'Visitors', colors: { primary: '#8f1d2c', secondary: '#f4f4f2' } }, logo, {});
-    this.section = 2;
+    this.section = 3;
   }
 
   // ------------------------------------------------ timeline
@@ -231,42 +273,59 @@ export class Intro {
     const t = this.t;
     const cam = this.camera;
 
-    if (t < 6.2) {
-      // high orbit over America, descending toward the gold lights
-      const k = t / 6.2;
-      const r = 150 - k * 96;
-      const ang = -0.6 + k * 1.1;
-      cam.position.set(Math.sin(ang) * r, 120 - k * 86, Math.cos(ang) * r * 0.85 + 18);
-      cam.lookAt(-4 + k * 6, 0, 4);
+    if (t < 4.6) {
+      // start tight on one burning gold light, rip upward to reveal them all
+      const k = Math.min(1, t / 4.6);
+      const e = k * k * (3 - 2 * k);
+      const r = 7 + e * 120;
+      const ang = 0.2 + e * 0.85;
+      cam.position.set(-5 + Math.sin(ang) * r * 0.5, 3 + e * 105, 14 + Math.cos(ang) * r * 0.45);
+      cam.lookAt(-5, 1.5, 14);
       if (t < 0.2) this.setCaption('EVERY FALL', 'SIX THOUSAND TOWNS TURN ON THE LIGHTS');
-      if (t > 4.4 && t < 4.5) this.setCaption('', '');
-    } else if (t < 16.4) {
+      if (t > 3.6 && t < 3.7) this.setCaption('', '');
+    } else if (t < 12.7) {
       if (this.section === 0) { this.buildSchools(); this.flashCut(); }
-      const local = t - 6.2;
-      const vi = Math.min(2, Math.floor(local / 3.4));
-      const vt = (local - vi * 3.4) / 3.4;
+      const local = t - 4.6;
+      const vi = Math.min(2, Math.floor(local / 2.7));
+      const vt = (local - vi * 2.7) / 2.7;
       const v = this.vignettes[vi];
       if (this._lastVi !== vi) {
         this._lastVi = vi;
         this.flashCut();
         this.setCaption(v.kicker, v.line);
       }
-      // lateral crane sweep past the school
-      cam.position.set(v.cx - 38 + vt * 62, 4 + vt * 9, 46 - vt * 12);
-      cam.lookAt(v.cx + 4, 5, -2);
-    } else if (t < 23) {
-      if (this.section === 1) {
+      // fast low whip past the front doors, slight roll for energy
+      cam.position.set(v.cx - 30 + vt * 58, 2.6 + vt * 4, 34 - vt * 9);
+      cam.lookAt(v.cx + 3, 5.5, -2);
+      cam.rotation.z = (vt - 0.5) * 0.05;
+    } else if (t < 17.6) {
+      if (this.section === 1) { this.buildHeroes(); this.flashCut(); this.setCaption('', ''); }
+      cam.rotation.z = 0;
+      for (const { a } of this.heroAnims || []) a.update(dt);
+      const local = t - 12.7;
+      const hi = Math.min(2, Math.floor(local / 1.63));
+      const ht = (local - hi * 1.63) / 1.63;
+      if (this._lastHero !== hi) {
+        this._lastHero = hi;
+        this.flashCut();
+        this.setCaption(['THE TRENCHES', 'THE ARM', 'THE BURNER'][hi], '');
+      }
+      const cx = hi * 60;
+      // slow push-in on each hero, low and tight
+      cam.position.set(cx + 2.6 - ht * 0.9, 1.5 + ht * 0.25, 3.4 - ht * 0.8);
+      cam.lookAt(cx, 1.35, 0);
+    } else if (t < 24) {
+      if (this.section === 2) {
         this.buildFinale();
         this.flashCut();
         this.setCaption('FRIDAY NIGHT', 'THIS IS WHERE LEGENDS START');
       }
-      const local = (t - 16.4) / 6.6;
-      // dolly from the end zone tunnel toward midfield, rising
+      const local = (t - 17.6) / 6.4;
       cam.position.set(-58 + local * 40, 1.6 + local * 7.5, 10 - local * 6);
       cam.lookAt(20, 2.5, 0);
       this.stadiumRef?.crowd.setExcitement(0.8);
       this.stadiumRef?.crowd.update(this.t, dt);
-      if (t > 19.4 && this.logoEl && !this.logoEl.classList.contains('show')) {
+      if (t > 20.4 && this.logoEl && !this.logoEl.classList.contains('show')) {
         this.setCaption('', '');
         this.logoEl.classList.add('show');
       }

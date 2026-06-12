@@ -33,7 +33,7 @@ export class PadUI {
   activeScope() {
     const modal = document.querySelector('#office-modal.show .om-card');
     if (modal) return modal;
-    for (const id of ['title', 'school', 'uniform', 'team', 'office', 'editor']) {
+    for (const id of ['title', 'school', 'uniform', 'team', 'create', 'hero', 'office', 'editor']) {
       const el = document.getElementById(`scr-${id}`);
       if (el?.classList.contains('active')) return el;
     }

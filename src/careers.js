@@ -40,10 +40,12 @@ export function heroOpponent(h) {
   return rivalFor(playoffOpponent(h.week - 9));
 }
 
+export function heroIsHome(h) { return h.week <= 8 ? h.schedule[h.week - 1].homeGame !== false : true; }
+
 export function heroWeekLabel(h, school) {
   if (h.week <= 8) {
     const g = h.schedule[h.week - 1];
-    return `WEEK ${h.week}${g.homecoming ? ' · HOMECOMING' : ''} — VS ${g.name.toUpperCase()} ${g.mascot.toUpperCase()}`;
+    return `WEEK ${h.week}${g.homecoming ? ' · HOMECOMING' : ''} — ${g.homeGame ? 'VS' : 'AT'} ${g.name.toUpperCase()} ${g.mascot.toUpperCase()}`;
   }
   return ['DISTRICT QUARTERFINAL', 'DISTRICT FINAL', 'THE STATE CHAMPIONSHIP'][h.week - 9] || 'POSTSEASON';
 }

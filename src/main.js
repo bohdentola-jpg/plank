@@ -7,7 +7,7 @@ import { Game } from './game.js';
 import { Office } from './office.js';
 import { PlayEditor } from './playEditor.js';
 import {
-  newFranchise, rollNewSeason, recordResult, currentOpponent, weekLabel,
+  newFranchise, rollNewSeason, recordResult, currentOpponent, weekLabel, isHomeWeek,
   weeklyDecision, adDecision, applyDecision, practiceBonusFor,
   wins, losses, DRILLS,
 } from './franchise.js';
@@ -21,7 +21,7 @@ import { PadUI } from './padui.js';
 import { Intro, varsityLogoCanvas } from './intro.js';
 import { FaceEditor } from './faceEditor.js';
 import {
-  newHero, heroOpponent, heroWeekLabel, applyWeekPlan, weekEvent, TRACKS,
+  newHero, heroOpponent, heroWeekLabel, heroIsHome, applyWeekPlan, weekEvent, TRACKS,
   UPGRADES, buyUpgrade, heroGameResult, offerStars,
 } from './careers.js';
 
@@ -313,9 +313,11 @@ class App {
     saveState(this.state);
     const opponent = heroOpponent(h);
     showScreen('game');
+    const lastLabel = heroWeekLabel(h, this.state.school);
     const game = new Game(document.getElementById('game-holder'), { ...this.state, rival: opponent }, {
-      weekLabel: heroWeekLabel(h, this.state.school),
+      weekLabel: lastLabel,
       hero: h,
+      homeGame: heroIsHome(h),
       playbook: this.playbook(),
       modifiers: { flat: h.morale, attrs: {} },
       onGameEnd: ({ won, home, away, stats }) => {
@@ -323,8 +325,16 @@ class App {
         const events = heroGameResult(h, { won, home, away, stats });
         saveState(this.state);
         this.toHeroHub();
+        const lastName = h.name.split(' ').slice(-1)[0].toUpperCase();
+        const headline = won
+          ? (stats.passTD >= 3 ? `${lastName} THROWS ${stats.passTD} TDs AS ${this.state.school.mascot.toUpperCase()} ROLL`
+            : stats.passYds >= 150 ? `${lastName} CARVES UP ${opponent.mascot.toUpperCase()} FOR ${stats.passYds} YARDS`
+            : `${this.state.school.mascot.toUpperCase()} GRIND ONE OUT, ${home}–${away}`)
+          : (stats.ints >= 2 ? `TURNOVERS DOOM ${this.state.school.mascot.toUpperCase()} IN ${home}–${away} LOSS`
+            : `HEARTBREAK: ${opponent.mascot.toUpperCase()} EDGE ${this.state.school.mascot.toUpperCase()}`);
         modal(`
-          <div class="om-title">${won ? 'W' : 'L'} ${home}–${away}</div>
+          <div class="om-title">🗞 ${headline}</div>
+          <div class="om-note">${this.state.school.name.toUpperCase()} GAZETTE — SATURDAY EDITION</div>
           <div class="om-text">${stats.passYds} pass yds · ${stats.passTD} TD · ${stats.ints} INT · ${stats.runYds} rush yds</div>
           ${notes.concat(events).map((e) => `<div class="om-note">${e}</div>`).join('')}`,
           [{ label: h.seasonOver ? 'SO IT GOES' : 'NEXT WEEK ▸', gold: true, onPick: () => { if (h.seasonOver) this.signingDay(); } }],
@@ -698,6 +708,7 @@ class App {
     const game = new Game(document.getElementById('game-holder'), { ...this.state, rival: opponent }, {
       weekLabel: weekLabel(fr, this.state.school),
       modifiers,
+      homeGame: isHomeWeek(fr),
       playbook: this.playbook(),
       onGameEnd: ({ won, home, away }) => {
         this.swap(null);

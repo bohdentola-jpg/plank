@@ -152,12 +152,12 @@ class Hud {
     };
     this._bannerT = null;
   }
-  setBar({ homeAbbr, awayAbbr, home, away, qtr, clock, down, toGo, ballOn, poss, homeColor, awayColor }) {
+  setBar({ homeAbbr, awayAbbr, home, away, qtr, clock, down, toGo, ballOn, poss, homeColor, awayColor, grade }) {
     this.el.score.innerHTML =
       `<span class="chip" style="background:${homeColor}">${homeAbbr}</span> <b>${home}</b>` +
       `&nbsp;·&nbsp;<span class="chip" style="background:${awayColor}">${awayAbbr}</span> <b>${away}</b>`;
     const downStr = down ? `${['1ST', '2ND', '3RD', '4TH'][down - 1]} & ${toGo}` : '';
-    this.el.situation.textContent = down ? `${downStr} · BALL ON ${ballOn} · ${poss} BALL` : poss;
+    this.el.situation.textContent = down ? `${downStr} · BALL ON ${ballOn} · ${poss} BALL${grade ? ' · GRADE ' + grade : ''}` : poss;
     this.el.clock.textContent = `Q${qtr} ${clock}`;
   }
   banner(main, sub = '', ms = 2200, cls = '') {
@@ -233,7 +233,7 @@ export class Game {
   constructor(container, appState, {
     onExit = () => {}, onRematch = () => {}, onGameEnd = null, onDrillEnd = null,
     mode = 'match', drill = null, daytime = false, playbook = null,
-    weekLabel = null, modifiers = null, hero = null,
+    weekLabel = null, modifiers = null, hero = null, homeGame = true,
   } = {}) {
     this.appState = appState;
     this.onExit = onExit;
@@ -247,6 +247,7 @@ export class Game {
     this.weekLabel = weekLabel;
     this.modifiers = modifiers;
     this.hero = hero;
+    this.homeGame = homeGame;
     this.heroStats = { passYds: 0, passTD: 0, ints: 0, runYds: 0 };
     this.container = container;
 
@@ -261,7 +262,7 @@ export class Game {
     this.renderer = renderer;
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(this.mode === 'drill' ? 50 : 42, container.clientWidth / container.clientHeight, 0.1, 900);
+    this.camera = new THREE.PerspectiveCamera(this.mode === 'drill' ? 50 : this.hero ? 47 : 42, container.clientWidth / container.clientHeight, 0.1, 900);
     this.camera.position.set(-40, 14, 30);
     this.camera.lookAt(0, 0, 0);
     this._camLook = v3(0, 0, 0);
@@ -273,18 +274,28 @@ export class Game {
     this.homeLogo = logoCanvas(school.logoId, { fg: school.colors.secondary, bg: school.colors.primary, line: '#101014', letter });
     this.awayLogo = logoCanvas(rival.logoId, { fg: rival.colors.secondary, bg: rival.colors.primary, line: '#101014', letter: rival.name[0] });
 
-    this.stadium = buildStadium(this.scene, school, rival, this.homeLogo, { daytime: this.daytime });
+    const hostSchool = this.homeGame ? school : {
+      name: rival.name, mascot: rival.mascot, colors: rival.colors,
+      building: school.building, logoId: rival.logoId,
+    };
+    const hostLogo = this.homeGame ? this.homeLogo : this.awayLogo;
+    this.stadium = buildStadium(this.scene, hostSchool, this.homeGame ? rival : school, hostLogo, { daytime: this.daytime });
 
     // kits: home in school uniform, visitors in road whites
-    this.kits = {
-      home: makeKit(appState.uniform, this.homeLogo),
-      away: makeKit({
-        jersey: '#f2f1ec', pants: rival.colors.primary, helmet: rival.colors.primary,
-        sleeve: rival.colors.primary, numberFill: rival.colors.primary, numberStroke: rival.colors.secondary,
-        pantsStripe: rival.colors.secondary, helmetStripe: rival.colors.secondary,
-        facemask: '#3a3d44', socks: '#f2f1ec', style: 'classic',
-      }, this.awayLogo),
-    };
+    const roadKitFor = (colors, logo) => makeKit({
+      jersey: '#f2f1ec', pants: colors.primary, helmet: colors.primary,
+      sleeve: colors.primary, numberFill: colors.primary, numberStroke: colors.secondary,
+      pantsStripe: colors.secondary, helmetStripe: colors.secondary,
+      facemask: '#3a3d44', socks: '#f2f1ec', style: 'classic',
+    }, logo);
+    this.kits = this.homeGame
+      ? { home: makeKit(appState.uniform, this.homeLogo), away: roadKitFor(rival.colors, this.awayLogo) }
+      : { home: roadKitFor(school.colors, this.homeLogo), away: makeKit({
+          jersey: rival.colors.primary, pants: '#f2f1ec', helmet: rival.colors.primary,
+          sleeve: rival.colors.secondary, numberFill: '#f4f4f2', numberStroke: rival.colors.secondary,
+          pantsStripe: rival.colors.primary, helmetStripe: rival.colors.secondary,
+          facemask: '#2d2f33', socks: rival.colors.primary, style: 'classic',
+        }, this.awayLogo) };
 
     // build athletes for every play role on both teams
     let homeRoster = appState.roster;
@@ -435,16 +446,34 @@ export class Game {
       ballOn: Math.round(50 - Math.abs(m.losX)),
       poss: m.poss === 'home' ? this.abbr(this.school.name) : this.abbr(this.rival.name),
       homeColor: this.school.colors.primary, awayColor: this.rival.colors.primary,
+      grade: this.hero ? this.heroGrade() : null,
     });
   }
 
   goalToGo() { return (50 - this.match.losX * this.match.dir) <= this.match.toGo; }
 
+  heroGrade() {
+    const s = this.heroStats;
+    const score = s.passYds / 18 + s.passTD * 5 + s.runYds / 12 - s.ints * 6 + (this.match.home - this.match.away) / 4;
+    const ladder = [[16, 'A+'], [12, 'A'], [8, 'B+'], [5, 'B'], [2, 'C+'], [0, 'C'], [-3, 'D']];
+    for (const [min, gr] of ladder) if (score >= min) return gr;
+    return 'F';
+  }
+
+  crowdPop(amount, forTeam = 'home') {
+    // the bleachers belong to the host; road crowds give you nothing
+    const hostFavors = this.homeGame ? 'home' : 'away';
+    const e = forTeam === hostFavors ? amount : amount * 0.22;
+    this.stadium.crowd.setExcitement(e);
+    sfx.crowd(e * 0.8);
+  }
+
   drawScoreboard() {
     const m = this.match;
+    const host = this.homeGame ? this.school : this.rival;
     this.stadium.scoreboard.draw({
-      stadium: `${this.school.mascot} Stadium`, mascot: this.school.mascot,
-      headerColor: this.school.colors.primary, headerText: contrastText(this.school.colors.primary),
+      stadium: `${host.mascot} Stadium`, mascot: host.mascot,
+      headerColor: host.colors.primary, headerText: contrastText(host.colors.primary),
       home: m.home, away: m.away, clock: this.fmtClock(m.clock),
       down: String(m.down), toGo: this.goalToGo() ? 'G' : String(m.toGo),
       ballOn: String(Math.round(50 - Math.abs(m.losX))), qtr: String(Math.min(m.qtr, 4)),
@@ -628,17 +657,37 @@ export class Game {
     // CPU picks its side immediately
     if (userOnOffense) {
       this.defPlay = this.cpuPickDefense();
-      const cards = this.playbook.map((p) => {
+      let book = this.playbook;
+      let pcTitle = null;
+      if (this.hero) {
+        // coach's call: three situational plays, your customs included
+        const dist = m.toGo;
+        const pool = dist <= 3 ? ['dive', 'slam', 'sneak', 'slants', 'toss']
+          : dist <= 7 ? ['slants', 'curls', 'outs', 'dive', 'draw', 'smash']
+          : ['curls', 'verts', 'pa_post', 'mesh', 'smash', 'sluggo'];
+        const picks = [];
+        const want = pool.slice().sort(() => Math.random() - 0.5);
+        for (const id of want) {
+          const p = this.playbook.find((x) => x.id === id);
+          if (p && picks.length < 2) picks.push(p);
+        }
+        const customs = this.playbook.filter((p) => p.custom);
+        picks.push(customs.length ? customs[(Math.random() * customs.length) | 0] : this.playbook.find((p) => !picks.includes(p)));
+        book = picks.filter(Boolean);
+        pcTitle = `COACH SENDS IT IN — ${['1ST', '2ND', '3RD', '4TH'][m.down - 1]} & ${this.goalToGo() ? 'GOAL' : m.toGo}`;
+      }
+      const cards = book.map((p) => {
         let art = null;
         try { art = drawPlayArt(p); } catch { /* a bad custom play never bricks the menu */ }
         return { id: p.id, name: p.name, desc: p.desc, art };
       });
+      this._pcTitleOverride = pcTitle;
       if (m.down === 4) {
         const kickDist = Math.round(50 - m.losX * m.dir + 17);
         if (kickDist <= 48) cards.push({ id: '__fg', name: `FG (${kickDist} yd)`, desc: 'Send out the kicking unit.' });
         cards.push({ id: '__punt', name: 'Punt', desc: 'Flip the field. Live to fight again.' });
       }
-      this.hud.playcall(`${['1ST', '2ND', '3RD', '4TH'][m.down - 1]} & ${this.goalToGo() ? 'GOAL' : m.toGo} — call it`, cards, (id) => this.choosePlay(id));
+      this.hud.playcall(this._pcTitleOverride || `${['1ST', '2ND', '3RD', '4TH'][m.down - 1]} & ${this.goalToGo() ? 'GOAL' : m.toGo} — call it`, cards, (id) => this.choosePlay(id));
     } else {
       this.offPlay = this.cpuPickOffense();
       const cards = DEFENSE_PLAYS.map((p) => ({ id: p.id, name: p.name, desc: p.desc, art: drawDefArt(p) }));
@@ -2417,14 +2466,16 @@ export class Game {
       if (this.ballMode === 'flight') focus = this.ball.position;
       else if (this.holder) focus = this.holder.pos;
       else focus = this.ball.position;
-      const back = this.phase === 'dead' ? 13 : 16.5;
-      target = v3(focus.x - faceDir * back, this.phase === 'dead' ? 6.2 : 7.4, focus.z * 0.55);
-      look = v3(focus.x + faceDir * 13, 1.4, focus.z * 0.82);
+      // hero mode rides low behind your player; coach mode stays broadcast
+      const back = this.hero ? (this.phase === 'dead' ? 8 : 9.5) : (this.phase === 'dead' ? 13 : 16.5);
+      const height = this.hero ? 3.4 : (this.phase === 'dead' ? 6.2 : 7.4);
+      target = v3(focus.x - faceDir * back, height, focus.z * (this.hero ? 0.86 : 0.55));
+      look = v3(focus.x + faceDir * (this.hero ? 9 : 13), this.hero ? 1.7 : 1.4, focus.z * (this.hero ? 0.95 : 0.82));
     } else {
       // playcall / lineup / set: settled view from behind the user's unit
       const x = m.losX;
-      target = v3(x - faceDir * 14.5, 6.6, 4);
-      look = v3(x + faceDir * 12, 1.0, 0);
+      target = this.hero ? v3(x - faceDir * 8, 3.0, 2.2) : v3(x - faceDir * 14.5, 6.6, 4);
+      look = this.hero ? v3(x + faceDir * 9, 1.8, 0) : v3(x + faceDir * 12, 1.0, 0);
     }
     const lam = this.phase === 'live' ? 5.2 : 2.6;
     cam.position.x = damp(cam.position.x, target.x, lam, dt);
