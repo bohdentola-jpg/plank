@@ -6,7 +6,9 @@
   "scripts": {
     "start": "python3 serve.py",
     "shot": "node tools/shot.mjs",
-    "smoke": "node tools/smoke.mjs"
+    "smoke": "node tools/smoke.mjs",
+    "shot:loam": "node tools/shot-loam.mjs",
+    "smoke:loam": "node tools/smoke-loam.mjs"
   },
   "dependencies": {
     "three": "^0.160.0"

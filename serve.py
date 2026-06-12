@@ -46,6 +46,7 @@ def main():
     print()
     print('  VARSITY 27')
     print(f'  Game is live at  {url}')
+    print(f'  LOAM (the block game) is at  {url}/loam/')
     if port != START_PORT:
         print(f'  (port {START_PORT} was busy — an old window may still be running)')
     print('  Keep this window open while you play. Ctrl+C or close it to stop.')
