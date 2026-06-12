@@ -551,7 +551,8 @@ export class Game {
     const rim = this.rimFor(b.team);
     const dist = Math.hypot(rim.x - b.pos.x, rim.z - b.pos.y);
     const movingIn = b.vel.length() > 2.2 && (b.vel.x * (rim.x - b.pos.x) + b.vel.y * (rim.z - b.pos.y)) > 0;
-    if (dist < 3.6 && (movingIn || dist < 1.9)) {
+    const dunkRange = b._sprint || b.onFire ? 4.4 : 3.6;   // turbo launches from deep
+    if (dist < dunkRange && (movingIn || dist < 1.9)) {
       const wantDunk = b._sprint || b.onFire || b.info.dunk > 82;
       if (wantDunk && b.info.dunk > 45) return this.startDunk(b);
       return this.startLayup(b);
@@ -1091,8 +1092,13 @@ export class Game {
     // arrival
     if (s.make) {
       if (s.rattle && !s.rattled) {
+        // kiss the iron, hop, drop in
         s.rattled = true;
-        s.t = s.T - 0.16;   // one lap around the iron
+        s.p0 = b.pos.clone();
+        s.p1 = new THREE.Vector3(s.hoop.center.x, s.hoop.center.y - 0.08, s.hoop.center.z);
+        s.T = 0.26;
+        s.t = 0;
+        s.apexY = COURT.RIM_Y + 0.34;
         sfx.rimClank();
         this.shotClock = Math.max(this.shotClock, 8);
         return;
