@@ -1,3 +1,16 @@
+# EB GAMES SHELF
+
+Two games, one repo, zero asset files — everything generated in code.
+
+- **VARSITY 27** 🏈 — high school football under the lights *(below)* — `http://localhost:8000/`
+- **[LOAM](loam/README.md)** ⛏ — voxel survival & building with a generative score — `http://localhost:8000/loam/`
+
+Both run from the same `serve.py` (or `play.bat` on Windows).
+
+[![LOAM](docs/loam-title.png)](loam/README.md)
+
+---
+
 # VARSITY 27 🏈
 
 *Sunday has Madden. Saturday has NCAA. Friday is yours.*

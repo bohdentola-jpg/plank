@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LOAM — dig deep, build tall</title>
+<link rel="stylesheet" href="styles.css" />
+<script type="importmap">
+{ "imports": { "three": "../vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="game-holder"></div>
+
+<div id="app">
+
+  <!-- ============================ BOOT ============================ -->
+  <div id="boot">
+    <img id="boot-logo" alt="LOAM" />
+    <div class="boot-press">CLICK TO BEGIN</div>
+    <div class="boot-sub">EB WORLDS · EVERY WORLD HAS A SEED</div>
+  </div>
+
+  <!-- ============================ TITLE ============================ -->
+  <section class="screen" id="scr-title">
+    <div class="title-overlay">
+      <div class="title-card">
+        <div class="title-kicker">EB WORLDS · DIG DEEP. BUILD TALL.</div>
+        <img id="title-logo" alt="LOAM" />
+        <div class="title-sub">EVERY WORLD HAS A SEED</div>
+        <div class="title-menu">
+          <button id="title-new" class="menu-btn gold">⛏ NEW WORLD</button>
+          <div id="world-list"></div>
+          <button id="title-how" class="menu-btn">HOW TO PLAY</button>
+        </div>
+        <div class="title-build" id="build-tag">LOAM · BUILD 1</div>
+      </div>
+    </div>
+
+    <div id="modal-new" class="big-overlay">
+      <div class="card">
+        <h2>NEW WORLD</h2>
+        <label>WORLD NAME <input id="nw-name" maxlength="24" placeholder="New World" /></label>
+        <label>SEED <input id="nw-seed" maxlength="24" placeholder="leave blank for random" /></label>
+        <div class="mode-row">
+          <button id="nw-survival" class="mode-card sel">
+            <b>SURVIVAL</b><span>Hearts and hunger. Mine it, craft it, earn it. Zombies after dark.</span>
+          </button>
+          <button id="nw-creative" class="mode-card">
+            <b>CREATIVE</b><span>Every block, infinite pockets, instant breaking, flight. Just build.</span>
+          </button>
+        </div>
+        <div class="row">
+          <button id="nw-create" class="menu-btn gold">CREATE WORLD</button>
+          <button id="nw-cancel" class="menu-btn">BACK</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal-how" class="big-overlay">
+      <div class="card">
+        <h2>HOW TO PLAY</h2>
+        <div class="how">
+          <p><b>MOUSE</b> look · <b>CLICK</b> capture the mouse · <b>LEFT</b> mine / attack · <b>RIGHT</b> place / use / eat</p>
+          <p><b>WASD</b> move · <b>SPACE</b> jump · <b>CTRL</b> sprint · <b>SHIFT</b> sneak (you won't fall off edges)</p>
+          <p><b>E</b> inventory &amp; crafting · <b>1–9</b> / wheel — hotbar · <b>Q</b> drop item · <b>middle-click</b> pick block</p>
+          <p><b>Creative:</b> double-tap <b>SPACE</b> (or <b>F</b>) to fly — SPACE up, SHIFT down</p>
+          <p><b>ESC</b> pause · <b>M</b> mute · <b>F3</b> nerd numbers</p>
+          <p class="dim">Survival tips: punch a tree → planks → crafting table → wooden pickaxe → cobblestone → stone tools.
+          Torches need coal. Iron wants a stone pick, diamonds want iron, and both live deep. Keep your hunger up to heal,
+          cook food in a furnace, and craft a bedroll (wool + planks) to skip the night and set your spawn.
+          Zombies come out after sundown — build a roof.</p>
+        </div>
+        <button id="how-close" class="menu-btn">GOT IT</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ GAME ============================ -->
+  <section class="screen" id="scr-game">
+    <div id="vignette"></div>
+    <div id="sleep-fade"></div>
+    <div id="crosshair"></div>
+
+    <div id="hud">
+      <div id="stats">
+        <canvas id="hearts"></canvas>
+        <canvas id="bubbles"></canvas>
+        <canvas id="hunger"></canvas>
+      </div>
+      <div id="held-name"></div>
+      <div id="hotbar"></div>
+    </div>
+
+    <div id="toasts"></div>
+    <div id="debug"></div>
+    <div id="lock-hint">CLICK TO PLAY</div>
+
+    <div id="loading">
+      <div class="load-title">SHAPING THE WORLD…</div>
+      <div class="load-track"><div id="loading-bar"></div></div>
+    </div>
+
+    <div id="inv" class="big-overlay">
+      <div class="card inv-card">
+        <h2 id="inv-title">INVENTORY</h2>
+        <div class="inv-body">
+          <div id="inv-grid"></div>
+          <div id="inv-side"></div>
+        </div>
+        <div class="inv-hint">click to lift a stack · right-click for half / one · E to close</div>
+      </div>
+    </div>
+
+    <div id="pause" class="big-overlay">
+      <div class="card">
+        <h2>PAUSED</h2>
+        <button id="pause-resume" class="menu-btn gold">BACK TO THE WORLD</button>
+        <div class="set-row"><span>RENDER DISTANCE</span><input id="set-dist" type="range" min="3" max="9" step="1" /><i id="set-dist-v"></i></div>
+        <div class="set-row"><span>MUSIC</span><input id="set-music" type="range" min="0" max="1" step="0.05" /><i id="set-music-v"></i></div>
+        <div class="set-row"><span>SOUND</span><input id="set-sfx" type="range" min="0" max="1" step="0.05" /><i id="set-sfx-v"></i></div>
+        <div class="set-row"><span>MOUSE SPEED</span><input id="set-sens" type="range" min="0.4" max="2" step="0.05" /><i id="set-sens-v"></i></div>
+        <button id="pause-quit" class="menu-btn">SAVE &amp; QUIT TO TITLE</button>
+        <div class="pause-keys">WASD move · SPACE jump · CTRL sprint · SHIFT sneak · E inventory · Q drop · M mute · F3 debug</div>
+      </div>
+    </div>
+
+    <div id="death" class="big-overlay red">
+      <div class="card">
+        <h2>YOU DIED</h2>
+        <div id="death-cause" class="death-cause"></div>
+        <button id="death-respawn" class="menu-btn gold">RESPAWN</button>
+        <button id="death-title" class="menu-btn">SAVE &amp; QUIT TO TITLE</button>
+      </div>
+    </div>
+
+    <div id="cursor-item"><canvas width="32" height="32"></canvas><span class="n"></span></div>
+  </section>
+
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
