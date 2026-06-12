@@ -2,6 +2,11 @@
 
 *Sunday has Madden. Saturday has NCAA. Friday is yours.*
 
+> **Also in this cabinet: [RIM CITY 🏀](rimcity/README.md)** — 2-on-2 arcade
+> basketball on the same engine. Turbo, shoves, alley-oops, ON FIRE, and THE
+> RUN: a nine-crew ladder to the crown. `python3 serve.py rimcity` or open
+> `/rimcity/` on a running server.
+
 The high school chapter of the football-game trinity, in the browser — full 3D, no
 install, no build step. Boots with a cinematic flyover of America's football towns
 and an original synthesized score.

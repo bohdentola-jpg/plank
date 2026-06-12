@@ -721,6 +721,11 @@ export class Game {
     }
     if (!sd.slammed && !sd.stuffed && t >= sd.slamT) {
       sd.slammed = true;
+      if (sd.oop && this.ball.holder !== b) {
+        // rose for the lob but never caught it — swing at nothing
+        if (b.anim.finished) { b.state = 'play'; b.y = 0; b.airborne = false; }
+        return;
+      }
       this.scoreBasket(b, 2, sd.kind || 'dunk');
       sd.hoop.shake = 1;
       sd.hoop.netKick = 1;
@@ -1370,7 +1375,15 @@ export class Game {
     const h = this.holder();
     const myTeamHasBall = this.possession === b.team && h;
     if (this.ball.mode === 'loose' || this.ball.mode === 'tip') return this.aiLoose(b, dt);
-    if (this.ball.mode === 'lob' && this.ball.pass?.to === b) return; // scripted oop
+    if (this.ball.mode === 'lob' && this.ball.pass?.to === b) {
+      // run under the lob; updatePass handles the rise and the finish
+      if (!b.scripted()) {
+        const p1 = this.ball.pass.p1;
+        b.seek(p1.x, p1.z, 1, true);
+        b.faceToward(p1.x, p1.z);
+      }
+      return;
+    }
     if (myTeamHasBall) {
       if (h === b) return this.aiHandler(b, dt);
       return this.aiOffBall(b, dt);
