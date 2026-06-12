@@ -126,6 +126,81 @@ export class Sfx {
   back() { this._osc('triangle', 660, 440, 0.12, 0.12); }
   firstDown() { this._osc('triangle', 523, 784, 0.18, 0.12); }
   kickThump() { this._noise(0.08, 0.5, 300, 0, 0.8); this._osc('sine', 140, 60, 0.12, 0.3); }
+
+  /** ~22s cinematic cue: low drone, building pulse, snare rolls, brass
+   * swells, final stinger. Returns a stop() handle. */
+  introScore() {
+    if (!this.ensure()) return { stop() {} };
+    const ctx = this.ctx;
+    const out = ctx.createGain();
+    out.gain.value = 0.9;
+    out.connect(this.master);
+    const t0 = ctx.currentTime + 0.05;
+    const alive = [];
+    const osc = (type, freq, from, to, g0, g1, detune = 0) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = type; o.frequency.value = freq; o.detune.value = detune;
+      g.gain.setValueAtTime(0.0001, t0 + from);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0001, g0), t0 + from + 0.6);
+      g.gain.setValueAtTime(Math.max(0.0001, g0), t0 + to - 0.8);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0001, g1), t0 + to);
+      o.connect(g).connect(out);
+      o.start(t0 + from); o.stop(t0 + to + 0.1);
+      alive.push(o);
+    };
+    // drone: D minor bed the whole way
+    osc('sawtooth', 36.7, 0, 22, 0.05, 0.0001);          // D1
+    osc('sawtooth', 73.4, 0, 22, 0.04, 0.0001, 8);       // D2
+    osc('sine', 110, 0, 22, 0.05, 0.0001);               // A2
+    // timpani pulse, accelerating
+    const thud = (at, vol = 0.5, f = 73) => {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(f, t0 + at);
+      o.frequency.exponentialRampToValueAtTime(40, t0 + at + 0.28);
+      g.gain.setValueAtTime(vol, t0 + at);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + at + 0.5);
+      o.connect(g).connect(out); o.start(t0 + at); o.stop(t0 + at + 0.55);
+      alive.push(o);
+    };
+    let at = 1.2, gap = 1.6;
+    while (at < 14) { thud(at); at += gap; gap = Math.max(0.42, gap * 0.86); }
+    for (let i = 0; i < 8; i++) thud(14 + i * 0.5, 0.42);
+    // snare rolls into the hits
+    const roll = (from, dur, vol) => {
+      const len = Math.ceil(ctx.sampleRate * dur);
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (i / len);
+      const s = ctx.createBufferSource(); s.buffer = buf;
+      const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 1800;
+      const g = ctx.createGain(); g.gain.value = vol;
+      s.connect(f).connect(g).connect(out); s.start(t0 + from);
+    };
+    roll(4.2, 1.6, 0.10); roll(9.0, 1.8, 0.13); roll(15.6, 2.2, 0.17);
+    // brass swells: detuned saw stacks rising at section changes (D, F, A→D)
+    const swell = (from, dur, freqs, vol) => {
+      for (const f of freqs) {
+        osc('sawtooth', f, from, from + dur, vol, 0.0001, -6);
+        osc('sawtooth', f * 1.005, from, from + dur, vol, 0.0001, 6);
+      }
+    };
+    swell(6, 4, [146.8, 220, 293.7], 0.035);          // D minor
+    swell(11, 4, [174.6, 261.6, 349.2], 0.045);       // F major lift
+    swell(16, 5.5, [146.8, 220, 293.7, 440], 0.06);   // home, bigger
+    // final stinger + cymbal wash at ~18s
+    thud(18, 0.8, 90); thud(18.06, 0.7, 60);
+    roll(18, 2.5, 0.12);
+    const stop = () => {
+      try {
+        out.gain.cancelScheduledValues(ctx.currentTime);
+        out.gain.setValueAtTime(out.gain.value, ctx.currentTime);
+        out.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.6);
+        setTimeout(() => { try { alive.forEach((o) => o.stop()); out.disconnect(); } catch {} }, 700);
+      } catch { /* already done */ }
+    };
+    return { stop };
+  }
 }
 
 export const sfx = new Sfx();

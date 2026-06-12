@@ -1,6 +1,17 @@
-# FRIDAY NIGHT GRIDIRON '04 🏈
+# VARSITY 27 🏈
 
-A 2000s high school football game in the browser — full 3D, no install, no build step.
+*Sunday has Madden. Saturday has NCAA. Friday is yours.*
+
+The high school chapter of the football-game trinity, in the browser — full 3D, no
+install, no build step. Boots with a cinematic flyover of America's football towns
+and an original synthesized score.
+
+**HOMETOWN HERO** — the player career: create your QB in a full face editor (skin,
+jaw, brows, eyes, hair, facial hair, eye black, visor, build), then live the week:
+allocate your hours between training, film, academics, and rest; handle what comes
+up (parties, scouts, chemistry finals); keep the GPA above 2.0 or watch Friday in
+street clothes; play your possessions live with the defense simulated like Road to
+Glory; earn XP and college offers; survive to State and pick a hat on Signing Day.
 
 ![Friday night under the lights](docs/friday-night.png)
 

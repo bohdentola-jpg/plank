@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Friday Night Gridiron '04</title>
+<title>VARSITY 27 — High School Football</title>
 <link rel="stylesheet" href="styles.css" />
 <script type="importmap">
 { "imports": { "three": "./vendor/three.module.js" } }
@@ -12,21 +12,37 @@
 <body>
 <div id="app">
 
+  <!-- ============================ BOOT + INTRO ============================ -->
+  <div id="boot">
+    <img id="boot-logo" alt="VARSITY 27" />
+    <div class="boot-press">PRESS ANY BUTTON</div>
+    <div class="boot-sub">SUNDAY HAS MADDEN. SATURDAY HAS NCAA. FRIDAY IS YOURS.</div>
+  </div>
+  <div id="intro">
+    <div id="intro-holder"></div>
+    <div class="intro-bars top"></div>
+    <div class="intro-bars bottom"></div>
+    <div id="intro-caption"></div>
+    <img id="intro-logo" alt="VARSITY 27" />
+    <div id="intro-flash"></div>
+    <div class="intro-skip">PRESS ANY BUTTON TO SKIP</div>
+  </div>
+
   <!-- ============================ TITLE ============================ -->
   <section class="screen" id="scr-title">
     <div id="title-3d"></div>
     <div class="title-overlay">
       <div class="title-card">
-        <div class="title-kicker">PLANK GAMES PRESENTS</div>
-        <h1 class="title-word">FRIDAY NIGHT<br/><span>GRIDIRON</span> <em class="yr">'04</em></h1>
-        <div class="title-sub">BUILD YOUR SCHOOL · SUIT UP YOUR TEAM · WIN THE NIGHT</div>
+        <div class="title-kicker">EB SPORTS · IT'S FRIDAY IN THE GAME</div>
+        <img id="title-logo" alt="VARSITY 27" />
+        <div class="title-sub">EVERY TOWN HAS A LEGEND</div>
         <div class="title-menu">
-          <button id="title-new" class="menu-btn">★ NEW CAREER — BUILD YOUR PROGRAM</button>
-          <button id="title-quick" class="menu-btn">QUICK PLAY — WESTFIELD FALCONS</button>
-          <button id="title-continue" class="menu-btn">CONTINUE — BACK TO THE OFFICE</button>
+          <button id="title-hero" class="menu-btn">★ HOMETOWN HERO — YOUR ROAD TO STATE</button>
+          <button id="title-new" class="menu-btn">PROGRAM MODE — COACH YOUR SCHOOL</button>
+          <button id="title-quick" class="menu-btn">PLAY NOW — FRIDAY EXHIBITION</button>
+          <button id="title-continue" class="menu-btn">CONTINUE</button>
         </div>
-        <div class="title-foot">KEYBOARD: WASD · SHIFT · SPACE · 1-4 &nbsp;|&nbsp; 🎮 PAD: STICK · ✕ · □✕◯△ · R2 SPRINT · L1 SWITCH</div>
-        <div class="title-build">BUILD 9</div>
+        <div class="title-build">VARSITY 27 · BUILD 10</div>
       </div>
     </div>
   </section>
@@ -53,6 +69,23 @@
     <div class="builder-body">
       <div class="panel wide"></div>
       <div class="preview3d"></div>
+    </div>
+  </section>
+
+  <!-- ============================ HERO MODE ============================ -->
+  <section class="screen builder" id="scr-create">
+    <header class="ribbon"><span class="step">HOMETOWN HERO</span> CREATE YOUR PLAYER</header>
+    <div class="builder-body">
+      <div class="panel"></div>
+      <div class="preview3d"></div>
+    </div>
+  </section>
+
+  <section class="screen" id="scr-hero">
+    <div id="hero-bg"></div>
+    <div id="hero-wrap">
+      <div id="hero-head"></div>
+      <div id="hero-grid"></div>
     </div>
   </section>
 

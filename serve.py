@@ -44,7 +44,7 @@ def main():
 
     url = f'http://localhost:{port}'
     print()
-    print('  FRIDAY NIGHT GRIDIRON \'04')
+    print('  VARSITY 27')
     print(f'  Game is live at  {url}')
     if port != START_PORT:
         print(f'  (port {START_PORT} was busy — an old window may still be running)')

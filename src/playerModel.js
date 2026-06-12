@@ -19,7 +19,7 @@ function phong(color, opts = {}) {
 }
 
 function capsule(r, len, mat, sx = 1, sz = 1) {
-  const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 4, 12), mat);
+  const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 6, 18), mat);
   m.scale.set(sx, 1, sz);
   m.castShadow = true;
   return m;
@@ -74,8 +74,9 @@ function skinMat(tone) {
 // a real face: eyes, brows, eye-black, painted onto the head sphere.
 // Sphere UV: front (+z) sits at u=0.25, eyes just above the equator.
 const faceCache = new Map();
-function faceMat(tone) {
-  if (faceCache.has(tone)) return faceCache.get(tone);
+function faceMat(tone, look = {}) {
+  const key = tone + '|' + JSON.stringify([look.brow ?? 1, look.eyeBlack ?? true, look.facial || 'none', look.eyeCol || '#241a12']);
+  if (faceCache.has(key)) return faceCache.get(key);
   const cv = mkCanvas(256, 128);
   const ctx = cv.getContext('2d');
   ctx.fillStyle = tone;
@@ -87,7 +88,7 @@ function faceMat(tone) {
   const cx = 64; // u = 0.25 → front center
   // brows
   ctx.strokeStyle = 'rgba(30,18,10,0.85)';
-  ctx.lineWidth = 3.4;
+  ctx.lineWidth = 2.2 + (look.brow ?? 1) * 1.6;
   for (const s of [-1, 1]) {
     ctx.beginPath();
     ctx.moveTo(cx + s * 14, 50);
@@ -100,21 +101,32 @@ function faceMat(tone) {
     ctx.beginPath();
     ctx.ellipse(cx + s * 9, 57, 4.6, 3.1, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#241a12';
+    ctx.fillStyle = look.eyeCol || '#241a12';
     ctx.beginPath();
     ctx.arc(cx + s * 8.4, 57.4, 1.9, 0, Math.PI * 2);
     ctx.fill();
   }
-  // eye black (it's 2004)
-  ctx.fillStyle = 'rgba(20,16,14,0.8)';
-  for (const s of [-1, 1]) ctx.fillRect(cx + s * 5.4 - 3.4, 63.5, 6.8, 3.4);
+  // eye black
+  if (look.eyeBlack ?? true) {
+    ctx.fillStyle = 'rgba(20,16,14,0.8)';
+    for (const s of [-1, 1]) ctx.fillRect(cx + s * 5.4 - 3.4, 63.5, 6.8, 3.4);
+  }
+  // facial hair
+  if (look.facial === 'stache' || look.facial === 'goatee') {
+    ctx.fillStyle = 'rgba(28,18,10,0.9)';
+    ctx.fillRect(cx - 7, 71.5, 14, 3.2);
+  }
+  if (look.facial === 'goatee') {
+    ctx.fillStyle = 'rgba(28,18,10,0.9)';
+    ctx.beginPath(); ctx.ellipse(cx, 82, 5.5, 4.5, 0, 0, Math.PI * 2); ctx.fill();
+  }
   // nose + mouth hints
   ctx.strokeStyle = 'rgba(60,36,22,0.55)';
   ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(cx, 60); ctx.lineTo(cx, 68); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(cx - 6, 76); ctx.quadraticCurveTo(cx, 78.5, cx + 6, 76); ctx.stroke();
   const m = new THREE.MeshPhongMaterial({ map: tex(cv), shininess: 6 });
-  faceCache.set(tone, m);
+  faceCache.set(key, m);
   return m;
 }
 
@@ -233,9 +245,27 @@ export function buildPlayer(kit, info = {}) {
   head.position.y = 0.115;
   neck.add(head);
 
-  const face = new THREE.Mesh(new THREE.SphereGeometry(0.107, 16, 12), faceMat(info.skin || '#c68863'));
+  const look = info.look || {};
+  const face = new THREE.Mesh(new THREE.SphereGeometry(0.107, 20, 16), faceMat(info.skin || '#c68863', look));
   face.position.set(0, -0.018, 0.032);
+  face.scale.x = look.jaw ?? 1;
   head.add(face);
+  const helmetParts = [];
+  // hair visible at the nape (and fully in the editor with the helmet off)
+  if (look.hair && look.hair !== 'none') {
+    const hairM = phong(look.hairCol || '#2a1c10', { shin: 8 });
+    const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.111, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.55), hairM);
+    hairCap.position.set(0, -0.012, 0.026);
+    hairCap.scale.set(look.jaw ?? 1, 1, 1.02);
+    head.add(hairCap);
+    if (look.hair === 'curl') {
+      for (const [hx, hz] of [[-0.05, 0.05], [0.05, 0.05], [0, -0.02]]) {
+        const puff = new THREE.Mesh(new THREE.SphereGeometry(0.052, 10, 8), hairM);
+        puff.position.set(hx, 0.085, hz + 0.03);
+        head.add(puff);
+      }
+    }
+  }
 
   const shellScale = new THREE.Vector3(1, 1.06, 1.16);
   const shell = new THREE.Mesh(new THREE.SphereGeometry(0.155, 18, 14), kit.helmet);
@@ -243,6 +273,7 @@ export function buildPlayer(kit, info = {}) {
   shell.position.y = 0.02;
   shell.castShadow = true;
   head.add(shell);
+  helmetParts.push(shell);
   // ear flaps: the shell wraps down over the ears and jaw
   for (const s of [-1, 1]) {
     const flapH = new THREE.Mesh(new THREE.SphereGeometry(0.115, 12, 10), kit.helmet);
@@ -250,11 +281,13 @@ export function buildPlayer(kit, info = {}) {
     flapH.position.set(s * 0.105, -0.045, 0.005);
     flapH.castShadow = true;
     head.add(flapH);
+    helmetParts.push(flapH);
     // ear hole ring
     const earRing = new THREE.Mesh(new THREE.TorusGeometry(0.022, 0.006, 6, 10), phong('#1c1d22'));
     earRing.rotation.y = Math.PI / 2;
     earRing.position.set(s * 0.165, -0.05, -0.005);
     head.add(earRing);
+    helmetParts.push(earRing);
   }
   // rear skirt: coverage down the back of the skull
   const skirt = new THREE.Mesh(new THREE.SphereGeometry(0.148, 14, 10), kit.helmet);
@@ -262,6 +295,7 @@ export function buildPlayer(kit, info = {}) {
   skirt.position.set(0, -0.035, -0.03);
   skirt.castShadow = true;
   head.add(skirt);
+  helmetParts.push(skirt);
 
   // facemask: three horizontal arcs (brow, mid, jaw) + verticals + side arms
   for (const [y, arc, rad] of [[-0.008, 1.5, 0.138], [-0.06, 1.36, 0.138], [-0.105, 1.2, 0.132]]) {
@@ -270,11 +304,13 @@ export function buildPlayer(kit, info = {}) {
     bar.rotation.z = Math.PI / 2 - arc / 2;
     bar.position.set(0, y, 0.042);
     head.add(bar);
+    helmetParts.push(bar);
   }
   for (const x of [-0.066, 0, 0.066]) {
     const v = new THREE.Mesh(new THREE.CylinderGeometry(0.0095, 0.0095, 0.115, 6), kit.mask);
     v.position.set(x, -0.055, Math.sqrt(Math.max(0, 0.135 * 0.135 - x * x)) + 0.044);
     head.add(v);
+    helmetParts.push(v);
   }
   // side arms anchoring the cage to the ear flaps
   for (const s of [-1, 1]) {
@@ -283,6 +319,7 @@ export function buildPlayer(kit, info = {}) {
     armM.rotation.y = s * 0.5;
     armM.position.set(s * 0.115, -0.055, 0.095);
     head.add(armM);
+    helmetParts.push(armM);
   }
   // chinstrap: two angled straps meeting in a cup
   const strapMat = phong('#e8e6de', { shin: 10 });
@@ -292,15 +329,18 @@ export function buildPlayer(kit, info = {}) {
     strap.rotation.z = s * 0.65;
     strap.rotation.x = -0.25;
     head.add(strap);
+    helmetParts.push(strap);
   }
   const cup = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 6), strapMat);
   cup.scale.set(1.15, 0.8, 0.7);
   cup.position.set(0, -0.135, 0.085);
   head.add(cup);
+  helmetParts.push(cup);
   // brow bumper
   const brow = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.022, 0.02), phong('#1c1d22'));
   brow.position.set(0, 0.045, 0.168);
   head.add(brow);
+  helmetParts.push(brow);
 
   // helmet stripe(s) over the crown
   const mkStripe = (off) => {
@@ -314,10 +354,23 @@ export function buildPlayer(kit, info = {}) {
     return s;
   };
   if (kit.u.stripes2) {
-    head.add(mkStripe(-0.024));
-    head.add(mkStripe(0.024));
+    const s1 = mkStripe(-0.024), s2 = mkStripe(0.024);
+    head.add(s1); head.add(s2);
+    helmetParts.push(s1, s2);
   } else if (kit.u.helmetStripe !== kit.u.helmet) {
-    head.add(mkStripe(0));
+    const s1 = mkStripe(0);
+    head.add(s1);
+    helmetParts.push(s1);
+  }
+  // tinted visor behind the cage
+  if (look.visor) {
+    const vis = new THREE.Mesh(
+      new THREE.SphereGeometry(0.128, 16, 10, Math.PI * 0.18, Math.PI * 0.64, Math.PI * 0.32, Math.PI * 0.26),
+      new THREE.MeshPhongMaterial({ color: look.visor === 'dark' ? '#16181f' : '#aac8e0', transparent: true, opacity: look.visor === 'dark' ? 0.92 : 0.4, shininess: 100, specular: '#fff' })
+    );
+    vis.rotation.y = Math.PI / 2;
+    head.add(vis);
+    helmetParts.push(vis);
   }
 
   // helmet side logos
@@ -331,6 +384,7 @@ export function buildPlayer(kit, info = {}) {
       decal.rotation.y = s * Math.PI / 2;
       if (s < 0) decal.rotation.z = 0; // mirror naturally
       head.add(decal);
+      helmetParts.push(decal);
     }
   }
 
@@ -443,6 +497,7 @@ export function buildPlayer(kit, info = {}) {
     },
     gripR: arms.gripR,
     gripL: arms.gripL,
+    helmetParts,
   };
 }
 

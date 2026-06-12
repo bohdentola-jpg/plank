@@ -18,8 +18,15 @@ import { makeClips } from './clips.js';
 import { logoCanvas } from './logos.js';
 import { sfx } from './audio.js';
 import { PadUI } from './padui.js';
+import { Intro, varsityLogoCanvas } from './intro.js';
+import { FaceEditor } from './faceEditor.js';
+import {
+  newHero, heroOpponent, heroWeekLabel, applyWeekPlan, weekEvent, TRACKS,
+  UPGRADES, buyUpgrade, heroGameResult, offerStars,
+} from './careers.js';
 
-const SAVE_KEY = 'fng04_save_v2';
+const SAVE_KEY = 'varsity27_save_v3';
+const V2_KEY = 'fng04_save_v2';
 const OLD_SAVE_KEY = 'fng04_save_v1';
 
 function defaultState() {
@@ -40,6 +47,7 @@ function defaultState() {
     customPlays: [],
     office: { wall: '#b8b2a4', carpet: '#5a2e28', wood: '#6a4a2c', poster: 'win', plant: true, radio: true, bobble: true },
     franchise: null,
+    hero: null,
     _uniformInit: false,
   };
 }
@@ -49,13 +57,14 @@ function saveState(state) {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       school: state.school, uniform: state.uniform, roster: state.roster,
       customPlays: state.customPlays, office: state.office, franchise: state.franchise,
+      hero: state.hero,
     }));
   } catch { /* private mode */ }
 }
 
 function loadState() {
   try {
-    let raw = localStorage.getItem(SAVE_KEY);
+    let raw = localStorage.getItem(SAVE_KEY) || localStorage.getItem(V2_KEY);
     if (!raw) {
       // migrate a v1 save: keep the school, start the career fresh
       const old = localStorage.getItem(OLD_SAVE_KEY);
@@ -71,7 +80,7 @@ function loadState() {
 }
 
 // ------------------------------------------------------------- shell
-const screens = ['title', 'school', 'uniform', 'team', 'office', 'editor', 'game'];
+const screens = ['title', 'school', 'uniform', 'team', 'create', 'hero', 'office', 'editor', 'game'];
 function showScreen(id) {
   for (const s of screens) {
     document.getElementById(`scr-${s}`).classList.toggle('active', s === id);
@@ -123,15 +132,230 @@ class App {
     const saved = loadState();
     const cont = document.getElementById('title-continue');
     cont.style.display = saved ? '' : 'none';
+    const tl = document.getElementById('title-logo');
+    if (tl && !tl.src) tl.src = varsityLogoCanvas().toDataURL();
+    document.getElementById('title-hero').onclick = () => {
+      sfx.ensure(); sfx.chime();
+      if (this.state.hero && !this.state.hero.signed) this.toHeroHub();
+      else this.toCreate();
+    };
     document.getElementById('title-new').onclick = () => { sfx.ensure(); sfx.chime(); this.toSchool(); };
     document.getElementById('title-quick').onclick = () => { sfx.ensure(); sfx.chime(); this.toExhibition(); };
     cont.onclick = () => {
       sfx.ensure(); sfx.chime();
       this.state = loadState() || this.state;
+      if (this.state.hero && !this.state.hero.seasonOver) { this.toHeroHub(); return; }
       if (!this.state.franchise) this.state.franchise = { ...newFranchise(), campDone: true };
       this.toOffice();
     };
     this.titleScene();
+  }
+
+  // ----------------------------------------------------------- hero mode
+  toCreate() {
+    showScreen('create');
+    const ed = new FaceEditor(
+      document.querySelector('#scr-create .panel'),
+      document.querySelector('#scr-create .preview3d'),
+      this.state,
+      ({ name, num, build, look }) => {
+        this.state.hero = newHero(name, look, build);
+        this.state.hero.num = num;
+        saveState(this.state);
+        this.swap(null);
+        this.toHeroHub();
+        modal(`
+          <div class="om-title">JUNIOR YEAR, TWO-A-DAYS</div>
+          <div class="om-text">You're ${name}, the new starting quarterback at ${this.state.school.name} High.
+          Win Fridays. Keep your grades alive. Make them remember your name.</div>
+          <div class="om-note">Every week: set your TIME, handle WHAT COMES UP, then play FRIDAY NIGHT.
+          College offers follow big games — and a 2.0 GPA keeps you on the field.</div>`,
+          [{ label: "LET'S GO", gold: true }]);
+      }
+    );
+    this.swap(ed);
+  }
+
+  toHeroHub() {
+    showScreen('hero');
+    closeModal();
+    this.swap(null);
+    this.renderHeroHub();
+    saveState(this.state);
+  }
+
+  renderHeroHub() {
+    const h = this.state.hero;
+    const s = this.state.school;
+    if (!h) { this.toCreate(); return; }
+    const head = document.getElementById('hero-head');
+    const wins = h.record.filter((r) => r.won).length;
+    const stars = '★'.repeat(offerStars(h)) + '☆'.repeat(5 - offerStars(h));
+    head.innerHTML = `
+      <div class="hh-name">${h.name.toUpperCase()} · QB${h.num} — ${s.name.toUpperCase()} ${s.mascot.toUpperCase()}</div>
+      <div class="hh-sub">
+        <span>${h.seasonOver ? 'SEASON COMPLETE' : heroWeekLabel(h, s)}</span>
+        <span>${wins}–${h.record.length - wins}</span>
+        <span>GPA ${h.gpa.toFixed(2)} ${h.gpa < 2.0 ? '⚠' : ''}</span>
+        <span>RECRUIT ${stars}</span>
+        <span class="oh-chip">${h.xp} XP</span>
+        ${h.ineligible ? '<span class="oh-chip bad">INELIGIBLE FRIDAY</span>' : ''}
+      </div>`;
+    const grid = document.getElementById('hero-grid');
+    grid.innerHTML = '';
+    const card = (cls, html, onClick) => {
+      const d = document.createElement('button');
+      d.className = 'hero-card' + (cls ? ' ' + cls : '');
+      d.innerHTML = html;
+      if (onClick) d.onclick = () => { sfx.chime(); onClick(); };
+      grid.appendChild(d);
+      return d;
+    };
+    // Friday game (big)
+    card('big', `
+      <h3>${h.seasonOver ? 'SIGNING DAY' : 'FRIDAY NIGHT'}</h3>
+      <div class="hc-line">${h.seasonOver ? 'Pick where the story goes next.' : heroWeekLabel(h, s)}</div>
+      <div class="hc-value">${h.seasonOver ? '🎓' : h.ineligible ? 'BENCHED' : 'PLAY ▸'}</div>`,
+      () => h.seasonOver ? this.signingDay() : this.heroFriday());
+    // weekly plan
+    const dots = (n) => '●'.repeat(n) + '○'.repeat(Math.max(0, 6 - n));
+    card('', `
+      <h3>MY WEEK</h3>
+      ${TRACKS.map((t) => `
+        <div class="hc-energy" data-track="${t.id}">
+          <button data-d="-1">−</button>
+          <button data-d="1">+</button>
+          <span class="dots">${dots(h.energy[t.id])}</span>
+          <span style="font-size:11px;letter-spacing:0.12em">${t.icon} ${t.name}</span>
+        </div>`).join('')}
+      <div class="hc-line">10 hours. Spend them like they matter.</div>`);
+    // event
+    card('', `
+      <h3>WHAT CAME UP</h3>
+      <div class="hc-line">${h.eventDone ? 'Handled for the week.' : weekEvent(h).title}</div>
+      <div class="hc-value">${h.eventDone ? '✔' : 'DEAL WITH IT ▸'}</div>`,
+      () => this.heroEvent());
+    // my player / upgrades
+    card('', `
+      <h3>MY GAME (${h.xp} XP)</h3>
+      <div class="hc-bars">
+        ${['arm', 'spd', 'iq', 'hands', 'str'].map((k) => `
+          <div class="hc-bar"><span>${k.toUpperCase()}</span><i><b style="width:${h.attrs[k]}%"></b></i><span>${h.attrs[k]}</span></div>`).join('')}
+      </div>`,
+      () => this.heroUpgrades());
+    // offers
+    card('', `
+      <h3>COLLEGE OFFERS (${h.offers.length})</h3>
+      <div class="hc-line">${h.offers.length ? h.offers.map((o) => `${o.stars} ${o.school}`).join('<br/>') : 'Put it on film and they will call.'}</div>`,
+      () => {});
+    // wire energy +/- buttons
+    grid.querySelectorAll('.hc-energy').forEach((row) => {
+      const id = row.dataset.track;
+      row.querySelectorAll('button').forEach((b) => {
+        b.onclick = (e) => {
+          e.stopPropagation();
+          const d = parseInt(b.dataset.d, 10);
+          const total = Object.values(h.energy).reduce((a, x) => a + x, 0);
+          if (d > 0 && total >= 10) return;
+          h.energy[id] = Math.max(0, Math.min(6, h.energy[id] + d));
+          sfx.chime();
+          saveState(this.state);
+          this.renderHeroHub();
+        };
+      });
+    });
+  }
+
+  heroEvent() {
+    const h = this.state.hero;
+    if (h.eventDone || h.seasonOver) return;
+    const ev = weekEvent(h);
+    modal(`
+      <div class="om-title">${ev.title}</div>
+      <div class="om-text">${ev.text}</div>`,
+      ev.options.map((o) => ({
+        label: o.label, fx: o.fx,
+        onPick: () => { o.effect(h); h.eventDone = true; saveState(this.state); this.renderHeroHub(); },
+      })), { sticky: true });
+  }
+
+  heroUpgrades() {
+    const h = this.state.hero;
+    modal(`
+      <div class="om-title">TRAIN UP (${h.xp} XP)</div>
+      <div class="om-text">Earned on the field and in the weight room. Spend it.</div>`,
+      UPGRADES.map((u) => ({
+        label: `${u.label} ${h.attrs[u.id]} → ${Math.min(99, h.attrs[u.id] + 2)}`,
+        fx: `${u.cost} XP`,
+        keepOpen: true,
+        onPick: () => { if (buyUpgrade(h, u.id)) { saveState(this.state); this.renderHeroHub(); this.heroUpgrades(); } },
+      })).concat([{ label: 'DONE', gold: true }]));
+  }
+
+  heroFriday() {
+    const h = this.state.hero;
+    if (h.ineligible) {
+      const notes = applyWeekPlan(h);
+      h.record.push({ opp: heroWeekLabel(h, this.state.school), won: false, home: 0, away: 21 });
+      h.week = Math.min(9, h.week + 1);
+      if (h.week === 9 && h.record.filter((r) => r.won).length < 5) h.seasonOver = true;
+      h.eventDone = false;
+      saveState(this.state);
+      this.renderHeroHub();
+      modal(`
+        <div class="om-title">STREET CLOTHES</div>
+        <div class="om-text">Under 2.0 — you watch from the bench in a polo. The team falls 21–0 without you.</div>
+        <div class="om-note">${notes.join(' · ')}</div>`,
+        [{ label: 'HIT THE BOOKS', gold: true }]);
+      return;
+    }
+    const notes = applyWeekPlan(h);
+    saveState(this.state);
+    const opponent = heroOpponent(h);
+    showScreen('game');
+    const game = new Game(document.getElementById('game-holder'), { ...this.state, rival: opponent }, {
+      weekLabel: heroWeekLabel(h, this.state.school),
+      hero: h,
+      playbook: this.playbook(),
+      modifiers: { flat: h.morale, attrs: {} },
+      onGameEnd: ({ won, home, away, stats }) => {
+        this.swap(null);
+        const events = heroGameResult(h, { won, home, away, stats });
+        saveState(this.state);
+        this.toHeroHub();
+        modal(`
+          <div class="om-title">${won ? 'W' : 'L'} ${home}–${away}</div>
+          <div class="om-text">${stats.passYds} pass yds · ${stats.passTD} TD · ${stats.ints} INT · ${stats.runYds} rush yds</div>
+          ${notes.concat(events).map((e) => `<div class="om-note">${e}</div>`).join('')}`,
+          [{ label: h.seasonOver ? 'SO IT GOES' : 'NEXT WEEK ▸', gold: true, onPick: () => { if (h.seasonOver) this.signingDay(); } }],
+          { sticky: true });
+      },
+      onExit: () => { this.swap(null); this.toHeroHub(); },
+    });
+    this.swap(game);
+    window.__fng = { state: this.state, game };
+  }
+
+  signingDay() {
+    const h = this.state.hero;
+    const offers = h.offers.length ? h.offers : [{ school: 'Walk-on at Eastern State', stars: '★' }];
+    modal(`
+      <div class="om-title">🎓 SIGNING DAY</div>
+      <div class="om-text">The gym is packed. Three hats on the table. ${h.stats.passYds} career passing yards,
+      ${h.stats.passTD} touchdowns — where's the next chapter?</div>`,
+      offers.map((o) => ({
+        label: `${o.stars} ${o.school}`,
+        onPick: () => {
+          h.signed = o.school;
+          saveState(this.state);
+          modal(`
+            <div class="om-title">SIGNED.</div>
+            <div class="om-text">${h.name} — ${o.school}. The town paper runs it front page.
+            Somewhere a kid at the fence decides he wants to be you.</div>`,
+            [{ label: 'BACK TO TITLE', gold: true, onPick: () => { showScreen('title'); this.bindTitle(); } }], { sticky: true });
+        },
+        keepOpen: true,
+      })), { sticky: true });
   }
 
   titleScene() {
@@ -551,22 +775,54 @@ if (params.has('gallery')) {
     const { galleryMode } = await import('./gallery.js');
     galleryMode(defaultState);
   })();
-} else {
+} else if (params.has('nointro') || params.has('quick') || params.has('office') || params.has('editor') || params.has('drill') || params.has('hero') || params.has('create')) {
   showScreen('title');
   const app = new App();
-  const padUI = new PadUI(() => (app.current && app.current.padFocusHotspot ? app.current : null));
-  window.__padui = padUI;
+  if (params.has('hero')) { app.state.hero = newHero('Test Hero', {}, 'avg'); app.toHeroHub(); }
+  if (params.has('create')) app.toCreate();
+  const padUI0 = new PadUI(() => (app.current && app.current.padFocusHotspot ? app.current : null));
+  window.__padui = padUI0;
   if (params.has('quick')) app.toExhibition();
   if (params.has('office')) {
     app.state.franchise = { ...newFranchise(), campDone: true };
     app.toOffice();
   }
-  if (params.has('editor')) {
-    app.toEditor();
-  }
+  if (params.has('editor')) app.toEditor();
   if (params.has('drill')) {
     app.state.franchise = { ...newFranchise(), campDone: true };
     app.toDrill(params.get('drill') || 'routes');
   }
+  window.__app = app;
+} else {
+  // full boot: press-any-button gate → cinematic → title
+  const boot = document.getElementById('boot');
+  document.getElementById('boot-logo').src = varsityLogoCanvas().toDataURL();
+  document.getElementById('intro-logo').src = varsityLogoCanvas().toDataURL();
+  boot.classList.add('show');
+  const begin = () => {
+    window.removeEventListener('keydown', begin);
+    boot.removeEventListener('pointerdown', begin);
+    clearInterval(bootPad);
+    sfx.ensure();
+    boot.classList.remove('show');
+    const introEl = document.getElementById('intro');
+    introEl.classList.add('show');
+    new Intro(document.getElementById('intro-holder'), () => {
+      introEl.classList.remove('show');
+      showScreen('title');
+    });
+  };
+  window.addEventListener('keydown', begin);
+  boot.addEventListener('pointerdown', begin);
+  const bootPad = setInterval(() => {
+    try {
+      for (const g of navigator.getGamepads?.() || []) {
+        if (g?.buttons?.some((b) => b.pressed)) { begin(); break; }
+      }
+    } catch { /* fine */ }
+  }, 120);
+  const app = new App();
+  const padUI = new PadUI(() => (app.current && app.current.padFocusHotspot ? app.current : null));
+  window.__padui = padUI;
   window.__app = app;
 }

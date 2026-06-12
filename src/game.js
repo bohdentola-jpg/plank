@@ -233,7 +233,7 @@ export class Game {
   constructor(container, appState, {
     onExit = () => {}, onRematch = () => {}, onGameEnd = null, onDrillEnd = null,
     mode = 'match', drill = null, daytime = false, playbook = null,
-    weekLabel = null, modifiers = null,
+    weekLabel = null, modifiers = null, hero = null,
   } = {}) {
     this.appState = appState;
     this.onExit = onExit;
@@ -246,6 +246,8 @@ export class Game {
     this.playbook = playbook || OFFENSE_PLAYS;
     this.weekLabel = weekLabel;
     this.modifiers = modifiers;
+    this.hero = hero;
+    this.heroStats = { passYds: 0, passTD: 0, ints: 0, runYds: 0 };
     this.container = container;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -259,7 +261,7 @@ export class Game {
     this.renderer = renderer;
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(58, container.clientWidth / container.clientHeight, 0.1, 900);
+    this.camera = new THREE.PerspectiveCamera(this.mode === 'drill' ? 50 : 42, container.clientWidth / container.clientHeight, 0.1, 900);
     this.camera.position.set(-40, 14, 30);
     this.camera.lookAt(0, 0, 0);
     this._camLook = v3(0, 0, 0);
@@ -300,9 +302,18 @@ export class Game {
       const roster = team === 'home' ? homeRoster : rival.roster;
       const picked = rosterPick(roster);
       for (const role of [...OFF_ROLES, ...DEF_ROLES, 'K']) {
-        const info = picked[role];
+        let info = picked[role];
+        if (this.hero && team === 'home' && role === 'QB') {
+          info = {
+            ...info, name: this.hero.name, num: this.hero.num, build: this.hero.build,
+            skin: this.hero.look?.skin || info.skin,
+            arm: this.hero.attrs.arm, spd: this.hero.attrs.spd, iq: this.hero.attrs.iq,
+            hands: this.hero.attrs.hands, str: this.hero.attrs.str,
+          };
+        }
         const rig = buildPlayer(this.kits[team], {
           num: info.num, build: info.build, skin: info.skin,
+          look: this.hero && team === 'home' && role === 'QB' ? this.hero.look : undefined,
           accessories: { towel: role === 'RB' || role === 'QB' },
         });
         const a = new Athlete(rig, info, team);
@@ -543,6 +554,7 @@ export class Game {
     const m = this.match;
     // overtime is sudden death: any lead at a change of drive ends it
     if (m.qtr > 4 && m.home !== m.away) { this.endGame(); return; }
+    if (this.hero && team === 'away') { this.simOpponentDrive(losX); return; }
     m.poss = team;
     m.dir = team === 'home' ? 1 : -1;
     m.losX = THREE.MathUtils.clamp(losX, -49, 49);
@@ -554,6 +566,57 @@ export class Game {
     this.drawScoreboard();
     if (note) this.hud.banner(team === 'home' ? 'YOUR DRIVE' : `${this.rival.mascot.toUpperCase()} BALL`, note, 1800);
     this.after(0.6, () => this.toPlaycall());
+  }
+
+  /** Hometown Hero: you're the QB, so the defense's series is simulated
+   * like Road to Glory — quick result, clock burn, back to your huddle. */
+  simOpponentDrive(fromX) {
+    const m = this.match;
+    m.poss = 'away';
+    m.dir = -1;
+    this.setPhase('dead');
+    this.clearField('away');
+    this.placeBallAt(THREE.MathUtils.clamp(fromX, -45, 45), 0);
+    this.hud.banner(`${this.rival.mascot.toUpperCase()} BALL`, 'Defense is out there...', 1900);
+    this.after(2.2, () => {
+      const oppQ = (this.rival.roster?.[0]?.spd || 70) / 99;
+      const defQ = (this.appState.roster?.[0]?.str || 70) / 99;
+      const roll = Math.random() + oppQ * 0.25 - defQ * 0.18;
+      m.clock = Math.max(0, m.clock - (55 + Math.random() * 50));
+      let note, spot;
+      if (roll > 0.78) {
+        m.away += 7;
+        note = ['They march it right down and punch it in.', 'Busted coverage — they score.'][Math.random() < 0.5 ? 0 : 1];
+        this.hud.banner('THEY SCORE', note, 2300, 'bad');
+        sfx.crowd(0.15);
+        spot = -25;
+      } else if (roll > 0.62) {
+        m.away += 3;
+        this.hud.banner('THEY SETTLE FOR THREE', 'Field goal is good.', 2300, 'bad');
+        spot = -25;
+      } else if (roll < 0.16) {
+        this.hud.banner('TAKEAWAY!', 'Your defense rips it loose!', 2300, 'good');
+        this.stadium.crowd.setExcitement(0.85);
+        sfx.crowd(0.7);
+        spot = THREE.MathUtils.clamp(-fromX + 10, -45, 20);
+      } else {
+        this.hud.banner('DEFENSE HOLDS', 'Three and out — punt.', 2300, 'good');
+        this.stadium.crowd.setExcitement(0.5);
+        sfx.crowd(0.4);
+        spot = THREE.MathUtils.clamp(-fromX - 18, -45, -8);
+      }
+      this.updateHudBar();
+      this.drawScoreboard();
+      this.after(2.4, () => {
+        const m2 = this.match;
+        m2.poss = 'home'; m2.dir = 1; m2.losX = spot; m2.down = 1;
+        m2.toGo = Math.min(10, 50 - spot);
+        this.placeBallAt(spot, 0);
+        this.clearField('home');
+        this.updateHudBar();
+        this.toPlaycall();
+      });
+    });
   }
 
   toPlaycall() {
@@ -676,6 +739,10 @@ export class Game {
     }
 
     if (r.reason !== 'incomplete') {
+      if (this.hero && m.poss === 'home' && gain > 0) {
+        if (this._lastPlayWasPass) this.heroStats.passYds += Math.round(gain);
+        else if (this._heroCarried) this.heroStats.runYds += Math.round(gain);
+      }
       m.losX = THREE.MathUtils.clamp(spot, -49.5, 49.5);
       m.toGo = Math.round(m.toGo - gain);
     }
@@ -726,6 +793,10 @@ export class Game {
   touchdown(team) {
     if (this.mode === 'drill') { this.drillRepEnd('td'); return; }
     const m = this.match;
+    if (this.hero && team === 'home') {
+      if (this._lastPlayWasPass) { this.heroStats.passTD++; this.heroStats.passYds += Math.max(0, Math.round((50 - m.losX))); }
+      else if (this._heroCarried) this.heroStats.runYds += Math.max(0, Math.round(50 - m.losX));
+    }
     m[team] += 6;
     this.setPhase('td');
     this.hud.clearIcons();
@@ -774,7 +845,7 @@ export class Game {
     if (rematchBtn) rematchBtn.onclick = () => { el.classList.remove('show'); this.onRematch(); };
     document.getElementById('fin-exit').onclick = () => {
       el.classList.remove('show');
-      if (this.onGameEnd) this.onGameEnd({ won, home: m.home, away: m.away });
+      if (this.onGameEnd) this.onGameEnd({ won, home: m.home, away: m.away, stats: this.heroStats });
       else this.onExit();
     };
     // field scene
@@ -908,6 +979,8 @@ export class Game {
     const def = this.players[m.poss === 'home' ? 'away' : 'home'];
     const dir = m.dir;
     sfx.hike();
+    this._lastPlayWasPass = false;
+    this._heroCarried = play.carrier === 'QB';
     for (const a of this.allAthletes) {
       if (a.state === 'toBench' && Math.abs(a.pos.z) < 26.8) {
         a.warp(a.pos.x, Math.sign(a.benchSpot[1]) * 28.6, a.benchSpot[2]);
@@ -1125,6 +1198,7 @@ export class Game {
       qb.tuck = 1;
       this.ballGrip = 'tuck';
       this.targetsLive = [];
+      if (qb.team === 'home') { this._heroCarried = true; this._lastPlayWasPass = false; }
       this.hud.clearIcons();
       if (qb.team === 'home') { this.user = qb; this.hud.hint('Scramble! <b>SHIFT</b> sprint · <b>SPACE</b> juke'); }
     }
@@ -1696,6 +1770,7 @@ export class Game {
       (to.z - from.z) / tFlight
     );
     this.ballMeta = { kind: 'pass', target, thrower: qb, resolved: false };
+    if (qb.team === 'home') this._lastPlayWasPass = true;
     this.spin = 16;
   }
 
@@ -1802,6 +1877,7 @@ export class Game {
         catcher.state = 'return';
         catcher.anim.play(this.ball.position.y > 1.7 ? 'catchHigh' : 'catchLow', { force: true });
         sfx.catchPop();
+        if (this.hero && m.poss === 'home') this.heroStats.ints++;
         this.hud.banner('INTERCEPTED!', `${catcher.info.name} jumps the route — he's got room!`, 2000, m.poss === 'home' ? 'bad' : 'good');
         this.stadium.crowd.setExcitement(m.poss === 'home' ? 0.35 : 0.95);
         sfx.crowd(m.poss === 'home' ? 0.2 : 0.8);
@@ -2336,18 +2412,19 @@ export class Game {
       target = v3(Math.sin(this._orbitA) * 22, 7, Math.cos(this._orbitA) * 22);
       look = v3(0, 1.5, 0);
     } else if (this.phase === 'live' || this.phase === 'dead') {
+      // broadcast/Madden: farther back, telephoto, looking well downfield
       let focus;
       if (this.ballMode === 'flight') focus = this.ball.position;
       else if (this.holder) focus = this.holder.pos;
       else focus = this.ball.position;
-      const back = this.phase === 'dead' ? 8 : 10.5;
-      target = v3(focus.x - faceDir * back, this.phase === 'dead' ? 4.6 : 5.8, focus.z * 0.62);
-      look = v3(focus.x + faceDir * 7, 1.0, focus.z * 0.85);
+      const back = this.phase === 'dead' ? 13 : 16.5;
+      target = v3(focus.x - faceDir * back, this.phase === 'dead' ? 6.2 : 7.4, focus.z * 0.55);
+      look = v3(focus.x + faceDir * 13, 1.4, focus.z * 0.82);
     } else {
       // playcall / lineup / set: settled view from behind the user's unit
       const x = m.losX;
-      target = v3(x - faceDir * 12, 6.4, 5);
-      look = v3(x + faceDir * 9, 0.6, 0);
+      target = v3(x - faceDir * 14.5, 6.6, 4);
+      look = v3(x + faceDir * 12, 1.0, 0);
     }
     const lam = this.phase === 'live' ? 5.2 : 2.6;
     cam.position.x = damp(cam.position.x, target.x, lam, dt);
