@@ -394,7 +394,7 @@ export class Game {
 
   tipoff() {
     this.phase = 'tip';
-    this.inb = null;
+    this.clearInbound();
     this.clockQ = this.qLen;
     this.shotClock = 14;
     // jumpers: best (height+block) per team
@@ -444,6 +444,7 @@ export class Game {
       const winner = s0 >= s1 ? j0 : j1;
       const mateP = this.mate(winner).pos;
       b.mode = 'loose';
+      b.lastTouch = winner;
       b.vel.set((mateP.x - b.pos.x) * 1.3, 2.1, (mateP.y - b.pos.y) * 1.3);
       b.noTouch = 0.12;
       this.phase = 'live';
@@ -555,6 +556,17 @@ export class Game {
     }
   }
 
+  /** Cancel an in-progress take-out without stranding a frozen passer. */
+  clearInbound() {
+    if (!this.inb) return;
+    const p = this.inb.passer;
+    if (p.state === 'inbound') {
+      p.state = 'play';
+      p.protected = 0.3;
+    }
+    this.inb = null;
+  }
+
   /** Whistle-free whistle: possession flips, take it out where it went out. */
   outOfBounds(x, z, toTeam, subNote) {
     const crew = toTeam === 0 ? this.home : this.away;
@@ -623,7 +635,12 @@ export class Game {
     this.keys.add(e.code);
     this.edgeKeysNext.add(e.code);
     if (e.code === 'Escape') this.togglePause();
-    if (e.code === 'KeyM') { sfx.setMuted(!sfx.muted); this.hud.banner(sfx.muted ? 'MUTED' : 'SOUND ON', '', 700); }
+    if (e.code === 'KeyM') {
+      sfx.setMuted(!sfx.muted);
+      this.hud.banner(sfx.muted ? 'MUTED' : 'SOUND ON', '', 700);
+      const pm = this.hud.el.pause.querySelector('#pause-mute');
+      if (this.paused && pm) pm.textContent = sfx.muted ? 'SOUND: OFF' : 'SOUND: ON';
+    }
   }
 
   // ------------------------------------------------------------ actions
@@ -1420,7 +1437,8 @@ export class Game {
   updateUser(team, dt) {
     const inp = this.readTeam(team);
     this.edge[team] = inp;
-    if (inp.pause) { this.togglePause(); return; }
+    // pad pause is handled once per frame in loop() — reading the same edge
+    // here too would toggle twice and make OPTIONS unable to unpause
     // arcade rule: control follows the ball on offense (giveBall retargets
     // controlled[]), nearest/switchable defender otherwise.
     const me = this.ctrlOf(team);
@@ -1826,7 +1844,7 @@ export class Game {
 
   endPeriod() {
     this.pendingEnd = false;
-    this.inb = null;
+    this.clearInbound();
     this.phase = 'dead';
     sfx.horn();
     const isHalf = this.quarter === 2;
@@ -1858,6 +1876,7 @@ export class Game {
   }
 
   endGame() {
+    this.clearInbound();
     this.phase = 'over';
     const won = this.scores[0] > this.scores[1];
     const winCrew = won ? this.home : this.away;

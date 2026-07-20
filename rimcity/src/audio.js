@@ -16,6 +16,11 @@ export class Sfx {
     this._lastLine = '';
     this._voice = null;
     this.loadSettings();
+    // voices load async in Chrome — re-pick once the real list lands so a
+    // saved voiceName actually applies instead of a cached early fallback
+    try {
+      window.speechSynthesis?.addEventListener?.('voiceschanged', () => { this._voice = null; });
+    } catch { /* no speech */ }
   }
 
   loadSettings() {
@@ -35,7 +40,11 @@ export class Sfx {
     } catch { /* private mode */ }
   }
 
-  setVoiceOn(v) { this.voiceOn = v; this.saveSettings(); }
+  setVoiceOn(v) {
+    this.voiceOn = v;
+    if (!v) { try { window.speechSynthesis?.cancel(); } catch { /* fine */ } }
+    this.saveSettings();
+  }
 
   /** English voices installed on this machine. */
   voices() {

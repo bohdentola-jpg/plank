@@ -248,12 +248,14 @@ function makeWindow(id, title, icon, bodyEl, { x = 120, y = 40, onClose = null }
     const up = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
       store.winPos = store.winPos || {};
       store.winPos[id] = { x: parseInt(el.style.left, 10), y: parseInt(el.style.top, 10) };
       save();
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   });
   el.addEventListener('pointerdown', () => focusWin(id));
   btnX.onclick = (e) => { e.stopPropagation(); closeWin(id); };
@@ -358,7 +360,10 @@ function aboutWindow() {
 
 // ------------------------------------------------------------------ Hi-Fi
 function spotifyEmbedUrl(url) {
-  const m = String(url).match(/open\.spotify\.com\/(?:intl-[a-z-]+\/)?(track|album|playlist|artist|episode|show)\/([A-Za-z0-9]+)/i);
+  const s = String(url).trim();
+  // modern links, /embed/ links, and legacy /user/…/playlist/… shares
+  let m = s.match(/open\.spotify\.com\/(?:intl-[a-z-]+\/)?(?:embed\/)?(?:user\/[^/]+\/)?(track|album|playlist|artist|episode|show)\/([A-Za-z0-9]+)/i);
+  if (!m) m = s.match(/^spotify:(track|album|playlist|artist|episode|show):([A-Za-z0-9]+)/i);
   if (!m) return null;
   return `https://open.spotify.com/embed/${m[1].toLowerCase()}/${m[2]}`;
 }
@@ -443,7 +448,7 @@ function hifiWindow() {
     });
   };
   const playIdx = (i) => {
-    if (i < 0 || i >= tracks.length) return;
+    if (!Number.isInteger(i) || i < 0 || i >= tracks.length) return;
     cur = i;
     audio.src = tracks[i].url;
     audio.play().catch(() => {});
@@ -474,9 +479,12 @@ function hifiWindow() {
     tray.hidden = true;
     setNow('EB Hi-Fi — stopped');
   };
-  body.querySelector('#hf-prev').onclick = () => playIdx((cur - 1 + tracks.length) % tracks.length);
-  body.querySelector('#hf-next').onclick = () => playIdx((cur + 1) % tracks.length);
+  body.querySelector('#hf-prev').onclick = () => { if (tracks.length) playIdx((cur - 1 + tracks.length) % tracks.length); };
+  body.querySelector('#hf-next').onclick = () => { if (tracks.length) playIdx((cur + 1) % tracks.length); };
   audio.onended = () => { if (tracks.length) playIdx((cur + 1) % tracks.length); };
+  // stay honest when the OS media keys pause/resume us
+  audio.addEventListener('pause', () => { if (!audio.ended) { playBtn.textContent = '▶'; tray.hidden = true; } });
+  audio.addEventListener('play', () => { playBtn.textContent = '⏸'; tray.hidden = false; });
   const seek = body.querySelector('#hf-seek');
   const timeEl = body.querySelector('#hf-time');
   audio.ontimeupdate = () => {
@@ -604,7 +612,7 @@ function buildStartMenu() {
   };
   document.getElementById('start-btn').onclick = (e) => { e.stopPropagation(); clickSfx(); chime(); toggleStart(); };
   window.addEventListener('pointerdown', (e) => {
-    if (!menu.hidden && !menu.contains(e.target) && e.target.id !== 'start-btn') toggleStart(false);
+    if (!menu.hidden && !menu.contains(e.target) && !e.target.closest('#start-btn')) toggleStart(false);
   });
 }
 
