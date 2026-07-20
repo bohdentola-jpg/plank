@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""Friday Night Gridiron game server.
+"""EB GAMES 95 — the whole shelf runs off this one file.
 
 - Tells the browser never to cache, so updates always show after a refresh.
 - If the port is taken (a forgotten old server), it picks the next free one
   instead of fighting over it.
-- Opens the game in your browser automatically (pass --no-browser to skip).
-Run: python serve.py   (or: py serve.py on Windows)
+- Opens the desktop in your browser automatically (pass --no-browser to skip).
+Run: python serve.py            → opens the desktop (pick a game there)
+     python serve.py varsity    → straight into VARSITY 27
+     python serve.py rimcity    → straight into RIM CITY
+     python serve.py loam       → straight into LOAM
 """
 import http.server
 import socketserver
@@ -15,6 +18,10 @@ import webbrowser
 
 args = [a for a in sys.argv[1:] if a.isdigit()]
 START_PORT = int(args[0]) if args else 8000
+OPEN_PATH = ''
+for a in sys.argv[1:]:
+    if not a.isdigit() and not a.startswith('-'):
+        OPEN_PATH = '/' + a.strip('/') + '/'
 
 
 class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
@@ -44,16 +51,18 @@ def main():
 
     url = f'http://localhost:{port}'
     print()
-    print('  VARSITY 27')
-    print(f'  Game is live at  {url}')
-    print(f'  LOAM (the block game) is at  {url}/loam/')
+    print('  EB GAMES 95')
+    print(f'  The desktop (all games)  {url}')
+    print(f'  VARSITY 27 (football)    {url}/varsity/')
+    print(f'  RIM CITY (basketball)    {url}/rimcity/')
+    print(f'  LOAM (voxels)            {url}/loam/')
     if port != START_PORT:
         print(f'  (port {START_PORT} was busy — an old window may still be running)')
     print('  Keep this window open while you play. Ctrl+C or close it to stop.')
     print()
     if '--no-browser' not in sys.argv:
         try:
-            threading.Timer(0.8, lambda: webbrowser.open(url)).start()
+            threading.Timer(0.8, lambda: webbrowser.open(url + OPEN_PATH)).start()
         except Exception:
             pass
     try:
