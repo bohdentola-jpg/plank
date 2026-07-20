@@ -1,5 +1,5 @@
 @echo off
-title Friday Night Gridiron '04
+title EB GAMES 95
 cd /d "%~dp0"
 
 rem ---- find a Python that actually runs (test by executing, not by PATH lookup)

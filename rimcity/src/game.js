@@ -18,21 +18,25 @@ const BALL_R = 0.121;
 const JUMP_V = 4.9;
 const RIM = (dir) => new THREE.Vector3(dir * COURT.RIM_X, COURT.RIM_Y, 0);
 
+// what the announcer screams, and how hard he screams it (0 = dead-pan
+// disappointment, 1 = standing on the scorer's table)
 const BARKS = {
-  dunk: ['KABOOM!', 'ON A POSTER!', 'DUNK CITY!', 'BRING THE THUNDER!', 'OH MY GOODNESS!'],
-  three: ['FROM DOWNTOWN!', 'BANG!', 'FROM THE PARKING LOT!', 'RAINING BUCKETS!'],
-  bucket: ['COUNT IT!', 'TOO SMOOTH!', 'BUTTER!'],
-  block: ['REJECTED!', 'GET THAT OUT OF HERE!', 'DENIED!', 'NOT IN THIS GYM!'],
-  steal: ['PICKED HIS POCKET!', 'TAKEN!', 'HE SAW THAT COMING A MILE AWAY!'],
-  shove: ['FLATTENED!', 'DOWN HE GOES!', 'SOMEBODY GET A MOP!'],
-  alley: ['ALLEY-OOP!', 'UP TOP, FINISHED!'],
-  fire: ["HE'S ON FIRE!", 'CALL THE FIRE DEPARTMENT!'],
-  heat: ["HE'S HEATING UP!"],
-  goaltend: ['GOALTENDING, COUNT IT!'],
-  brick: ['NO GOOD!', 'CLANK!', 'OFF THE IRON!'],
-  airball: ['AIR BALL!', 'NOT EVEN CLOSE!'],
+  dunk: { x: 1.0, lines: ['Oh! Kaboooom!', 'Put him on a poster!', 'Welcome to DUNK CITY!', 'He brought the THUNDER!', 'Ohhh my goodness gracious!', 'Are you KIDDING me?!'] },
+  three: { x: 0.85, lines: ['From waaaay downtown!', 'Bang! BANG!', 'From the parking lot!', 'It is RAINING out here!', 'Splash! Hello!'] },
+  bucket: { x: 0.45, lines: ['Count it.', 'Too smooth.', 'Butter.', 'And that is good.'] },
+  block: { x: 0.9, lines: ['REJECTED!', 'Get that OUTTA here!', 'Denied! Not in this gym!', 'Swatted into the third row!'] },
+  steal: { x: 0.75, lines: ['Picked his pocket clean!', 'Taken! Candy from a baby!', 'He saw that coming a mile away!'] },
+  shove: { x: 0.7, lines: ['Ohh, FLATTENED!', 'Down goes the big man, down he goes!', 'Somebody call a chiropractor!'] },
+  alley: { x: 1.0, lines: ['Alley... OOOOP!', 'Up top... FINISHED! Goodnight!', 'The lob! The JAM!'] },
+  fire: { x: 1.0, lines: ["He's on FIIIIRE!", 'Call the fire department, this man is BURNING!', 'You cannot cool him down!'] },
+  heat: { x: 0.7, lines: ["He's heating up!", 'Somebody check the thermostat!'] },
+  goaltend: { x: 0.7, lines: ['Goaltending! Count it, count every bit of it!'] },
+  brick: { x: 0.22, lines: ['No good.', 'Clank. That is a brick.', 'Off the iron... nothing.'] },
+  airball: { x: 0.45, lines: ['Aaair ball! Air ball!', 'Not even close, my friend.'] },
+  oob: { x: 0.3, lines: ['Out of bounds!', 'Off the hardwood and gone.', 'He stepped out, take it the other way.'] },
 };
-const bark = (k) => BARKS[k][(Math.random() * BARKS[k].length) | 0];
+const bark = (k) => BARKS[k].lines[(Math.random() * BARKS[k].lines.length) | 0];
+const barkX = (k) => BARKS[k].x;
 
 // ------------------------------------------------------------------ baller
 class Baller {
@@ -110,7 +114,7 @@ class Baller {
   }
 
   scripted() {
-    return ['shoot', 'dunk', 'layup', 'steal', 'shove', 'spin', 'fall', 'getup', 'tip', 'celebrate', 'dejected', 'pass', 'catch'].includes(this.state);
+    return ['shoot', 'dunk', 'layup', 'steal', 'shove', 'spin', 'fall', 'getup', 'tip', 'celebrate', 'dejected', 'pass', 'catch', 'inbound'].includes(this.state);
   }
 
   move(dt, hasBall, guarding) {
@@ -282,8 +286,9 @@ export class Game {
       mode: 'dead', holder: null, lastTouch: null,
       pos: new THREE.Vector3(0, 1, 0), vel: new THREE.Vector3(),
       shot: null, pass: null, t: 0, noTouch: 0, scoreLock: 0,
-      dribblePhase: 0,
+      dribblePhase: 0, cosmetic: false,
     };
+    this.inb = null;
 
     // particles: fire trail + bursts + confetti share one Points pool
     this.particles = this.makeParticles(420);
@@ -389,6 +394,7 @@ export class Game {
 
   tipoff() {
     this.phase = 'tip';
+    this.inb = null;
     this.clockQ = this.qLen;
     this.shotClock = 14;
     // jumpers: best (height+block) per team
@@ -442,7 +448,7 @@ export class Game {
       b.noTouch = 0.12;
       this.phase = 'live';
       sfx.catchPop();
-      sfx.say(`${winner.crew.name} control the tip!`);
+      sfx.say(`${winner.crew.name} control the tip!`, 1, 0.55);
     }
   }
 
@@ -452,6 +458,7 @@ export class Game {
     b.holder = baller;
     b.lastTouch = baller;
     b.shot = null; b.pass = null;
+    b.cosmetic = false;
     // control always follows the ball on your own team
     this.controlled[baller.team] = baller.slot;
     if (this.possession !== baller.team) {
@@ -470,17 +477,89 @@ export class Game {
     return da <= db ? a.slot : b.slot;
   }
 
-  /** After a make: other team takes it out under the hoop that got scored on. */
-  inbound(team) {
-    const dir = -this.attackDir(team);           // their backcourt baseline
+  /** Spot behind their own baseline (used after makes + quarter starts). */
+  backcourtSpot(team) {
+    const dir = -this.attackDir(team);
+    return { x: dir * (COURT.HALF_LEN + 0.8), z: (Math.random() < 0.5 ? 1 : -1) * (1.2 + Math.random() * 1.6) };
+  }
+
+  /** Nearest point just outside the boundary from where the ball went out. */
+  oobSpot(x, z) {
+    const dx = COURT.HALF_LEN - Math.abs(x);
+    const dz = COURT.HALF_WID - Math.abs(z);
+    if (dx < dz) {
+      return { x: Math.sign(x || 1) * (COURT.HALF_LEN + 0.8), z: clamp(z, -COURT.HALF_WID + 1, COURT.HALF_WID - 1) };
+    }
+    return { x: clamp(x, -COURT.HALF_LEN + 1, COURT.HALF_LEN - 1), z: Math.sign(z || 1) * (COURT.HALF_WID + 0.8) };
+  }
+
+  /**
+   * A real take-out: the passer stands out of bounds holding the ball
+   * overhead (unstealable), the receiver works to get open, then a live —
+   * and interceptable — pass brings it in.
+   */
+  startInbound(team, spot) {
+    if (this.phase === 'over') return;
+    this.pendingEnd = false;
     const [a, b] = this.teamBallers(team);
-    const handler = a.info.handle >= b.info.handle ? a : b;
-    const other = this.mate(handler);
-    handler.warp(dir * (COURT.HALF_LEN - 0.6), (Math.random() < 0.5 ? 1 : -1) * 1.8, Math.atan2(-dir, 0));
-    handler.protected = 1.0;
-    other.seek(dir * 8, -handler.pos.y * 0.7);
-    this.giveBall(handler);
+    let passer = a.info.handle <= b.info.handle ? a : b;
+    let receiver = this.mate(passer);
+    if (passer.state === 'fall' || passer.state === 'getup') [passer, receiver] = [receiver, passer];
+    // quick take-out: both hustle into position instantly (arcade rules)
+    passer.warp(spot.x, spot.z, Math.atan2(-spot.x, -spot.z));
+    const inX = clamp(spot.x * 0.72, -COURT.HALF_LEN + 1.6, COURT.HALF_LEN - 1.6);
+    const inZ = clamp(spot.z * 0.5, -COURT.HALF_WID + 1.4, COURT.HALF_WID - 1.4);
+    if (receiver.state !== 'fall' && receiver.state !== 'getup') {
+      receiver.warp(inX + (Math.random() - 0.5) * 1.5, inZ + (Math.random() - 0.5) * 1.5, Math.atan2(spot.x - inX, spot.z - inZ));
+    }
+    this.giveBall(passer);
+    passer.state = 'inbound';
+    passer.protected = 99;
+    passer.anim.play('inboundHold', { fade: 0.1 });
+    this.controlled[team] = receiver.slot;            // human runs the cutter
+    this.inb = { team, passer, receiver, t: 0, force: false };
     this.shotClock = 14;
+    this.contextHint();
+  }
+
+  updateInbound(dt) {
+    const inb = this.inb;
+    if (!inb) return;
+    const { passer, receiver, team } = inb;
+    if (this.ball.holder !== passer || passer.state !== 'inbound') { this.inb = null; return; }
+    inb.t += dt;
+    passer.stop();
+    passer.faceToward(receiver.pos.x, receiver.pos.y);
+    const receiverReady = !receiver.scripted() && receiver.state !== 'fall';
+    const openEnough = this.opennessOf(receiver) > 1.4;
+    const auto = inb.t > (this.isHuman(team) ? 1.15 : 0.75) && receiverReady && openEnough;
+    if (inb.force || auto || inb.t > 2.4) {
+      // let it fly — a real pass, so a defender in the lane can still tip it
+      this.inb = null;
+      passer.protected = 0;
+      passer.state = 'pass';
+      passer.stateT = 0;
+      passer.anim.play('passChest', { fade: 0.06, onDone: () => { if (passer.state === 'pass') passer.state = 'play'; } });
+      const relT = CLIP_META.passChest.release * CLIPS.passChest.dur;
+      this.after(relT, () => {
+        if (this.ball.holder !== passer) return;
+        const p0 = new THREE.Vector3();
+        passer.gripPos(p0, 'both');
+        this.ball.holder = null;
+        this.ball.mode = 'pass';
+        this.ball.pass = { p0, to: receiver, t: 0, T: 0, apexY: 0 };
+        sfx.catchPop();
+      });
+    }
+  }
+
+  /** Whistle-free whistle: possession flips, take it out where it went out. */
+  outOfBounds(x, z, toTeam, subNote) {
+    const crew = toTeam === 0 ? this.home : this.away;
+    this.hud.banner('OUT OF BOUNDS', subNote || `${crew.name} BALL`, 1600);
+    sfx.back();
+    sfx.say(bark('oob'), 1, barkX('oob'));
+    this.startInbound(toTeam, this.oobSpot(x, z));
   }
 
   // ------------------------------------------------------------ input
@@ -710,11 +789,12 @@ export class Game {
           sd.stuffed = true;
           this.ball.mode = 'loose';
           this.ball.holder = null;
+          this.ball.lastTouch = d;
           this.ball.vel.set((d.pos.x - b.pos.x) * 2.4, 2.6, (d.pos.y - b.pos.y) * 2.4);
           this.ball.noTouch = 0.15;
           d.stats.blk++;
           this.hud.banner('STUFFED AT THE RIM!', `${d.info.nick} SAYS NO`, 2000, 'reject');
-          sfx.say(bark('block'), 2);
+          sfx.say(bark('block'), 2, barkX('block'));
           sfx.rimClank();
           this.crowdPop(0.8);
         }
@@ -816,7 +896,7 @@ export class Game {
         this.ball.pass = { p0, to, t: 0, T: 0.92, p1: drop, apexY: COURT.RIM_Y + 1.7, oop: true };
         to.sd = {}; to.cutT = 0;
         to.oopTarget = drop;
-        sfx.say('Lob is UP!');
+        sfx.say('The lob is UP!', 1, 0.8);
       } else {
         this.ball.mode = 'pass';
         this.ball.pass = { p0, to, t: 0, T: 0, apexY: 0 };
@@ -846,7 +926,7 @@ export class Game {
         d.stats.stl++;
         this.hud.banner('PICKED!', `${d.info.nick} WITH THE TAKEAWAY`, 1800, 'steal');
         sfx.steal();
-        sfx.say(bark('steal'), 1);
+        sfx.say(bark('steal'), 1, barkX('steal'));
         this.crowdPop(0.5);
       }
     });
@@ -864,7 +944,7 @@ export class Game {
     this.after(hitT, () => {
       for (const v of this.teamBallers(1 - s.team)) {
         const dd = Math.hypot(v.pos.x - s.pos.x, v.pos.y - s.pos.y);
-        if (dd > 1.15 || v.state === 'fall' || v.state === 'getup' || v.state === 'dunk') continue;
+        if (dd > 1.15 || v.state === 'fall' || v.state === 'getup' || v.state === 'dunk' || v.state === 'inbound') continue;
         const ang = Math.atan2(v.pos.x - s.pos.x, v.pos.y - s.pos.y);
         let dA = ang - s.facing;
         while (dA > Math.PI) dA -= Math.PI * 2;
@@ -883,7 +963,7 @@ export class Game {
         }
         this.hud.banner('FLATTENED!', hadBall ? 'AND THE BALL IS LOOSE' : '', 1500, 'shove');
         sfx.shove();
-        if (Math.random() < 0.6) sfx.say(bark('shove'));
+        if (Math.random() < 0.6) sfx.say(bark('shove'), 1, barkX('shove'));
         this.crowdPop(0.4);
       }
     });
@@ -931,14 +1011,14 @@ export class Game {
     scorer.fireStreak++;
     let fireNote = '';
     if (scorer.fireStreak === 2) {
-      sfx.say(bark('heat'));
+      sfx.say(bark('heat'), 1, barkX('heat'));
       fireNote = `${scorer.info.nick} IS HEATING UP`;
     }
     if (scorer.fireStreak >= 3 && !scorer.onFire) {
       scorer.onFire = true;
       this.hud.banner('🔥 ON FIRE 🔥', `${scorer.info.nick} CAN'T MISS`, 2600, 'fire');
       sfx.whooshUp();
-      sfx.say(bark('fire'), 2);
+      sfx.say(bark('fire'), 2, barkX('fire'));
       this.crowdPop(1.0);
     }
 
@@ -956,7 +1036,11 @@ export class Game {
     this.hud.banner(pts === 3 ? `${main} +3` : main, fireNote || sub, 2000, kind === 'dunk' || kind === 'oop' ? 'dunk' : pts === 3 ? 'three' : '');
     if (kind === 'dunk' || kind === 'oop') { /* dunk already barked elsewhere on bigs */ }
     if (kind !== 'goaltend' && Math.random() < (kind === 'dunk' || kind === 'oop' ? 0.95 : 0.6)) {
-      sfx.say(kind === 'three' ? bark('three') : kind === 'dunk' ? bark('dunk') : kind === 'oop' ? bark('alley') : bark('bucket'));
+      sfx.say(
+        kind === 'three' ? bark('three') : kind === 'dunk' ? bark('dunk') : kind === 'oop' ? bark('alley') : bark('bucket'),
+        1,
+        kind === 'three' ? barkX('three') : kind === 'dunk' ? barkX('dunk') : kind === 'oop' ? barkX('alley') : barkX('bucket')
+      );
     }
     this.crowdPop(kind === 'dunk' || kind === 'oop' ? 0.9 : pts === 3 ? 0.7 : 0.4);
     this.jumboFlash(pts === 3 ? 'TREY!' : kind === 'dunk' || kind === 'oop' ? 'JAM!' : 'BUCKET!', scorer.crew.colors.secondary);
@@ -965,7 +1049,13 @@ export class Game {
       this.after(0.5, () => this.endPeriod());
       this.pendingEnd = false;
     } else {
-      this.inbound(1 - team);
+      // the ball drops through the net untouchable, then the other side
+      // takes it out from under that hoop — no more camping the rim
+      this.ball.cosmetic = true;
+      const spot = { x: this.attackDir(team) * (COURT.HALF_LEN + 0.8), z: (Math.random() < 0.5 ? 1 : -1) * (1.2 + Math.random() * 1.6) };
+      this.after(0.95, () => {
+        if (this.phase === 'live' && this.ball.cosmetic) this.startInbound(1 - team, spot);
+      });
     }
   }
 
@@ -973,7 +1063,7 @@ export class Game {
     const team = this.possession;
     this.hud.banner(reason, 'TURNOVER', 1500);
     sfx.buzzer();
-    this.inbound(1 - team);
+    this.startInbound(1 - team, this.backcourtSpot(1 - team));
   }
 
   // ------------------------------------------------------------ ball
@@ -985,9 +1075,9 @@ export class Game {
     if (b.mode === 'held') {
       const h = b.holder;
       if (!h) { b.mode = 'loose'; return; }
-      if (h.state === 'shoot' || h.state === 'pass' || h.state === 'layup' || h.state === 'spin' || h.state === 'tip') {
+      if (h.state === 'shoot' || h.state === 'pass' || h.state === 'layup' || h.state === 'spin' || h.state === 'tip' || h.state === 'inbound') {
         // in the hands
-        const side = h.state === 'pass' ? 'both' : 'R';
+        const side = (h.state === 'pass' || h.state === 'inbound') ? 'both' : 'R';
         h.gripPos(b.pos, side);
       } else if (h.state === 'fall' || h.state === 'getup') {
         h.gripPos(b.pos, 'R');
@@ -1059,9 +1149,10 @@ export class Game {
           b.vel.set(away.x * 5.5 + (Math.random() - 0.5) * 2, 1.8, away.z * 5.5 + (Math.random() - 0.5) * 2);
           b.noTouch = 0.12;
           b.shot = null;
+          b.lastTouch = d;
           d.stats.blk++;
           this.hud.banner('REJECTED!', `${d.info.nick} SENDS IT BACK`, 1900, 'reject');
-          sfx.say(bark('block'), 2);
+          sfx.say(bark('block'), 2, barkX('block'));
           sfx.catchPop();
           this.crowdPop(0.7);
           return;
@@ -1071,7 +1162,7 @@ export class Game {
           b.mode = 'loose';
           b.vel.set((Math.random() - 0.5) * 2, -1, (Math.random() - 0.5) * 2);
           b.shot = null;
-          sfx.say(bark('goaltend'), 2);
+          sfx.say(bark('goaltend'), 2, barkX('goaltend'));
           this.scoreBasket(s.shooter, s.isThree ? 3 : 2, 'goaltend');
           return;
         }
@@ -1080,9 +1171,10 @@ export class Game {
         const away = new THREE.Vector3(b.pos.x - s.hoop.center.x, 0, b.pos.z - s.hoop.center.z).normalize();
         b.vel.set(away.x * 6, 1.4, away.z * 6);
         b.shot = null;
+        b.lastTouch = d;
         d.stats.blk++;
         this.hud.banner('TOO HOT TO HANDLE!', `${d.info.nick} SWATS IT AWAY`, 1900, 'reject');
-        sfx.say(bark('block'), 2);
+        sfx.say(bark('block'), 2, barkX('block'));
         return;
       }
     }
@@ -1133,9 +1225,9 @@ export class Game {
       vel.copy(n).multiplyScalar(sp);
       vel.y = Math.abs(vel.y) + 2.4;
       this.shotClock = Math.max(this.shotClock, 8);
-      if (Math.random() < 0.25) sfx.say(bark('brick'), 0);
+      if (Math.random() < 0.25) sfx.say(bark('brick'), 0, barkX('brick'));
     } else {
-      if (Math.random() < 0.6) sfx.say(bark('airball'), 1);
+      if (Math.random() < 0.6) sfx.say(bark('airball'), 1, barkX('airball'));
     }
     b.vel.copy(vel);
     b.noTouch = 0.22;
@@ -1159,6 +1251,7 @@ export class Game {
         if (Math.hypot(d.pos.x - b.pos.x, d.pos.y - b.pos.z) < 0.6 && b.pos.y < d.reach) {
           b.mode = 'loose';
           b.pass = null;
+          b.lastTouch = d;
           b.vel.set((Math.random() - 0.5) * 4, 1.6, (Math.random() - 0.5) * 4);
           this.hud.banner('TIPPED!', `${d.info.nick} GETS A HAND IN`, 1400, 'steal');
           sfx.catchPop();
@@ -1239,10 +1332,18 @@ export class Game {
       b.vel.z *= 0.86;
       if (Math.abs(b.vel.y) < 0.4) b.vel.y = 0;
     }
-    // street rules: invisible walls keep it alive
-    const WX = COURT.FLOOR_HALF_LEN - 0.25, WZ = COURT.FLOOR_HALF_WID - 0.25;
-    if (Math.abs(b.pos.x) > WX) { b.pos.x = Math.sign(b.pos.x) * WX; b.vel.x = -b.vel.x * 0.5; }
-    if (Math.abs(b.pos.z) > WZ) { b.pos.z = Math.sign(b.pos.z) * WZ; b.vel.z = -b.vel.z * 0.5; }
+    if (b.cosmetic) {
+      // post-bucket net-drop: keep it near the rim, nobody can touch it
+      const WX = COURT.HALF_LEN - 0.2, WZ = COURT.HALF_WID - 0.2;
+      if (Math.abs(b.pos.x) > WX) { b.pos.x = Math.sign(b.pos.x) * WX; b.vel.x = -b.vel.x * 0.4; }
+      if (Math.abs(b.pos.z) > WZ) { b.pos.z = Math.sign(b.pos.z) * WZ; b.vel.z = -b.vel.z * 0.4; }
+    } else if (this.phase === 'live' &&
+        (Math.abs(b.pos.x) > COURT.HALF_LEN + 0.35 || Math.abs(b.pos.z) > COURT.HALF_WID + 0.35)) {
+      // over the line and gone — other team's ball where it went out
+      const toTeam = b.lastTouch ? 1 - b.lastTouch.team : 1 - this.possession;
+      this.outOfBounds(b.pos.x, b.pos.z, toTeam);
+      return;
+    }
 
     // rims + boards
     for (const hoop of this.arena.hoops) {
@@ -1276,7 +1377,7 @@ export class Game {
         }
       }
       // dropping through the cylinder = putback bucket
-      if (b.vel.y < 0 && b.pos.y < c.y + 0.05 && b.pos.y > c.y - 0.3 && horiz < COURT.RIM_R * 0.7 && this.t > this.ball.scoreLock) {
+      if (!b.cosmetic && b.vel.y < 0 && b.pos.y < c.y + 0.05 && b.pos.y > c.y - 0.3 && horiz < COURT.RIM_R * 0.7 && this.t > this.ball.scoreLock) {
         const attackTeam = this.ballers.find((p) => this.attackDir(p.team) === hoop.dir)?.team ?? 0;
         const credit = (b.lastTouch && b.lastTouch.team === attackTeam) ? b.lastTouch : this.teamBallers(attackTeam)[0];
         hoop.netKick = 1;
@@ -1288,7 +1389,7 @@ export class Game {
     }
 
     // pickups
-    if (b.noTouch > 0) return;
+    if (b.noTouch > 0 || b.cosmetic) return;
     for (const p of this.ballers) {
       if (p.state === 'fall' || p.state === 'getup' || p.state === 'dunk') continue;
       const dd = Math.hypot(p.pos.x - b.pos.x, p.pos.y - b.pos.z);
@@ -1322,6 +1423,18 @@ export class Game {
     // controlled[]), nearest/switchable defender otherwise.
     const me = this.ctrlOf(team);
     if (!me) return;
+
+    if (this.inb && this.inb.team === team) {
+      // inbounding: you run the cutter — get open, □ demands the ball now
+      if (!me.scripted()) {
+        const m = Math.hypot(inp.mx, inp.mz);
+        me._desired.set(clamp(inp.mx, -1, 1), clamp(inp.mz, -1, 1));
+        if (m > 1) me._desired.multiplyScalar(1 / m);
+        me._sprint = inp.turbo && (me.turbo > 0 || me.onFire);
+      }
+      if (inp.pass || inp.shootD) this.inb.force = true;
+      return;
+    }
 
     // movement intent
     const mag = Math.hypot(inp.mx, inp.mz);
@@ -1379,6 +1492,19 @@ export class Game {
   updateAI(b, dt) {
     b.aiT -= dt;
     const h = this.holder();
+    if (this.inb && this.inb.receiver === b && !b.scripted()) {
+      // shake loose for the take-out: jab away from the nearest defender
+      const opp = this.nearestOpp(b);
+      const p = this.inb.passer;
+      let tx = p.pos.x * 0.72, tz = p.pos.y * 0.4;
+      if (opp && Math.hypot(opp.pos.x - b.pos.x, opp.pos.y - b.pos.y) < 1.6) {
+        tx = b.pos.x + (b.pos.x - opp.pos.x) * 2;
+        tz = b.pos.y + (b.pos.y - opp.pos.y) * 2;
+      }
+      b.seek(clamp(tx, -COURT.HALF_LEN + 1, COURT.HALF_LEN - 1), clamp(tz, -COURT.HALF_WID + 1, COURT.HALF_WID - 1), 0.9);
+      b.faceToward(p.pos.x, p.pos.y);
+      return;
+    }
     const myTeamHasBall = this.possession === b.team && h;
     if (this.ball.mode === 'loose' || this.ball.mode === 'tip') return this.aiLoose(b, dt);
     if (this.ball.mode === 'lob' && this.ball.pass?.to === b) {
@@ -1595,9 +1721,7 @@ export class Game {
     // clocks
     if (this.phase === 'live') {
       this.clockQ -= dt;
-      if (this.holder() || this.ball.mode === 'shot' || this.ball.mode === 'pass' || this.ball.mode === 'lob') {
-        if (this.holder()) this.shotClock -= dt;
-      }
+      if (this.holder() && !this.inb) this.shotClock -= dt;
       if (this.clockQ <= 0 && !this.pendingEnd) {
         const airborneBall = ['shot', 'dunk', 'lob', 'pass'].includes(this.ball.mode) ||
           (this.holder() && ['shoot', 'layup', 'dunk'].includes(this.holder().state));
@@ -1607,6 +1731,13 @@ export class Game {
       }
       if (this.shotClock <= 0 && this.holder()) {
         return this.turnover('SHOT CLOCK');
+      }
+      // stepping over the line with the ball is a turnover — no refs needed,
+      // everybody in the gym saw it
+      const carrier = this.holder();
+      if (carrier && !this.inb && carrier.state !== 'inbound' && carrier.state !== 'dunk' && carrier.protected <= 0 &&
+          (Math.abs(carrier.pos.x) > COURT.HALF_LEN + 0.12 || Math.abs(carrier.pos.y) > COURT.HALF_WID + 0.12)) {
+        return this.outOfBounds(carrier.pos.x, carrier.pos.y, 1 - carrier.team, `${carrier.info.nick} STEPPED OUT`);
       }
       // the buzzer sounded with a shot in the air; once it resolves without
       // points (miss, swat, dropped lob) the period is over
@@ -1619,6 +1750,8 @@ export class Game {
         }
       }
     }
+
+    this.updateInbound(dt);
 
     // inputs + AI: the human drives exactly one player per team (ctrlOf),
     // the AI drives everyone else.
@@ -1691,6 +1824,7 @@ export class Game {
 
   endPeriod() {
     this.pendingEnd = false;
+    this.inb = null;
     this.phase = 'dead';
     sfx.horn();
     const isHalf = this.quarter === 2;
@@ -1702,17 +1836,18 @@ export class Game {
       this.shotClock = 14;
       this.phase = 'live';
       // alternate possession
-      this.inbound(this.quarter % 2 === 0 ? 1 : 0);
+      const team = this.quarter % 2 === 0 ? 1 : 0;
+      this.startInbound(team, this.backcourtSpot(team));
       this.hud.banner(this.qLabel(), this.quarter > 4 ? 'EXTRA PERIOD — 1:00' : isHalf ? 'SIDES SWITCHED' : '', 1800);
     };
     if (this.quarter >= 4) {
       this.hud.banner('OVERTIME', `TIED AT ${this.scores[0]}`, 2400, 'fire');
-      sfx.say('We are going to overtime!', 2);
+      sfx.say('Are you serious?! We are going to OVERTIME!', 2, 0.95);
       this.after(2.6, next);
     } else if (isHalf) {
       this.hud.banner('HALFTIME', `${this.home.abbr} ${this.scores[0]} — ${this.away.abbr} ${this.scores[1]}`, 2600);
       sfx.organ();
-      sfx.say(`At the half: ${this.scores[0]} to ${this.scores[1]}.`);
+      sfx.say(`At the half: ${this.scores[0]} to ${this.scores[1]}.`, 1, 0.35);
       this.after(3.0, next);
     } else {
       this.hud.banner(`END OF ${this.qLabel()}`, '', 1800);
@@ -1963,6 +2098,9 @@ export class Game {
     this.hud.el.pause.classList.toggle('show', this.paused);
     if (this.paused) {
       const p = this.hud.el.pause;
+      p.querySelector('#pause-mute').textContent = sfx.muted ? 'SOUND: OFF' : 'SOUND: ON';
+      p.querySelector('#pause-voice').textContent = sfx.voiceOn ? 'ANNOUNCER: ON' : 'ANNOUNCER: OFF';
+      p.querySelector('#pause-voice-name').textContent = `ANNOUNCER VOICE: ${(sfx.voiceName || 'AUTO').toUpperCase().slice(0, 28)} ▸`;
       p.querySelector('#pause-resume').onclick = () => this.togglePause();
       p.querySelector('#pause-exit').onclick = () => { this.opts.onExit?.(); };
       p.querySelector('#pause-mute').onclick = () => {
@@ -1970,8 +2108,13 @@ export class Game {
         p.querySelector('#pause-mute').textContent = sfx.muted ? 'SOUND: OFF' : 'SOUND: ON';
       };
       p.querySelector('#pause-voice').onclick = () => {
-        sfx.voiceOn = !sfx.voiceOn;
+        sfx.setVoiceOn(!sfx.voiceOn);
         p.querySelector('#pause-voice').textContent = sfx.voiceOn ? 'ANNOUNCER: ON' : 'ANNOUNCER: OFF';
+      };
+      p.querySelector('#pause-voice-name').onclick = () => {
+        const name = sfx.cycleVoice();
+        p.querySelector('#pause-voice-name').textContent = `ANNOUNCER VOICE: ${(name || 'AUTO').toUpperCase().slice(0, 28)} ▸`;
+        sfx.say(bark('dunk'), 2, 1.0);   // audition the new guy
       };
     }
   }

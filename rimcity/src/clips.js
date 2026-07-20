@@ -483,6 +483,21 @@ export function makeClips() {
     })],
   ]);
 
+  // holding the ball overhead out of bounds, waiting on the cut
+  C.inboundHold = clip(1.6, true, [
+    [0, P({
+      shL: [-146, 8, -14], shR: [-146, -8, 14], elL: [-28, 0, 0], elR: [-28, 0, 0],
+      chest: [-4, 0, 0], head: [-8, 0, 0],
+      thighL: [-6, 0, -6], thighR: [-6, 0, 6], kneeL: [10, 0, 0], kneeR: [10, 0, 0],
+    }, STAND)],
+    [0.5, P({
+      y: -0.03,
+      shL: [-152, 8, -14], shR: [-152, -8, 14], elL: [-24, 0, 0], elR: [-24, 0, 0],
+      chest: [-6, 0, 0], head: [-10, 0, 0],
+      thighL: [-8, 0, -6], thighR: [-8, 0, 6], kneeL: [14, 0, 0], kneeR: [14, 0, 0],
+    }, STAND)],
+  ]);
+
   C.dejected = clip(3.0, true, [
     [0, P({ chest: [16, 0, 0], head: [34, 0, 0], shL: [6, 0, -3], shR: [6, 0, 3], elL: [-6, 0, 0], elR: [-6, 0, 0] }, STAND)],
     [0.5, P({ chest: [18, 0, 0], head: [36, 0, 0], y: -0.025, shL: [6, 0, -3], shR: [6, 0, 3], elL: [-6, 0, 0], elR: [-6, 0, 0] }, STAND)],

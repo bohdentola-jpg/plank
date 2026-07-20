@@ -19,10 +19,15 @@ Kings of Rim City. Progress saves to the browser.
 ## The rules of the blacktop
 
 - Four quarters, **14-second shot clock**, halftime side switch, overtime.
-- **No refs.** Shove (◯) knocks a man flat and pops the ball loose. Costs turbo.
+- **No refs, but there are lines.** Step out with the ball or let it sail over
+  the boundary and it's the other team's — taken out with a real **inbound
+  pass**: your partner holds it overhead out of bounds while you get open
+  (□ demands it now), and a defender in the lane can still tip the entry pass.
+- After every bucket the other team takes it out from under that rim — no
+  camping the basket for repeat dunks.
+- **Shove (◯)** knocks a man flat and pops the ball loose. Costs turbo.
 - **Goaltending counts** — swat the ball on the way down and the points go up
   anyway… unless *you're* the one on fire.
-- **Nothing's out.** The walls keep every rebound alive.
 - **ON FIRE** — three straight buckets by the same player: flaming ball,
   infinite turbo, can't-miss range, legal goaltending. Burns until the other
   team scores.
@@ -71,7 +76,10 @@ Everything is generated in code — no art, no models, no audio files:
   four banks of animated crowd, a live four-face jumbotron, ad boards.
 - WebAudio everything: ball thumps, sneaker squeaks, rim clank, dunk boom,
   buzzers, an organ, a title beat — and the speech-synthesis announcer
-  ("HE'S ON FIRE!"), switchable in the pause menu.
+  ("He's on FIIIIRE!") whose pitch and pace rise with the moment. Don't like
+  his voice? The pause menu cycles through every voice installed on your
+  machine, and remembers your pick. Sound, announcer, and voice settings all
+  auto-save.
 
 ## Dev
 

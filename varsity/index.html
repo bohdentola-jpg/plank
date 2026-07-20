@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VARSITY 27 — High School Football</title>
+<link rel="stylesheet" href="styles.css" />
+<script type="importmap">
+{ "imports": { "three": "../vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============================ BOOT + INTRO ============================ -->
+  <div id="boot">
+    <img id="boot-logo" alt="VARSITY 27" />
+    <div class="boot-press">PRESS ANY BUTTON</div>
+    <div class="boot-sub">SUNDAY HAS MADDEN. SATURDAY HAS NCAA. FRIDAY IS YOURS.</div>
+  </div>
+  <div id="intro">
+    <div id="intro-holder"></div>
+    <div class="intro-bars top"></div>
+    <div class="intro-bars bottom"></div>
+    <div id="intro-caption"></div>
+    <img id="intro-logo" alt="VARSITY 27" />
+    <div id="intro-flash"></div>
+    <div class="intro-skip">PRESS ANY BUTTON TO SKIP</div>
+  </div>
+
+  <!-- ============================ TITLE ============================ -->
+  <section class="screen" id="scr-title">
+    <div id="title-3d"></div>
+    <div class="title-overlay">
+      <div class="title-card">
+        <div class="title-kicker">EB SPORTS · IT'S FRIDAY IN THE GAME</div>
+        <img id="title-logo" alt="VARSITY 27" />
+        <div class="title-sub">EVERY TOWN HAS A LEGEND</div>
+        <div class="title-menu">
+          <button id="title-hero" class="menu-btn">★ HOMETOWN HERO — YOUR ROAD TO STATE</button>
+          <button id="title-new" class="menu-btn">PROGRAM MODE — COACH YOUR SCHOOL</button>
+          <button id="title-quick" class="menu-btn">PLAY NOW — FRIDAY EXHIBITION</button>
+          <button id="title-continue" class="menu-btn">CONTINUE</button>
+        </div>
+        <div class="title-build">VARSITY 27 · BUILD 11</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ BUILDERS ============================ -->
+  <section class="screen builder" id="scr-school">
+    <header class="ribbon"><span class="step">STEP 1 OF 3</span> YOUR SCHOOL</header>
+    <div class="builder-body">
+      <div class="panel"></div>
+      <div class="preview3d"></div>
+    </div>
+  </section>
+
+  <section class="screen builder" id="scr-uniform">
+    <header class="ribbon"><span class="step">STEP 2 OF 3</span> THE UNIFORM</header>
+    <div class="builder-body">
+      <div class="panel"></div>
+      <div class="preview3d"></div>
+    </div>
+  </section>
+
+  <section class="screen builder" id="scr-team">
+    <header class="ribbon"><span class="step">STEP 3 OF 3</span> THE ROSTER</header>
+    <div class="builder-body">
+      <div class="panel wide"></div>
+      <div class="preview3d"></div>
+    </div>
+  </section>
+
+  <!-- ============================ HERO MODE ============================ -->
+  <section class="screen builder" id="scr-create">
+    <header class="ribbon"><span class="step">HOMETOWN HERO</span> CREATE YOUR PLAYER</header>
+    <div class="builder-body">
+      <div class="panel"></div>
+      <div class="preview3d"></div>
+    </div>
+  </section>
+
+  <section class="screen" id="scr-hero">
+    <div id="hero-bg"></div>
+    <div id="hero-wrap">
+      <div id="hero-head"></div>
+      <div id="hero-grid"></div>
+    </div>
+  </section>
+
+  <!-- ============================ OFFICE ============================ -->
+  <section class="screen" id="scr-office">
+    <div id="office-holder"></div>
+    <div id="office-head"></div>
+    <div id="office-tip"></div>
+    
+    <div id="office-modal" class="big-overlay"><div class="om-card"></div></div>
+  </section>
+
+  <!-- ============================ PLAY DESIGNER ============================ -->
+  <section class="screen builder" id="scr-editor">
+    <header class="ribbon"><span class="step">CHALK TALK</span> PLAY DESIGNER</header>
+    <div class="builder-body">
+      <div class="panel"></div>
+      <div class="ed-board"></div>
+    </div>
+  </section>
+
+  <!-- ============================ GAME ============================ -->
+  <section class="screen" id="scr-game">
+    <div id="game-holder"></div>
+
+    <div id="hud-bar">
+      <div id="hud-score"></div>
+      <div id="hud-situation"></div>
+      <div id="hud-clock"></div>
+    </div>
+
+    <div id="hud-banner"><div class="main"></div><div class="sub"></div></div>
+
+    <div id="icons"></div>
+
+    <div id="playcall">
+      <div class="pc-title"></div>
+      <div class="grid"></div>
+      
+    </div>
+
+    <div id="hud-hint"></div>
+
+    <div id="matchup" class="big-overlay"></div>
+    <div id="final" class="big-overlay"></div>
+
+    <div id="pause" class="big-overlay">
+      <div class="pause-card">
+        <h2>TIMEOUT</h2>
+        <button id="pause-resume" class="menu-btn">BACK TO THE GAME</button>
+        <button id="pause-exit" class="menu-btn">QUIT TO TITLE</button>
+        <div class="pause-keys">KEYBOARD — WASD move · SHIFT sprint · SPACE snap/juke/dive · 1-4 throw · E switch · M mute · ESC pause<br/>🎮 PAD — stick move · ✕ snap/juke/dive · □✕◯△ throw · R2 sprint · L1 switch · d-pad menus · OPTIONS pause</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

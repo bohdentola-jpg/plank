@@ -2,6 +2,8 @@
 // glass thud, dunk boom, buzzers, organ riffs, a title-screen beat — and the
 // announcer, who is the browser's own speech synth with his coffee replaced
 // by an airhorn. Everything is generated; no audio assets.
+const SET_KEY = 'rimcity_settings_v1';
+
 export class Sfx {
   constructor() {
     this.ctx = null;
@@ -9,9 +11,48 @@ export class Sfx {
     this.crowdGain = null;
     this.muted = false;
     this.voiceOn = true;
+    this.voiceName = null;      // user-picked announcer voice
     this._excite = 0.25;
     this._lastLine = '';
     this._voice = null;
+    this.loadSettings();
+  }
+
+  loadSettings() {
+    try {
+      const s = JSON.parse(localStorage.getItem(SET_KEY) || '{}');
+      if (typeof s.muted === 'boolean') this.muted = s.muted;
+      if (typeof s.voiceOn === 'boolean') this.voiceOn = s.voiceOn;
+      if (typeof s.voiceName === 'string') this.voiceName = s.voiceName;
+    } catch { /* private mode / node */ }
+  }
+
+  saveSettings() {
+    try {
+      localStorage.setItem(SET_KEY, JSON.stringify({
+        muted: this.muted, voiceOn: this.voiceOn, voiceName: this.voiceName,
+      }));
+    } catch { /* private mode */ }
+  }
+
+  setVoiceOn(v) { this.voiceOn = v; this.saveSettings(); }
+
+  /** English voices installed on this machine. */
+  voices() {
+    try {
+      return (window.speechSynthesis?.getVoices?.() || []).filter((v) => v.lang?.startsWith('en'));
+    } catch { return []; }
+  }
+
+  /** Step to the next installed voice; returns its name. */
+  cycleVoice() {
+    const all = this.voices();
+    if (!all.length) return null;
+    const cur = all.findIndex((v) => v.name === (this._voice?.name || this.voiceName));
+    this._voice = all[(cur + 1) % all.length];
+    this.voiceName = this._voice.name;
+    this.saveSettings();
+    return this.voiceName;
   }
 
   ensure() {
@@ -21,7 +62,7 @@ export class Sfx {
     } catch { return false; }
     const ctx = this.ctx;
     this.master = ctx.createGain();
-    this.master.gain.value = 0.7;
+    this.master.gain.value = this.muted ? 0 : 0.7;
     this.master.connect(ctx.destination);
     // crowd bed: looped filtered noise, brighter than an outdoor crowd —
     // gym acoustics, everything slaps back off the ceiling.
@@ -52,6 +93,7 @@ export class Sfx {
     this.muted = m;
     if (this.master) this.master.gain.value = m ? 0 : 0.7;
     if (m) { try { window.speechSynthesis?.cancel(); } catch { /* fine */ } }
+    this.saveSettings();
   }
 
   crowd(excite) {
@@ -270,7 +312,15 @@ export class Sfx {
     if (this._voice) return this._voice;
     try {
       const all = window.speechSynthesis?.getVoices?.() || [];
-      const want = ['Google US English', 'Microsoft David', 'Daniel', 'Alex', 'Fred'];
+      // the user's saved pick wins; otherwise prefer the livelier voices
+      if (this.voiceName) {
+        const saved = all.find((x) => x.name === this.voiceName);
+        if (saved) { this._voice = saved; return saved; }
+      }
+      const want = [
+        'Google US English', 'Aria', 'Guy', 'Microsoft Mark', 'Microsoft David',
+        'Daniel', 'Alex', 'Samantha', 'Fred',
+      ];
       for (const name of want) {
         const v = all.find((x) => x.name?.includes(name));
         if (v) { this._voice = v; return v; }
@@ -280,8 +330,13 @@ export class Sfx {
     return this._voice;
   }
 
-  /** Announcer bark. priority 0 chatter · 1 events · 2 must-say (buzzer, fire). */
-  say(text, priority = 1) {
+  /**
+   * Announcer bark with an emotional register.
+   * priority: 0 chatter · 1 events · 2 must-say (buzzer, fire).
+   * excite 0..1: dead-pan lows for bricks, courtside-losing-his-mind highs
+   * for posters — drives pitch, speed, and a little human wobble.
+   */
+  say(text, priority = 1, excite = 0.55) {
     if (this.muted || !this.voiceOn) return;
     try {
       const synth = window.speechSynthesis;
@@ -295,8 +350,9 @@ export class Sfx {
       const u = new SpeechSynthesisUtterance(text);
       const v = this._pickVoice();
       if (v) u.voice = v;
-      u.rate = 1.12;
-      u.pitch = 0.72;
+      const wobble = (Math.random() - 0.5) * 0.08;
+      u.pitch = Math.max(0.1, Math.min(2, 0.58 + excite * 0.52 + wobble));
+      u.rate = Math.max(0.5, Math.min(2.2, 0.96 + excite * 0.38 + wobble * 0.5));
       u.volume = 1;
       synth.speak(u);
     } catch { /* speech unavailable — the game plays fine mute */ }
