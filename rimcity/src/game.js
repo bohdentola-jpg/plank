@@ -534,9 +534,11 @@ export class Game {
     const openEnough = this.opennessOf(receiver) > 1.4;
     const auto = inb.t > (this.isHuman(team) ? 1.15 : 0.75) && receiverReady && openEnough;
     if (inb.force || auto || inb.t > 2.4) {
-      // let it fly — a real pass, so a defender in the lane can still tip it
+      // let it fly — a real pass, so a defender in the lane can still tip it.
+      // The passer stays whistle-proof for the release beat: he's standing
+      // out of bounds ON PURPOSE, that's not a turnover.
       this.inb = null;
-      passer.protected = 0;
+      passer.protected = 0.5;
       passer.state = 'pass';
       passer.stateT = 0;
       passer.anim.play('passChest', { fade: 0.06, onDone: () => { if (passer.state === 'pass') passer.state = 'play'; } });

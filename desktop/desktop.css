@@ -234,6 +234,7 @@ button { font-family: inherit; font-size: 12px; }
 @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
 
 /* ------------------------------------------------------------- start menu */
+#start-menu[hidden] { display: none; }
 #start-menu {
   position: fixed; left: 2px; bottom: 32px;
   width: 240px;
