@@ -91,3 +91,27 @@ node tools/shot.mjs "/rimcity/?quick" rim.png --wait 9000     # screenshot QA
 QA URL modes: `?quick` jumps straight into a game (`&team=ny&opp=chi&rung=5`
 `&q=30` for short quarters, `&cpu` for CPU vs CPU), `?gallery` shows every
 animation clip on a grid of rigs (`&clips=dunkTomahawk,block`).
+
+## RIM CITY ONLINE — one file, real multiplayer
+
+`rimcity-online.html` (repo root) is the whole game in a single HTML file with
+**cross-platform online multiplayer**: PC vs phone vs whatever, over a WebRTC
+data channel (PeerJS's free cloud handles the handshake — there is no server
+for you to run). Pick your name and crew, **CREATE LOBBY**, and send a friend
+the 4-letter code or the invite link; they JOIN from any browser. Touch
+controls appear automatically on phones (stick to move — push it to the rim
+for turbo — plus SHOOT / PASS / ALLEY / SPIN buttons); pads and keyboard work
+everywhere. There's a PRACTICE VS CPU mode too, and your name/crew choices
+save.
+
+**Publish it:** put the file alone in a folder, rename it `index.html`, and
+drag the folder onto https://app.netlify.com/drop — done, share the URL.
+(Any static host works; it needs internet for the CDN engine + matchmaking.)
+
+**Rebuild it after engine changes:** `npm run build:online` — the arcade
+version in this folder is bundled read-only and stays untouched.
+
+Netcode: the host runs the real simulation and streams ~300-byte snapshots at
+20Hz; the guest renders them with interpolation and sends inputs at 30Hz. If
+both players are behind very strict carrier NATs the free TURN relay does its
+best, but a home Wi-Fi on at least one end is the happy path.

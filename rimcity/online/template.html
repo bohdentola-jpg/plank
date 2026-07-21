@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>RIM CITY ONLINE — 2-on-2 Arcade Basketball</title>
+<style>
+{{CSS}}
+</style>
+<script type="importmap">
+{ "imports": { "three": "{{THREE_URL}}" } }
+</script>
+<script src="{{PEER_URL}}"></script>
+</head>
+<body>
+<div id="app">
+
+  <!-- ======================= LANDING / LOBBY ======================= -->
+  <section class="nscreen active" id="scr-landing">
+    <div class="land-wrap">
+      <div class="n-logo"><img id="n-logo-img" alt="RIM CITY ONLINE" /></div>
+      <div class="land-card">
+        <label class="n-label">YOUR NAME</label>
+        <input id="n-name" class="n-input" maxlength="12" placeholder="BUCKETS" autocomplete="off" />
+        <label class="n-label">YOUR CREW</label>
+        <div id="n-crews" class="n-crews"></div>
+        <div class="n-actions">
+          <button id="n-create" class="n-btn gold">🏀 CREATE LOBBY</button>
+          <div class="n-joinrow">
+            <input id="n-code" class="n-input code" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters" />
+            <button id="n-join" class="n-btn">JOIN</button>
+          </div>
+          <button id="n-practice" class="n-btn dim">PRACTICE VS CPU</button>
+        </div>
+        <div id="n-status" class="n-status"></div>
+      </div>
+      <div class="n-foot">PS5 / XBOX PAD · KEYBOARD · TOUCH — CROSS-PLATFORM · NO INSTALL</div>
+    </div>
+  </section>
+
+  <section class="nscreen" id="scr-lobby">
+    <div class="land-wrap">
+      <div class="lob-code">LOBBY CODE <b id="lob-code">----</b></div>
+      <div class="lob-sub" id="lob-share">Tell a friend to open this page and JOIN with the code — phone or PC, doesn't matter.</div>
+      <div class="lob-players" id="lob-players"></div>
+      <div class="n-actions">
+        <button id="lob-start" class="n-btn gold" style="display:none">▶ START GAME</button>
+        <div id="lob-wait" class="n-status">waiting…</div>
+        <button id="lob-leave" class="n-btn dim">LEAVE</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= GAME ======================= -->
+  <section class="nscreen" id="scr-game">
+    <div id="game-holder"></div>
+
+    <div id="hud-bar">
+      <div class="hud-team" id="hud-away"></div>
+      <div id="hud-mid"></div>
+      <div class="hud-team" id="hud-home"></div>
+    </div>
+
+    <div id="hud-banner"><div class="main"></div><div class="sub"></div></div>
+    <div id="hud-hint"></div>
+    <div id="shot-meter"><b></b></div>
+    <div id="nametags"></div>
+
+    <div id="corner-ui">
+      <button id="c-pause" title="Pause">⏸</button>
+      <button id="c-mute" title="Mute">🔊</button>
+    </div>
+
+    <div id="touch-ui">
+      <div id="stick"><div id="stick-knob"></div></div>
+      <div id="tbtns">
+        <button class="tbtn" data-b="lob">ALLEY<small>SWITCH</small></button>
+        <button class="tbtn" data-b="shove">SPIN<small>SHOVE</small></button>
+        <button class="tbtn" data-b="pass">PASS<small>STEAL</small></button>
+        <button class="tbtn big" data-b="shoot">SHOOT<small>BLOCK</small></button>
+      </div>
+    </div>
+
+    <div id="matchup" class="big-overlay"></div>
+    <div id="final" class="big-overlay"></div>
+    <div id="net-final" class="big-overlay"></div>
+
+    <div id="pause" class="big-overlay">
+      <div class="pause-card">
+        <h2>TIMEOUT</h2>
+        <button id="pause-resume" class="menu-btn">BACK TO THE GAME</button>
+        <button id="pause-mute" class="menu-btn">SOUND: ON</button>
+        <button id="pause-voice" class="menu-btn">ANNOUNCER: ON</button>
+        <button id="pause-voice-name" class="menu-btn">ANNOUNCER VOICE: AUTO ▸</button>
+        <button id="pause-exit" class="menu-btn">QUIT</button>
+        <div class="pause-keys">
+          KEYBOARD — WASD move · SHIFT turbo · SPACE shoot/block (hold, release at the top) ·
+          E pass/steal · F alley-oop/switch · Q spin/shove<br/>
+          🎮 PAD — stick move · R2 turbo · ✕ shoot/block · □ pass/steal · △ alley-oop · ◯ spin/shove · L1 switch<br/>
+          📱 TOUCH — stick to move (push to the edge for TURBO) · hold SHOOT, release at the top of the jump
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="rotate-hint">🔄 ROTATE YOUR PHONE — RIM CITY PLAYS SIDEWAYS</div>
+  <div id="cdn-fail" hidden>
+    <div class="pause-card"><h2>COULDN'T LOAD</h2>
+    This page pulls the 3D engine from a CDN — check your connection and refresh.</div>
+  </div>
+</div>
+<script type="module">
+{{BUNDLE}}
+</script>
+</body>
+</html>
