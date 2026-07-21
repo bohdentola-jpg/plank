@@ -1,9 +1,10 @@
-// Screenshot harness: serves the repo, drives the game in headless Chromium,
-// captures frames into qa/. Usage:
-//   node tools/shot.mjs "?gallery" gallery.png --wait 2500
-//   node tools/shot.mjs "?quick" game.png --wait 6000 --keys "Space@4000"
-//   node tools/shot.mjs "" title.png --eval "..." --series 3@1500
-//   node tools/shot.mjs "/rimcity/?quick" hoops.png      (leading / = full path)
+// Screenshot harness: serves the repo, drives a game in headless Chromium,
+// captures frames into qa/. "" or "?x" targets the EB desktop at /index.html;
+// a leading / picks a game. Usage:
+//   node tools/shot.mjs "" desktop.png --wait 2500
+//   node tools/shot.mjs "/varsity/?quick" game.png --wait 6000 --keys "Space@4000"
+//   node tools/shot.mjs "/varsity/?gallery" gallery.png --wait 2500
+//   node tools/shot.mjs "/rimcity/?quick" hoops.png --eval "..." --series 3@1500
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';

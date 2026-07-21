@@ -2106,7 +2106,10 @@ export class Game {
     for (const team of [0, 1]) {
       const ring = this._markers[team];
       if (!ring) continue;
-      const b = (this.possession === team && this.holder()?.team === team) ? this.holder() : this.ctrlOf(team);
+      // during your own inbound the ring follows the cutter you steer,
+      // not the AI holding the ball out of bounds
+      const b = (this.inb?.team !== team && this.possession === team && this.holder()?.team === team)
+        ? this.holder() : this.ctrlOf(team);
       ring.position.x = b.pos.x;
       ring.position.z = b.pos.y;
       ring.material.opacity = 0.55 + Math.sin(this.t * 6) * 0.25;
