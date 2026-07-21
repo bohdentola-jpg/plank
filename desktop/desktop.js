@@ -267,6 +267,12 @@ function makeWindow(id, title, icon, bodyEl, { x = 120, y = 40, onClose = null }
 function openWin(id) {
   const w = wins.get(id);
   if (!w) return;
+  // second open of a visible window just focuses it — no double chirp,
+  // no reposition (a dblclick also fires the single-click open path)
+  if (w.el.style.display !== 'none' && !w.minimized && w.taskBtn) {
+    focusWin(id);
+    return;
+  }
   w.minimized = false;
   w.el.style.display = 'flex';
   if (!w.taskBtn) {
