@@ -1,13 +1,14 @@
 {
   "name": "eb-games-shelf",
   "version": "2.0.0",
-  "description": "EB GAMES SHELF — VARSITY 27 (football), RIM CITY (basketball), LOAM (voxels). Three 3D browser games, zero asset files, one Windows-95 desktop to launch them.",
+  "description": "EB GAMES SHELF — VARSITY 27 (football), BIG INNING '27 (baseball), RIM CITY (basketball), LOAM (voxels). Four 3D browser games, zero asset files, one Windows-95 desktop to launch them.",
   "type": "module",
   "scripts": {
     "start": "python3 serve.py",
     "shot": "node tools/shot.mjs",
-    "smoke": "node tools/smoke.mjs && node tools/smoke-rimcity.mjs && node tools/smoke-loam.mjs",
+    "smoke": "node tools/smoke.mjs && node tools/smoke-baseball.mjs && node tools/smoke-rimcity.mjs && node tools/smoke-loam.mjs",
     "smoke:varsity": "node tools/smoke.mjs",
+    "smoke:baseball": "node tools/smoke-baseball.mjs",
     "smoke:rimcity": "node tools/smoke-rimcity.mjs",
     "smoke:loam": "node tools/smoke-loam.mjs",
     "shot:loam": "node tools/shot-loam.mjs"

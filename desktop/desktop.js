@@ -1,4 +1,4 @@
-// EB GAMES 95 — a small operating system for a shelf of three games.
+// EB GAMES 95 — a small operating system for a shelf of four games.
 // Boot POST → teal desktop → double-click a cartridge. The Hi-Fi keeps
 // playing while you game in another tab, which is the whole point of tabs.
 
@@ -74,6 +74,24 @@ const ICONS = {
     '.g.g.g.g.g.g.g..',
     'gggggggggggggggg',
   ], { d: '#4a2410', b: '#8a4a1c', w: '#f4f2ec', g: '#1d6b2d' }),
+  biginning: pixelIcon([
+    '................',
+    '................',
+    '....wwwwww......',
+    '...wwwwwwww.....',
+    '..wwrwwwwrww....',
+    '..wwwrwwrwww....',
+    '..wwwrwwrwww....',
+    '..wwrwwwwrww....',
+    '...wwwwwwww.....',
+    '....wwwwww......',
+    '..........bb....',
+    '.........bb.....',
+    '........bb......',
+    '....g.gbb.g.....',
+    '.g.g.gbb.g.g.g..',
+    'gggggggggggggggg',
+  ], { w: '#f4f2ec', r: '#c0273a', b: '#b8834a', g: '#1d6b2d' }),
   rimcity: pixelIcon([
     '................',
     '....kkkkkkkk....',
@@ -161,6 +179,18 @@ const GAMES = {
       play designer, drills, and a coach's office where every week begins.`,
     shots: ['docs/friday-night.png', 'docs/touchdown.png'],
     meta: ['11-on-11 football', '1 player', 'PS5/Xbox pad + keyboard', 'auto-saves'],
+  },
+  biginning: {
+    title: "BIG INNING '27",
+    tag: 'The summer game. Every yard is different.',
+    path: 'baseball/',
+    desc: `Arcade baseball with real feel: read the incoming-pitch marker, time the
+      swing, paint the corners with four pitches, throw the force play — camera behind
+      your batter when you hit, behind the mound when you deal. Six hand-built
+      ballparks from a wooden sandlot to night ball under the smokestacks. Exhibition,
+      a full SEASON with a free-agent fence line, or ROAD TO GLORY at-bat by at-bat.`,
+    shots: ['docs/biginning-swing.png', 'docs/biginning-park.png'],
+    meta: ['arcade baseball', '1 player', 'PS5/Xbox pad + keyboard', 'seasons + careers auto-save'],
   },
   rimcity: {
     title: 'RIM CITY',
@@ -350,10 +380,11 @@ function aboutWindow() {
   body.className = 'about';
   body.innerHTML = `
     <h1>EB GAMES 95</h1>
-    <p>Three 3D games, one repo, zero asset files — every model, texture, animation,
+    <p>Four 3D games, one repo, zero asset files — every model, texture, animation,
     and note of music is generated in code and runs straight in the browser.</p>
     <ul>
       <li><b>VARSITY 27</b> — high school football, careers and all</li>
+      <li><b>BIG INNING '27</b> — arcade baseball across six hand-built yards</li>
       <li><b>RIM CITY</b> — 2-on-2 arcade basketball, ON FIRE included</li>
       <li><b>LOAM</b> — voxel survival with a generative score</li>
     </ul>
@@ -538,6 +569,7 @@ function hifiWindow() {
 // ------------------------------------------------------------------ desktop icons
 const DESK_APPS = [
   { id: 'varsity', label: 'VARSITY 27' },
+  { id: 'biginning', label: "BIG INNING '27" },
   { id: 'rimcity', label: 'RIM CITY' },
   { id: 'loam', label: 'LOAM' },
   { id: 'hifi', label: 'EB Hi-Fi' },
@@ -587,6 +619,7 @@ function buildStartMenu() {
     return b;
   };
   mk(ICONS.varsity, 'VARSITY 27', () => openWin('varsity'));
+  mk(ICONS.biginning, "BIG INNING '27", () => openWin('biginning'));
   mk(ICONS.rimcity, 'RIM CITY', () => openWin('rimcity'));
   mk(ICONS.loam, 'LOAM', () => openWin('loam'));
   items.insertAdjacentHTML('beforeend', '<div class="sm-sep"></div>');
@@ -649,8 +682,9 @@ function boot() {
     'CPU : BLAST PROCESSOR AT 66 MHZ ......... OK',
     'MEMORY TEST : 640K BASE ... 8192K EXT ... OK',
     '',
-    'DETECTING SHELF .......... 3 CARTRIDGES FOUND',
+    'DETECTING SHELF .......... 4 CARTRIDGES FOUND',
     '  VARSITY 27 ............................ OK',
+    "  BIG INNING '27 ........................ OK",
     '  RIM CITY .............................. OK',
     '  LOAM .................................. OK',
     'SOUND : EB-FM SYNTHESIS .................. OK',
@@ -686,6 +720,7 @@ startClock();
 applyCrt();
 
 makeWindow('varsity', 'VARSITY 27', ICONS.varsity, gameWindow('varsity'), { x: 140, y: 30 });
+makeWindow('biginning', "BIG INNING '27", ICONS.biginning, gameWindow('biginning'), { x: 170, y: 50 });
 makeWindow('rimcity', 'RIM CITY', ICONS.rimcity, gameWindow('rimcity'), { x: 200, y: 70 });
 makeWindow('loam', 'LOAM', ICONS.loam, gameWindow('loam'), { x: 260, y: 110 });
 makeWindow('hifi', 'EB Hi-Fi', ICONS.hifi, hifiWindow(), { x: 460, y: 90 });

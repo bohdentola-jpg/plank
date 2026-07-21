@@ -1,6 +1,6 @@
 # EB GAMES 95 🖥
 
-Three 3D games. One repo. Zero asset files — every model, texture, animation,
+Four 3D games. One repo. Zero asset files — every model, texture, animation,
 and note of music is generated in code, and it all runs straight in the
 browser. No install, no build step.
 
@@ -12,6 +12,7 @@ Spotify link) — the desktop keeps the music going while you play.
 | Cartridge | What it is | Direct door |
 | --- | --- | --- |
 | 🏈 **[VARSITY 27](varsity/README.md)** | High school football under the Friday lights — careers, a play designer, a coach's office | `/varsity/` |
+| ⚾ **[BIG INNING '27](baseball/README.md)** | Arcade baseball across six hand-built yards — seasons, free agents, Road to Glory | `/baseball/` |
 | 🏀 **[RIM CITY](rimcity/README.md)** | 2-on-2 arcade basketball — turbo, shoves, alley-oops, ON FIRE, and THE RUN ladder | `/rimcity/` |
 | ⛏ **[LOAM](loam/README.md)** | Voxel survival & building grown from any seed word, scored by a generative composer | `/loam/` |
 

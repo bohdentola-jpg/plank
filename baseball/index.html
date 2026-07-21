@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BIG INNING '27 — Summer League Baseball</title>
+<link rel="stylesheet" href="styles.css" />
+<script type="importmap">
+{ "imports": { "three": "../vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============================ BOOT ============================ -->
+  <div id="boot">
+    <img id="boot-logo" alt="BIG INNING '27" />
+    <div class="boot-press">PRESS ANY BUTTON</div>
+    <div class="boot-sub">EB SPORTS PRESENTS · THE SUMMER GAME</div>
+  </div>
+
+  <!-- ============================ TITLE ============================ -->
+  <section class="screen" id="scr-title">
+    <div id="title-3d"></div>
+    <div class="title-overlay">
+      <div class="title-card">
+        <div class="title-kicker">EB SPORTS · SUMMER LEAGUE BASEBALL</div>
+        <img id="title-logo" alt="BIG INNING '27" />
+        <div class="title-menu">
+          <button id="title-rtg" class="menu-btn">★ ROAD TO GLORY — YOUR STORY IN THE BOX</button>
+          <button id="title-season" class="menu-btn">SEASON MODE — YOUR CLUB, YOUR SUMMER</button>
+          <button id="title-quick" class="menu-btn">EXHIBITION — PICK A YARD, PLAY TONIGHT</button>
+          <button id="title-continue" class="menu-btn">CONTINUE</button>
+        </div>
+        <div class="title-build">BIG INNING '27 · BUILD 2 · PLAYS GREAT WITH A PS5 PAD</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ CREATE (RTG) ============================ -->
+  <section class="screen builder" id="scr-create">
+    <header class="ribbon"><span class="step">ROAD TO GLORY</span> CREATE YOUR BALLPLAYER</header>
+    <div class="builder-body">
+      <div class="panel"></div>
+      <div class="preview3d"></div>
+    </div>
+  </section>
+
+  <!-- ============================ HUBS ============================ -->
+  <section class="screen" id="scr-hub">
+    <div id="hub-wrap">
+      <div id="hub-head"></div>
+      <div id="hub-grid"></div>
+    </div>
+  </section>
+
+  <!-- ============================ GAME ============================ -->
+  <section class="screen" id="scr-game">
+    <div id="game-holder"></div>
+
+    <div id="hud-bar">
+      <div id="bb-bar"></div>
+      <div id="bb-count"></div>
+      <div id="bb-bases"></div>
+    </div>
+
+    <div id="hud-banner"><div class="main"></div><div class="sub"></div></div>
+
+    <div id="bb-zone"></div>
+    <div id="bb-incoming"></div>
+    <div id="bb-reticle"></div>
+    <div id="bb-mark"></div>
+
+    <div id="bb-pitchmenu"></div>
+    <div id="bb-throwmenu"></div>
+    <div id="bb-hint"></div>
+
+    <div id="matchup" class="big-overlay"></div>
+    <div id="final" class="big-overlay"></div>
+
+    <div id="pause" class="big-overlay">
+      <div class="pause-card">
+        <h2>TIME</h2>
+        <button id="pause-resume" class="menu-btn">BACK TO THE GAME</button>
+        <button id="pause-exit" class="menu-btn">QUIT TO MENU</button>
+        <div class="pause-keys">BATTING — mouse aims · CLICK/Z swing · X power swing · A send runners · S hold<br/>
+        PITCHING — 1-4 pick a pitch · mouse aims · CLICK/SPACE deal · FIELDING — 1/2/3/H throw to a bag<br/>
+        🎮 PAD — stick aims · ✕ swing/deal · □ power · d-pad picks pitches · ◯△□✕ throw to 1st/2nd/3rd/home · OPTIONS pause<br/>
+        M mute · ESC time out</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- modal shared by hubs -->
+  <div id="office-modal" class="big-overlay"><div class="om-card"></div></div>
+
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
