@@ -178,7 +178,7 @@ export class Combat {
       ent.viewPunch.x += kick.y;
       ent.viewPunch.y += kick.x;
     }
-    ent.fireInacc += Math.max(-0.4, def.inacc.fire);
+    ent.fireInacc = Math.max(-1.2, ent.fireInacc + def.inacc.fire); // negative = settling (Negev)
 
     // spread
     const speed = Math.hypot(ent.vel.x, ent.vel.z);

@@ -88,10 +88,18 @@ function wireMenus() {
 
   document.addEventListener('pointerlockchange', () => {
     const locked = document.pointerLockElement === canvas;
+    if (!locked) {
+      G.player.keys = {}; // never leave movement keys "held" across a lock loss
+      G.player.mouseDown = false;
+      G.player.mouse2Down = false;
+    }
     if (!locked && G.started && !G.hud.buyOpen && !G.game.matchOver && !G.testMode) {
       G.paused = true;
       $('pause').style.display = 'flex';
     }
+  });
+  window.addEventListener('blur', () => {
+    if (G.player) { G.player.keys = {}; G.player.mouseDown = false; G.player.mouse2Down = false; }
   });
 
   // clicking the canvas re-locks (e.g. after closing the buy menu)
