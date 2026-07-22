@@ -571,7 +571,8 @@ class ViewModel {
   constructor() {
     this.root = new THREE.Group();
     G.camera.add(this.root);
-    this.root.position.set(0.26, -0.25, -0.42);
+    this.root.position.set(0.24, -0.23, -0.36);
+    this.root.scale.setScalar(0.68);
     this.current = null;
     this.currentKey = null;
     this.drawT = 0;
@@ -683,13 +684,13 @@ class ViewModel {
     }
 
     g.position.set(
-      0.26 + bx + this.swayX + swingX,
-      -0.25 + by + this.swayY - draw * 0.25 - reloadDip,
-      -0.42 + kick * 0.05
+      0.24 + bx + this.swayX + swingX,
+      -0.23 + by + this.swayY - draw * 0.25 - reloadDip,
+      -0.36 + kick * 0.05
     );
     g.rotation.set(
       kick * 0.06 + draw * 0.9 + reloadRot * 0.35 - swingRot * 0.5,
-      this.swayX * 1.6 + swingRot * 0.35,
+      0.06 + this.swayX * 1.6 + swingRot * 0.35, // slight inward cant toward the crosshair
       this.swayY * 0.6
     );
   }
