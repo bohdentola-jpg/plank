@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Container Strike — model gallery</title>
+<style>body{margin:0;background:#20242a;overflow:hidden}</style></head>
+<body>
+<script type="module">
+import * as THREE from '../src/three.js';
+import { getModel, listBuilderIds } from '../src/models/index.js';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x272b33);
+scene.add(new THREE.HemisphereLight(0xdde4f0, 0x555044, 0.9));
+const sun = new THREE.DirectionalLight(0xfff2dc, 1.8);
+sun.position.set(5, 12, 6);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -20; sun.shadow.camera.right = 20;
+sun.shadow.camera.top = 20; sun.shadow.camera.bottom = -20;
+scene.add(sun);
+
+const params = new URLSearchParams(location.search);
+const only = params.get('ids');
+const ids = only ? only.split(',') : listBuilderIds();
+const cols = Math.ceil(Math.sqrt(ids.length * 1.6));
+const CELL = 1.1;
+
+function label(text, x, y, z) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 48;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#cfe0a8'; ctx.font = 'bold 30px monospace'; ctx.textAlign = 'center';
+  ctx.fillText(text, 128, 34);
+  const tex = new THREE.CanvasTexture(c);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+  s.scale.set(0.8, 0.15, 1); s.position.set(x, y, z);
+  scene.add(s);
+}
+
+ids.forEach((id, i) => {
+  const col = i % cols, row = Math.floor(i / cols);
+  const x = (col - (cols - 1) / 2) * CELL;
+  const z = row * CELL * 0.85;
+  const m = getModel(id);
+  const g = m.group.clone(true);
+  g.position.set(x, 0.05, z);
+  g.rotation.y = Math.PI / 3.2; // 3/4 view
+  scene.add(g);
+  label(id, x, -0.32, z + 0.1);
+});
+
+const rows = Math.ceil(ids.length / cols);
+const cam = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.05, 100);
+const cz = rows * CELL * 0.85 / 2 - 0.4;
+cam.position.set(0, cols * 0.62, cz + cols * 0.75);
+cam.lookAt(0, -0.1, cz);
+renderer.render(scene, cam);
+window.__galleryReady = true;
+</script>
+</body>
+</html>
