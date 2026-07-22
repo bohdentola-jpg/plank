@@ -6,13 +6,16 @@ map textures, and every sound) generated procedurally at runtime.
 
 ## Run it
 
-From the repository root:
+Container Strike is fully self-contained (its own vendored three.js, its own
+server) and runs separately from the other games in this repository:
 
 ```
-python3 serve.py            # or: python3 -m http.server 8000
+cd container-strike
+python3 serve.py            # Windows: double-click container-strike/play.bat
 ```
 
-then open `http://localhost:8000/container-strike/` and hit **DEPLOY**.
+It opens `http://localhost:8010` automatically — hit **DEPLOY**.
+(Any static file server pointed at the `container-strike/` folder works too.)
 
 Requires a WebGL-capable browser. Pointer lock is used for mouse look.
 
@@ -107,7 +110,8 @@ container-strike/
     smoke-browser.mjs headless Playwright smoke test of the full game
 ```
 
-three.js r160 is vendored at `vendor/three.module.js` (repo root).
+three.js r160 is vendored at `container-strike/vendor/three.module.js`, so the
+folder has no dependency on anything else in the repository.
 
 ## Tests
 
