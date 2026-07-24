@@ -259,9 +259,11 @@ body.crt-on #melee-crt { display: block; }
 .cs-cell.hover { border-color: var(--gold); transform: translateY(-3px); }
 .cs-cell.locked { filter: grayscale(1) brightness(0.55); }
 .cs-lock {
-  position: absolute; inset: auto 4px 22px 4px;
-  font-size: 8px; letter-spacing: 0.1em; text-align: center; color: var(--gold);
-  background: rgba(5,6,12,0.86); padding: 2px;
+  position: absolute; inset: auto 3px 24px 3px;
+  font-size: 7.5px; line-height: 1.35; letter-spacing: 0.04em; text-align: center;
+  color: var(--gold); text-transform: uppercase;
+  background: rgba(5,6,12,0.9); padding: 3px 2px;
+  border-top: 1px solid rgba(255,210,58,0.4);
 }
 .cs-token {
   position: absolute; width: 24px; height: 24px;
@@ -280,14 +282,21 @@ body.crt-on #melee-crt { display: block; }
 .cs-preview { height: min(34vh, 300px); background: linear-gradient(180deg, #141830, #0a0c18); border: 2px solid var(--line); border-radius: 4px; }
 .cs-plate { width: 100%; image-rendering: pixelated; border: 2px solid #05060c; }
 .cs-bio { font-size: 12px; line-height: 1.45; color: #c3c9e8; }
-.cs-stats { display: flex; flex-direction: column; gap: 2px; }
+.cs-stats { display: flex; flex-direction: column; gap: 5px; }
 .sb {
-  display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: baseline;
+  display: grid; grid-template-columns: 1fr 118px; gap: 10px; align-items: center;
   font-size: 10px; letter-spacing: 0.16em; color: #98a0cc;
 }
 .sb i {
-  font-style: normal; color: var(--gold); letter-spacing: 1px;
-  white-space: nowrap; font-size: 11px;
+  display: block; height: 9px;
+  background: #10142a;
+  border: 1px solid var(--line);
+  /* five notches, so a 3-of-5 stat reads as three filled segments */
+  background-image: repeating-linear-gradient(90deg, transparent 0 22px, var(--line) 22px 23px);
+}
+.sb i b {
+  display: block; height: 100%;
+  background: linear-gradient(180deg, var(--gold), #c98f00);
 }
 .cs-slots { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
 .cs-chip {

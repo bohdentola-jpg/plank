@@ -368,7 +368,7 @@ export class Menus {
       }
       const picks = {};
 
-      const statBar = (label, v) => `<div class="sb"><span>${label}</span><i>${'█'.repeat(v)}${'·'.repeat(5 - v)}</i></div>`;
+      const statBar = (label, v) => `<div class="sb"><span>${label}</span><i><b style="width:${v * 20}%"></b></i></div>`;
 
       const showDef = (def) => {
         plate.src = nameplateCanvas(def).toDataURL();
