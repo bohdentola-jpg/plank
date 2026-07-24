@@ -1,50 +1,112 @@
-# VARSITY 27 🏈
+# EB GAMES 🕹️
+
+*An in-store demo kiosk with two games on the shelf. No install, no build step,
+no art assets — every model, texture, sound and note in here is generated in code.*
+
+Double-click **`play.bat`** (Windows) or run **`python3 serve.py`** (Mac/Linux) and
+the kiosk opens in your browser. Pick a game off the rack with the mouse, the
+keyboard, or a controller.
+
+![The EB GAMES kiosk](docs/eb-games.png)
+
+---
+
+## 🏈 VARSITY 27 — *EB SPORTS*
 
 *Sunday has Madden. Saturday has NCAA. Friday is yours.*
 
-The high school chapter of the football-game trinity, in the browser — full 3D, no
-install, no build step. Boots with a cinematic flyover of America's football towns
-and an original synthesized score.
+The high school chapter of the football-game trinity, in full 3D. Build your school
+from the bricks up, design the uniform on a live 3D player, then coach — or play —
+every Friday night under the lights.
 
-**HOMETOWN HERO** — the player career: create your QB in a full face editor (skin,
-jaw, brows, eyes, hair, facial hair, eye black, visor, build), then live the week:
-allocate your hours between training, film, academics, and rest; handle what comes
-up (parties, scouts, chemistry finals); keep the GPA above 2.0 or watch Friday in
-street clothes; play your possessions live with the defense simulated like Road to
-Glory; earn XP and college offers; survive to State and pick a hat on Signing Day.
+**HOMETOWN HERO** — the player career: create your QB in a full face editor, then
+live the week. Allocate your hours between training, film, academics and rest;
+handle what comes up (parties, scouts, chemistry finals); keep the GPA above 2.0 or
+watch Friday in street clothes; play your possessions live with the defense
+simulated; earn XP and college offers; survive to State and pick a hat on Signing Day.
 
-![Friday night under the lights](docs/friday-night.png)
-
-**Build your school.** Name it, pick the colors, design the logo, and raise the actual
-building — style, floors, wings, gymnasium, cupola, marquee sign, bus fleet.
-
-**Suit up your team.** Design the uniform on a live 3D player (jersey, helmet stripes,
-side panels, facemask, socks — the works), then set your varsity roster: names,
-numbers, and attribute re-rolls until the depth chart feels right.
-
-**Then it's Friday night.** Full 11-on-11 under the lights against a generated rival,
-in a stadium your school overlooks from the hill behind the west end zone. Animated
-crowd, light towers, working scoreboard, painted end zones, your logo at midfield.
-
-**And it's a career.** Your week starts in a 3D coach's office overlooking the field
-in daylight — click the **helmet** to play Friday's game, the **papers** for weekly
-decisions (eligibility scandals, booster deals, the AD on line one), the **window**
-to run practice drills (Route Tree, the Gauntlet, Hit Stick — grades become Friday
-boosts), the **whiteboard** to open the play designer, the **trophy shelf** for the
-season. An 8-game schedule, playoffs, a State title, an AD trust meter that can get
-you fired, and a paint can to redecorate the whole office. The season starts at
-training camp; the playbook has 17 plays plus whatever you draw up yourself.
+**PROGRAM MODE** — your week starts in a 3D coach's office overlooking the field.
+Click the **helmet** to play Friday's game, the **papers** for weekly decisions, the
+**window** to run practice drills, the **whiteboard** to open the play designer, the
+**trophy shelf** for the season. An 8-game schedule, playoffs, a State title, and an
+AD trust meter that can get you fired.
 
 | | |
 | --- | --- |
-| ![School builder](docs/school-builder.png) | ![Uniform lab](docs/uniform-lab.png) |
-| ![Touchdown celebration](docs/touchdown.png) | ![Defense](docs/defense.png) |
+| ![Friday night](docs/friday-night.png) | ![School builder](docs/school-builder.png) |
+| ![Uniform lab](docs/uniform-lab.png) | ![Office](docs/office.png) |
+
+**Controls** — click a play card or press its number · **SPACE** snap · **WASD** move ·
+**1–4** throw · **SHIFT** sprint · **E** switch defender · **ESC** pause. Controllers
+work everywhere, including the menus and the office.
+
+---
+
+## 🥊 MASCOT MELEE 64 — *EB INTERACTIVE*
+
+*Twelve mascots. One ring. No mercy.*
+
+A platform fighter with deliberately chunky 64-bit graphics: low-poly flat-shaded
+rigs, 64-pixel nearest-neighbour textures, blob shadows, and the whole scene
+rendered at a third of your window's resolution and scaled back up. There is no
+health bar — the number under your mascot is **damage**, and the higher it climbs
+the further you fly. Knock everyone else off the stage.
+
+![Hometown Field](docs/melee-field.png)
+
+**The roster.** Ten fighters plus two unlockables, every one of them built in code:
+**BLITZ** the Westfield falcon (fast, aerial, dive-bombs), **TUSK** the unmovable boar
+(armour and a command-grab), **CHIP** the pocket-sized menace (three jumps, acorns),
+**VOLT-9** the store demo unit (lasers, homing disc, reflector), **CRUNCH** the
+clearance-bin kaiju (fire breath, tail sweep), **RIBBIT** the pond ninja (tongue grab,
+kunai, counter), **EL PLANCHA** the luchador (suplex rush, counter slam), **ZORB**
+the visitor from aisle 9 (floaty, gravity ball), **SIR CLANK** the knight of the bargain
+bin (lance, shield bash, guard stance), **SPIRIT** the pep-squad captain (megaphone,
+basket toss) — and two more who show up once you've earned them.
+
+| | |
+| --- | --- |
+| ![Character select](docs/melee-select.png) | ![Title screen](docs/melee-title.png) |
+| ![Magma Bin](docs/melee-magma.png) | ![Frozen Pond](docs/melee-pond.png) |
+
+**Six stages**, each with its own hazard or gimmick: **HOMETOWN FIELD** (the goalposts
+are the platforms), **ARCADE ATTIC** (shelves of boxed games), **MAGMA BIN** (lava
+plumes erupt from three vents), **SKY BLIMP** (a crosswind that changes every recovery),
+**FROZEN POND** (a fifth of normal traction), **THE VOID DECK** (four platforms, no
+horizon).
+
+**Modes** — **SMASH** (1–4 fighters, stock or time, items, damage ratio, CPU levels 1–9),
+**GAUNTLET** (six escalating rounds ending on the void deck), **TRAINING** (infinite
+stocks; taunt resets the damage).
+
+**Two players, one couch.** Plug in two controllers, or split the keyboard.
+
+| | Controller | Player 1 keys | Player 2 keys |
+| --- | --- | --- | --- |
+| Move | left stick / d-pad | **W A S D** | **arrows** |
+| Jump | **□ / △** (X / Y) | **SPACE** | **NUM 0 / R-SHIFT** |
+| Attack | **✕ / A** | **J** | **NUM 1 / .** |
+| Special | **◯ / B** | **K** | **NUM 2 / /** |
+| Shield · roll · dodge | **L2 / R2** | **L** | **NUM 3 / R-CTRL** |
+| Grab | **R1 / RB** | **H** | **NUM 4 / '** |
+| Smash attack | flick the stick, or the **right stick** | **SHIFT** + direction + **J** | **NUM .** + direction + **1** |
+| Taunt · pause | **SHARE** · **OPTIONS** | **T** · **ESC** | **NUM 5** · **ENTER** |
+
+A keyboard has no analog stick, so holding a direction ramps from a walk into a run,
+and smash attacks come from the modifier key instead of a flick.
+
+Tilts, smash attacks (chargeable), five aerials, four specials, grabs and four throws,
+shields that shrink and break, rolls, spot-dodges, air-dodges, ledge grabs, directional
+influence, hitlag, clanking attacks, counters, reflectors, stocks and sudden death.
+Pick up a **MELEE ORB** and your neutral special becomes a screen-clearing finisher.
+
+---
 
 ## Run it
 
-**Windows:** double-click **`play.bat`** — it finds Python, starts the server,
-and opens the game in your browser. (If Python isn't installed it tells you
-where to get it.)
+**Windows:** double-click **`play.bat`** — it finds Python, starts the server, and
+opens the kiosk in your browser. (If Python isn't installed it tells you where to
+get it.)
 
 **Mac/Linux:**
 
@@ -54,62 +116,63 @@ python3 serve.py
 # open http://localhost:8000
 ```
 
-`serve.py` is a tiny no-cache static server: updates always show after a
-refresh, it opens the game in your browser by itself, and if the port is busy
-(a forgotten old window) it just picks the next free one and says so. Any
-static server works too — ES modules need http://, not file://. Three.js is
-vendored — no npm install required to play. The title screen shows the BUILD
-number so you can confirm which version you're running.
+`serve.py` is a tiny no-cache static server: updates always show after a refresh, it
+opens the browser by itself, and if the port is busy it picks the next free one and
+says so. Any static server works — ES modules need `http://`, not `file://`. Three.js
+is vendored, so there is nothing to install to play.
 
-## How to play
-
-| Phase | Controls |
-| --- | --- |
-| Play call | Click a card or press its **number** |
-| At the line | **SPACE** to snap |
-| Quarterback | **WASD** move the pocket · **1–4** throw to that receiver · scramble past the line to run |
-| Ball carrier | **WASD** steer · **SHIFT** sprint · **SPACE** juke |
-| Defense | **E** switch defender · **WASD** pursue · **SPACE** dive tackle |
-| Anytime | **ESC** pause · **M** mute |
-
-**Controller (PS5 DualSense, Xbox, anything standard):** plug it in over USB and
-press any button — the game announces it. **Left stick** moves (analog speed),
-**✕** snaps/jukes/dives, **□ ✕ ◯ △** throw to the matching receiver icons,
-**R2** sprints, **L1** switches defenders, **D-pad + ✕** picks plays,
-**OPTIONS** pauses. Menus and the office stay mouse-driven.
-
-Four 3-minute quarters. Touchdowns, extra points, field goals, punts, sacks,
-interceptions, broken tackles, gang tackles, overtime. No penalties — refs swallow
-their whistles on Friday night.
-
-Your school, uniform, and roster auto-save to the browser (`CONTINUE` on the title
-screen).
+Pages: `index.html` is the kiosk, `varsity.html` is the football game, `melee.html` is
+the fighter. Each game has a **◀ EB GAMES** link back to the shelf.
 
 ## Under the hood
 
-Everything is generated in code — no art assets, no model files:
+Everything is generated at runtime — no model files, no textures, no audio files:
 
-- **Players** — articulated 16-joint rigs (shoulder pads, helmets with facemasks and
-  decals, number decals, four body types) posed by a hand-keyed clip system with
-  crossfades: run/sprint cycles, dropbacks, throws, catches, juke moves, blocks,
-  tackles, falls, celebrations, the ref's TD signal.
-- **The world** — parametric school architecture, procedural canvas textures (field
-  paint, brick, dusk sky, scoreboard LEDs), instanced animated crowd, light towers.
-- **The game** — role-based AI for all 22 on the field: routes, man/zone coverage,
-  pass rush vs. pass pro with shed timers, pursuit angles, a CPU QB that reads
-  separation, play-action that fools linebackers.
-- **Sound** — synthesized WebAudio: crowd bed, pea whistle, pad thud, horn.
+- **Fighters** (melee) — a 14-joint skeleton wearing parametric parts (beaks, snouts,
+  tusks, visors, helms, pom-poms, tails, wings), ~400 triangles each, posed by a
+  hand-keyed clip library with crossfades. Rigs are scaled to match their hurtboxes
+  exactly, so what you see is what you can hit.
+- **Athletes** (varsity) — articulated 16-joint rigs with shoulder pads, facemasks,
+  number decals and four body types.
+- **Worlds** — parametric architecture, procedural canvas textures at 64 px with
+  nearest filtering, banded sky domes, instanced crowds, light towers, lava, snow.
+- **The fight** — a fixed 60 Hz sim with Melee-flavoured knockback
+  (`kb = ((p/10 + p·d/20)·1.4·(200/(w+100)) + 18)·growth/100 + base`), hitstun,
+  hitlag, DI, shield stun, ledge states and blast zones. Every hitbox is authored in
+  60 Hz frames and the animation is re-timed to match it.
+- **CPU** — nine levels with reaction delays, spacing, edge-guarding, recovery routing
+  and mash-out, all driving a virtual controller so it plays by the same rules you do.
+- **Sound** — WebAudio synthesis end to end: layered impacts, UI chirps, a speech-synth
+  announcer, and a lookahead chiptune sequencer with a written-out loop per stage.
 
-The sim runs on its own clock (pause-safe), and quality auto-scales down
-(shadows/pixel ratio/bench players) if the machine can't hold frame rate.
+The melee sim is deliberately free of three.js and the DOM, which is what makes the
+test harness below possible.
 
 ## Dev
 
 ```bash
-npm install                  # dev tooling only (playwright for screenshots)
-npm run smoke                # node-based module/clip sanity checks
-node tools/shot.mjs "?gallery" g.png --wait 2500    # screenshot the anim gallery
+npm install                 # dev tooling only (playwright, for screenshots)
+npm run smoke               # node module/rig/clip/stage checks for both games
+npm run melee               # headless fight harness: frame data, move drill, matches
+npm run pages               # headless Chromium: every page, real keyboard input
+node tools/shot.mjs "melee.html?quick&p1=blitz&p2=tusk" fight.png --wait 6000
 ```
 
-QA URL modes: `?quick` jumps straight into a game, `?gallery` shows every animation
-clip on a grid of rigs (`&clips=run,sprint&camr=8&camy=2&ang=0.6` to frame shots).
+`npm run melee` is the interesting one. It validates every move's frame data, then
+executes all ~310 moves against a pinned dummy to prove each one actually connects,
+then plays CPU-vs-CPU matches across the roster and every stage at ~2000× realtime,
+failing if anyone goes non-finite, gets stuck in mid-air, stops dying at sane percents,
+or can no longer recover from below the ledge:
+
+```
+1. frame data   312 moves, 12 fighters, 6 stages checked
+2. move drill   307 moves executed, all connected
+3. matches      12 run, 12 finished (2200x realtime)
+   length       avg 83.2s for 2 stocks
+   KO damage    avg 122%  median 123%
+   recovery     13 ledge grabs
+```
+
+QA URLs: `melee.html?quick` drops straight into a fight (`&p1=`, `&p2=`, `&p3=`,
+`&stage=`), `melee.html?demo` runs CPU vs CPU for screenshots, `varsity.html?quick`
+jumps into a football game and `varsity.html?gallery` shows every animation clip.

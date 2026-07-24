@@ -1,5 +1,5 @@
 @echo off
-title Friday Night Gridiron '04
+title EB GAMES
 cd /d "%~dp0"
 
 rem ---- find a Python that actually runs (test by executing, not by PATH lookup)
@@ -21,7 +21,7 @@ if not defined PY (
 )
 
 echo.
-echo  Starting the game server with "%PY%"...
+echo  Starting the EB GAMES kiosk with "%PY%"...
 echo  Your browser will open by itself in a moment.
 echo.
 %PY% serve.py

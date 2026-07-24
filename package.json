@@ -1,12 +1,14 @@
 {
-  "name": "friday-night-gridiron",
+  "name": "eb-games",
   "version": "1.0.0",
-  "description": "Friday Night Gridiron '04 — build your high school, build your team, play under the lights. A 2000s high school football 3D game.",
+  "description": "The EB GAMES library: VARSITY 27 (3D high school football) and MASCOT MELEE 64 (a chunky 64-bit platform fighter). One launcher, no build step.",
   "type": "module",
   "scripts": {
     "start": "python3 serve.py",
     "shot": "node tools/shot.mjs",
-    "smoke": "node tools/smoke.mjs"
+    "smoke": "node tools/smoke.mjs",
+    "melee": "node tools/melee-sim.mjs",
+    "pages": "node tools/pages.mjs"
   },
   "dependencies": {
     "three": "^0.160.0"

@@ -172,5 +172,131 @@ await step('plays count + custom art', async () => {
   });
 });
 
+// ======================================================= MASCOT MELEE 64
+// The fight sim is three.js-free, so most of it is covered in depth by
+// tools/melee-sim.mjs. What matters here is that the *browser-side* modules
+// import and build with DOM stubs: every rig, every stage, every emblem.
+
+await step('melee: pose library', async () => {
+  const { makeClips } = await import('../src/melee/poses.js');
+  const { JOINTS } = await import('../src/melee/anim.js');
+  const clips = makeClips();
+  const names = Object.keys(clips);
+  if (names.length < 40) throw new Error(`only ${names.length} clips`);
+  for (const [name, c] of Object.entries(clips)) {
+    if (!c.keys.length) throw new Error(`clip ${name} has no keys`);
+    if (!(c.dur > 0)) throw new Error(`clip ${name} has no duration`);
+    for (const k of c.keys) {
+      for (const j of JOINTS) {
+        if (!Array.isArray(k.p[j]) || k.p[j].length !== 3) throw new Error(`clip ${name} joint ${j} malformed`);
+      }
+    }
+  }
+});
+
+await step('melee: every fighter builds a rig', async () => {
+  const { ROSTER } = await import('../src/melee/roster.js');
+  const { buildFighter, buildBlobShadow, buildPlayerRing } = await import('../src/melee/models.js');
+  const { Animator } = await import('../src/melee/anim.js');
+  const { makeClips } = await import('../src/melee/poses.js');
+  const clips = makeClips();
+  for (const def of ROSTER) {
+    for (const alt of [0, 2]) {
+      const rig = buildFighter(def, alt);
+      if (!rig.j.hips || !rig.j.head) throw new Error(`${def.id} rig missing joints`);
+      const want = 1.75 * (def.stats.size ?? 1);
+      if (Math.abs(rig.height - want) > 0.001) throw new Error(`${def.id} height ${rig.height} != ${want}`);
+      let tris = 0;
+      rig.group.traverse((o) => {
+        if (!o.isMesh) return;
+        const g = o.geometry;
+        tris += (g.index ? g.index.count : g.attributes.position.count) / 3;
+      });
+      if (tris > 1400) throw new Error(`${def.id} is ${tris | 0} triangles — too heavy for the look`);
+      // pose it through every clip to catch a bad joint reference
+      const anim = new Animator(rig, { ...clips, ...(def.clips || {}) });
+      for (const name of Object.keys(clips)) {
+        anim.play(name, { fade: 0, force: true });
+        anim.update(1 / 60);
+        anim.update(1 / 3);
+      }
+      rig.setFace('ko');
+      rig.setFace('normal');
+      rig.setFlash('#ffffff', 0.5);
+      rig.setFlash('#ffffff', 0);
+      rig.dispose();
+    }
+  }
+  buildBlobShadow(0.5);
+  buildPlayerRing('#ff0000');
+});
+
+await step('melee: every stage builds and draws its thumbnail', async () => {
+  const { STAGES } = await import('../src/melee/stages.js');
+  const { World } = await import('../src/melee/world.js');
+  const kit = await import('../src/melee/kit.js');
+  for (const st of STAGES) {
+    const world = new World(st);
+    const view = st.build({ THREE, world, ...kit });
+    if (!view?.group) throw new Error(`${st.id} built no group`);
+    view.update?.(1 / 60, { frame: 10, fighters: [], rand: () => 0.5 });
+    st.thumb(stubCtx(), 288, 162);
+    // the ledges the sim will offer must exist
+    if (!world.ledges().length) throw new Error(`${st.id} exposes no ledges`);
+  }
+});
+
+await step('melee: emblems + logo art', async () => {
+  const { ROSTER } = await import('../src/melee/roster.js');
+  const { emblemCanvas, nameplateCanvas, stockIconCanvas } = await import('../src/melee/portraits.js');
+  for (const def of ROSTER) {
+    emblemCanvas(def, 96);
+    nameplateCanvas(def);
+    stockIconCanvas(def, 32);
+  }
+  const { logoCanvas } = await import('../src/melee/menu.js');
+  logoCanvas(400, 140);
+});
+
+await step('melee: sound + fx modules import clean', async () => {
+  const { sfx, music, TRACK_IDS } = await import('../src/melee/sound.js');
+  if (TRACK_IDS.length < 10) throw new Error(`only ${TRACK_IDS.length} music tracks`);
+  const { STAGES } = await import('../src/melee/stages.js');
+  for (const st of STAGES) {
+    if (!TRACK_IDS.includes(st.music)) throw new Error(`${st.id} wants missing track ${st.music}`);
+  }
+  // with no AudioContext in node these must all no-op rather than throw
+  sfx.hit('heavy', 1);
+  sfx.ui('confirm');
+  sfx.voice('test');
+  sfx.charge(true);
+  sfx.charge(false);
+  music.play('menu');
+  music.stop();
+  await import('../src/melee/fx.js');
+  await import('../src/melee/hud.js');
+  await import('../src/melee/view.js');
+  await import('../src/melee/menu.js');
+});
+
+await step('melee: a full match runs headless', async () => {
+  const { Match } = await import('../src/melee/match.js');
+  const { charById } = await import('../src/melee/roster.js');
+  const { STAGES } = await import('../src/melee/stages.js');
+  const { VirtualControls } = await import('../src/melee/input.js');
+  const match = new Match({
+    stage: STAGES[0],
+    entrants: [
+      { def: charById('blitz'), controls: new VirtualControls(), cpu: 6 },
+      { def: charById('tusk'), alt: 1, controls: new VirtualControls(), cpu: 6 },
+    ],
+    rules: { mode: 'stock', stocks: 1, timeLimit: 0, items: true },
+  });
+  let frames = 0;
+  while (!match.over && frames < 60 * 60 * 4) { match.step(); frames++; }
+  if (!match.over) throw new Error('match never finished');
+  if (!match.result?.order?.length) throw new Error('no result');
+});
+
 console.log(failures ? `\n${failures} failure(s)` : '\nall smoke checks passed');
 process.exit(failures ? 1 : 0);

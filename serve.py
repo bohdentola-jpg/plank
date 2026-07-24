@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Friday Night Gridiron game server.
+"""EB GAMES library server.
 
 - Tells the browser never to cache, so updates always show after a refresh.
 - If the port is taken (a forgotten old server), it picks the next free one
@@ -44,8 +44,9 @@ def main():
 
     url = f'http://localhost:{port}'
     print()
-    print('  VARSITY 27')
-    print(f'  Game is live at  {url}')
+    print('  EB GAMES — the library kiosk')
+    print(f'  Kiosk is live at  {url}')
+    print('  Shelf: VARSITY 27 (football) · MASCOT MELEE 64 (platform fighter)')
     if port != START_PORT:
         print(f'  (port {START_PORT} was busy — an old window may still be running)')
     print('  Keep this window open while you play. Ctrl+C or close it to stop.')
