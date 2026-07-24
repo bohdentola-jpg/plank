@@ -319,6 +319,160 @@ await visit('melee 4-way on magma', 'melee.html?quick&stage=magma&p1=crunch&p2=v
   await ctx.close();
 }
 
+// ---- two humans on one keyboard, moving independently
+{
+  const ctx = await browser.newContext({ viewport: { width: 1200, height: 700 } });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(`http://127.0.0.1:${port}/melee.html?quick&humans=2&p1=blitz&p2=spirit`);
+  await page.waitForTimeout(4000);
+  const read = () => page.evaluate(() => {
+    const m = window.melee?.match;
+    if (!m) return null;
+    return {
+      n: m.fighters.length,
+      devices: m.fighters.map((f) => f.input?.device || 'none'),
+      x: m.fighters.map((f) => f.x),
+      cpu: m.fighters.map((f) => f.isCpu),
+    };
+  });
+  const before = await read();
+  // P1 goes right on WASD, P2 goes left on the arrows — at the same time
+  await page.keyboard.down('KeyD');
+  await page.keyboard.down('ArrowLeft');
+  await page.waitForTimeout(700);
+  await page.keyboard.up('KeyD');
+  await page.keyboard.up('ArrowLeft');
+  await page.waitForTimeout(200);
+  const after = await read();
+  const problems = [];
+  if (!before || !after) problems.push('no match');
+  else {
+    if (before.cpu.some(Boolean)) problems.push(`a slot is still CPU: ${JSON.stringify(before.cpu)}`);
+    if (before.devices[0] !== 'kb1' || before.devices[1] !== 'kb2') problems.push(`devices are ${before.devices.join(',')}`);
+    if (after.x[0] - before.x[0] < 0.5) problems.push(`P1 moved ${(after.x[0] - before.x[0]).toFixed(2)}`);
+    if (before.x[1] - after.x[1] < 0.5) problems.push(`P2 moved ${(after.x[1] - before.x[1]).toFixed(2)}`);
+  }
+  if (errors.length) problems.push(`page errors: ${errors[0]}`);
+  if (problems.length) {
+    failures++;
+    console.error('FAIL melee two players');
+    for (const p of problems) console.error(`     ${p}`);
+  } else {
+    console.log('ok   melee two players (WASD and arrows drive different fighters)');
+  }
+  await ctx.close();
+}
+
+// ---- a controller: the Gamepad API is faked so the pad mapping is really exercised
+{
+  const ctx = await browser.newContext({ viewport: { width: 1200, height: 700 } });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  // a standard-mapping pad whose state the test can poke through window.__pad
+  await page.addInitScript(() => {
+    window.__pad = { axes: [0, 0, 0, 0], buttons: new Array(17).fill(0) };
+    const snapshot = () => ({
+      id: 'Fake Standard Pad (STANDARD GAMEPAD)', index: 0, connected: true, mapping: 'standard',
+      timestamp: performance.now(),
+      axes: window.__pad.axes.slice(),
+      buttons: window.__pad.buttons.map((v) => ({ pressed: v > 0.4, touched: v > 0.1, value: v })),
+    });
+    navigator.getGamepads = () => [snapshot()];
+    window.__press = (i, v = 1) => { window.__pad.buttons[i] = v; };
+    window.__release = (i) => { window.__pad.buttons[i] = 0; };
+    window.__stick = (x, y) => { window.__pad.axes[0] = x; window.__pad.axes[1] = y; };
+  });
+  const tapPad = async (i, ms = 120) => {
+    await page.evaluate((b) => window.__press(b), i);
+    await page.waitForTimeout(ms);
+    await page.evaluate((b) => window.__release(b), i);
+    await page.waitForTimeout(240);
+  };
+  const problems = [];
+
+  // 1. the launcher should notice the pad and switch its hint row
+  await page.goto(`http://127.0.0.1:${port}/index.html`);
+  await page.waitForTimeout(600);
+  // a short nudge: the rack only holds two games, so a long hold would repeat
+  // and wrap straight back to the first one
+  await page.evaluate(() => window.__stick(0, 1));        // stick down = next game
+  await page.waitForTimeout(160);
+  await page.evaluate(() => window.__stick(0, 0));
+  await page.waitForTimeout(300);
+  const kiosk = await page.evaluate(() => ({
+    hint: document.getElementById('hint').textContent,
+    sel: document.querySelector('.rack-card.sel .rack-meta b')?.textContent,
+  }));
+  if (!kiosk.hint.includes('✕')) problems.push(`kiosk hint did not switch to pad glyphs (${kiosk.hint})`);
+  if (!kiosk.sel?.includes('MELEE')) problems.push(`pad stick did not move the kiosk selection (${kiosk.sel})`);
+
+  // 2. the fighter: boot and menus on the pad alone
+  await page.goto(`http://127.0.0.1:${port}/melee.html`);
+  await page.waitForTimeout(1200);
+  await tapPad(0);                                        // ✕ past the boot screen
+  const atTitle = await page.evaluate(() => document.querySelector('.mscreen')?.className || '');
+  if (!atTitle.includes('mtitle')) problems.push(`pad could not leave the boot screen (${atTitle})`);
+  await page.evaluate(() => window.__stick(0, 1));        // down twice on the stick
+  await page.waitForTimeout(360);
+  await page.evaluate(() => window.__stick(0, 0));
+  await page.waitForTimeout(200);
+  const moved = await page.evaluate(() => document.querySelector('.mscreen .mbtn.sel .mbtn-label')?.textContent);
+  if (moved === 'SMASH') problems.push('pad stick did not move the title selection');
+
+  // 3. gameplay: stick and buttons drive a fighter
+  await page.goto(`http://127.0.0.1:${port}/melee.html?quick&p1=blitz&p2=tusk`);
+  await page.waitForTimeout(4000);
+  await page.evaluate(() => { window.melee.match.fighters[1].brain = null; window.melee.match.fighters[1].x = 7; });
+  const state = () => page.evaluate(() => {
+    const f = window.melee?.match?.fighters?.[0];
+    return f ? { x: f.x, y: f.y, state: f.state, moveId: f.moveId, device: f.input.device } : null;
+  });
+  const s0 = await state();
+  if (s0 && !String(s0.device).startsWith('pad')) problems.push(`P1 is on ${s0.device}, not a pad`);
+  await page.evaluate(() => window.__stick(1, 0));        // hold right
+  await page.waitForTimeout(600);
+  await page.evaluate(() => window.__stick(0, 0));
+  const s1 = await state();
+  if (s0 && s1 && s1.x - s0.x < 0.5) problems.push(`pad stick moved P1 ${(s1.x - s0.x).toFixed(2)} units`);
+  const seen = new Set();
+  const sample = async (ms) => {
+    for (let i = 0; i < ms / 40; i++) {
+      const s = await state();
+      if (s) { seen.add(s.state); if (s.moveId) seen.add(`move:${s.moveId}`); }
+      await page.waitForTimeout(40);
+    }
+  };
+  await tapPad(0, 80); await sample(300);                 // ✕ attack
+  await tapPad(2, 80); await sample(400);                 // □ jump
+  await tapPad(1, 80); await sample(500);                 // ◯ special
+  await page.evaluate(() => window.__press(7, 1));        // R2 shield
+  await sample(320);
+  await page.evaluate(() => window.__release(7));
+  await tapPad(5, 80); await sample(300);                 // R1 grab
+  for (const want of [['attack', 'attack'], ['jump', 'air'], ['shield', 'shield']]) {
+    if (!seen.has(want[1])) problems.push(`pad ${want[0]} never produced ${want[1]} (saw ${[...seen].join(',')})`);
+  }
+  if (![...seen].some((s) => s.startsWith('move:'))) problems.push('no move ever started from the pad');
+  // 4. OPTIONS pauses
+  await tapPad(9, 120);
+  await page.waitForTimeout(400);
+  const paused = await page.evaluate(() => window.melee.paused);
+  if (!paused) problems.push('OPTIONS did not pause the match');
+
+  if (errors.length) problems.push(`page errors: ${errors[0]}`);
+  if (problems.length) {
+    failures++;
+    console.error('FAIL melee controller');
+    for (const p of problems) console.error(`     ${p}`);
+  } else {
+    console.log('ok   melee controller (kiosk nav, menus, stick, ✕ ◯ □ R1 R2, OPTIONS pause)');
+  }
+  await ctx.close();
+}
+
 // ---- the football game still works after moving to varsity.html
 await visit('varsity title', 'varsity.html', {
   wait: 3000,

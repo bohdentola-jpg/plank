@@ -279,6 +279,8 @@ class App {
       const stage = qs.get('stage') ? stageById(qs.get('stage')) : STAGES[0];
       const setup = defaultSetup();
       if (qs.has('demo')) { setup.slots[0] = { type: 'cpu', level: 7 }; setup.slots[1] = { type: 'cpu', level: 7 }; }
+      // ?humans=2 puts a second player on the second device (a pad, or the arrows)
+      if (+(qs.get('humans') || 1) > 1) setup.slots[1] = { type: 'human', level: 5 };
       const picks = {
         0: { def: charById(qs.get('p1') || 'blitz'), alt: 0 },
         1: { def: charById(qs.get('p2') || 'tusk'), alt: 1 },
