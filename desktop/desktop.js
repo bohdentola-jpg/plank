@@ -1,4 +1,4 @@
-// EB GAMES 95 — a small operating system for a shelf of four games.
+// EB GAMES 95 — a small operating system for a shelf of six games.
 // Boot POST → teal desktop → double-click a cartridge. The Hi-Fi keeps
 // playing while you game in another tab, which is the whole point of tabs.
 
@@ -128,6 +128,42 @@ const ICONS = {
     '.nnnnnnnnnnnnnn.',
     '................',
   ], { g: '#3f9e3a', G: '#2c7a28', n: '#7a5230', N: '#5c3c20' }),
+  melee: pixelIcon([
+    '................',
+    '.....oooooo.....',
+    '...oooooooooo...',
+    '..oooooooooooo..',
+    '..oowwoooowwoo..',
+    '..oowkwooowkwo..',
+    '..oowwoooowwoo..',
+    '..oooooooooooo..',
+    '..ookoooooooko..',
+    '..oookkkkkkooo..',
+    '...oooooooooo...',
+    '.....oooooo.....',
+    '......b..b......',
+    '.....bb..bb.....',
+    '....bb....bb....',
+    '................',
+  ], { o: '#e8862a', w: '#f6f2e8', k: '#1a1410', b: '#2a58a8' }),
+  noclip: pixelIcon([
+    'yyyyyyyyyyyyyyyy',
+    'yyyyyyyyyyyyyyyy',
+    'yykkkkkkkkkkkyry',
+    'yyksssssssskkkky',
+    'yyksllsssskssssy',
+    'yykslllssskssssy',
+    'yykssssssskssssy',
+    'yykkkkkkkkkkkkky',
+    'yyyyyyyyyyyyyyyy',
+    'yyyddddddddddyyy',
+    'yyydgggggggddyyy',
+    'yyydgggggggddyyy',
+    'yyydgggggggddyyy',
+    'yyydddddddddyyyy',
+    'yycccccccccccyyy',
+    'yycccccccccccyyy',
+  ], { y: '#d8c877', k: '#20222a', s: '#4a4e58', l: '#9fd8e8', r: '#ff3020', d: '#3a3020', g: '#0a0a0c', c: '#9a8b3e' }),
   hifi: pixelIcon([
     '................',
     '....k......k....',
@@ -215,6 +251,32 @@ const GAMES = {
       session live — no audio files, the music writes itself.`,
     shots: ['docs/loam-peaks.png', 'docs/loam-night.png'],
     meta: ['voxel survival + building', '1 player', 'mouse + keyboard', 'worlds auto-save'],
+  },
+  melee: {
+    title: 'MASCOT MELEE 64',
+    tag: 'Twelve mascots. One trophy. No rules worth mentioning.',
+    path: 'melee/',
+    desc: `A chunky 64-bit platform fighter: knock the other mascots off the stage
+      and don't get knocked off yourself. Twelve original fighters with full
+      movesets — tilts, smashes, aerials, specials, grabs and a finisher each —
+      six stages, items, stocks, time, and a GAUNTLET ladder. Couch versus for
+      two on one keyboard, or plug in two pads.`,
+    shots: ['docs/melee-title.png', 'docs/melee-field.png'],
+    meta: ['platform fighter', '1–2 players', 'pads + keyboard', 'records auto-save'],
+  },
+  noclip: {
+    title: 'NOCLIP',
+    tag: 'You noclipped out of reality. Twenty-three levels down.',
+    path: 'backrooms/',
+    desc: `First-person found-footage horror, shot on a camcorder you cannot put
+      down: the battery is your light and the tape is your health bar. Twenty-three
+      levels of the backrooms, generated fresh from your tape's seed — the yellow
+      rooms, the poolrooms, pipe tunnels, an endless hotel, a hospital, a snowfield,
+      a party that has been going for decades — eighteen things that hunt you by
+      sight, sound, silence or the fact that you looked away. Find the way out of
+      each one. There is a way out of all of them.`,
+    shots: ['docs/noclip-lobby.png', 'docs/noclip-poolrooms.png'],
+    meta: ['survival horror', '1 player', 'mouse + keyboard', '3 tape slots, auto-save', 'headphones'],
   },
 };
 
@@ -380,13 +442,15 @@ function aboutWindow() {
   body.className = 'about';
   body.innerHTML = `
     <h1>EB GAMES 95</h1>
-    <p>Four 3D games, one repo, zero asset files — every model, texture, animation,
+    <p>Six 3D games, one repo, zero asset files — every model, texture, animation,
     and note of music is generated in code and runs straight in the browser.</p>
     <ul>
       <li><b>VARSITY 27</b> — high school football, careers and all</li>
       <li><b>BIG INNING '27</b> — arcade baseball across six hand-built yards</li>
       <li><b>RIM CITY</b> — 2-on-2 arcade basketball, ON FIRE included</li>
       <li><b>LOAM</b> — voxel survival with a generative score</li>
+      <li><b>MASCOT MELEE 64</b> — twelve mascots, one trophy, no rules</li>
+      <li><b>NOCLIP</b> — twenty-three levels of the backrooms, on tape</li>
     </ul>
     <p>Plug in a PS5 or Xbox controller for the sports titles. Games open in their
     own tabs; start some music in the EB Hi-Fi first and it keeps playing while
@@ -572,6 +636,8 @@ const DESK_APPS = [
   { id: 'biginning', label: "BIG INNING '27" },
   { id: 'rimcity', label: 'RIM CITY' },
   { id: 'loam', label: 'LOAM' },
+  { id: 'melee', label: 'MASCOT MELEE 64' },
+  { id: 'noclip', label: 'NOCLIP' },
   { id: 'hifi', label: 'EB Hi-Fi' },
   { id: 'about', label: 'About' },
 ];
@@ -622,6 +688,8 @@ function buildStartMenu() {
   mk(ICONS.biginning, "BIG INNING '27", () => openWin('biginning'));
   mk(ICONS.rimcity, 'RIM CITY', () => openWin('rimcity'));
   mk(ICONS.loam, 'LOAM', () => openWin('loam'));
+  mk(ICONS.melee, 'MASCOT MELEE 64', () => openWin('melee'));
+  mk(ICONS.noclip, 'NOCLIP (horror)', () => openWin('noclip'));
   items.insertAdjacentHTML('beforeend', '<div class="sm-sep"></div>');
   mk(ICONS.hifi, 'EB Hi-Fi (music)', () => openWin('hifi'));
   mk(ICONS.about, 'About EB GAMES 95', () => openWin('about'));
@@ -682,12 +750,16 @@ function boot() {
     'CPU : BLAST PROCESSOR AT 66 MHZ ......... OK',
     'MEMORY TEST : 640K BASE ... 8192K EXT ... OK',
     '',
-    'DETECTING SHELF .......... 4 CARTRIDGES FOUND',
+    'DETECTING SHELF .......... 6 CARTRIDGES FOUND',
     '  VARSITY 27 ............................ OK',
     "  BIG INNING '27 ........................ OK",
     '  RIM CITY .............................. OK',
     '  LOAM .................................. OK',
+    '  MASCOT MELEE 64 ....................... OK',
+    '  NOCLIP ......................... [SEE NOTE]',
     'SOUND : EB-FM SYNTHESIS .................. OK',
+    'NOTE  : NOCLIP TAPE IS NOT A CARTRIDGE.',
+    '        IT WAS IN THE DRIVE WHEN WE OPENED IT.',
     'GAMEPAD : PLUG IN A PAD ANY TIME ...... READY',
     '',
     'BOOTING EB GAMES 95 ...',
@@ -723,6 +795,8 @@ makeWindow('varsity', 'VARSITY 27', ICONS.varsity, gameWindow('varsity'), { x: 1
 makeWindow('biginning', "BIG INNING '27", ICONS.biginning, gameWindow('biginning'), { x: 170, y: 50 });
 makeWindow('rimcity', 'RIM CITY', ICONS.rimcity, gameWindow('rimcity'), { x: 200, y: 70 });
 makeWindow('loam', 'LOAM', ICONS.loam, gameWindow('loam'), { x: 260, y: 110 });
+makeWindow('melee', 'MASCOT MELEE 64', ICONS.melee, gameWindow('melee'), { x: 290, y: 130 });
+makeWindow('noclip', 'NOCLIP', ICONS.noclip, gameWindow('noclip'), { x: 320, y: 150 });
 makeWindow('hifi', 'EB Hi-Fi', ICONS.hifi, hifiWindow(), { x: 460, y: 90 });
 makeWindow('about', 'About EB GAMES 95', ICONS.about, aboutWindow(), { x: 380, y: 150 });
 

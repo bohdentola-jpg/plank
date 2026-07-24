@@ -1,17 +1,20 @@
 {
   "name": "eb-games-shelf",
   "version": "2.0.0",
-  "description": "EB GAMES SHELF — VARSITY 27 (football), BIG INNING '27 (baseball), RIM CITY (basketball), LOAM (voxels). Four 3D browser games, zero asset files, one Windows-95 desktop to launch them.",
+  "description": "EB GAMES SHELF — VARSITY 27 (football), BIG INNING '27 (baseball), RIM CITY (basketball), LOAM (voxels), MASCOT MELEE 64 (platform fighter), NOCLIP (backrooms horror). Six 3D browser games, zero asset files, one Windows-95 desktop to launch them.",
   "type": "module",
   "scripts": {
     "start": "python3 serve.py",
     "shot": "node tools/shot.mjs",
-    "smoke": "node tools/smoke.mjs && node tools/smoke-baseball.mjs && node tools/smoke-rimcity.mjs && node tools/smoke-loam.mjs",
+    "smoke": "node tools/smoke.mjs && node tools/smoke-baseball.mjs && node tools/smoke-rimcity.mjs && node tools/smoke-loam.mjs && node tools/melee-sim.mjs 6 && node tools/smoke-backrooms.mjs",
     "smoke:varsity": "node tools/smoke.mjs",
     "smoke:baseball": "node tools/smoke-baseball.mjs",
     "smoke:rimcity": "node tools/smoke-rimcity.mjs",
     "smoke:loam": "node tools/smoke-loam.mjs",
-    "shot:loam": "node tools/shot-loam.mjs"
+    "shot:loam": "node tools/shot-loam.mjs",
+    "smoke:melee": "node tools/melee-sim.mjs 18",
+    "smoke:backrooms": "node tools/smoke-backrooms.mjs --verbose",
+    "shot:backrooms": "node tools/shot-backrooms.mjs"
   },
   "dependencies": {
     "three": "^0.160.0"

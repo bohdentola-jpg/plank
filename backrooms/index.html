@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NOCLIP — The Backrooms, on tape</title>
+<link rel="stylesheet" href="styles.css" />
+<script type="importmap">
+{ "imports": { "three": "../vendor/three.module.js" } }
+</script>
+</head>
+<body>
+
+<div id="game-holder"></div>
+<div id="overlay"></div>
+
+<div id="app">
+
+  <!-- ============================ BOOT ============================ -->
+  <div id="boot">
+    <img id="boot-logo" alt="NOCLIP" />
+    <div class="boot-press">PRESS ANY KEY · PUT THE HEADPHONES ON</div>
+    <div class="boot-sub">EB AFTER DARK PRESENTS · A FOUND-FOOTAGE DESCENT</div>
+    <div class="boot-warn">flashing lights · sudden sound · enclosed spaces</div>
+  </div>
+
+  <!-- ============================ TITLE ============================ -->
+  <section class="screen" id="scr-title">
+    <div class="title-card">
+      <div class="title-kicker">EB AFTER DARK · TAPE 1 OF 1</div>
+      <img id="title-logo" alt="NOCLIP" />
+      <div class="title-sub">You noclipped out of reality. Twenty-three levels down. Get out.</div>
+      <div class="title-menu">
+        <button id="t-new" class="menu-btn gold">▶ NEW TAPE</button>
+        <button id="t-continue" class="menu-btn">CONTINUE</button>
+        <button id="t-archive" class="menu-btn">THE ARCHIVE — levels &amp; tapes found</button>
+        <button id="t-how" class="menu-btn">HOW TO SURVIVE</button>
+        <button id="t-options" class="menu-btn">OPTIONS</button>
+        <a class="menu-btn back-link" href="../index.html">◀ BACK TO EB GAMES</a>
+      </div>
+      <div class="title-build">NOCLIP · BUILD 1 · 23 LEVELS · HEADPHONES STRONGLY ADVISED</div>
+    </div>
+  </section>
+
+  <!-- ============================ SLOTS ============================ -->
+  <section class="screen" id="scr-slots">
+    <header class="ribbon"><span id="slot-title">PICK A TAPE</span></header>
+    <div class="pane" id="slot-list"></div>
+    <button class="menu-btn" data-back>◀ BACK</button>
+  </section>
+
+  <!-- ============================ ARCHIVE ============================ -->
+  <section class="screen" id="scr-archive">
+    <header class="ribbon"><span>THE ARCHIVE</span></header>
+    <div class="pane" id="archive-list"></div>
+    <button class="menu-btn" data-back>◀ BACK</button>
+  </section>
+
+  <!-- ============================ HOW TO ============================ -->
+  <section class="screen" id="scr-how">
+    <header class="ribbon"><span>HOW TO SURVIVE</span></header>
+    <div class="pane how">
+      <div class="how-col">
+        <h3>THE CAMERA</h3>
+        <ul>
+          <li><b>R</b> — record / pause. The tape only advances while recording.</li>
+          <li><b>N</b> — NIGHTSHOT. Sees in the dark, drinks the battery twice as fast.</li>
+          <li><b>SCROLL</b> — zoom. Useful for looking at something you should not.</li>
+          <li><b>F</b> / right mouse — torch. Its own battery. D-cells refill both.</li>
+        </ul>
+        <h3>THE BODY</h3>
+        <ul>
+          <li><b>WASD</b> move · <b>SHIFT</b> run (loud) · <b>CTRL</b> crouch (quiet)</li>
+          <li><b>SPACE</b> hop a ledge · water: <b>SPACE</b> up, <b>CTRL</b> down</li>
+          <li><b>E</b> take / read / use a door · <b>Q</b> use item · <b>G</b> throw it</li>
+          <li><b>1–5</b> / <b>TAB</b> pick an item · <b>ESC</b> pause</li>
+        </ul>
+      </div>
+      <div class="how-col">
+        <h3>THE RULES OTHERS WROTE DOWN</h3>
+        <ol>
+          <li>Noise is the whole game. Most of what lives here is blind and none of it is deaf.</li>
+          <li>Light stops some things and calls others. Learn which is which per level.</li>
+          <li>If a thing is smiling in the dark, put light on it and do not stop putting light on it.</li>
+          <li>If a thing has no face, don't keep looking at it.</li>
+          <li>If a thing hasn't moved and is closer, do not look away.</li>
+          <li>Almond water is real and it does help. Nobody knows why.</li>
+          <li>Every level has a way out. It is never signposted, and it is never where the level wants you to be.</li>
+        </ol>
+        <p class="how-note">Nerve falls in the dark, near things that hunt, and when the tape damages.
+          At zero the walls start moving on their own. Read the pages you find — that helps too.</p>
+      </div>
+    </div>
+    <button class="menu-btn" data-back>◀ BACK</button>
+  </section>
+
+  <!-- ============================ OPTIONS ============================ -->
+  <section class="screen" id="scr-options">
+    <header class="ribbon"><span>OPTIONS</span></header>
+    <div class="pane" id="opt-list"></div>
+    <button class="menu-btn" id="opt-back">◀ BACK</button>
+  </section>
+
+  <!-- ============================ LOADING ============================ -->
+  <section class="screen" id="scr-load">
+    <div class="load-box">
+      <div class="load-title">READING TAPE</div>
+      <div class="load-track"><i id="load-bar"></i></div>
+      <div class="load-label" id="load-label">…</div>
+      <div class="load-hint">Every level is generated fresh from your tape's seed. Nobody
+        else's map of this place will help you.</div>
+    </div>
+  </section>
+
+  <!-- ============================ PLAY (the HUD lives in #overlay) ======= -->
+  <section class="screen" id="scr-play"></section>
+
+  <!-- ============================ PAUSE ============================ -->
+  <section class="screen" id="scr-pause">
+    <div class="pause-card">
+      <h2>TAPE PAUSED</h2>
+      <button id="p-resume" class="menu-btn gold">BACK TO IT</button>
+      <button id="p-options" class="menu-btn">OPTIONS</button>
+      <button id="p-quit" class="menu-btn">SAVE &amp; EJECT</button>
+      <p class="pause-keys">WASD move · SHIFT run · CTRL crouch · E interact ·
+        F torch · N nightshot · R record · Q use · G throw · TAB item · SCROLL zoom</p>
+    </div>
+  </section>
+
+  <!-- ============================ END ============================ -->
+  <section class="screen" id="scr-end">
+    <div class="title-card">
+      <div class="title-kicker">TAPE ENDS</div>
+      <h1 class="end-h">YOU GOT OUT</h1>
+      <p class="end-p">The train doesn't stop again. Wherever this is, it has weather,
+        and the weather is happening to you, and that is enough to be going on with.</p>
+      <div id="end-stats" class="end-stats"></div>
+      <button class="menu-btn gold" id="end-back">◀ BACK TO THE TITLE</button>
+    </div>
+  </section>
+
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

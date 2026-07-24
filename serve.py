@@ -9,6 +9,7 @@ Run: python serve.py            → opens the desktop (pick a game there)
      python serve.py varsity    → straight into VARSITY 27
      python serve.py rimcity    → straight into RIM CITY
      python serve.py loam       → straight into LOAM
+     python serve.py backrooms  → straight into NOCLIP (horror)
 """
 import http.server
 import socketserver
@@ -56,6 +57,8 @@ def main():
     print(f'  VARSITY 27 (football)    {url}/varsity/')
     print(f'  RIM CITY (basketball)    {url}/rimcity/')
     print(f'  LOAM (voxels)            {url}/loam/')
+    print(f'  MASCOT MELEE 64 (fights) {url}/melee/')
+    print(f'  NOCLIP (horror)          {url}/backrooms/')
     if port != START_PORT:
         print(f'  (port {START_PORT} was busy — an old window may still be running)')
     print('  Keep this window open while you play. Ctrl+C or close it to stop.')

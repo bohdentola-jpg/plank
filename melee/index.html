@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MASCOT MELEE 64 — EB Interactive</title>
+<link rel="stylesheet" href="styles.css" />
+<script type="importmap">
+{ "imports": { "three": "../vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="melee">
+  <!-- the 3D fight, rendered at a third of the resolution and scaled up -->
+  <div id="melee-game"></div>
+
+  <!-- crisp DOM layers over the top, the way the 64-era games did their overlays -->
+  <div id="melee-hud"></div>
+  <div id="melee-menus"></div>
+
+  <!-- scanlines + vignette, toggled in OPTIONS -->
+  <div id="melee-crt"></div>
+
+  <a id="melee-back" href="../index.html" title="Back to the EB GAMES library">◀ EB GAMES</a>
+  <div id="melee-build">MASCOT MELEE 64 · BUILD 1</div>
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
