@@ -121,6 +121,13 @@ export function build(kit) {
     }
   }
 
+  // Ward tubes throughout: a hospital corridor is lit even when nobody has walked it
+  // in years, and the ones that have given up matter more when the rest work.
+  L.lightGrid(5, 5, 133, 133, {
+    every: 6, color: 0xdfeee4, intensity: 0.8, radius: 12, fixture: 'tube',
+    flickerChance: 0.34, deadChance: 0.16, brokenChance: 0.06,
+  });
+
   // ---------------------------------------------------------------- dressing
   L.scatter('gurney', 36);
   L.scatter('ivStand', 30);
@@ -135,74 +142,6 @@ export function build(kit) {
   L.scatter('bloodTrail', 14);
   L.scatter('clawMarks', 8);
   L.scatter('graffiti', 10);
-  L.scatter('tapePile', 3);
-
-  // ---------------------------------------------------------------- pickups
-  L.item('keycard', { x: tx + 4, z: tz + 26 });
-  L.item('battery', { x: wards[0][0], z: wards[0][1] });
-  L.item('battery', { x: wards[7][0], z: wards[7][1] });
-  L.item('almondWater', { x: wards[4][0], z: wards[4][1] });
-  L.item('almondWater', { x: wards[9][0], z: wards[9][1] });
-  L.item('medkit', { x: wards[2][0], z: wards[2][1] });
-  L.item('medkit', { x: tx + 10, z: tz + 10 });
-  L.item('flare', { x: wards[11][0], z: wards[11][1], amount: 2 });
-  L.item('tape', { x: tx + 6, z: tz + 24, id: 'tape-hosp', title: 'TAPE — "HANDOVER"' });
-
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: tx + 5, z: tz + 26, title: 'SCRUB ROOM, HANDOVER SHEET',
-    text: `Handover to night staff: 41 beds, 41 patients, no admissions, no
-      discharges, no deaths. Same as yesterday. Same as the day I started. I have
-      checked every bed on this ward tonight and there is nobody in any of them and
-      the sheet is right, because I filled it in, because I always do.`,
-  });
-  L.note({
-    x: wards[0][0], z: wards[0][1] + 1, title: 'CHART AT THE END OF A BED',
-    text: `Obs every 15 minutes, back four years, in one hand. Pulse 61. Pulse 61.
-      Pulse 61. On the last page, the same hand: I have never once seen a patient
-      here. I take the obs anyway. It seemed better than the alternative, which was
-      to stop.`,
-  });
-  L.note({
-    x: wards[4][0], z: wards[4][1] + 1, title: 'PINNED TO A CURTAIN RAIL',
-    text: `She keeps to the main corridors and she does the round in one direction.
-      Learn which one. If you are in a ward when she passes the door she does not
-      come in — she has her own route and she is not allowed to leave it and she
-      has never once been late.`,
-  });
-  L.note({
-    x: wards[9][0], z: wards[9][1] + 1, title: 'NOTE LEFT ON A PILLOW',
-    text: `Whoever comes next: the theatre lamp is on. Do not turn it off to save
-      the battery. I turned it off. Something in there had been waiting for that
-      for a while and it is very quick in the dark and very patient in the light.`,
-  });
-  L.note({
-    x: 116, z: 134, title: 'MORGUE, CLIPBOARD ON THE DOOR',
-    text: `Eight bags, seven names, one blank. I have opened the blank one twice.
-      The first time it was empty. The second time it was empty and warm.`,
-  });
-  L.note({
-    x: 12, z: 12, title: 'BASEMENT WARD, LAMINATED AND FLOATING',
-    text: `WARD CLOSED — WATER INGRESS. DO NOT WADE. The growth on the walls down
-      here is the same as the caves and it is the same as the tunnels and I would
-      very much like to know what the building is for.`,
-  });
-
-  // ---------------------------------------------------------------- company
-  L.entity('nurse', {
-    x: 121, z: 10, state: 'patrol', leash: 0, tag: 'nurse',
-    route: [[121, 10], [121, 58], [73, 61], [25, 61], [25, 133], [73, 133], [121, 97], [121, 25]],
-  });
-  L.entity('nurse', { x: 25, z: 20, state: 'dormant', wake: { after: 240 }, route: [[25, 20], [25, 100], [73, 97], [120, 97]] });
-  L.pack('crawler', 4, 60, 40, 14, { state: 'patrol', leash: 20 });
-  L.pack('crawler', 3, 100, 120, 12, { state: 'patrol', leash: 20 });
-  L.pack('bacteria', 5, 12, 12, 5, { state: 'guard' });
-  L.entity('mannequin', { x: tx + 22, z: tz + 22, state: 'patrol' });
-  L.pack('duller', 6, 40, 96, 14, { state: 'patrol', leash: 16 });
-  L.entity('faceling', { x: 88, z: 60, state: 'patrol', leash: 26 });
-  L.entity('howler', { x: 130, z: 130, state: 'patrol', leash: 16 });
-  L.entity('watcher', { x: 141, z: 133, state: 'guard' });
-
   // ---------------------------------------------------------------- scares
   L.scare('faceInHall', { x: 60, z: 25, radius: 8 });
   L.scare('doorSlam', { x: 40, z: 60, radius: 7 });
@@ -218,9 +157,6 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- the way out
   L.spawnAt(141, 25, Math.PI);
-  L.objective('Get out through the west doors on the main corridor.');
-  L.objective('The doors badge in. There is a keycard in the theatre scrub room.', { id: 'obj1' });
-  L.objective('Work out which way round she does her round.', { optional: true });
 
   L.trigger({ x: tx + 4, z: tz + 26, radius: 4, objective: 'obj1', say: 'A ward keycard, and a lamp above the table that is still on.' });
   L.trigger({ x: 73, z: 61, radius: 6, say: 'Heels on tile, a long way off, keeping perfect time.' });
@@ -230,10 +166,14 @@ export function build(kit) {
   L.prop('doubleDoor', { x: 5, z: 61, rot: Math.PI / 2 });
   L.prop('exitSign', { x: 6, z: 61 });
   L.light({ x: 7, z: 61, y: 3.1, color: 0x60ff90, intensity: 0.7, radius: 8, fixture: 'none' });
-  L.exit({
-    x: 5, z: 61, kind: 'door', to: 'level94', needs: 'keycard', label: 'WEST DOORS',
-    say: 'The reader beeps. Through the doors: lockers, and a floor polished by a lot of small shoes.',
-  });
+
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('flicker');
+  L.hideSpots('gurney', 10);
+  L.monsterFar('nurse', { tell: 'nurseHeels', speed: 2.5, patience: 4.0, hearing: 1.4, wanders: 60, checksHides: 0.75 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: 5, z: 61 });
 
   return L.finish();
 }

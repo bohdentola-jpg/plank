@@ -1,25 +1,28 @@
 // LEVEL 4B — THE BREAK ROOM
-// The one place on the tape where nothing is hunting you. A staff break room and
-// its stockroom, warm lamps, a vending machine that still works, crates of
-// almond water, and a corkboard carrying the notes of everyone who came through
-// here and went on. Something tall stands in the corner and hums, and it points
-// at the door when you look at it, and it has never once come closer.
+// A staff break room and its stockroom: warm lamps, steady light, a vending machine
+// that still works, crates of almond water, and a corkboard carrying the notes of
+// everyone who came through here and went on. It reads as the safe floor, and for a
+// long time people wrote that down as fact.
 //
-// Mechanically: the game's save room. Deliberately small — the size bar does not
-// apply to the level whose whole job is to be a room.
+// Something tall stands in the corner and hums. When you look at it, it points at
+// the way out — patiently, helpfully, every time. It is the only thing down here
+// that tells you the truth, and it must not be allowed to reach you.
+//
+// The smallest floor on the tape, which is the point: there is nowhere in it that is
+// more than twenty seconds from the thing.
 
 export const meta = {
   id: 'breakroom',
   num: '4B',
   name: 'THE BREAK ROOM',
   subtitle: 'safe, as far as anyone knows',
-  tagline: 'Sit down. Drink something. It will still be out there in ten minutes.',
-  danger: 0,
-  survival: 'total',
+  tagline: 'It hums, it points, and it is walking while it does it.',
+  danger: 5,
+  survival: 'good, if you keep moving',
   chapter: 6,
   tape: 'TAPE 05B',
-  brief: `Nothing in here wants anything from you. Restock, read the corkboard,
-    and pick a door: STAIRS B, or the unlit one somebody labelled DO NOT.`,
+  brief: `Warm light, steady hum, and one small floor. The thing in the corner will
+    show you where the lift is. It will also walk you down while it does.`,
 };
 
 export function build(kit) {
@@ -31,7 +34,7 @@ export function build(kit) {
     ambient: { color: 0x40342a, intensity: 0.34 },
   });
   L.setAmbience({ room: 'drone', hum: 0.25, drip: 0.08, wind: 0, music: 'calm', reverb: 0.3 });
-  L.setRules({ sanityDrain: 0, batteryDrain: 0.5 });
+  L.setRules({ sanityDrain: 0.7, batteryDrain: 0.5 });
   L.setTint(1.06, 1.0, 0.9);
 
   // ---------------------------------------------------------------- the rooms
@@ -92,83 +95,37 @@ export function build(kit) {
   L.light({ x: 22, z: 44, y: 2.7, color: 0xffe0b0, intensity: 0.9, radius: 14, fixture: 'tube' });
   L.light({ x: 46, z: 38, y: 2.7, color: 0xe8f0f0, intensity: 0.9, radius: 12, fixture: 'panel' });
   L.light({ x: 22, z: 54, y: 2.6, color: 0x60ff90, intensity: 0.6, radius: 8, fixture: 'none' });
-
-  // ---------------------------------------------------------------- stock
-  L.item('almondWater', { x: 42, z: 12, amount: 2 });
-  L.item('almondWater', { x: 46, z: 17, amount: 2 });
-  L.item('battery', { x: 50, z: 12, amount: 2 });
-  L.item('battery', { x: 44, z: 24 });
-  L.item('medkit', { x: 54, z: 20 });
-  L.item('flare', { x: 52, z: 16, amount: 2 });
-  L.item('glowstick', { x: 56, z: 22, amount: 4 });
-  L.item('tape', { x: 44, z: 21, id: 'tape-break', title: 'TAPE — "EVERYONE WHO SAT HERE"' });
+  // and a fitting every few metres besides, because this is the one floor where the
+  // lights were maintained
+  L.lightGrid(9, 9, 58, 56, {
+    every: 5, color: 0xffdca8, intensity: 0.5, radius: 9, fixture: 'panel',
+    flickerChance: 0, deadChance: 0.1, brokenChance: 0,
+  });
 
   // ---------------------------------------------------------------- the board
-  L.note({
-    x: 17, z: 9, title: 'CORKBOARD — TOP LEFT, OLDEST',
-    text: `If you are reading this you found the room. Rules of the room:
-      take what you need, leave what you can, don't sleep more than one shift, and
-      do not follow the tall one if it walks. It only ever points. If it walks,
-      the room isn't safe any more and you should already be gone.`,
-  });
-  L.note({
-    x: 21, z: 9, title: 'CORKBOARD — A LIST OF NAMES',
-    text: `Forty-one names, each with two dates. Most have a second date. Six
-      don't. At the bottom, in a different hand: the six without a second date are
-      the ones who went out through STAIRS B. Make of that what you like — I did,
-      and I'm going that way.`,
-  });
-  L.note({
-    x: 20, z: 15, title: 'ON THE TABLE, UNDER A MUG',
-    text: `The vending machine takes no money and gives you what you need instead
-      of what you press. I have tested it eleven times. Twice it gave me a first
-      aid tin. Once it gave me a photograph of a house I grew up in.`,
-  });
-  L.note({
-    x: 44, z: 22, title: 'STOCKROOM INVENTORY, IN PENCIL',
-    text: `Almond water: plenty. D-cells: plenty. Flares: fewer every time I count,
-      and I am the only one here. Whatever is taking them isn't taking anything
-      else, which means it can see in the dark and would rather you couldn't.`,
-  });
-  L.note({
-    x: 22, z: 50, title: 'TAPED TO THE UNLIT DOOR',
-    text: `DO NOT. I'm not going to tell you why, because the last person who
-      wrote why on this door was very specific and everyone went anyway.
-      It goes down and it goes dark and there is no third thing.`,
-  });
-  L.note({
-    x: 48, z: 42, title: 'WASHROOM MIRROR, WRITTEN IN SOAP',
-    text: `Check your reflection every time you pass. Not for anything behind you.
-      For you. If it takes longer than it should to catch up, sit down in the
-      break room and drink something and do not go out for a while.`,
-  });
-
-  // ---------------------------------------------------------------- company
-  // One entity, and it is on your side, more or less.
-  L.entity('shepherd', { x: 31, z: 12, state: 'guard' });
   L.scare('screamDistant', { x: 22, z: 46, radius: 10 });
+  L.scare('breathing', { x: 48, z: 16, radius: 7 });
+  L.scare('doorSlam', { x: 22, z: 40, radius: 6 });
 
   // ---------------------------------------------------------------- doors out
   L.spawnAt(20, 20, Math.PI);
-  L.objective('Restock, then pick a door: STAIRS B, or the one marked DO NOT.');
-  L.objective('Read the corkboard. All of it.', { optional: true });
-  L.objective('The vending machine works. Try it.', { optional: true });
 
-  L.trigger({ x: 20, z: 20, radius: 6, say: 'Warm light, steady hum, nothing moving. Take a minute — the tape can spare it.' });
+  L.trigger({ x: 20, z: 20, radius: 6, say: 'Warm light, steady hum, and something humming along with it in the next room.' });
   L.trigger({ x: 31, z: 13, radius: 4, say: 'It hums a note and a half, and points, patiently, at the south corridor.' });
   L.trigger({ x: 22, z: 48, radius: 5, say: 'Two doors. One of them has light under it.' });
 
   L.prop('doorFrame', { x: 20, z: 56 });
   L.prop('exitSign', { x: 20, z: 55 });
-  L.exit({
-    x: 20, z: 55, kind: 'door', to: 'level5', label: 'STAIRS B',
-    say: 'Carpet, then patterned carpet, then a corridor of doors with brass numbers on them.',
-  });
   L.prop('door', { x: 25, z: 56, metal: true });
-  L.exit({
-    x: 25, z: 55, kind: 'stairs', to: 'level6', label: 'DO NOT',
-    say: 'Down, and down. The last bulb is behind you now and nothing has replaced it.',
-  });
+
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('silence');
+  L.hideSpots('locker', 10);
+  // It walks. It never runs, it never loses you, and it never stops pointing.
+  L.monsterFar('shepherd', { tell: 'shepherdHum', speed: 2.2, patience: 6.0, hearing: 1.4, wanders: 20, checksHides: 0.2 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: 20, z: 55 });
 
   return L.finish();
 }

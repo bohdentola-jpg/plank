@@ -139,45 +139,36 @@ html, body {
 #tape {
   position: fixed; inset: 0; z-index: 25; pointer-events: none;
   font-size: 13px; letter-spacing: 3px; color: #f4f0e0;
-  text-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.95), 0 1px 2px rgba(0, 0, 0, 0.95);
 }
-#tape > div { position: absolute; display: flex; align-items: center; gap: 8px; }
-.tape-tl { top: 3.2vh; left: 3.6vw; }
-.tape-tr { top: 3.2vh; right: 3.6vw; }
-.tape-bl { bottom: 3.4vh; left: 3.6vw; }
-.tape-br { bottom: 3.4vh; right: 3.6vw; flex-direction: column; align-items: flex-end; gap: 4px; }
+/* a scrim under the strip, because a camcorder's burn-in has to read over a blown-out
+   poolroom as well as over a dark corridor */
+#tape::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 11vh;
+  background: linear-gradient(rgba(2, 2, 4, 0.5), rgba(2, 2, 4, 0));
+}
+.tape-top {
+  position: absolute; top: 2.6vh; left: 3.4vw; right: 3.4vw;
+  display: flex; align-items: center; gap: 12px;
+}
+.tape-gap { flex: 1; }
 .rec-dot { width: 11px; height: 11px; border-radius: 50%; background: #ff3020; opacity: 0.25; }
 .rec-dot.blink { animation: recblink 1.4s steps(2, end) infinite; opacity: 1; }
 @keyframes recblink { 50% { opacity: 0.1; } }
 .rec-word { letter-spacing: 4px; }
 #tape.paused .rec-word::after { content: ' ▮▮'; }
-.tape-sp { font-size: 10px; color: #b8b2a0; }
+.tape-sp, .floor-tag { font-size: 10px; color: #cfc9b6; letter-spacing: 2px; }
+.tc { font-size: 14px; letter-spacing: 2px; }
 .bat {
-  display: inline-block; width: 38px; height: 13px; border: 1.5px solid #e8e4d8;
+  display: inline-block; width: 36px; height: 12px; border: 1.5px solid #e8e4d8;
   padding: 1.5px; position: relative;
 }
 .bat::after {
-  content: ''; position: absolute; right: -5px; top: 3px; width: 3px; height: 5px; background: #e8e4d8;
+  content: ''; position: absolute; right: -5px; top: 3px; width: 3px; height: 4px; background: #e8e4d8;
 }
 .bat i { display: block; height: 100%; background: #e8e4d8; }
-.bat-pct { font-size: 11px; }
-.tc { font-size: 14px; letter-spacing: 2px; }
-.zoom { font-size: 11px; letter-spacing: 1px; color: #d8d4c4; }
-.zoom b { color: #fff; }
+.tape-br { position: absolute; bottom: 3.4vh; right: 3.4vw; }
 .nv { font-size: 10px; color: #7dffb0; letter-spacing: 2px; }
-.tape-focus { position: absolute; inset: 26vh 30vw; }
-.tape-focus i {
-  position: absolute; width: 16px; height: 16px;
-  border: 1.5px solid rgba(244, 240, 224, 0.5);
-}
-.tape-focus i:nth-child(1) { top: 0; left: 0; border-right: none; border-bottom: none; }
-.tape-focus i:nth-child(2) { top: 0; right: 0; border-left: none; border-bottom: none; }
-.tape-focus i:nth-child(3) { bottom: 0; left: 0; border-right: none; border-top: none; }
-.tape-focus i:nth-child(4) { bottom: 0; right: 0; border-left: none; border-top: none; }
-.tape-warn {
-  position: absolute; top: 8vh; right: 3.6vw; color: #ff5040; font-size: 11px;
-  letter-spacing: 3px; animation: blink 1s steps(2, end) infinite;
-}
 
 /* ------------------------------------------------------------------ hud */
 #hud { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
@@ -187,11 +178,14 @@ html, body {
 .hud-obj ul { list-style: none; margin: 0; padding: 0; }
 .hud-obj li {
   font-size: 12px; line-height: 1.45; color: #cfc9b6; letter-spacing: 0.5px;
-  margin-bottom: 5px; text-shadow: 0 1px 3px #000;
+  margin-bottom: 5px;
+  /* the floors run from near-black to blown-out white, so the text carries its own
+     contrast rather than trusting the room behind it */
+  text-shadow: 0 1px 3px #000, 0 0 8px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.95);
 }
 .hud-obj li .tick { display: inline-block; width: 16px; color: #a89a60; }
-.hud-obj li.done { color: #6d6a5c; text-decoration: line-through; }
-.hud-obj li.opt { color: #8a8674; font-style: italic; }
+.hud-obj li.done { color: #8a8878; text-decoration: line-through; }
+.hud-obj li.opt { color: #a8a48e; font-style: italic; }
 
 .hud-vitals { position: absolute; bottom: 9vh; left: 3.6vw; display: flex; flex-direction: column; gap: 5px; }
 .v-row { display: flex; align-items: center; gap: 8px; }
@@ -199,15 +193,45 @@ html, body {
 .v-bar { display: block; width: 120px; height: 7px; border: 1px solid #4a4a52; background: #0c0c10; }
 .v-bar i { display: block; height: 100%; background: #c8c0a8; transition: width 140ms linear; }
 
-.hud-belt { position: absolute; bottom: 9vh; right: 3.6vw; display: flex; gap: 6px; }
-.hud-belt .slot {
-  position: relative; width: 44px; height: 44px; border: 1px solid #3a3a44;
-  background: rgba(10, 10, 14, 0.65); pointer-events: auto; cursor: pointer;
+.hud-right {
+  position: absolute; top: 9vh; right: 3.4vw; display: flex; flex-direction: column;
+  align-items: flex-end; gap: 10px;
 }
-.hud-belt .slot.sel { border-color: #b8a860; background: rgba(40, 34, 12, 0.6); }
-.hud-belt .slot img { width: 34px; height: 34px; position: absolute; top: 4px; left: 5px; }
-.hud-belt .slot .n { position: absolute; bottom: 1px; right: 3px; font-size: 10px; color: #e8e2d0; }
-.hud-belt .slot .k { position: absolute; top: 1px; left: 3px; font-size: 9px; color: #7d7a6a; }
+.hud-footage { display: flex; align-items: baseline; gap: 6px; }
+.hud-footage .ft-n { font-size: 20px; color: #f0e0a8; }
+.hud-footage .ft-l { font-size: 9px; letter-spacing: 3px; color: #8a8674; }
+.hud-filming {
+  font-size: 11px; letter-spacing: 2px; color: #ff6a5a;
+  animation: blink 1s steps(2, end) infinite;
+}
+.hud-track, .hud-compass {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 10px; letter-spacing: 2px; color: #b8b2a0;
+  border: 1px solid #3a3a44; padding: 4px 8px; background: rgba(8, 8, 12, 0.5);
+}
+.hud-track i, .hud-compass i {
+  display: block; width: 0; height: 0; border-left: 6px solid transparent;
+  border-right: 6px solid transparent; border-bottom: 12px solid #8a8674;
+  transform-origin: 50% 70%;
+}
+.hud-compass i { border-bottom-color: #b8a860; }
+.hud-track.near i { border-bottom-color: #ffb020; }
+.hud-track.hunting { border-color: #7a2018; color: #ff8070; }
+.hud-track.hunting i { border-bottom-color: #ff4030; }
+
+.hud-chase {
+  position: absolute; left: 50%; top: 11vh; transform: translateX(-50%);
+  font-size: 13px; letter-spacing: 6px; color: #ff5040;
+  animation: blink 0.55s steps(2, end) infinite;
+}
+
+/* in cover: the frame closes down to slats and you cannot move */
+.hide-frame { position: absolute; inset: 0; }
+.hide-frame i { position: absolute; background: #04040a; }
+.hide-frame .hf-l { left: 0; top: 0; bottom: 0; width: 22vw; }
+.hide-frame .hf-r { right: 0; top: 0; bottom: 0; width: 22vw; }
+.hide-frame .hf-t { left: 0; right: 0; top: 0; height: 16vh; }
+.hide-frame .hf-b { left: 0; right: 0; bottom: 0; height: 22vh; }
 
 .hud-prompt {
   position: absolute; left: 50%; bottom: 22vh; transform: translateX(-50%);
@@ -220,9 +244,11 @@ html, body {
   max-width: 62vw; text-align: center; font-size: 14px; line-height: 1.5;
   color: #efe9d8; text-shadow: 0 2px 6px #000; letter-spacing: 0.5px;
 }
+/* sits under the subtitle band, clear of the objective list in the top-left */
 .hud-toast {
-  position: absolute; left: 50%; top: 16vh; transform: translateX(-50%);
+  position: absolute; left: 50%; bottom: 27vh; transform: translateX(-50%);
   font-size: 12px; letter-spacing: 3px; color: #f0e0a8; text-shadow: 0 1px 4px #000;
+  background: rgba(6, 6, 10, 0.45); padding: 4px 12px;
 }
 .hud-crosshair { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
 .hud-crosshair i {
@@ -289,4 +315,53 @@ html, body {
   .how { flex-direction: column; }
   .hud-obj { max-width: 52vw; }
   .lc-name { font-size: 22px; letter-spacing: 6px; }
+}
+
+/* ------------------------------------------------------------------ the lift */
+#scr-lift .lift {
+  width: min(940px, 96vw); border: 1px solid #3a3a44;
+  background: linear-gradient(180deg, rgba(26, 24, 20, 0.96), rgba(12, 11, 9, 0.97));
+  padding: 20px 22px; display: flex; flex-direction: column; gap: 14px;
+}
+.lift-head { display: flex; align-items: baseline; gap: 16px; border-bottom: 1px solid #2e2e38; padding-bottom: 10px; }
+.lift-title { letter-spacing: 8px; font-size: 15px; color: #f0e8cc; }
+.lift-floor { font-size: 11px; letter-spacing: 3px; color: #a89a60; }
+.lift-body { display: grid; grid-template-columns: 260px 1fr; gap: 22px; }
+.lift-pay { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: #b8b2a0; }
+.lift-pay div { display: flex; justify-content: space-between; gap: 10px; }
+.lift-pay b { color: #d8d0a8; font-weight: normal; }
+.lift-pay .tot { margin-top: 8px; border-top: 1px solid #2e2e38; padding-top: 8px; letter-spacing: 3px; }
+.lift-pay .tot b { color: #f0e0a8; font-size: 15px; }
+.lift-stall-head, .lift-owned-head {
+  font-size: 9px; letter-spacing: 4px; color: #8a8674; margin-bottom: 8px;
+}
+.lift-owned-head { margin-top: 14px; }
+.lift-stall { display: flex; flex-direction: column; gap: 8px; }
+.stall-item {
+  font: inherit; text-align: left; cursor: pointer; color: #ded8c6;
+  border: 1px solid #3a3a44; background: #16161c; padding: 9px 12px;
+  display: grid; grid-template-columns: 1fr 92px; grid-template-rows: auto auto auto;
+  gap: 2px 10px;
+}
+.stall-item:hover:not(.broke) { background: #23232c; border-color: #6a5a2a; }
+.stall-item.broke { opacity: 0.4; cursor: default; }
+.si-name { font-size: 13px; letter-spacing: 2px; color: #f0e0a8; }
+.si-name i { color: #8a8674; font-style: normal; font-size: 11px; }
+.si-blurb { font-size: 11px; color: #b8b2a0; grid-column: 1; }
+.si-stall { font-size: 10px; color: #7d7a6a; font-style: italic; grid-column: 1; }
+.si-price {
+  grid-column: 2; grid-row: 1 / span 3; align-self: center; text-align: right;
+  font-size: 13px; color: #d8d0a8; letter-spacing: 1px;
+}
+.lift-owned { display: flex; flex-wrap: wrap; gap: 6px; }
+.lift-owned span {
+  font-size: 10px; letter-spacing: 1px; color: #cfc9b6;
+  border: 1px solid #2e2e38; padding: 3px 7px; background: #14141a;
+}
+.lift-owned .none { color: #5d5a50; border-color: #22222a; }
+.title-record { font-size: 10px; letter-spacing: 2px; color: #8a8674; margin-top: 4px; }
+.arch-tier { margin-left: auto; font-size: 10px; color: #6d6a5c; letter-spacing: 2px; }
+
+@media (max-width: 820px) {
+  .lift-body { grid-template-columns: 1fr; }
 }

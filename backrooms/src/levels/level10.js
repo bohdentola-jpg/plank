@@ -143,62 +143,7 @@ export function build(kit) {
   L.scatter('skull', 6);
   L.scatter('tent', 4);
   L.scatter('sleepingBag', 4);
-  L.scatter('tapePile', 3);
   L.scatter('trafficCone', 8);
-
-  // ---------------------------------------------------------------- pickups
-  L.item('almondWater', { x: fx + 6, z: fz + 4 });
-  L.item('almondWater', { x: sx - 2, z: sz + 2 });
-  L.item('battery', { x: fx + 11, z: fz + 8 });
-  L.item('battery', { x: 100, z: 52 });
-  L.item('medkit', { x: fx + 3, z: fz + 8 });
-  L.item('flare', { x: 20, z: 22, amount: 2 });
-  L.item('tape', { x: fx + 8, z: fz + 4, id: 'tape-field', title: 'TAPE — "NO BIRDS"' });
-
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: fx + 7, z: fz + 4, title: 'FARMHOUSE TABLE, UNDER A PLATE',
-    text: `Four places laid, all clean, all dry. There is a note in the middle in
-      the same hand as the shopping list at number 41: WE ARE IN THE FIELD.
-      PLEASE HELP YOURSELF. IT IS THE ONLY KIND THING LEFT AND IT IS FREE.`,
-  });
-  L.note({
-    x: fx + 12, z: fz + 8, title: 'PINNED ABOVE THE SINK',
-    text: `No birds. Eleven days and no birds, no insects, no mice in the flour.
-      The wheat is real — I have milled it and eaten it and it is wheat. Something
-      is growing this and nothing is eating it but me.`,
-  });
-  L.note({
-    x: 101, z: 52, title: 'IN THE CAB, ON THE SEAT',
-    text: `Cut the same forty acres eight times. It comes back overnight. Not
-      grown back — back. Same stalks, same lean, same broken one by the wheel rut.
-      I am going to stop cutting it and see what happens. Day 3 of not cutting: it
-      has cut itself.`,
-  });
-  L.note({
-    x: 21, z: 22, title: 'TAPED INSIDE THE MAST LOCKER',
-    text: `The thing on the ridge is not closer. I have measured it against the
-      fence posts. It is not closer. It is bigger, which is a different problem,
-      and it is bigger every time I don't look at it.`,
-  });
-  L.note({
-    x: sx - 1, z: sz + 2, title: 'GRAIN SILO, CHALKED INSIDE THE HATCH',
-    text: `Down the ladder, past the auger, and the bottom of it isn't grain, it's
-      city — streetlights, a long way down, in fog. I dropped a bolt in and did not
-      hear it land. Going anyway. Nothing here will kill me and that is worse.`,
-  });
-
-  // ---------------------------------------------------------------- company
-  L.pack('deathmoth', 8, 70, 40, 14, { state: 'patrol', leash: 24 });
-  L.pack('deathmoth', 7, 120, 100, 14, { state: 'patrol', leash: 24 });
-  L.pack('deathmoth', 6, 40, 120, 12, { state: 'patrol', leash: 20 });
-  L.entity('watcher', { x: 148, z: 12, state: 'guard' });
-  L.entity('watcher', { x: 12, z: 148, state: 'guard' });
-  L.pack('duller', 5, 90, 90, 10, { state: 'patrol', leash: 30 });
-  L.entity('faceling', { x: fx + 7, z: fz + 16, state: 'patrol', leash: 20 });
-  L.entity('howler', { x: 130, z: 40, state: 'patrol', leash: 18 });
-  L.entity('skinstealer', { x: 60, z: 130, state: 'dormant', wake: { after: 200 }, keepsDistance: 14 });
-
   // ---------------------------------------------------------------- scares
   L.scare('shadowCross', { x: 60, z: 30, radius: 8 });
   L.scare('whisper', { x: 90, z: 60, radius: 8, text: 'The wheat moves against the wind, in a line, coming this way.' });
@@ -212,18 +157,18 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- the way out
   L.spawnAt(8, 8, Math.PI * 0.25);
-  L.objective('Reach the grain silo in the south-east and climb down inside it.');
-  L.objective('The farmhouse has water and a radio. Go via it.', { id: 'obj1' });
-  L.objective('Keep the ridge line in view. Don\'t look away from it twice.', { optional: true });
 
   L.trigger({ x: fx + 7, z: fz + 6, radius: 6, objective: 'obj1', say: 'Four places laid. The radio is on, playing nothing, and warm.' });
   L.trigger({ x: 76, z: 77, radius: 8, say: 'A signpost with the arms broken off. Someone has scratched: EITHER WAY.' });
   L.trigger({ x: sx, z: sz - 4, radius: 6, say: 'The silo hatch is open, and there is fog coming up out of it, and street noise.' });
 
-  L.exit({
-    x: sx, z: sz, kind: 'hole', to: 'level11', label: 'GRAIN SILO',
-    say: 'Down past the auger. Streetlights, a long way below, and traffic that has no cars in it.',
-  });
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('crowd');
+  L.hideSpots('wheat', 10);
+  L.monsterFar('howler', { tell: 'howlerWheeze', speed: 4.2, patience: 1.3, hearing: 1.7, wanders: 50, checksHides: 0.3 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: sx, z: sz });
 
   return L.finish();
 }

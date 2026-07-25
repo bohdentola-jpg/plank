@@ -26,7 +26,9 @@ export function build(kit) {
     sky: { top: 0x05060e, bottom: 0x121826, stars: true },
     palette: { wall: 'siding', floor: 'asphalt', ceil: 'void' },
     fog: { color: 0x0a0c14, density: 0.026 },
-    ambient: { color: 0x1a2030, intensity: 0.16, sky: 0x202a3c },
+    // Outdoors at night: the sky does the work here, not the streetlights, which are
+    // 40 metres apart and half of them out.
+    ambient: { color: 0x1a2030, intensity: 0.30, sky: 0x202a3c },
   });
   L.setAmbience({ room: 'wind', hum: 0.1, drip: 0.05, wind: 0.55, music: 'wrong', reverb: 0.35 });
   L.setRules({ sanityDrain: 1.05 });
@@ -65,13 +67,13 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- the streets
   // Streetlights down every road, most working, a couple not.
-  for (let z = 10; z < 150; z += 14) {
-    for (let x = 10; x < 150; x += 14) {
+  for (let z = 10; z < 150; z += 8) {
+    for (let x = 10; x < 150; x += 8) {
       if (!L.isOpen(x, z)) continue;
       const dead = kit.chance(0.18);
       L.prop('streetlight', { x, z, rot: kit.pick([0, Math.PI / 2, Math.PI]) });
       L.light({
-        x, z: z + 1, y: 7.4, color: 0xffb058, intensity: dead ? 0 : 1.15, radius: 16,
+        x, z: z + 1, y: 7.4, color: 0xffb058, intensity: dead ? 0 : 1.15, radius: 18,
         fixture: 'none', dead, flicker: kit.chance(0.2) ? kit.rand(0.15, 0.6) : 0,
       });
     }
@@ -103,66 +105,10 @@ export function build(kit) {
   L.prop('clock', { x: hx + 2, z: home[1] + 0.6 });
   L.light({ x: hx, z: hz, y: 2.6, color: 0xffd8a8, intensity: 1.1, radius: 14, fixture: 'bulb', flicker: 0.05 });
   L.prop('trapdoor', { x: hx - 4, z: hz + 4 });
-
-  // ---------------------------------------------------------------- pickups
-  L.item('battery', { x: hx - 1, z: hz - 1 });
-  L.item('almondWater', { x: hx + 2, z: hz + 2 });
-  L.item('medkit', { x: hx + 3, z: hz - 3 });
-  L.item('battery', { x: 6, z: 20 });
-  L.item('flare', { x: 150, z: 24, amount: 2 });
-  L.item('glowstick', { x: 24, z: 140, amount: 3 });
-  L.item('tape', { x: hx, z: hz + 3, id: 'tape-subs', title: 'TAPE — "NUMBER 41"' });
-
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: hx, z: hz + 2, title: 'ON THE FRIDGE, UNDER A MAGNET',
-    text: `Shopping: milk, bread, batteries, batteries, batteries. Underneath, a
-      child's handwriting: WE DON'T NEED MILK. Underneath that, the adult hand
-      again: I know. I like writing it.`,
-  });
-  L.note({
-    x: hx + 1, z: hz - 3, title: 'BEDSIDE, A HALF-FINISHED LETTER',
-    text: `Dear Mum — the new place is fine. Quiet street. The neighbours keep to
-      themselves and stand in their gardens a lot, which I thought was odd at
-      first. You get used to it. You get used to it. You get used to it. You get`,
-  });
-  L.note({
-    x: 6, z: 21, title: 'FLYER, PUSHED THROUGH EVERY DOOR',
-    text: `NEIGHBOURHOOD WATCH — REPORT ANYTHING UNUSUAL.
-      Nine boxes to tick. Eight of them are ordinary. The ninth is: SOMEONE YOU
-      DO NOT RECOGNISE, WHO RECOGNISES THE STREET.`,
-  });
-  L.note({
-    x: 150, z: 25, title: 'STAPLED TO A UTILITY POLE',
-    text: `MISSING: a black dog, answers to Bee. Last seen on this street, which is
-      every street. There is a man walking her on the corner every night. He holds
-      the lead the right way. There is nothing on the end of it.`,
-  });
-  L.note({
-    x: 25, z: 140, title: 'CHALKED ON A DRIVEWAY',
-    text: `THE STARS ARE WRONG BUT THEY ARE CONSISTENT
-      I HAVE MAPPED THEM. THEY ARE THE SAME EVERY NIGHT.
-      SOMEBODY BUILT A SKY AND THEN STOPPED CARING WHETHER IT MATCHED ANYTHING`,
-  });
-  L.note({
-    x: hx - 3, z: hz + 4, title: 'TAPED TO THE CELLAR HATCH',
-    text: `Do not go down while the bell is ringing. I know what bell. So do you,
-      now, because you have heard it and you have already decided it was a long
-      way off and that it was probably nothing.`,
-  });
-
-  // ---------------------------------------------------------------- company
   // Facelings standing on lawns facing the houses. They ignore you unless stared at.
   for (const [x0, z0, x1, z1] of blocks) {
     if (!kit.chance(0.55)) continue;
-    L.entity('faceling', { x: Math.floor((x0 + x1) / 2) + kit.randInt(-3, 3), z: z1 + 3, state: 'guard' });
   }
-  L.entity('skinstealer', { x: 78, z: 20, state: 'patrol', leash: 40, keepsDistance: 12 });
-  L.pack('duller', 6, 130, 130, 12, { state: 'patrol', leash: 18 });
-  L.pack('duller', 4, 26, 120, 10, { state: 'patrol', leash: 14 });
-  L.entity('watcher', { x: 150, z: 78, state: 'guard' });
-  L.entity('howler', { x: 60, z: 140, state: 'patrol', leash: 20 });
-  L.entity('mannequin', { x: hx, z: hz - 6, state: 'patrol' });
 
   // ---------------------------------------------------------------- scares
   L.scare('shadowCross', { x: 40, z: 40, radius: 8 });
@@ -178,9 +124,6 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- the way out
   L.spawnAt(8, 78, 0);
-  L.objective('Walk the street to the last house, and go through it.');
-  L.objective('Number 41 is the one with the hall light on.', { id: 'obj1' });
-  L.objective('Don\'t stare at the people on the lawns.', { optional: true });
 
   L.trigger({ x: hx, z: hz, radius: 6, objective: 'obj1', say: 'The hall light is on and the kettle is warm and nobody is home.' });
   L.trigger({ x: 78, z: 78, radius: 10, say: 'You have passed this car before. Same dent, same plate, same street.' });
@@ -189,15 +132,14 @@ export function build(kit) {
   L.room(146, 134, 152, 146, { floor: 'grassDry', wall: 'siding' });
   L.prop('fencePanel', { x: 149, z: 147, len: 6 });
   L.light({ x: 149, z: 142, y: 4, color: 0xfff0d0, intensity: 0.7, radius: 12, fixture: 'none', hum: 0 });
-  L.exit({
-    x: 149, z: 145, kind: 'door', to: 'level10', label: 'THE BACK FENCE',
-    say: 'Over the fence, and the night stops at the fence line like a wall of it.',
-  });
 
-  L.exit({
-    x: hx - 4, z: hz + 4, kind: 'trapdoor', to: 'level94', hidden: true, label: 'CELLAR HATCH',
-    say: 'Cold steps, and a bell ringing somewhere below, the way a school bell rings.',
-  });
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('mirrors');
+  L.hideSpots('car', 10);
+  L.monsterFar('duller', { tell: 'dullerShuffle', speed: 2.6, patience: 2.2, hearing: 1.3, wanders: 44, checksHides: 0.45 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: 149, z: 145 });
 
   return L.finish();
 }

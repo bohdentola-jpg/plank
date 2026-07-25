@@ -88,65 +88,9 @@ export function build(kit) {
   L.scatter('graffiti', 14);
   L.scatter('mattress', 8);
   L.scatter('campLight', 6);
-  L.scatter('tapePile', 4);
   L.scatter('cocoon', 6, { where: (x, z) => x > 90 || z > 90 });
-
-  // ---------------------------------------------------------------- pickups
   // Generous, because without light this level is a coin flip.
   const spot = (i) => [rooms[i % rooms.length][0], rooms[i % rooms.length][1]];
-  L.item('flare', { x: spot(0)[0], z: spot(0)[1], amount: 3 });
-  L.item('flare', { x: spot(4)[0], z: spot(4)[1], amount: 2 });
-  L.item('glowstick', { x: spot(1)[0], z: spot(1)[1], amount: 6 });
-  L.item('glowstick', { x: spot(6)[0], z: spot(6)[1], amount: 4 });
-  L.item('battery', { x: spot(2)[0], z: spot(2)[1], amount: 2 });
-  L.item('battery', { x: spot(7)[0], z: spot(7)[1] });
-  L.item('almondWater', { x: spot(3)[0], z: spot(3)[1] });
-  L.item('medkit', { x: spot(5)[0], z: spot(5)[1] });
-  L.item('tape', { x: spot(8)[0], z: spot(8)[1], id: 'tape-dark', title: 'TAPE — "SIXTY-ONE STEPS"' });
-
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: spot(0)[0] + 1, z: spot(0)[1], title: 'FLARE BOX LID, WRITTEN IN CHALK',
-    text: `Light held still is safe. Light that sweeps around is a flag. They do
-      not see it, exactly — they hear you turn. Put the flare down, let it burn,
-      walk out of the circle in a straight line and keep walking.`,
-  });
-  L.note({
-    x: spot(1)[0] + 1, z: spot(1)[1], title: 'INDEX CARD, PINNED TO A CAGE',
-    text: `Counted the steps between the boiler room and the cages: sixty-one at a
-      walk. Ninety-four the time I ran, because running does not go in a straight
-      line down here, and because it followed me the long way round.`,
-  });
-  L.note({
-    x: spot(2)[0] + 1, z: spot(2)[1], title: 'DAMP PAGE, HANDWRITING VERY NEAT',
-    text: `The smilers do not move while there is light on them. I have tested this
-      for six hours. I got very good at holding the torch steady and very bad at
-      everything else, and when the battery went I found out what they do next.`,
-  });
-  L.note({
-    x: spot(5)[0] + 1, z: spot(5)[1], title: 'SPRAYED AT WAIST HEIGHT',
-    text: `THE SHAFT IS IN THE NORTH-EAST BOILER ROOM
-      THE AIR COMING DOWN IT IS WARM
-      IT SMELLS OF SWIMMING POOLS AND I ALMOST CRIED`,
-  });
-  L.note({
-    x: spot(8)[0] + 1, z: spot(8)[1], title: 'FILE FOLDER, EMPTY, LABEL INTACT',
-    text: `SUB-BASEMENT LIGHTING — WORK ORDERS, 41 YEARS. Every order signed off
-      as completed. Every order for the same eleven fittings. Nobody has ever
-      replaced one of them and everybody has been paid.`,
-  });
-
-  // ---------------------------------------------------------------- company
-  L.pack('hound', 5, spot(9)[0], spot(9)[1], 10, { state: 'patrol', leash: 40 });
-  L.pack('hound', 4, spot(11)[0], spot(11)[1], 10, { state: 'patrol', leash: 40 });
-  L.entity('hound', { x: spot(3)[0], z: spot(3)[1], state: 'patrol', leash: 50 });
-  L.pack('smiler', 5, spot(10)[0], spot(10)[1], 14, { state: 'patrol', leash: 20 });
-  L.pack('smiler', 4, spot(12)[0], spot(12)[1], 14, { state: 'patrol', leash: 20 });
-  L.entity('smiler', { x: spot(6)[0], z: spot(6)[1], state: 'guard' });
-  L.entity('howler', { x: spot(7)[0], z: spot(7)[1], state: 'patrol', leash: 18 });
-  L.entity('clump', { x: spot(13)[0], z: spot(13)[1], state: 'patrol', leash: 8 });
-  L.entity('crawler', { x: spot(14)[0], z: spot(14)[1], state: 'patrol', leash: 24 });
-
   // ---------------------------------------------------------------- scares
   L.scare('breathing', { x: spot(2)[0], z: spot(2)[1] + 3, radius: 6, needsDark: true });
   L.scare('footstepsFollow', { x: spot(4)[0], z: spot(4)[1] + 3, radius: 8 });
@@ -163,9 +107,6 @@ export function build(kit) {
   const start = rooms[0];
   const shaft = boilers[boilers.length - 1];
   L.spawnAt(start[0], start[1], 0);
-  L.objective('Find the maintenance shaft in a boiler room. The warm one.');
-  L.objective('Get a light you can put down and leave burning.', { id: 'obj1' });
-  L.objective('Never run. Not once.', { optional: true });
 
   L.trigger({ x: spot(0)[0], z: spot(0)[1], radius: 4, objective: 'obj1', say: 'Flares. Three of them, dry.' });
   L.trigger({ x: spot(9)[0], z: spot(9)[1], radius: 8, say: 'Something ahead of you is breathing through its mouth and moving on four legs.' });
@@ -173,10 +114,15 @@ export function build(kit) {
 
   L.prop('ladder', { x: shaft[0] + 3, z: shaft[1] + 3, height: 3.0 });
   L.light({ x: shaft[0] + 3, z: shaft[1] + 3, y: 2.6, color: 0x90e8ff, intensity: 0.5, radius: 7, fixture: 'none', hum: 0 });
-  L.exit({
-    x: shaft[0] + 3, z: shaft[1] + 3, kind: 'ladder', to: 'poolrooms', label: 'MAINTENANCE SHAFT',
-    say: 'You climb toward the smell of chlorine, and it gets warmer, and then it gets bright.',
-  });
+
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('blackout');
+  L.hideSpots('shelf', 10);
+  // The moth comes to the only light in the level, which is the one you are holding.
+  L.monsterFar('deathmoth', { tell: 'mothFlutter', speed: 4.2, patience: 2.4, hearing: 1.2, wanders: 44, checksHides: 0.3 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: shaft[0] + 3, z: shaft[1] + 3 });
 
   return L.finish();
 }

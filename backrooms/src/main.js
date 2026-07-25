@@ -1,10 +1,18 @@
-// NOCLIP — app shell. Owns the renderer, the one animation frame, the screens,
-// the save file, and the rules that aren't geometry: battery, nerve, damage,
-// pickups, the exits, and what happens when a level finally lets you leave.
+// NOCLIP — app shell.
+//
+// A run is a descent: floor, lift, floor, lift, until something catches you. Each
+// floor has one thing living on it that kills you on contact, somewhere to hide
+// from it, chalk marks somebody left pointing at the service lift, and one trick
+// that belongs to that floor alone. In the lift there is a stall, and the stall
+// takes footage — which you earn by getting off the floor and, mostly, by keeping
+// the thing in frame while you do it.
+//
+// This file owns the renderer, the one animation frame, the screens, the save
+// file, the run, the shop, and the rules that are not geometry.
 
 import * as THREE from 'three';
 import { makeKit } from './kit.js';
-import { CHAIN, chainIndex, loadLevelModule, levelSeed } from './levels/index.js';
+import { CHAIN, loadLevelModule, levelSeed, makeRun } from './levels/index.js';
 import { World } from './world.js';
 import { Player } from './player.js';
 import { Entities } from './entities.js';
@@ -12,16 +20,27 @@ import { Camcorder } from './camcorder.js';
 import { Audio } from './audio.js';
 import { Hud } from './hud.js';
 import { Fx } from './fx.js';
-import { ITEM_DEFS } from './items.js';
-import { simple, logoCanvas } from './textures.js';
-import { blankSave, listSaves, loadSave, writeSave, deleteSave, loadSettings, saveSettings } from './save.js';
-import { clamp, clamp01, damp, fmtTime } from './util.js';
+import { CATALOG, applyOwned, priceOf, soldOut, offersFor, footageFor } from './powerups.js';
+import { logoCanvas } from './textures.js';
+import { loadSettings, saveSettings } from './save.js';
+import { clamp, clamp01, damp, fmtTime, rng } from './util.js';
 
+const RECORD_KEY = 'noclip_records_v2';
 const qs = new URLSearchParams(location.search);
+
+function loadRecords() {
+  try {
+    return { bestFloor: 0, bestFootage: 0, runs: 0, escapes: 0, seen: [], ...JSON.parse(localStorage.getItem(RECORD_KEY) || '{}') };
+  } catch { return { bestFloor: 0, bestFootage: 0, runs: 0, escapes: 0, seen: [] }; }
+}
+function saveRecords(r) {
+  try { localStorage.setItem(RECORD_KEY, JSON.stringify(r)); } catch { /* private mode */ }
+}
 
 class Game {
   constructor() {
     this.settings = loadSettings();
+    this.records = loadRecords();
     this.holder = document.getElementById('game-holder');
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(this.settings.fov, 16 / 9, 0.06, 400);
@@ -44,51 +63,48 @@ class Game {
       },
       onSplash: (v) => this.audio.oneShot('splash', clamp01(v)),
       onLand: () => this.audio.footstep('concrete', 1),
-      onFall: (drop) => {
-        this.hurtPlayer(Math.min(70, (drop - 3) * 14), 'fall');
-        this.audio.footstep('concrete', 1);
-      },
+      onFall: (drop) => { if (drop > 6) this.caught(null, 'the floor was further away than it looked'); },
     });
 
-    // ---- lights that belong to you, not the level
+    // ---- your own light, and the only tool you get
     this.ambient = new THREE.AmbientLight(0x30302a, 0.2);
-    this.scene.add(this.ambient);
     this.hemi = new THREE.HemisphereLight(0x404048, 0x101010, 0.15);
-    this.scene.add(this.hemi);
-    this.lamp = new THREE.SpotLight(0xfff2d8, 0, 26, 0.62, 0.55, 1.3);
-    this.lamp.position.set(0, 0, 0);
+    // A torch, not a room light: a defined hot centre with a soft edge, so a dark
+    // floor reads as a beam sweeping over surfaces rather than a general glow.
+    this.lamp = new THREE.SpotLight(0xfff2d8, 0, 30, 0.62, 0.55, 1.05);
     this.lampTarget = new THREE.Object3D();
-    this.scene.add(this.lamp, this.lampTarget);
+    // The camcorder's own lamp: a couple of metres of spill around the lens, so the
+    // floor at your feet and the wall at your shoulder exist. Without it the beam
+    // lights a distant smudge and everything within reach stays black.
+    this.glow = new THREE.PointLight(0xffe8c8, 0, 9, 1.25);
+    this.scene.add(this.ambient, this.hemi, this.lamp, this.lampTarget, this.glow);
     this.lamp.target = this.lampTarget;
-    this.lampOn = false;
+    this.lampOn = true;
 
     // ---- run state
     this.state = 'boot';
-    this.save = blankSave(1);
+    this.mods = applyOwned({});
+    this.owned = {};
+    this.footage = 0;
+    this.floors = [];
+    this.floorIndex = 0;
     this.levelTime = 0;
     this.tapeTime = 0;
-    this.hp = 100;
-    this.sanity = 100;
     this.camBattery = 100;
-    this.lampBattery = 100;
-    this.inventory = {};
-    this.selected = null;
-    this.damageFlash = 0;
     this.night = false;
-    this.zoom = 1;
     this.recording = true;
     this.noiseBoost = 0;
-    this.wokenTags = new Set();
-    this.pickables = [];
-    this.noteObjs = [];
-    this.exitObjs = [];
-    this.thrown = [];
-    this.exitMarker = null;
-    this.deadCause = '';
-    this.levelsSeen = new Set();
+    this.filmSeconds = 0;
+    this.wasChased = false;
+    this.hidesUsed = 0;
+    this.dead = false;
     this.paused = false;
+    this.gimmickT = 0;
+    this.blackoutT = 0;
+    this.steamT = 0;
     this.input = { fwd: 0, back: 0, left: 0, right: 0, sprint: 0, crouch: 0, jump: 0 };
     this.keys = new Set();
+    this.runRand = rng(1);
 
     this.bindInput();
     this.resize();
@@ -102,27 +118,25 @@ class Game {
 
   // ------------------------------------------------------------------ screens
   buildScreens() {
-    const logo = document.getElementById('title-logo');
-    if (logo) logo.src = logoCanvas('NOCLIP').toDataURL();
-    const bootLogo = document.getElementById('boot-logo');
-    if (bootLogo) bootLogo.src = logoCanvas('NOCLIP').toDataURL();
-
+    for (const id of ['title-logo', 'boot-logo']) {
+      const el = document.getElementById(id);
+      if (el) el.src = logoCanvas('NOCLIP').toDataURL();
+    }
     document.getElementById('boot').addEventListener('click', () => this.leaveBoot());
     window.addEventListener('keydown', (e) => {
       if (this.state === 'boot' && (e.code === 'Space' || e.code === 'Enter')) this.leaveBoot();
     });
 
-    document.getElementById('t-new').onclick = () => this.showSlots('new');
-    document.getElementById('t-continue').onclick = () => this.showSlots('load');
-    document.getElementById('t-archive').onclick = () => this.showScreen('archive');
+    document.getElementById('t-new').onclick = () => this.startRun();
+    document.getElementById('t-archive').onclick = () => { this.renderArchive(); this.showScreen('archive'); };
     document.getElementById('t-how').onclick = () => this.showScreen('how');
     document.getElementById('t-options').onclick = () => { this.renderOptions(); this.showScreen('options'); };
     for (const b of document.querySelectorAll('[data-back]')) b.onclick = () => this.showScreen('title');
-
     document.getElementById('p-resume').onclick = () => this.setPaused(false);
     document.getElementById('p-options').onclick = () => { this.renderOptions(true); this.showScreen('options'); };
     document.getElementById('p-quit').onclick = () => this.toTitle();
-    this.refreshArchive();
+    document.getElementById('lift-go').onclick = () => this.descend();
+    document.getElementById('end-back').onclick = () => this.toTitle();
   }
 
   showScreen(name) {
@@ -131,8 +145,7 @@ class Game {
     this.screen = name;
     const playing = name === 'play';
     this.hud.setVisible(playing);
-    document.getElementById('tape').style.display = playing ? '' : 'none';
-    document.getElementById('scr-pause').classList.toggle('on', name === 'pause');
+    document.getElementById('tape').style.display = playing || name === 'lift' ? '' : 'none';
   }
 
   leaveBoot() {
@@ -143,53 +156,31 @@ class Game {
     this.audio.startMusic('drone');
     this.audio.startTone({ room: 'static', hum: 0.2, drip: 0, wind: 0, reverb: 0.2 });
     this.showScreen('title');
-    document.getElementById('t-continue').disabled = !listSaves().some(Boolean);
-    if (qs.has('quick')) this.startRun(1, qs.get('level') || 'level0');
+    this.renderTitleRecord();
+    if (qs.has('quick')) this.startRun(qs.get('level') || null);
   }
 
-  showSlots(mode) {
-    const host = document.getElementById('slot-list');
-    const saves = listSaves();
-    host.innerHTML = '';
-    saves.forEach((s, i) => {
-      const slot = i + 1;
-      const b = document.createElement('button');
-      b.className = 'menu-btn slot-btn';
-      if (s && mode === 'load') {
-        const c = CHAIN.find((x) => x.id === s.level);
-        b.innerHTML = `<b>TAPE ${slot}</b> LEVEL ${c?.num ?? '?'} — ${c?.name ?? s.level}
-          <small>${fmtTime(s.playtime)} · ${s.tapesFound.length} tapes · ${s.deaths} deaths</small>`;
-        b.onclick = () => this.startRun(slot, null, s);
-      } else if (mode === 'load') {
-        b.innerHTML = `<b>TAPE ${slot}</b> <small>blank</small>`;
-        b.disabled = true;
-      } else {
-        b.innerHTML = s
-          ? `<b>TAPE ${slot}</b> <small>record over: LEVEL ${CHAIN.find((x) => x.id === s.level)?.num ?? '?'}</small>`
-          : `<b>TAPE ${slot}</b> <small>blank — new run</small>`;
-        b.onclick = () => { if (s) deleteSave(slot); this.startRun(slot, 'level0'); };
-      }
-      host.appendChild(b);
-    });
-    document.getElementById('slot-title').textContent = mode === 'new' ? 'PICK A TAPE TO RECORD ON' : 'CONTINUE A TAPE';
-    this.showScreen('slots');
+  renderTitleRecord() {
+    const el = document.getElementById('title-record');
+    if (!el) return;
+    const r = this.records;
+    el.textContent = r.runs
+      ? `${r.runs} descent${r.runs === 1 ? '' : 's'} · deepest floor ${r.bestFloor} · best haul ${r.bestFootage} ft · ${r.escapes} got out`
+      : 'no tapes recorded yet';
   }
 
-  refreshArchive() {
+  renderArchive() {
     const host = document.getElementById('archive-list');
-    if (!host) return;
-    const found = new Set();
-    for (const s of listSaves()) for (const t of s?.tapesFound || []) found.add(t);
-    const seen = new Set();
-    for (const s of listSaves()) for (const l of s?.levelsSeen || []) seen.add(l);
-    host.innerHTML = CHAIN.map((c) => {
+    const seen = new Set(this.records.seen || []);
+    host.innerHTML = CHAIN.filter((c) => c.tier > 0).map((c) => {
       const known = seen.has(c.id);
       return `<div class="arch-row ${known ? '' : 'unknown'}">
         <span class="arch-num">${known ? c.num : '??'}</span>
         <span class="arch-name">${known ? c.name : '— — — — —'}</span>
+        <span class="arch-tier">${known ? ['', 'shallow', 'middling', 'deep', 'the bottom'][c.tier] : ''}</span>
       </div>`;
-    }).join('') + `<p class="arch-note">${found.size} tape${found.size === 1 ? '' : 's'} recovered.
-      ${seen.size} of ${CHAIN.length} levels seen.</p>`;
+    }).join('') + `<p class="arch-note">${seen.size} of ${CHAIN.filter((c) => c.tier > 0).length} floors seen.
+      A descent draws ten of them, shallow to deep, and never the same ten twice.</p>`;
   }
 
   renderOptions(fromPause = false) {
@@ -226,7 +217,7 @@ class Game {
   }
 
   applySettings() {
-    this.camera.fov = this.settings.fov / this.zoom;
+    this.camera.fov = (this.mods?.fov ?? this.settings.fov);
     this.camera.updateProjectionMatrix();
     this.audio.volSfx = this.settings.sfx;
     this.audio.setMusicVolume(this.settings.music);
@@ -251,16 +242,7 @@ class Game {
         case 'KeyF': this.toggleLamp(); break;
         case 'KeyN': this.toggleNight(); break;
         case 'KeyR': this.toggleRecording(); break;
-        case 'KeyQ': this.useSelected(); break;
-        case 'KeyG': this.throwSelected(); break;
-        case 'Tab': e.preventDefault(); this.cycleItem(1); break;
         case 'Escape': this.setPaused(!this.paused); break;
-        case 'Digit1': case 'Digit2': case 'Digit3': case 'Digit4': case 'Digit5': {
-          const keys = Object.keys(this.inventory).filter((k) => this.inventory[k] > 0);
-          const k = keys[+e.code.slice(-1) - 1];
-          if (k) this.selectItem(k);
-          break;
-        }
         default: break;
       }
     });
@@ -270,22 +252,16 @@ class Game {
     });
     const canvas = this.renderer.domElement;
     canvas.addEventListener('click', () => {
-      if (this.state === 'play' && !this.paused && !this.hud.noteOpen) canvas.requestPointerLock?.();
+      if (this.state === 'play' && !this.paused) canvas.requestPointerLock?.();
     });
     document.addEventListener('mousemove', (e) => {
       if (document.pointerLockElement !== canvas || this.paused) return;
-      this.player.turn(e.movementX, (this.settings.invertY ? -1 : 1) * e.movementY, this.settings.sens);
+      const scale = this.player.hidden ? 0.45 : 1;       // in cover you can only peer
+      this.player.turn(e.movementX * scale, (this.settings.invertY ? -1 : 1) * e.movementY * scale, this.settings.sens);
     });
     document.addEventListener('pointerlockchange', () => {
-      if (this.state === 'play' && document.pointerLockElement !== canvas && !this.hud.noteOpen && !this.dead) {
-        this.setPaused(true);
-      }
+      if (this.state === 'play' && document.pointerLockElement !== canvas && !this.dead) this.setPaused(true);
     });
-    canvas.addEventListener('wheel', (e) => {
-      if (this.state !== 'play') return;
-      this.zoom = clamp(this.zoom - Math.sign(e.deltaY) * 0.25, 1, 3);
-      this.applySettings();
-    }, { passive: true });
     canvas.addEventListener('mousedown', (e) => {
       if (this.state !== 'play' || this.paused) return;
       if (e.button === 2) this.toggleLamp();
@@ -299,42 +275,41 @@ class Game {
     if (!p) return;
     const dead = (v) => (Math.abs(v) < 0.18 ? 0 : v);
     const lx = dead(p.axes[0] || 0), ly = dead(p.axes[1] || 0);
-    this.input.fwd = ly < -0.2 ? 1 : this.input.fwd;
-    this.input.back = ly > 0.2 ? 1 : this.input.back;
-    this.input.left = lx < -0.2 ? 1 : this.input.left;
-    this.input.right = lx > 0.2 ? 1 : this.input.right;
+    if (ly < -0.2) this.input.fwd = 1;
+    if (ly > 0.2) this.input.back = 1;
+    if (lx < -0.2) this.input.left = 1;
+    if (lx > 0.2) this.input.right = 1;
     const rx = dead(p.axes[2] || 0), ry = dead(p.axes[3] || 0);
     if (rx || ry) this.player.turn(rx * 12, (this.settings.invertY ? -1 : 1) * ry * 12, this.settings.sens);
     const btn = (i) => !!p.buttons[i]?.pressed;
-    this.input.sprint = btn(10) || (p.buttons[7]?.value > 0.4) ? 1 : this.input.sprint;
-    this.input.crouch = btn(11) ? 1 : this.input.crouch;
-    this.input.jump = btn(0) ? 1 : this.input.jump;
+    if (btn(10) || (p.buttons[7]?.value > 0.4)) this.input.sprint = 1;
+    if (btn(11)) this.input.crouch = 1;
+    if (btn(0)) this.input.jump = 1;
     if (btn(2) && !this.padE) this.interact();
     this.padE = btn(2);
     if (btn(3) && !this.padF) this.toggleLamp();
     this.padF = btn(3);
   }
 
-  // ------------------------------------------------------------------ run
-  async startRun(slot, levelId, existing = null) {
-    this.save = existing ? { ...blankSave(slot), ...existing, slot } : blankSave(slot);
-    if (!this.save.created) this.save.created = 1;
-    if (levelId) this.save.level = levelId;
-    if (!existing) this.save.seedSalt = Math.floor(Math.random() * 1e6);
-    this.hp = this.save.hp ?? 100;
-    this.sanity = this.save.sanity ?? 100;
-    this.camBattery = this.save.camBattery ?? 100;
-    this.lampBattery = this.save.lampBattery ?? 100;
-    this.inventory = { ...(this.save.inventory || {}) };
-    if (!existing) this.inventory = { battery: 2, almondWater: 1, glowstick: 2 };
-    this.tapeTime = this.save.tapeTime || 0;
-    this.levelsSeen = new Set(this.save.levelsSeen || []);
-    this.selected = Object.keys(this.inventory)[0] || null;
+  // ------------------------------------------------------------------ the run
+  async startRun(forceLevel = null) {
+    this.runSeed = Math.floor(Math.random() * 1e9);
+    this.runRand = rng(this.runSeed);
+    this.owned = {};
+    this.mods = applyOwned(this.owned);
+    this.footage = 0;
+    this.tapeTime = 0;
+    this.floors = forceLevel ? [forceLevel, 'level_end'] : makeRun(this.runRand);
+    this.floorIndex = 0;
+    this.records.runs = (this.records.runs || 0) + 1;
+    saveRecords(this.records);
     this.applySettings();
-    await this.enterLevel(this.save.level, true);
+    await this.enterFloor(0);
   }
 
-  async enterLevel(id, fromSave = false) {
+  async enterFloor(index) {
+    this.floorIndex = index;
+    const id = this.floors[index];
     this.state = 'loading';
     this.showScreen('load');
     const bar = document.getElementById('load-bar');
@@ -344,33 +319,32 @@ class Game {
       label.textContent = text;
       await new Promise((r) => setTimeout(r, 16));
     };
-    await step(6, 'READING TAPE HEADER');
+    await step(8, 'THREADING THE TAPE');
 
     let mod;
-    try {
-      mod = await loadLevelModule(id);
-    } catch (e) {
-      label.textContent = `TAPE DAMAGED — ${id} could not be read (${e.message})`;
+    try { mod = await loadLevelModule(id); } catch (e) {
+      label.textContent = `TAPE DAMAGED — ${id} (${e.message})`;
       return;
     }
-    await step(22, `LEVEL ${mod.meta.num} — ${mod.meta.name}`);
-    const kit = makeKit(levelSeed(id, this.save.seedSalt));
-    const data = mod.build(kit);
-    await step(48, 'POURING CONCRETE');
+    await step(24, `FLOOR ${index + 1} — LEVEL ${mod.meta.num}`);
+    const data = mod.build(makeKit(levelSeed(id, this.runSeed + index)));
+    await step(52, 'POURING CONCRETE');
 
     if (this.world) this.world.dispose();
     this.entities.clear();
     this.fx.reset();
-    this.clearLevelObjects();
-    this.world = new World(data, this.scene, { quality: this.settings.quality });
+    this.clearFloorObjects();
+    this.world = new World(data, this.scene, {
+      quality: this.settings.quality,
+      arrows: this.mods.arrows,
+    });
     this.player.world = this.world;
-    await step(74, 'WIRING THE LIGHTS');
+    this.player.mods = this.mods;
+    await step(78, 'CHALKING THE WAY OUT');
 
-    // ---- scene mood
     this.scene.fog = new THREE.FogExp2(data.fog.color, data.fog.density);
-    // Clear to the fog colour, not black: distance and the odd seam in the
-    // geometry then read as haze instead of a hole punched in the world.
     this.scene.background = new THREE.Color(data.fog.color);
+    this.baseFog = data.fog.density;
     this.ambient.color.setHex(data.ambient.color);
     this.ambient.intensity = data.ambient.intensity;
     this.hemi.visible = !!data.openSky;
@@ -380,364 +354,305 @@ class Game {
     }
     this.levelTint = data.tint || { r: 1, g: 1, b: 1 };
     this.rules = data.rules;
+    this.gimmick = data.gimmick;
+    this.gimmickOpts = data.gimmickOpts || {};
 
-    // ---- population and furniture
-    this.entities.load(data.entities);
-    this.spawnPickups(data.items);
-    this.spawnNotes(data.notes);
+    this.entities.load(data);
     this.spawnExits(data.exits);
     this.triggers = data.triggers.map((t) => ({ ...t, fired: false }));
     this.scares = data.scares.slice();
     this.links = data.links.slice();
-    this.objectives = data.objectives.map((o) => ({ ...o }));
-    this.hud.setObjectives(this.objectives);
     this.meta = mod.meta;
     this.levelId = id;
     this.levelTime = 0;
-    this.wokenTags = new Set();
-    await step(92, 'PRESSING RECORD');
-
-    // ---- you
-    this.player.spawn(data.spawn.x * data.cell, data.spawn.z * data.cell, data.spawn.yaw);
-    this.levelsSeen.add(id);
-    this.audio.startTone(data.ambience);
-    this.audio.startMusic(data.ambience.music);
-    this.audio.oneShot('tapeStart', 0.6);
+    this.filmSeconds = 0;
+    this.wasChased = false;
+    this.hidesUsed = 0;
+    this.camBattery = 100;
+    this.night = false;
     this.dead = false;
+    this.player.leaveHide();
     this.hud.hideDeath();
+    this.hud.setObjectives([
+      { id: 'lift', text: 'Find the service lift. Follow the chalk.', done: false },
+      { id: 'gim', text: GIMMICK_HINT[data.gimmick] || '', done: false, optional: true },
+      { id: 'film', text: 'Film it from a distance — footage buys upgrades in the lift.', done: false, optional: true },
+    ]);
+    if (!this.records.seen.includes(id)) {
+      this.records.seen.push(id);
+      saveRecords(this.records);
+    }
+
+    this.player.spawn(data.spawn.x * data.cell, data.spawn.z * data.cell, data.spawn.yaw);
+    this.faceOpenGround();
+    this.audio.startTone(data.ambience);
+    this.audio.startMusic(data.gimmick === 'silence' ? 'none' : data.ambience.music);
+    this.audio.oneShot('tapeStart', 0.6);
     await step(100, 'GO');
 
     this.state = 'play';
     this.paused = false;
     this.showScreen('play');
-    this.hud.levelCard(mod.meta);
-    this.hud.setInventory(this.inventory, this.selected);
-    if (!fromSave) this.hud.subtitle(mod.meta.brief.replace(/\s+/g, ' ').trim(), 7);
-    this.autosave();
+    this.hud.levelCard(mod.meta, index + 1, this.floors.length);
+    if (this.mods.compass) this.hud.toast('FLOOR PLAN — the lift marker is on the tape edge');
     this.renderer.domElement.requestPointerLock?.();
   }
 
-  clearLevelObjects() {
-    for (const list of [this.pickables, this.noteObjs, this.exitObjs, this.thrown]) {
-      for (const o of list) {
-        this.scene.remove(o.mesh);
-        if (o.light) this.scene.remove(o.light);
-        o.mesh?.traverse?.((m) => m.geometry?.dispose?.());
+  // Spawning nose-first into a cupboard is a bad first frame. Step to the most
+  // open cell nearby, then look down whichever direction has the most room in it
+  // — ideally the one the chalk goes.
+  faceOpenGround() {
+    const w = this.world;
+    const p = this.player;
+    // ---- find somewhere with a view
+    const runFrom = (x, z) => {
+      let total = 0;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        for (let d = 1; d <= 14; d++) {
+          if (w.solidAtWorld(x + dx * d * w.cell, z + dz * d * w.cell, p.pos.y)) break;
+          total++;
+        }
       }
-      list.length = 0;
+      return total;
+    };
+    let bx = p.pos.x, bz = p.pos.z, bestOpen = runFrom(p.pos.x, p.pos.z);
+    if (bestOpen < 10) {
+      const [c0x, c0z] = w.toCell(p.pos.x, p.pos.z);
+      for (let r = 1; r <= 8 && bestOpen < 16; r++) {
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2;
+          const cx = c0x + Math.round(Math.cos(a) * r), cz = c0z + Math.round(Math.sin(a) * r);
+          if (!w.isOpenCell(cx, cz)) continue;
+          const x = cx * w.cell, z = cz * w.cell;
+          const open = runFrom(x, z);
+          if (open > bestOpen) { bestOpen = open; bx = x; bz = z; }
+        }
+      }
+      if (bx !== p.pos.x || bz !== p.pos.z) p.spawn(bx, bz, p.yaw);
     }
-    this.exitMarker = null;
+    let best = -1, bestYaw = p.yaw;
+    for (let i = 0; i < 16; i++) {
+      const yaw = (i / 16) * Math.PI * 2;
+      let d = 0;
+      for (; d < 26; d += 1.5) {
+        const x = p.pos.x - Math.sin(yaw) * d;
+        const z = p.pos.z - Math.cos(yaw) * d;
+        if (w.solidAtWorld(x, z, p.pos.y)) break;
+      }
+      // prefer the direction that also heads toward the lift
+      const b = w.liftBearing(p.pos.x, p.pos.z);
+      const bonus = b ? Math.max(0, Math.cos(yaw - b.angle)) * 6 : 0;
+      if (d + bonus > best) { best = d + bonus; bestYaw = yaw; }
+    }
+    p.yaw = bestYaw;
   }
 
-  // ------------------------------------------------------------------ objects
-  spawnPickups(items) {
-    const S = this.world.cell;
-    for (const it of items) {
-      const def = ITEM_DEFS[it.type];
-      if (!def) continue;
-      const g = new THREE.Group();
-      const body = new THREE.Mesh(
-        new THREE.BoxGeometry(0.16, 0.22, 0.16),
-        simple(new THREE.Color(def.color).getHex(), { rough: 0.5, emissive: new THREE.Color(def.color).multiplyScalar(0.25).getHex(), emissiveIntensity: 0.8 }),
-      );
-      body.position.y = 0.12;
-      g.add(body);
-      const halo = new THREE.PointLight(new THREE.Color(def.color).getHex(), 0.5, 3.5, 2);
-      halo.position.y = 0.3;
-      g.add(halo);
-      g.position.set(it.x * S, this.world.floorAtWorld(it.x * S, it.z * S), it.z * S);
-      this.scene.add(g);
-      this.pickables.push({ mesh: g, rec: it, spin: Math.random() * 6 });
+  clearFloorObjects() {
+    for (const o of this.exitObjs || []) {
+      this.scene.remove(o.mesh);
+      o.mesh.traverse?.((m) => m.geometry?.dispose?.());
     }
-  }
-
-  spawnNotes(notes) {
-    const S = this.world.cell;
-    for (const n of notes) {
-      if (this.save.notesRead?.includes(n.title)) { /* still show it — you can re-read */ }
-      const m = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.3, 0.42),
-        simple(0xe8e2cc, { rough: 0.95, emissive: 0x2a2820, emissiveIntensity: 0.6, side: THREE.DoubleSide }),
-      );
-      m.rotation.x = -Math.PI / 2;
-      m.rotation.z = Math.random() * 3;
-      m.position.set(n.x * S + (Math.random() - 0.5), this.world.floorAtWorld(n.x * S, n.z * S) + 0.03, n.z * S + (Math.random() - 0.5));
-      this.scene.add(m);
-      this.noteObjs.push({ mesh: m, rec: n });
-    }
+    this.exitObjs = [];
   }
 
   spawnExits(exits) {
     const S = this.world.cell;
+    this.exitObjs = [];
     for (const e of exits) {
+      if (e.kind !== 'elevator') continue;      // one way off a floor now
       const g = new THREE.Group();
-      const glow = new THREE.Mesh(
-        new THREE.PlaneGeometry(1.6, 2.2),
-        new THREE.MeshBasicMaterial({ color: 0xd8f0ff, transparent: true, opacity: e.hidden ? 0.06 : 0.16, side: THREE.DoubleSide, depthWrite: false }),
+      const doors = new THREE.Mesh(
+        new THREE.PlaneGeometry(2.6, 2.4),
+        new THREE.MeshBasicMaterial({ color: 0xffe6b0, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false }),
       );
-      glow.position.y = 1.1;
-      g.add(glow);
-      const light = new THREE.PointLight(0xbfe4ff, e.hidden ? 0.2 : 0.9, 7, 2);
-      light.position.y = 1.4;
+      doors.position.y = 1.2;
+      g.add(doors);
+      const light = new THREE.PointLight(0xffe0a0, 1.6, 14, 2);
+      light.position.y = 1.8;
       g.add(light);
       g.position.set(e.x * S, this.world.floorAtWorld(e.x * S, e.z * S), e.z * S);
       this.scene.add(g);
-      this.exitObjs.push({ mesh: g, rec: e, glow });
-      if (!e.hidden && !this.exitMarker) this.exitMarker = { x: e.x * S, z: e.z * S };
+      this.exitObjs.push({ mesh: g, rec: e, glow: doors });
     }
   }
 
   // ------------------------------------------------------------------ verbs
-  nearest(list, range = 2.4) {
-    const p = this.player.pos;
-    let best = null, bd = range;
-    for (const o of list) {
-      const d = Math.hypot(o.mesh.position.x - p.x, o.mesh.position.z - p.z);
-      if (d < bd) { bd = d; best = o; }
-    }
-    return best;
-  }
-
   interact() {
-    if (this.hud.noteOpen) { this.hud.hideNote(); return; }
-    const item = this.nearest(this.pickables, 2.0);
-    const note = this.nearest(this.noteObjs, 2.0);
-    const exit = this.nearest(this.exitObjs, 2.6);
-    if (exit && (!item || true)) {
-      const need = exit.rec.needs;
-      if (need && !(this.inventory[need] > 0)) {
-        this.hud.toast(`LOCKED — you need ${ITEM_DEFS[need]?.name || need}`);
-        this.audio.oneShot('doorSlam', 0.4);
-        return;
-      }
-      if (need) this.take(need, -1);
-      this.useExit(exit.rec);
-      return;
+    if (this.player.hidden) { this.player.leaveHide(); this.audio.oneShot('clawStep', 0.3); return; }
+    const p = this.player.pos;
+    const lift = (this.exitObjs || []).find((o) => Math.hypot(o.mesh.position.x - p.x, o.mesh.position.z - p.z) < 3.0);
+    if (lift) { this.reachLift(lift.rec); return; }
+    const hide = this.world?.nearestHide(p.x, p.z, 2.3);
+    if (hide) {
+      this.player.enterHide(hide);
+      this.hidesUsed++;
+      this.audio.oneShot('clawStep', 0.35);
+      this.hud.subtitle(HIDE_LINE[hide.kind] || 'You get out of sight and stay very still.', 3);
     }
-    if (item) { this.pickUp(item); return; }
-    if (note) { this.readNote(note); return; }
-  }
-
-  pickUp(o) {
-    const it = o.rec;
-    this.take(it.type, it.amount || 1);
-    this.audio.oneShot('pickup', 0.6);
-    const def = ITEM_DEFS[it.type];
-    this.hud.toast(`${def.name} ×${it.amount || 1}`);
-    if (def.collectible) {
-      const id = it.id || `${this.levelId}-tape`;
-      if (!this.save.tapesFound.includes(id)) this.save.tapesFound.push(id);
-      this.hud.subtitle(it.title || 'A tape. Somebody else got this far.');
-    } else if (def.say) this.hud.subtitle(def.say, 3);
-    this.scene.remove(o.mesh);
-    this.pickables.splice(this.pickables.indexOf(o), 1);
-  }
-
-  readNote(o) {
-    this.hud.showNote(o.rec);
-    if (!this.save.notesRead.includes(o.rec.title)) this.save.notesRead.push(o.rec.title);
-    this.sanity = Math.min(100, this.sanity + 4);
-    document.exitPointerLock?.();
-  }
-
-  resumeFromNote() {
-    if (this.state === 'play' && !this.paused) this.renderer.domElement.requestPointerLock?.();
-  }
-
-  take(type, n) {
-    this.inventory[type] = Math.max(0, (this.inventory[type] || 0) + n);
-    if (!this.inventory[type]) delete this.inventory[type];
-    if (!this.selected || !this.inventory[this.selected]) this.selected = Object.keys(this.inventory)[0] || null;
-    this.hud.setInventory(this.inventory, this.selected);
-  }
-
-  selectItem(k) {
-    if (!this.inventory[k]) return;
-    this.selected = k;
-    this.hud.setInventory(this.inventory, this.selected);
-  }
-
-  cycleItem(dir) {
-    const keys = Object.keys(this.inventory).filter((k) => this.inventory[k] > 0);
-    if (!keys.length) return;
-    const i = keys.indexOf(this.selected);
-    this.selectItem(keys[(i + dir + keys.length) % keys.length]);
-  }
-
-  useSelected() {
-    const k = this.selected;
-    if (!k || !this.inventory[k]) return;
-    const def = ITEM_DEFS[k];
-    if (def.throwable) return this.throwSelected();
-    if (!def.use) { this.hud.toast(`${def.name} — not now`); return; }
-    def.use(this);
-    this.take(k, -1);
-    this.audio.oneShot('pickup', 0.4);
-    this.hud.toast(`USED ${def.name}`);
-  }
-
-  throwSelected() {
-    const k = this.selected;
-    const def = ITEM_DEFS[k];
-    if (!k || !def?.throwable || !this.inventory[k]) return;
-    this.take(k, -1);
-    const look = this.player.look();
-    const eye = this.player.eye();
-    const g = new THREE.Group();
-    const body = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.03, 0.03, 0.2, 6),
-      simple(new THREE.Color(def.color).getHex(), { emissive: new THREE.Color(def.color).getHex(), emissiveIntensity: 2, rough: 0.4 }),
-    );
-    body.rotation.z = Math.PI / 2;
-    g.add(body);
-    g.position.set(eye.x, eye.y, eye.z);
-    this.scene.add(g);
-    const light = new THREE.PointLight(def.light.color, def.light.intensity, def.light.radius, 2);
-    light.position.copy(g.position);
-    this.scene.add(light);
-    this.thrown.push({
-      mesh: g, light, vel: { x: look.x * 9, y: look.y * 9 + 1.5, z: look.z * 9 },
-      life: def.light.life, scary: !!def.scary, rest: false,
-    });
-    this.audio.oneShot('pickup', 0.3);
   }
 
   toggleLamp() {
-    if (this.lampBattery <= 0) { this.hud.toast('TORCH DEAD'); return; }
     this.lampOn = !this.lampOn;
-    this.audio.oneShot('facelingClick', 0.35);
+    this.audio.oneShot('facelingClick', 0.3);
   }
 
   toggleNight() {
     if (this.camBattery <= 0) return;
     this.night = !this.night;
     this.audio.oneShot('glassTick', 0.4);
-    this.hud.toast(this.night ? 'NIGHTSHOT ON — 0 LUX' : 'NIGHTSHOT OFF');
   }
 
   toggleRecording() {
     this.recording = !this.recording;
     this.audio.oneShot(this.recording ? 'tapeStart' : 'tapeStop', 0.5);
-    this.hud.toast(this.recording ? 'REC' : 'PAUSE — nothing is being recorded');
+    if (!this.recording) this.hud.toast('PAUSED — no tape, no footage');
   }
 
-  // ------------------------------------------------------------------ rules
-  hurtPlayer(amount, from, opts = {}) {
-    if (this.dead || this.state !== 'play') return;
-    this.hp -= amount;
-    this.sanity = Math.max(0, this.sanity - amount * 0.5);
-    this.damageFlash = 1;
-    this.fx.glitchAmt = Math.max(this.fx.glitchAmt, 0.7);
-    this.fx.shakeAmt = Math.max(this.fx.shakeAmt, 0.8);
-    if (!opts.silent) this.audio.oneShot('hurt', 0.8);
-    if (opts.jump && from) {
-      const sp = from;
-      this.audio.oneShot(`${from}Grab`, 0.6);
-    }
-    if (this.hp <= 0) this.die(from);
-  }
-
-  die(cause) {
-    if (this.dead) return;
-    this.dead = true;
-    this.hp = 0;
-    this.audio.oneShot('die', 1);
-    this.audio.stopMusic();
-    this.fx.glitchAmt = 1;
+  // ------------------------------------------------------------------ the lift
+  reachLift() {
+    if (this.state !== 'play') return;
+    this.state = 'lift';
     document.exitPointerLock?.();
-    this.save.deaths = (this.save.deaths || 0) + 1;
-    const names = {
-      hound: 'Something that hunts by sound found you.',
-      smiler: 'You were in the dark with it.',
-      faceling: 'You looked too long.',
-      skinstealer: 'It stopped pretending.',
-      clump: 'It filled the corridor.',
-      deathmoth: 'They took the warmth with them.',
-      partygoer: 'The party found you.',
-      bacteria: 'The growth got in.',
-      wretch: 'It pulled you under.',
-      crawler: 'It came down through the ceiling.',
-      mannequin: 'It was closer every time you looked away.',
-      nurse: 'She never stopped walking.',
-      leviathan: 'You were in deep water.',
-      duller: 'They walked you down.',
-      howler: 'It called everything else.',
-      fall: 'The floor was further away than it looked.',
-      drown: 'The water was over your head for too long.',
-      cold: 'The cold finished before anything else could.',
-    };
-    this.deadCause = names[cause] || 'The tape ends here.';
-    this.hud.death(this.deadCause, {
-      playtime: this.save.playtime, levels: this.levelsSeen.size,
-      tapes: this.save.tapesFound.length, deaths: this.save.deaths,
+    this.audio.oneShot('exitOpen', 0.9);
+    this.audio.stopMusic();
+    this.audio.startTone({ room: 'drone', hum: 0.3, drip: 0, wind: 0, music: 'calm', reverb: 0.3 });
+    this.audio.startMusic('calm');
+
+    const pay = footageFor({
+      floorIndex: this.floorIndex,
+      filmSeconds: this.filmSeconds,
+      neverChased: !this.wasChased,
+      seconds: this.levelTime,
+      hides: this.hidesUsed,
     });
-    writeSave({ ...this.save, deaths: this.save.deaths });
+    this.footage += pay.total;
+    this.records.bestFloor = Math.max(this.records.bestFloor || 0, this.floorIndex + 1);
+    this.records.bestFootage = Math.max(this.records.bestFootage || 0, this.footage);
+    saveRecords(this.records);
+    this.renderLift(pay);
+    this.showScreen('lift');
   }
 
-  async respawn() {
-    this.hud.hideDeath();
-    this.hp = 65;
-    this.sanity = Math.max(35, this.sanity);
-    this.camBattery = Math.max(30, this.camBattery);
-    this.lampBattery = Math.max(30, this.lampBattery);
-    await this.enterLevel(this.levelId, true);
+  renderLift(pay) {
+    const last = this.floorIndex + 1 >= this.floors.length;
+    document.getElementById('lift-floor').textContent = last
+      ? 'THE LIFT GOES UP FROM HERE'
+      : `DESCENDING — FLOOR ${this.floorIndex + 2} OF ${this.floors.length}`;
+    // buying redraws the stall, and the docket for the floor you just survived stays
+    // up while you do it — only the running total moves
+    if (pay) this.lastPay = pay; else pay = this.lastPay;
+    document.getElementById('lift-pay').innerHTML = pay ? `
+      <div><span>off the floor alive</span><b>+${pay.base}</b></div>
+      <div><span>footage of it (${Math.floor(this.filmSeconds)}s)</span><b>+${pay.film}</b></div>
+      <div><span>never chased</span><b>+${pay.clean}</b></div>
+      <div><span>brisk about it</span><b>+${pay.brisk}</b></div>
+      <div><span>used the cover</span><b>+${pay.cover}</b></div>
+      <div class="tot"><span>FOOTAGE</span><b>${this.footage}</b></div>` : '';
+
+    const offers = offersFor(this.floorIndex, this.owned, this.runRand);
+    const host = document.getElementById('lift-stall');
+    host.innerHTML = '';
+    for (const key of offers) {
+      const def = CATALOG[key];
+      const price = priceOf(key, this.owned);
+      const have = this.owned[key] || 0;
+      const canBuy = this.footage >= price && !soldOut(key, this.owned);
+      const b = document.createElement('button');
+      b.className = `stall-item${canBuy ? '' : ' broke'}`;
+      b.innerHTML = `<span class="si-name">${def.name}${have ? ` <i>×${have}</i>` : ''}</span>
+        <span class="si-blurb">${def.blurb}</span>
+        <span class="si-stall">${def.stall}</span>
+        <span class="si-price">${soldOut(key, this.owned) ? 'SOLD OUT' : `${price} ft`}</span>`;
+      b.onclick = () => {
+        if (!canBuy) return;
+        this.footage -= price;
+        this.owned[key] = have + 1;
+        this.mods = applyOwned(this.owned);
+        this.player.mods = this.mods;
+        this.applySettings();
+        this.audio.oneShot('objectiveDone', 0.6);
+        this.renderLift(null);
+      };
+      host.appendChild(b);
+    }
+    document.getElementById('lift-owned').innerHTML = Object.entries(this.owned).length
+      ? Object.entries(this.owned).map(([k, n]) => `<span>${CATALOG[k].name}${n > 1 ? ` ×${n}` : ''}</span>`).join('')
+      : '<span class="none">nothing yet</span>';
+    document.getElementById('lift-go').textContent = last ? 'RIDE IT UP  ▲' : 'GO DOWN  ▼';
   }
 
-  async useExit(rec) {
-    if (rec.say) this.hud.subtitle(rec.say, 6);
-    this.audio.oneShot('exitOpen', 0.8);
-    if (rec.to === 'END') return this.finish();
-    this.save.level = rec.to;
-    this.save.hp = this.hp;
-    this.save.sanity = this.sanity;
-    this.save.camBattery = this.camBattery;
-    this.save.lampBattery = this.lampBattery;
-    this.save.inventory = { ...this.inventory };
-    this.autosave();
-    await new Promise((r) => setTimeout(r, 900));
-    await this.enterLevel(rec.to);
+  async descend() {
+    if (this.floorIndex + 1 >= this.floors.length) return this.finish();
+    await this.enterFloor(this.floorIndex + 1);
   }
 
   finish() {
     this.state = 'end';
-    this.audio.stopMusic();
-    this.audio.startMusic('calm');
-    document.exitPointerLock?.();
+    this.records.escapes = (this.records.escapes || 0) + 1;
+    saveRecords(this.records);
     document.getElementById('end-stats').innerHTML = `
-      <div>RUN TIME <b>${fmtTime(this.save.playtime)}</b></div>
-      <div>TAPE LENGTH <b>${fmtTime(this.tapeTime)}</b></div>
-      <div>LEVELS SEEN <b>${this.levelsSeen.size} / ${CHAIN.length}</b></div>
-      <div>TAPES RECOVERED <b>${this.save.tapesFound.length}</b></div>
-      <div>DEATHS <b>${this.save.deaths}</b></div>`;
+      <div>FLOORS <b>${this.floors.length}</b></div>
+      <div>TAPE <b>${fmtTime(this.tapeTime)}</b></div>
+      <div>FOOTAGE LEFT <b>${this.footage}</b></div>
+      <div>KIT <b>${Object.keys(this.owned).length || 'none'}</b></div>`;
     this.showScreen('end');
-    this.save.finished = true;
-    this.autosave();
-    document.getElementById('end-back').onclick = () => this.toTitle();
+    this.audio.startMusic('calm');
   }
 
-  isObjectiveDone(id) { return !!this.objectives?.find((o) => o.id === id)?.done; }
-
-  completeObjective(id) {
-    const o = this.objectives?.find((x) => x.id === id);
-    if (!o || o.done) return;
-    o.done = true;
-    this.hud.renderObjectives();
-    this.hud.toast('OBJECTIVE COMPLETE');
-    this.audio.oneShot('objectiveDone', 0.6);
-    this.save.objectives = this.save.objectives || {};
-    this.save.objectives[`${this.levelId}:${id}`] = true;
+  // ------------------------------------------------------------------ caught
+  onChaseStart(m) {
+    this.wasChased = true;
+    this.audio.stinger(0.8);
+    this.hud.chaseOn(m.sp.name);
+    this.fx.glitchAmt = Math.max(this.fx.glitchAmt, 0.5);
   }
 
-  autosave() {
-    this.save.level = this.levelId || this.save.level;
-    this.save.hp = this.hp;
-    this.save.sanity = this.sanity;
-    this.save.camBattery = this.camBattery;
-    this.save.lampBattery = this.lampBattery;
-    this.save.inventory = { ...this.inventory };
-    this.save.tapeTime = this.tapeTime;
-    this.save.levelsSeen = [...this.levelsSeen];
-    writeSave(this.save);
+  onChaseEnd() { this.hud.chaseOff(); }
+
+  onCaught(monster, reason) {
+    if (this.dead || this.state !== 'play') return;
+    // GAFFER TAPE: the tape jumps and you are somewhere else on the floor
+    if ((this.mods.lives || 0) > (this.livesUsed || 0)) {
+      this.livesUsed = (this.livesUsed || 0) + 1;
+      this.fx.glitchAmt = 1;
+      this.audio.oneShot('tapeChew', 1);
+      const spot = this.entities.monster
+        ? this.farFromMonster()
+        : { x: this.player.pos.x, z: this.player.pos.z };
+      this.player.leaveHide();
+      this.player.spawn(spot.x, spot.z, this.player.yaw + Math.PI);
+      if (monster) { monster.grabbed = false; monster.state = 'search'; monster.alert = 0.4; }
+      this.hud.toast('GAFFER TAPE — the tape jumps a few seconds');
+      return;
+    }
+    this.dead = true;
+    document.exitPointerLock?.();
+    this.fx.jumpscare(monster);
+    this.audio.oneShot('die', 1);
+    this.audio.stopMusic();
+    const name = monster?.sp?.name || 'IT';
+    this.hud.death(reason ? `${name} — ${reason}.` : `${name} reached you.`, {
+      floor: this.floorIndex + 1, floors: this.floors.length,
+      footage: this.footage, tape: this.tapeTime, kit: Object.keys(this.owned).length,
+    });
+  }
+
+  farFromMonster() {
+    const w = this.world;
+    const m = this.entities.monster;
+    for (let i = 0; i < 200; i++) {
+      const cx = 1 + Math.floor(Math.random() * (w.w - 2));
+      const cz = 1 + Math.floor(Math.random() * (w.h - 2));
+      if (!w.isOpenCell(cx, cz)) continue;
+      const x = cx * w.cell, z = cz * w.cell;
+      if (!m || Math.hypot(m.pos.x - x, m.pos.z - z) > 40) return { x, z };
+    }
+    return { x: this.player.pos.x, z: this.player.pos.z };
+  }
+
+  retry() {
+    this.hud.hideDeath();
+    this.toTitle();
   }
 
   setPaused(p) {
@@ -755,20 +670,19 @@ class Game {
   }
 
   toTitle() {
-    this.autosave();
     this.paused = false;
     this.dead = false;
     this.state = 'title';
     this.hud.hideDeath();
+    this.hud.chaseOff();
     if (this.world) { this.world.dispose(); this.world = null; }
     this.entities.clear();
     this.fx.reset();
-    this.clearLevelObjects();
+    this.clearFloorObjects();
     this.audio.stopTone();
     this.audio.startMusic('drone');
     this.audio.startTone({ room: 'static', hum: 0.2, drip: 0, wind: 0, reverb: 0.2 });
-    this.refreshArchive();
-    document.getElementById('t-continue').disabled = !listSaves().some(Boolean);
+    this.renderTitleRecord();
     this.showScreen('title');
   }
 
@@ -785,30 +699,26 @@ class Game {
     requestAnimationFrame(this.loop);
     const dt = Math.min(0.05, Math.max(0.0005, (now - this.last) / 1000));
     this.last = now;
+    this.lastDt = dt;
 
-    if (this.state === 'play' && !this.paused && !this.dead && !this.hud.noteOpen) {
-      this.pollPad();
-      this.tick(dt);
-    } else if (this.state === 'play') {
-      // paused / reading: keep the tape rolling visually, freeze the world
-      this.fx.update(dt * 0.2);
-    }
+    if (this.state === 'play' && !this.paused && !this.dead) this.tick(dt);
+    else if (this.state === 'play') this.fx.update(dt * 0.2);
     this.hud.update(dt);
 
     const light = this.world ? this.world.lightAt(this.player.pos.x, this.player.pos.z) + (this.lampOn ? 0.35 : 0) : 0.4;
     this.cam.render(dt, {
-      glitch: clamp01(this.fx.glitchAmt * this.settings.tape + (1 - this.camBattery / 100) * 0.15),
-      grain: clamp01(this.fx.grainAmt + (this.state === 'play' ? 0 : 0.1)),
+      glitch: clamp01(this.fx.glitchAmt * this.settings.tape),
+      grain: clamp01(this.fx.grainAmt),
       light: this.state === 'play' ? light : 0.5,
       night: this.night && this.camBattery > 0,
-      damage: this.damageFlash,
-      sanity: clamp01(this.sanity / 100),
+      damage: this.fx.hitFlash || 0,
+      sanity: 1 - clamp01((this.entities.monster?.state === 'hunt' ? 0.45 : 0) + (this.player.hidden ? 0.15 : 0)),
       underwater: !!this.player.submerged,
       tint: this.levelTint || { r: 1, g: 1, b: 1 },
       tapeTime: this.tapeTime,
       battery: this.camBattery,
       recording: this.recording && this.camBattery > 0,
-      zoom: this.zoom,
+      floorTag: this.meta ? `FLOOR ${this.floorIndex + 1}/${this.floors.length} · LEVEL ${this.meta.num}` : '',
     });
   }
 
@@ -817,174 +727,249 @@ class Game {
     const w = this.world;
     if (!w) return;
     this.levelTime += dt;
-    this.save.playtime = (this.save.playtime || 0) + dt;
     if (this.recording && this.camBattery > 0) this.tapeTime += dt;
     this.noiseBoost = Math.max(0, this.noiseBoost - dt * 1.5);
 
-    // ---- move
-    p.update(dt, this.input, this.rules || {});
+    // ---- move (or sit very still in cover)
+    if (p.hidden) {
+      const m = this.entities.monster;
+      p.hideThreat = m ? clamp01(1 - m.dist / 14) * (m.state === 'hunt' || m.state === 'search' ? 1 : 0.3) : 0;
+      p.updateHide(dt, this.mods);
+      if (p.hideBreath <= 0) { p.leaveHide(); this.hud.toast('you had to breathe'); }
+    } else {
+      p.update(dt, this.input, this.rules || {});
+    }
     w.update(dt, p.pos);
     this.entities.update(dt);
     this.fx.update(dt);
+    this.runGimmick(dt);
 
-    // ---- camera: eye + bob + shake + the whip when something is behind you
+    // ---- camera
     const eye = p.eye();
     const shake = this.fx.shakeAmt;
+    const hideDrop = p.hidden ? 0.42 : 0;
     this.camera.position.set(
       eye.x + (Math.random() - 0.5) * shake * 0.08,
-      eye.y - this.fx.dropAmt + (this.settings.headBob ? 0 : -p.bob) + (Math.random() - 0.5) * shake * 0.08,
+      eye.y - hideDrop + (this.settings.headBob ? 0 : -p.bob) + (Math.random() - 0.5) * shake * 0.08,
       eye.z + (Math.random() - 0.5) * shake * 0.08,
     );
     if (this.fx.whipAmt > 0.2) p.yaw += this.fx.whipAmt * dt * 9;
     this.camera.rotation.set(p.pitch, p.yaw, p.sway * (this.settings.headBob ? 1 : 0) + shake * 0.03, 'YXZ');
 
-    // ---- your torch
+    // ---- torch
     const look = p.look();
     this.lamp.position.copy(this.camera.position);
     this.lampTarget.position.set(eye.x + look.x * 8, eye.y + look.y * 8, eye.z + look.z * 8);
-    const lampWant = this.lampOn && this.lampBattery > 0 ? 3.4 : 0;
-    this.lamp.intensity = damp(this.lamp.intensity, lampWant, 12, dt);
-    if (this.lampOn && this.lampBattery > 0) this.lampBattery = Math.max(0, this.lampBattery - dt * 0.55);
-    if (this.lampBattery <= 0 && this.lampOn) { this.lampOn = false; this.hud.toast('TORCH DEAD'); }
+    const want = this.lampOn && !p.hidden ? 2.6 * (this.mods.lampPower || 1) : 0;
+    this.lamp.intensity = damp(this.lamp.intensity, want, 12, dt);
+    this.lamp.distance = 30 * (this.mods.lampRange || 1);
+    // NIGHTSHOT is an emitter, not a filter: it throws its own flat, rangy light and
+    // charges you the battery for it. Without that it just tints black pixels black.
+    this.glow.position.copy(this.camera.position);
+    const night = this.night && this.camBattery > 0;
+    const spill = night ? 7.5 : this.lampOn && !p.hidden ? 2.2 * (this.mods.lampPower || 1) : 0.12;
+    this.glow.distance = night ? 22 : 9;
+    this.glow.intensity = damp(this.glow.intensity, p.hidden ? 0.12 : spill, 12, dt);
 
-    // ---- the tape's own battery
+    // ---- the tape's battery: nightshot is what actually costs you
     if (this.recording) {
-      const drain = 0.24 * (this.rules?.batteryDrain ?? 1) * (this.night ? 2.1 : 1);
+      const drain = 0.11 * (this.rules?.batteryDrain ?? 1) * (this.mods.batteryDrain || 1) * (this.night ? 3 : 1);
       this.camBattery = Math.max(0, this.camBattery - dt * drain);
     }
-    if (this.camBattery <= 0) this.night = false;
+    if (this.camBattery <= 0 && this.night) { this.night = false; this.hud.toast('BATTERY — nightshot off'); }
 
-    // ---- nerve: darkness, being hunted, and water all eat it
-    const threat = this.entities.threat();
-    const closeness = threat.creature && threat.dist < 26 ? clamp01(1 - threat.dist / 26) * (threat.hunting ? 1 : 0.4) : 0;
-    const dark = clamp01(1 - w.lightAt(p.pos.x, p.pos.z) * 2.2) * (this.lampOn ? 0.35 : 1);
-    const drainS = (dark * 1.5 + closeness * 3.2 + this.fx.dread * 1.2) * (this.rules?.sanityDrain ?? 1);
-    this.sanity = clamp(this.sanity - drainS * dt + (dark < 0.3 && closeness < 0.1 ? 1.6 * dt : 0), 0, 100);
-    if (this.sanity < 12 && Math.random() < dt * 0.25) {
-      this.audio.oneShot(Math.random() < 0.5 ? 'whisper' : 'stepBehind', 0.35);
+    // ---- filming it pays for the lift
+    const m = this.entities.monster;
+    const filming = !!m && this.recording && this.camBattery > 0 && m.filmable();
+    if (filming) this.filmSeconds += dt;
+    this.hud.setFilming(filming, this.filmSeconds);
+
+    // ---- the lift, and the chalk
+    for (const o of this.exitObjs) {
+      o.glow.lookAt(this.camera.position.x, o.glow.position.y, this.camera.position.z);
+      o.glow.material.opacity = 0.2 + Math.sin(this.levelTime * 2.2) * 0.05;
+      const d = Math.hypot(o.mesh.position.x - p.pos.x, o.mesh.position.z - p.pos.z);
+      if (d < 22) this.audio.hum(clamp01(1 - d / 22));
     }
 
-    // ---- drowning, cold
-    if (p.breath <= 0) this.hurtPlayer(26 * dt, 'drown', { silent: true });
-    if (this.rules?.cold) {
-      const shelter = w.lightAt(p.pos.x, p.pos.z) > 0.5;
-      if (!shelter) this.hurtPlayer(1.6 * dt, 'cold', { silent: true });
-    }
-    this.damageFlash = damp(this.damageFlash, 0, 2.2, dt);
-    this.audio.setListener(p.pos.x, p.pos.z, p.yaw);
-    this.audio.updateHeart(dt, closeness);
-    this.audio.dread = clamp01(this.fx.dread * 0.6 + closeness);
+    // ---- prompts
+    const nearLift = (this.exitObjs || []).some((o) => Math.hypot(o.mesh.position.x - p.pos.x, o.mesh.position.z - p.pos.z) < 3.0);
+    const hide = w.nearestHide(p.pos.x, p.pos.z, 2.3);
+    if (p.hidden) this.hud.prompt('<b>[E]</b> come out');
+    else if (nearLift) this.hud.prompt('<b>[E]</b> take the lift');
+    else if (hide) this.hud.prompt(`<b>[E]</b> hide — ${HIDE_NAME[hide.kind] || hide.kind}`);
+    else this.hud.prompt(null);
 
-    // ---- pickables spin, exits breathe, thrown lights fly
-    for (const o of this.pickables) {
-      o.spin += dt * 1.6;
-      o.mesh.rotation.y = o.spin;
-      o.mesh.children[0].position.y = 0.12 + Math.sin(o.spin * 2) * 0.03;
-    }
-    for (const e of this.exitObjs) {
-      e.glow.material.opacity = (e.rec.hidden ? 0.05 : 0.14) + Math.sin(this.levelTime * 2) * 0.04;
-      e.glow.lookAt(this.camera.position.x, e.glow.position.y, this.camera.position.z);
-    }
-    for (let i = this.thrown.length - 1; i >= 0; i--) {
-      const t = this.thrown[i];
-      t.life -= dt;
-      if (!t.rest) {
-        t.vel.y -= 16 * dt;
-        const nx = t.mesh.position.x + t.vel.x * dt;
-        const nz = t.mesh.position.z + t.vel.z * dt;
-        if (!w.solidAtWorld(nx, nz, t.mesh.position.y)) {
-          t.mesh.position.x = nx;
-          t.mesh.position.z = nz;
-        } else { t.vel.x *= -0.3; t.vel.z *= -0.3; }
-        t.mesh.position.y += t.vel.y * dt;
-        const floor = w.floorAtWorld(t.mesh.position.x, t.mesh.position.z);
-        if (t.mesh.position.y <= floor + 0.05) {
-          t.mesh.position.y = floor + 0.05;
-          t.vel.x *= 0.4; t.vel.z *= 0.4;
-          t.vel.y = 0;
-          if (Math.hypot(t.vel.x, t.vel.z) < 0.4) t.rest = true;
-        }
-        t.light.position.copy(t.mesh.position);
-      }
-      if (t.scary) {
-        // flares keep things off you
-        for (const c of this.entities.list) {
-          if (Math.hypot(c.pos.x - t.mesh.position.x, c.pos.z - t.mesh.position.z) < 7) {
-            c.alert = Math.max(0, c.alert - dt * 0.9);
-            if (c.state === 'hunt' && Math.random() < dt) c.state = 'patrol';
-          }
-        }
-      }
-      if (t.life <= 0) {
-        this.scene.remove(t.mesh, t.light);
-        t.mesh.traverse((m) => m.geometry?.dispose?.());
-        this.thrown.splice(i, 1);
-      }
-    }
-
-    // ---- proximity: prompts, notes, triggers, scares, links
-    const near = this.nearest(this.pickables, 2.0);
-    const nnote = this.nearest(this.noteObjs, 2.0);
-    const nexit = this.nearest(this.exitObjs, 2.6);
-    if (nexit) {
-      const need = nexit.rec.needs;
-      const label = nexit.rec.label || nexit.rec.kind.toUpperCase();
-      this.hud.prompt(need && !this.inventory[need]
-        ? `<b>${label}</b> — locked. Needs ${ITEM_DEFS[need]?.name || need}.`
-        : `<b>[E]</b> take the ${nexit.rec.kind} — <b>${label}</b>`);
-    } else if (near) {
-      this.hud.prompt(`<b>[E]</b> take ${ITEM_DEFS[near.rec.type]?.name || near.rec.type}`);
-    } else if (nnote) {
-      this.hud.prompt('<b>[E]</b> read');
-    } else this.hud.prompt(null);
-
+    // ---- triggers and the floor's own scares (kept sparse; the monster is the scare)
     for (const t of this.triggers) {
       if (t.fired) continue;
       if (Math.hypot(t.x * w.cell - p.pos.x, t.z * w.cell - p.pos.z) > t.radius * w.cell) continue;
       t.fired = t.once;
-      if (t.say) this.hud.subtitle(t.say, 5.5);
-      if (t.objective) this.completeObjective(t.objective);
-      if (t.addObjective) this.hud.addObjective(t.addObjective);
-      if (t.wake) this.wokenTags.add(t.wake);
-      if (t.sound) this.audio.oneShot(t.sound, 0.7);
+      if (t.say) this.hud.subtitle(t.say, 5);
       if (t.lightsOff) w.douse(p.pos.x, p.pos.z, t.lightsOff, 6);
     }
-
     for (const s of this.scares) {
       if (Math.hypot(s.x * w.cell - p.pos.x, s.z * w.cell - p.pos.z) > s.radius * w.cell) continue;
       if (s.needsDark && w.lightAt(p.pos.x, p.pos.z) > 0.3) continue;
       this.fx.trigger(s);
     }
 
-    // pits: step in one and the level below catches you
-    if (w.codeAtWorld(p.pos.x, p.pos.z) === 8 && p.pos.y < w.floorAtWorld(p.pos.x, p.pos.z) - 1) {
-      this.hurtPlayer(35, 'fall');
-      p.spawn(this.world.data.spawn.x * w.cell, this.world.data.spawn.z * w.cell, p.yaw);
-    }
+    // ---- drowning still kills you
+    if (p.breath <= 0) this.onCaught(null, 'the water was over your head for too long');
 
-    // declared traversals (ladders, drains, lift shafts)
-    for (const L of this.links) {
-      const a = { x: L.x0 * w.cell, z: L.z0 * w.cell };
-      const b = { x: L.x1 * w.cell, z: L.z1 * w.cell };
-      const hit = (q) => Math.hypot(q.x - p.pos.x, q.z - p.pos.z) < w.cell * 0.7;
-      if (hit(a) && !this.linkCool) {
-        this.linkCool = 1.2;
-        p.pos.x = b.x; p.pos.z = b.z; p.pos.y = w.floorAtWorld(b.x, b.z) + 0.1;
-        this.audio.oneShot('clawStep', 0.4);
-      } else if (L.two && hit(b) && !this.linkCool) {
-        this.linkCool = 1.2;
-        p.pos.x = a.x; p.pos.z = a.z; p.pos.y = w.floorAtWorld(a.x, a.z) + 0.1;
-        this.audio.oneShot('clawStep', 0.4);
+    // ---- audio + hud
+    this.audio.setListener(p.pos.x, p.pos.z, p.yaw);
+    const threat = this.entities.threat();
+    const closeness = threat.creature && threat.dist < 30
+      ? clamp01(1 - threat.dist / 30) * (threat.hunting ? 1 : 0.45) : 0;
+    this.audio.updateHeart(dt, closeness);
+    this.audio.dread = closeness;
+    this.hud.setVitals({
+      stamina: p.stamina,
+      breath: p.hidden ? p.hideBreath : p.breath,
+      hidden: p.hidden,
+      footage: this.footage,
+      bearing: this.mods.tracker ? this.entities.bearing() : null,
+      trackerLevel: this.mods.tracker,
+      compass: this.mods.compass ? w.liftBearing(p.pos.x, p.pos.z) : null,
+      playerYaw: p.yaw,
+    });
+  }
+
+  // ------------------------------------------------------------------ gimmicks
+  // The one thing that belongs to this floor and no other.
+  runGimmick(dt) {
+    const w = this.world;
+    const p = this.player;
+    const m = this.entities.monster;
+    this.gimmickT += dt;
+    switch (this.gimmick) {
+      case 'flicker':
+        // the grid stutters, and every so often a whole wing drops out
+        if (this.gimmickT > 9) {
+          this.gimmickT = 0;
+          w.douse(p.pos.x + (Math.random() - 0.5) * 60, p.pos.z + (Math.random() - 0.5) * 60, 16, 3.5);
+          this.audio.oneShot('breakerThunk', 0.35);
+        }
+        break;
+      case 'blackout':
+        // total dark on a rhythm you can learn — and it hunts better in it
+        this.blackoutT -= dt;
+        if (this.blackoutT <= 0) {
+          this.blackoutT = 26 + Math.random() * 10;
+          w.douse(p.pos.x, p.pos.z, 999, 7);
+          this.audio.oneShot('breakerThunk', 0.9);
+          this.hud.subtitle('Every light on the floor goes out at once.', 4);
+          if (m) m.alert = Math.min(1, m.alert + 0.3);
+        }
+        break;
+      case 'darkwater':
+        // the water is opaque, and being in it is being blind
+        if (w.waterDepthAt(p.pos.x, p.pos.z) > 0.2) {
+          this.fx.grainAmt = Math.max(this.fx.grainAmt, 0.35);
+          if (p.submerged) p.breath = Math.max(0, p.breath - dt * 8);
+        }
+        break;
+      case 'steam':
+        this.steamT -= dt;
+        if (this.steamT <= 0) {
+          this.steamT = 14 + Math.random() * 10;
+          this.fx.grainAmt = 1;
+          this.fx.glitchAmt = Math.max(this.fx.glitchAmt, 0.35);
+          this.audio.oneShot('bacteriaHiss', 0.7);
+          this.hud.subtitle('A vent lets go beside you and the frame fills with steam.', 3);
+        }
+        break;
+      case 'sparks':
+        if (m && m.dist < 22 && this.gimmickT > 4) {
+          this.gimmickT = 0;
+          const dead = w.killNearestLight(p.pos.x, p.pos.z);
+          if (dead) { this.audio.oneShot('glassPop', 0.6); this.fx.spark(p.pos.x, p.pos.z); }
+        }
+        break;
+      case 'ceiling':
+        if (m && m.dist < 26 && this.gimmickT > 6) {
+          this.gimmickT = 0;
+          this.audio.oneShot('crawlerScrape', 0.5, { x: p.pos.x, z: p.pos.z });
+        }
+        break;
+      case 'noisefloor':
+        if (!w.rules.noisefloor) w.rules.noisefloor = true;
+        break;
+      case 'crowd':
+        if (this.gimmickT > 12) {
+          this.gimmickT = 0;
+          this.audio.oneShot('crowdLaugh', 0.4);
+        }
+        break;
+      case 'fogbank': {
+        // thick, except near the lift, which is the only navigation you get
+        const b = w.liftBearing(p.pos.x, p.pos.z);
+        const near = b ? clamp01(1 - b.dist / 90) : 0;
+        if (this.scene.fog) this.scene.fog.density = this.baseFog * (1.5 - near * 0.8);
+        break;
       }
+      case 'mirrors':
+        if (m && m.dist < 30 && this.gimmickT > 10) {
+          this.gimmickT = 0;
+          const g = w.nearestGlass(p.pos.x, p.pos.z, 12);
+          if (g) {
+            this.fx.apparition(m.rec.type, g.x, g.z, { life: 0.8, faceCamera: true });
+            this.audio.oneShot('glassKnock', 0.5, g);
+          }
+        }
+        break;
+      case 'cold':
+        if (w.lightAt(p.pos.x, p.pos.z) < 0.35) {
+          this.cold = (this.cold || 0) + dt;
+          if (this.cold > 55) this.onCaught(null, 'the cold got there first');
+          if (this.cold > 30) this.fx.grainAmt = Math.max(this.fx.grainAmt, 0.3);
+        } else this.cold = Math.max(0, (this.cold || 0) - dt * 3);
+        break;
+      default:
+        break;
     }
-    this.linkCool = Math.max(0, (this.linkCool || 0) - dt);
-
-    // ---- autosave every half minute of survival
-    this.saveT = (this.saveT ?? 30) - dt;
-    if (this.saveT <= 0) { this.saveT = 30; this.autosave(); }
-
-    this.hud.setVitals({ hp: this.hp, sanity: this.sanity, stamina: p.stamina, breath: p.breath });
   }
 }
+
+const GIMMICK_HINT = {
+  flicker: 'The grid stutters here. Wings drop out without warning.',
+  blackout: 'The whole floor goes dark on a rhythm. Learn it.',
+  darkwater: 'The water is opaque. Whatever is in it does not need to see.',
+  steam: 'The vents let go at intervals and blind the camera.',
+  sparks: 'It arcs the lights out as it gets close.',
+  ceiling: 'It travels above the tiles. Listen up, not along.',
+  noisefloor: 'Everything here is metal. Every step carries.',
+  silence: 'No room tone at all. It hears you before you hear it.',
+  crowd: 'There are bodies standing about, and it stands among them.',
+  fogbank: 'Fog thick enough to hide the walls. It thins near the lift.',
+  mirrors: 'It shows up in the glass a beat before it shows up in the room.',
+  cold: 'You freeze away from the light. Keep finding warmth.',
+};
+
+const HIDE_NAME = {
+  locker: 'get in the locker', cubicle: 'under the desk', gurney: 'under the trolley',
+  shelf: 'between the stacks', crate: 'behind the pallets', stall: 'in the stall',
+  car: 'in the back seat', water: 'go under', drift: 'into the drift',
+  wheat: 'flat in the crop', vent: 'into the floor duct', tent: 'inside the tent',
+  curtain: 'behind the curtain', crawl: 'under the pipes',
+};
+
+const HIDE_LINE = {
+  locker: 'You pull the door to and breathe through the vents.',
+  cubicle: 'Knees up, head down, back against the pedestal.',
+  gurney: 'Under the trolley, sheet hanging past your face.',
+  shelf: 'Sideways between two stacks, cheek against the boards.',
+  crate: 'Down behind the pallets with your hands over your mouth.',
+  stall: 'Feet up on the pan, latch across, absolutely still.',
+  car: 'Into the back seat and down into the footwell.',
+  water: 'You go under and hold it and the surface closes over you.',
+  drift: 'You dig into the drift and pull the snow over your legs.',
+  wheat: 'Flat in the crop with the stalks closing above you.',
+  vent: 'Into the floor duct, lid pulled over your head.',
+  tent: 'Inside somebody else\'s tent. It still smells of them.',
+  curtain: 'Behind the drape, breathing as shallow as you can manage.',
+  crawl: 'On your side under the pipe run, face to the wall.',
+};
 
 window.NOCLIP = new Game();

@@ -101,72 +101,10 @@ export function build(kit) {
   L.scatter('plant', 24);
   L.scatter('clock', 12);
   L.scatter('corkboard', 14);
-  L.scatter('noteSheet', 40);
   L.scatter('graffiti', 10);
   L.scatter('boxStack', 18);
   L.scatter('mopBucket', 6);
   L.scatter('picture', 16);
-
-  // ---------------------------------------------------------------- pickups
-  L.item('battery', { x: 22, z: 20 });
-  L.item('battery', { x: 118, z: 24 });
-  L.item('almondWater', { x: 116, z: 118 });
-  L.item('almondWater', { x: 28, z: 120 });
-  L.item('medkit', { x: 68, z: 20 });
-  L.item('glowstick', { x: 74, z: 72, amount: 3 });
-  L.item('keycard', { x: 120, z: 120 });
-  L.item('tape', { x: 26, z: 18, id: 'tape-office', title: 'TAPE — "THE 3:40 CALL"' });
-
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: 23, z: 20, title: 'MEETING AGENDA, PHOTOCOPIED 900 TIMES',
-    text: `1. Welcome. 2. Apologies for absence — all. 3. Minutes of the previous
-      meeting, which was this meeting. 4. Any other business. 5. Confirm date of
-      next meeting: today. Chair: vacant. Note-taker: vacant. Attendance: 41.`,
-  });
-  L.note({
-    x: 119, z: 24, title: 'DESK DIARY, ONE ENTRY REPEATED',
-    text: `3:40 — call J. back. Every page. Two hundred pages. On the last page
-      somebody else's handwriting adds: he did call back, and he is still on hold,
-      and if you pick up the phone in the mail room you can hear him breathing.`,
-  });
-  L.note({
-    x: 117, z: 118, title: 'PRINTED SIGN, CANTEEN WALL',
-    text: `PLEASE LABEL YOUR FOOD WITH YOUR NAME AND THE DATE.
-      Underneath, in biro, forty-odd names. Underneath that, in the same biro:
-      I have started labelling mine with tomorrow's date. It is still there.`,
-  });
-  L.note({
-    x: 75, z: 72, title: 'SERVER ROOM, TAPED TO A RACK',
-    text: `Something is still writing to disk. 400 kilobytes a minute, every
-      minute, for as long as the counter has been running. I mounted it once.
-      It is a list of everywhere I have walked, in order, timestamped.`,
-  });
-  L.note({
-    x: 29, z: 120, title: 'INDEX CARD, MAIL ROOM',
-    text: `They have no faces and they do not care about you. But if you look at
-      one and keep looking, it will notice being looked at, and then it will care
-      about you very much. Six seconds. I counted for someone who didn't.`,
-  });
-  L.note({
-    x: 121, z: 120, title: 'ELEVATOR NOTICE',
-    text: `LIFT 2 IS OUT OF SERVICE. Someone has crossed out OUT and written IN,
-      and under that: it comes when you press it. It goes down. There are no
-      floors below this one on the panel and it goes down anyway.`,
-  });
-
-  // ---------------------------------------------------------------- company
-  L.pack('faceling', 5, 70, 50, 22, { state: 'patrol', leash: 28 });
-  L.pack('faceling', 4, 40, 100, 18, { state: 'patrol', leash: 24 });
-  L.pack('duller', 6, 118, 90, 14, { state: 'patrol', leash: 14 });
-  L.entity('mannequin', { x: 55, z: 70, state: 'patrol' });
-  L.entity('mannequin', { x: 55, z: 92, state: 'dormant', wake: { after: 120 } });
-  L.entity('windows', { x: 52, z: 60, state: 'guard' });
-  L.entity('windows', { x: 58, z: 84, state: 'guard' });
-  L.entity('watcher', { x: 100, z: 140, state: 'guard' });
-  L.entity('howler', { x: 30, z: 60, state: 'patrol', leash: 16 });
-  L.entity('crawler', { x: 84, z: 126, state: 'dormant', wake: { after: 90 } });
-
   // ---------------------------------------------------------------- scares
   L.scare('phoneRing', { x: 30, z: 116, radius: 7 });
   L.scare('faceInHall', { x: 55, z: 52, radius: 6 });
@@ -181,9 +119,6 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- the way out
   L.spawnAt(6, 74, 0);
-  L.objective('Reach the elevator lobby on the east side, and press the button.');
-  L.objective('Find a keycard — the lobby door badges in.', { id: 'obj1' });
-  L.objective('Read the desk diary. Then don\'t pick up the phone.', { optional: true });
 
   L.trigger({ x: 66, z: 74, radius: 6, say: 'Every chair on this side of the floor is facing the same corner.' });
   L.trigger({ x: 120, z: 120, radius: 5, objective: 'obj1', say: 'A keycard, still clipped to a lanyard.' });
@@ -194,10 +129,14 @@ export function build(kit) {
   L.prop('elevatorDoors', { x: 143, z: 74, rot: -Math.PI / 2 });
   L.prop('plant', { x: 136, z: 68 });
   L.prop('sofa', { x: 136, z: 80, rot: Math.PI / 2 });
-  L.exit({
-    x: 143, z: 74, kind: 'elevator', to: 'breakroom', needs: 'keycard', label: 'LIFT 2',
-    say: 'It arrives. It is warm inside, and lit, and somebody has left a cup of coffee on the handrail.',
-  });
+
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('flicker');
+  L.hideSpots('cubicle', 10);
+  L.monsterFar('mannequin', { tell: 'mannequinScrape', speed: 6.4, patience: 2.0, wanders: 40, checksHides: 0.35 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: 143, z: 74 });
 
   return L.finish();
 }

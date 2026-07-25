@@ -18,16 +18,24 @@ Spotify link) — the desktop keeps the music going while you play.
 | 🏀 **[RIM CITY](rimcity/README.md)** | 2-on-2 arcade basketball — turbo, shoves, alley-oops, ON FIRE, and THE RUN ladder | `/rimcity/` |
 | ⛏ **[LOAM](loam/README.md)** | Voxel survival & building grown from any seed word, scored by a generative composer | `/loam/` |
 | 🏆 **[MASCOT MELEE 64](melee/README.md)** | Twelve mascots, one trophy — a chunky 64-era platform fighter with a GAUNTLET ladder | `/melee/` |
-| 📼 **[NOCLIP](backrooms/README.md)** | Found-footage backrooms horror: 23 levels, a camcorder for a torch, eighteen things that hunt | `/backrooms/` |
+| 📼 **[NOCLIP](backrooms/README.md)** | Found-footage backrooms horror: ten floors a run, one thing hunting each of them, a stall in the lift | `/backrooms/` |
 
 ## The new one
 
-**NOCLIP** is a first-person horror game shot entirely through a camcorder: the
-battery is your light, the tape is your nerve, and the auto-gain is the reason you
-can see anything at all down there. Twenty-three levels, generated fresh from your
-tape's seed — the original yellow rooms, the poolrooms, pipe tunnels, an endless
-hotel, a hospital with a nurse in it, a snowfield with a queue of people facing
-away, a birthday party that has been going for decades — and a way out of every one.
+**NOCLIP** is a first-person horror game shot entirely through a camcorder — the
+whole screen is VHS, tracking bands and all, with `REC` and a timecode along the top.
+
+A run is ten floors down. Each one has a **service lift** to find, exactly **one**
+thing hunting you (contact is death, no health bar), somewhere of its own to **hide**,
+and chalk arrows somebody left pointing the way. Filming the thing that is chasing
+you is what pays, and you spend the footage in the lift, where a stall sells twelve
+upgrades that last the rest of the run: better shoes, a low-light CCD, a tracker pip
+on the tape edge, a spare life in gaffer tape.
+
+Twenty-three floors in the pool, drawn by depth and generated fresh each run — the
+original yellow rooms, the poolrooms with the lights out under the water, pipe
+tunnels, an endless hotel, a hospital with a nurse in it, a snowfield with a queue of
+people facing away, a birthday party that has been going for decades.
 
 | | |
 | --- | --- |
@@ -71,7 +79,8 @@ tracks). Games open in new tabs, so the tunes never stop.
 ```bash
 npm install              # playwright, for screenshots and browser smoke tests
 npm run smoke            # every game's headless harness, back to back
-npm run smoke:backrooms  # builds all 23 NOCLIP levels and walks the exit graph
+npm run smoke:backrooms  # builds all 23 NOCLIP floors and checks every one
+npm run play:backrooms -- --all        # plays the loop on every NOCLIP floor
 npm run smoke:melee      # frame data + move drill + CPU-vs-CPU matches
 node tools/shot-backrooms.mjs poolrooms --frames 3     # drive NOCLIP in Chromium
 node tools/shot.mjs "/rimcity/?quick" shot.png --wait 9000   # screenshot QA

@@ -63,12 +63,17 @@ await page.waitForTimeout(1200);
 
 const stats = await page.evaluate(() => {
   const g = window.NOCLIP;
+  if (!g) return { error: 'no game object' };
   return {
     level: g.levelId,
     meta: g.meta && { num: g.meta.num, name: g.meta.name },
     walkable: g.world?.data?.stats?.walkable,
     lights: g.world?.lights?.length,
-    entities: g.entities?.list?.length,
+    monster: g.entities?.monster?.rec?.type,
+    hides: g.world?.hides?.length,
+    arrows: g.world?.arrows?.length,
+    gimmick: g.gimmick,
+    floors: g.floors?.length,
     meshes: g.world?.meshes?.length,
     triangles: g.renderer.info.render.triangles,
     calls: g.renderer.info.render.calls,
@@ -80,7 +85,7 @@ console.log('stats', JSON.stringify(stats));
 // walk forward, taking frames as we go. The look direction is driven through
 // the game object rather than the mouse: pointer lock in headless is unreliable,
 // and a screenshot of the ceiling tells you nothing.
-if (args.includes('--torch')) await page.keyboard.press('KeyF');
+if (args.includes('--notorch')) await page.keyboard.press('KeyF');   // the torch is on by default now
 if (args.includes('--night')) await page.keyboard.press('KeyN');
 const per = Math.max(600, Math.floor(walkMs / frames));
 for (let i = 0; i < frames; i++) {
@@ -101,9 +106,16 @@ const after = await page.evaluate(() => {
   const g = window.NOCLIP;
   return {
     pos: g.player && { x: +g.player.pos.x.toFixed(1), z: +g.player.pos.z.toFixed(1) },
-    hp: Math.round(g.hp), sanity: Math.round(g.sanity), battery: Math.round(g.camBattery),
+    battery: Math.round(g.camBattery), footage: g.footage, filmS: +(g.filmSeconds || 0).toFixed(1),
+    monsterState: g.entities?.monster?.state, monsterDist: Math.round(g.entities?.monster?.dist || 0),
     fps: Math.round(1 / (g.lastDt || 0.016)),
     triangles: g.renderer.info.render.triangles,
+    // lighting, which is the thing that most often looks wrong in a still
+    lamp: +g.lamp.intensity.toFixed(2),
+    lightHere: +g.world.lightAt(g.player.pos.x, g.player.pos.z).toFixed(3),
+    lit: g.world.lights.filter((l) => l.on).length + '/' + g.world.lights.length,
+    pool: g.world.pool.map((p) => +p.intensity.toFixed(1)).join(','),
+    ambient: +g.scene.children.filter((c) => c.isAmbientLight)[0]?.intensity.toFixed(2),
   };
 });
 console.log('after walk', JSON.stringify(after));

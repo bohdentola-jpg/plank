@@ -225,6 +225,7 @@ export class Fx {
     this.follow = 0;
     this.ringing = null;
     this.dread = 0;         // slow-moving mood value the audio bed listens to
+    this.hitFlash = 0;      // red pulse the camcorder pass reads
   }
 
   // ---------------------------------------------------------------- verbs
@@ -282,6 +283,26 @@ export class Fx {
     script.run(this.makeCtx(scare));
     this.game.audio?.stinger(script.dread);
     return true;
+  }
+
+  // The moment it reaches you: it fills the frame, the tape tears, and that is
+  // the end of the run. No damage numbers, no second wind — one shot.
+  jumpscare(monster) {
+    const g = this.game;
+    this.glitchAmt = 1;
+    this.grainAmt = 1;
+    this.shakeAmt = 1.4;
+    this.hitFlash = 1;
+    if (!monster) return;
+    // put its face where the lens is
+    const p = g.player;
+    const look = p.look();
+    const x = p.pos.x - look.x * 1.1;
+    const z = p.pos.z - look.z * 1.1;
+    const a = this.apparition(monster.rec.type, x, z, { life: 2.4, faceCamera: true, tall: 1.05 });
+    if (a?.mesh) a.mesh.position.y = g.world.floorAtWorld(x, z);
+    g.audio?.oneShot(monster.sp.sound.attack || 'stingerHigh', 1);
+    g.audio?.oneShot('stingerLow', 0.9);
   }
 
   // ---------------------------------------------------------------- pieces
@@ -342,6 +363,7 @@ export class Fx {
     this.whipAmt = damp(this.whipAmt, 0, 6, dt);
     this.dropAmt = damp(this.dropAmt, 0, 5, dt);
     this.blackout = Math.max(0, this.blackout - dt);
+    this.hitFlash = damp(this.hitFlash, 0, 1.2, dt);
     this.dread = damp(this.dread, 0, 0.12, dt);
 
     // the follower: footsteps behind you, then nothing

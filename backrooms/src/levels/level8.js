@@ -111,67 +111,11 @@ export function build(kit) {
   L.scatter('skull', 10);
   L.scatter('campLight', 5);
   L.scatter('sleepingBag', 4);
-  L.scatter('tapePile', 3);
   L.scatter('chalkArrow', 22);
-
-  // ---------------------------------------------------------------- pickups
   const at = (i, dx = 0) => {
     const c = cave[(i * 137) % cave.length] || [gx, gz];
     return [c[0] + dx, c[1]];
   };
-  L.item('battery', { x: at(1)[0], z: at(1)[1], amount: 2 });
-  L.item('battery', { x: at(5)[0], z: at(5)[1] });
-  L.item('glowstick', { x: gx + 2, z: gz + 2, amount: 5 });
-  L.item('flare', { x: at(9)[0], z: at(9)[1], amount: 2 });
-  L.item('almondWater', { x: at(13)[0], z: at(13)[1] });
-  L.item('medkit', { x: at(17)[0], z: at(17)[1] });
-  L.item('tape', { x: gx - 2, z: gz + 3, id: 'tape-caves', title: 'TAPE — "THE SHRINE"' });
-
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: gx + 1, z: gz + 1, title: 'AT THE SHRINE, ON A FLAT STONE',
-    text: `Whoever stacked these candles: the ones down here don't come into the
-      big chamber. Not because of the light. Because of the echo — you can hear
-      something crossing the floor from thirty metres away, and they know it, and
-      they'd rather wait in the squeezes where you can't.`,
-  });
-  L.note({
-    x: at(1, 1)[0], z: at(1, 1)[1], title: 'CAVING NOTEBOOK, SOAKED',
-    text: `Survey day 6. The passages don't hold their shape between visits. I have
-      resurveyed the same gallery three times and got three different lengths, all
-      longer than the time before. The compass is fine. I checked it against
-      itself, which I understand is not a check.`,
-  });
-  L.note({
-    x: at(5, 1)[0], z: at(5, 1)[1], title: 'SCRATCHED BESIDE A SQUEEZE',
-    text: `The low bits are where they live. Go through on your side with the light
-      out in front of your hand, not behind it, so you see the eyes before you put
-      your hand on them. Yes: before.`,
-  });
-  L.note({
-    x: at(9, 1)[0], z: at(9, 1)[1], title: 'TAPED TO A LAMP, LENS SMASHED',
-    text: `The growth in the deep galleries is warm. It is 34 degrees, which is not
-      a temperature rock does. It flinched when I touched it. I have not gone back
-      that way and I do not recommend it.`,
-  });
-  L.note({
-    x: at(13, 1)[0], z: at(13, 1)[1], title: 'CHALK ON A BOULDER',
-    text: `FISSURE: FOLLOW THE DRAUGHT, NOT THE ARROWS.
-      SOMEBODY HAS BEEN MOVING THE ARROWS.`,
-  });
-
-  // ---------------------------------------------------------------- company
-  L.pack('crawler', 6, at(3)[0], at(3)[1], 12, { state: 'patrol', leash: 26 });
-  L.pack('crawler', 5, at(11)[0], at(11)[1], 12, { state: 'patrol', leash: 26 });
-  L.pack('bacteria', 8, at(19)[0], at(19)[1], 14, { state: 'guard' });
-  L.pack('bacteria', 6, at(23)[0], at(23)[1], 12, { state: 'guard' });
-  L.entity('clump', { x: at(7)[0], z: at(7)[1], state: 'patrol', leash: 8 });
-  L.entity('clump', { x: at(21)[0], z: at(21)[1], state: 'dormant', wake: { after: 120 } });
-  L.pack('deathmoth', 5, gx, gz + 4, 8, { state: 'patrol', leash: 14 });
-  L.entity('wretch', { x: sumps[0][0], z: sumps[0][1], state: 'patrol', leash: 10 });
-  L.entity('wretch', { x: sumps[3][0], z: sumps[3][1], state: 'patrol', leash: 10 });
-  L.entity('howler', { x: at(15)[0], z: at(15)[1], state: 'patrol', leash: 16 });
-
   // ---------------------------------------------------------------- scares
   L.scare('crawlerDrop', { x: at(3, 2)[0], z: at(3, 2)[1], radius: 6 });
   L.scare('handFromCeiling', { x: at(11, 2)[0], z: at(11, 2)[1], radius: 5 });
@@ -184,12 +128,18 @@ export function build(kit) {
   L.scare('tapeGlitch', { x: at(23, 2)[0], z: at(23, 2)[1], radius: 8 });
 
   // ---------------------------------------------------------------- the way out
-  const start = cave[0] || [8, 8];
-  const fissure = cave[cave.length - 1] || [136, 136];
+  // The automaton hands back its void seeds in no particular order, so take the two
+  // that are furthest apart: you come in at one end of the system and out the other.
+  // (two passes: farthest from the middle, then farthest from that)
+  let start = cave[0] || [8, 8], fissure = cave[cave.length - 1] || [136, 136];
+  const farthestFrom = (p) => cave.reduce((b, c) => (
+    Math.hypot(c[0] - p[0], c[1] - p[1]) > Math.hypot(b[0] - p[0], b[1] - p[1]) ? c : b
+  ), cave[0] || p);
+  if (cave.length) {
+    start = farthestFrom([72, 72]);
+    fissure = farthestFrom(start);
+  }
   L.spawnAt(start[0], start[1], 0);
-  L.objective('Find the fissure with night air coming through it.');
-  L.objective('Get through the big chamber — it is the only place you can hear anything coming.', { id: 'obj1' });
-  L.objective('Don\'t touch the warm growth.', { optional: true });
 
   L.trigger({ x: gx, z: gz, radius: 10, objective: 'obj1', say: 'Nine metres of air above you, and an echo you could set your watch by.' });
   L.trigger({ x: sumps[2][0], z: sumps[2][1], radius: 6, say: 'This sump is full to the roof. You will have to swim it, or find the way round.' });
@@ -197,10 +147,14 @@ export function build(kit) {
 
   L.disc(fissure[0], fissure[1], 4, C.OPEN);
   L.light({ x: fissure[0], z: fissure[1], y: 1.6, color: 0x8090c0, intensity: 0.5, radius: 8, fixture: 'none', hum: 0 });
-  L.exit({
-    x: fissure[0], z: fissure[1], kind: 'crack', to: 'level9', label: 'THE FISSURE',
-    say: 'You come out through wet stone into a smell of cut grass, under a sky with the wrong stars in it.',
-  });
+
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('ceiling');
+  L.hideSpots('crawl', 10);
+  L.monsterFar('crawler', { tell: 'crawlerScrape', speed: 5.0, patience: 1.6, wanders: 30, checksHides: 0.65 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: fissure[0], z: fissure[1] });
 
   return L.finish();
 }

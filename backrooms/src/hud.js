@@ -1,8 +1,9 @@
-// The parts of the screen that aren't the tape: objectives, what you're
-// carrying, what you're standing next to, and the pages you pick up. Kept as DOM
-// so it stays crisp while the 3D underneath is deliberately not.
+// The parts of the screen that are not the tape: what you are looking for, what
+// your body is doing, whether it is filming, and — if you bought the meter — a pip
+// that tells you how far away the thing is.
+//
+// There is no inventory, because there is nothing to carry. You have a torch.
 
-import { ITEM_DEFS, itemIcon } from './items.js';
 import { fmtTime } from './util.js';
 
 export class Hud {
@@ -12,25 +13,24 @@ export class Hud {
     this.el.id = 'hud';
     this.el.innerHTML = `
       <div class="hud-obj"><ul></ul></div>
+      <div class="hud-right">
+        <div class="hud-footage"><span class="ft-n">0</span><span class="ft-l">FOOTAGE</span></div>
+        <div class="hud-filming" hidden>● FILMING <span class="film-t">0s</span></div>
+        <div class="hud-track" hidden><i></i><span class="tk-d"></span></div>
+        <div class="hud-compass" hidden><i></i><span>LIFT</span></div>
+      </div>
       <div class="hud-vitals">
-        <div class="v-row"><span class="v-key">BODY</span><span class="v-bar hp"><i></i></span></div>
-        <div class="v-row"><span class="v-key">NERVE</span><span class="v-bar sanity"><i></i></span></div>
         <div class="v-row"><span class="v-key">WIND</span><span class="v-bar stam"><i></i></span></div>
         <div class="v-row breath" hidden><span class="v-key">AIR</span><span class="v-bar air"><i></i></span></div>
       </div>
-      <div class="hud-belt"></div>
       <div class="hud-prompt" hidden></div>
       <div class="hud-sub" hidden></div>
       <div class="hud-toast" hidden></div>
       <div class="hud-crosshair"><i></i></div>
-      <div class="note-reader" hidden>
-        <div class="note-page">
-          <h3></h3>
-          <p></p>
-          <button class="note-close">CLOSE  [E]</button>
-        </div>
-      </div>
+      <div class="hud-chase" hidden><span></span></div>
+      <div class="hide-frame" hidden><i class="hf-l"></i><i class="hf-r"></i><i class="hf-t"></i><i class="hf-b"></i></div>
       <div class="level-card" hidden>
+        <div class="lc-floor"></div>
         <div class="lc-num"></div>
         <div class="lc-name"></div>
         <div class="lc-sub"></div>
@@ -42,31 +42,34 @@ export class Hud {
           <h2>THE TAPE STOPS HERE</h2>
           <p class="d-cause"></p>
           <p class="d-stats"></p>
-          <button class="d-retry">REWIND  ·  LAST CHECKPOINT</button>
-          <button class="d-quit">EJECT  ·  BACK TO TITLE</button>
+          <button class="d-retry">EJECT · BACK TO THE TITLE</button>
         </div>
       </div>`;
     host.appendChild(this.el);
 
     this.objList = this.el.querySelector('.hud-obj ul');
-    this.belt = this.el.querySelector('.hud-belt');
     this.promptEl = this.el.querySelector('.hud-prompt');
     this.subEl = this.el.querySelector('.hud-sub');
     this.toastEl = this.el.querySelector('.hud-toast');
-    this.noteEl = this.el.querySelector('.note-reader');
     this.cardEl = this.el.querySelector('.level-card');
     this.deathEl = this.el.querySelector('.death');
+    this.chaseEl = this.el.querySelector('.hud-chase');
+    this.hideFrame = this.el.querySelector('.hide-frame');
+    this.filmEl = this.el.querySelector('.hud-filming');
+    this.filmT = this.el.querySelector('.film-t');
+    this.footEl = this.el.querySelector('.ft-n');
+    this.trackEl = this.el.querySelector('.hud-track');
+    this.trackPip = this.el.querySelector('.hud-track i');
+    this.trackDist = this.el.querySelector('.tk-d');
+    this.compassEl = this.el.querySelector('.hud-compass');
+    this.compassPip = this.el.querySelector('.hud-compass i');
     this.bars = {
-      hp: this.el.querySelector('.v-bar.hp i'),
-      sanity: this.el.querySelector('.v-bar.sanity i'),
       stam: this.el.querySelector('.v-bar.stam i'),
       air: this.el.querySelector('.v-bar.air i'),
       breathRow: this.el.querySelector('.v-row.breath'),
+      breathKey: this.el.querySelector('.v-row.breath .v-key'),
     };
-    this.noteEl.querySelector('.note-close').onclick = () => this.hideNote();
-    this.deathEl.querySelector('.d-retry').onclick = () => game.respawn();
-    this.deathEl.querySelector('.d-quit').onclick = () => game.toTitle();
-    this.iconCache = new Map();
+    this.deathEl.querySelector('.d-retry').onclick = () => game.retry();
     this.subT = 0;
     this.toastT = 0;
     this.objectives = [];
@@ -74,63 +77,59 @@ export class Hud {
 
   // ---------------------------------------------------------------- objectives
   setObjectives(list) {
-    this.objectives = list;
-    this.renderObjectives();
-  }
-
-  renderObjectives() {
+    this.objectives = list.filter((o) => o.text);
     this.objList.innerHTML = this.objectives.map((o) => `
       <li class="${o.done ? 'done' : ''}${o.optional ? ' opt' : ''}">
         <span class="tick">${o.done ? '✓' : '·'}</span>${o.text}
       </li>`).join('');
   }
 
-  completeObjective(id) {
-    const o = this.objectives.find((x) => x.id === id);
-    if (!o || o.done) return false;
-    o.done = true;
-    this.renderObjectives();
-    this.toast('OBJECTIVE COMPLETE');
-    return true;
-  }
-
-  addObjective(text) {
-    this.objectives.push({ id: `x${this.objectives.length}`, text, done: false });
-    this.renderObjectives();
-  }
-
   // ---------------------------------------------------------------- vitals
   setVitals(v) {
-    this.bars.hp.style.width = `${Math.max(0, v.hp)}%`;
-    this.bars.hp.style.background = v.hp < 30 ? '#d02a20' : '#c8c0a8';
-    this.bars.sanity.style.width = `${Math.max(0, v.sanity)}%`;
-    this.bars.sanity.style.background = v.sanity < 35 ? '#8a4ad0' : '#a8a090';
     this.bars.stam.style.width = `${Math.max(0, v.stamina)}%`;
-    const under = v.breath < 99.5;
-    this.bars.breathRow.hidden = !under;
-    if (under) {
+    const showAir = v.hidden || v.breath < 99.5;
+    this.bars.breathRow.hidden = !showAir;
+    if (showAir) {
       this.bars.air.style.width = `${Math.max(0, v.breath)}%`;
       this.bars.air.style.background = v.breath < 30 ? '#d02a20' : '#7ac8e0';
+      this.bars.breathKey.textContent = v.hidden ? 'STILL' : 'AIR';
     }
+    this.hideFrame.hidden = !v.hidden;
+    if (this.lastFootage !== v.footage) {
+      this.lastFootage = v.footage;
+      this.footEl.textContent = String(v.footage);
+    }
+
+    // the tracking meter: an arrow when it is far, a bar when it is close
+    if (v.bearing) {
+      this.trackEl.hidden = false;
+      const b = v.bearing;
+      this.trackPip.style.transform = `rotate(${b.rel}rad)`;
+      const near = b.dist < 18;
+      this.trackEl.classList.toggle('near', near);
+      this.trackEl.classList.toggle('hunting', b.state === 'hunt');
+      this.trackDist.textContent = v.trackerLevel > 1
+        ? `${Math.round(b.dist)}m ${b.state === 'hunt' ? '· HUNTING' : ''}`
+        : near ? 'CLOSE' : `${Math.round(b.dist / 10) * 10}m`;
+    } else this.trackEl.hidden = true;
+
+    if (v.compass) {
+      this.compassEl.hidden = false;
+      this.compassPip.style.transform = `rotate(${v.compass.angle - v.playerYaw}rad)`;
+    } else this.compassEl.hidden = true;
   }
 
-  // ---------------------------------------------------------------- belt
-  setInventory(inv, sel) {
-    const keys = Object.keys(inv).filter((k) => inv[k] > 0);
-    this.belt.innerHTML = '';
-    keys.forEach((k, i) => {
-      const def = ITEM_DEFS[k];
-      if (!def) return;
-      const slot = document.createElement('div');
-      slot.className = `slot${k === sel ? ' sel' : ''}`;
-      if (!this.iconCache.has(k)) this.iconCache.set(k, itemIcon(k).toDataURL());
-      slot.innerHTML = `<img src="${this.iconCache.get(k)}" alt=""/>
-        <span class="n">${inv[k]}</span><span class="k">${i + 1}</span>`;
-      slot.title = `${def.name} — ${def.tag}`;
-      slot.onclick = () => this.game.selectItem(k);
-      this.belt.appendChild(slot);
-    });
+  setFilming(on, secs) {
+    this.filmEl.hidden = !on;
+    if (on) this.filmT.textContent = `${Math.floor(secs)}s`;
   }
+
+  chaseOn(name) {
+    this.chaseEl.hidden = false;
+    this.chaseEl.querySelector('span').textContent = `${name} HAS YOU`;
+  }
+
+  chaseOff() { this.chaseEl.hidden = true; }
 
   // ---------------------------------------------------------------- messages
   prompt(text) {
@@ -152,51 +151,32 @@ export class Hud {
     this.toastT = secs;
   }
 
-  // ---------------------------------------------------------------- pages
-  showNote(note) {
-    this.noteEl.hidden = false;
-    this.noteEl.querySelector('h3').textContent = note.title;
-    this.noteEl.querySelector('p').textContent = String(note.text).replace(/\s+/g, ' ').trim();
-    this.game.audio?.oneShot('noteOpen', 0.5);
-  }
-
-  hideNote() {
-    this.noteEl.hidden = true;
-    this.game.resumeFromNote?.();
-  }
-
-  get noteOpen() { return !this.noteEl.hidden; }
-
   // ---------------------------------------------------------------- cards
-  levelCard(meta) {
+  levelCard(meta, floor, floors) {
     this.cardEl.hidden = false;
+    this.cardEl.querySelector('.lc-floor').textContent = `FLOOR ${floor} OF ${floors}`;
     this.cardEl.querySelector('.lc-num').textContent = `LEVEL ${meta.num}`;
     this.cardEl.querySelector('.lc-name').textContent = meta.name;
     this.cardEl.querySelector('.lc-sub').textContent = meta.subtitle || '';
     this.cardEl.querySelector('.lc-tag').textContent = meta.tagline || '';
     this.cardEl.classList.remove('fade');
-    setTimeout(() => this.cardEl.classList.add('fade'), 3200);
-    setTimeout(() => { this.cardEl.hidden = true; }, 5000);
+    setTimeout(() => this.cardEl.classList.add('fade'), 3000);
+    setTimeout(() => { this.cardEl.hidden = true; }, 4800);
   }
 
   death(cause, stats) {
     this.deathEl.hidden = false;
     this.deathEl.querySelector('.d-cause').textContent = cause;
     this.deathEl.querySelector('.d-stats').textContent =
-      `RUN TIME ${fmtTime(stats.playtime)} · LEVELS ${stats.levels} · TAPES ${stats.tapes} · DEATHS ${stats.deaths}`;
+      `FLOOR ${stats.floor} OF ${stats.floors} · ${fmtTime(stats.tape)} OF TAPE · `
+      + `${stats.footage} FOOTAGE UNSPENT · ${stats.kit} UPGRADE${stats.kit === 1 ? '' : 'S'}`;
   }
 
   hideDeath() { this.deathEl.hidden = true; }
 
   update(dt) {
-    if (this.subT > 0) {
-      this.subT -= dt;
-      if (this.subT <= 0) this.subEl.hidden = true;
-    }
-    if (this.toastT > 0) {
-      this.toastT -= dt;
-      if (this.toastT <= 0) this.toastEl.hidden = true;
-    }
+    if (this.subT > 0) { this.subT -= dt; if (this.subT <= 0) this.subEl.hidden = true; }
+    if (this.toastT > 0) { this.toastT -= dt; if (this.toastT <= 0) this.toastEl.hidden = true; }
   }
 
   setVisible(v) { this.el.style.display = v ? '' : 'none'; }

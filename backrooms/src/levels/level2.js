@@ -97,61 +97,6 @@ export function build(kit) {
   L.scatter('graffiti', 22);
   L.scatter('skull', 5, { where: (x, z) => x > 60 });
   L.scatter('rubblePile', 12);
-  L.scatter('tapePile', 3);
-
-  // ---------------------------------------------------------------- pickups
-  L.item('glowstick', { x: plants[0][0], z: plants[0][1], amount: 4 });
-  L.item('battery', { x: plants[1][0], z: plants[1][1] });
-  L.item('battery', { x: plants[3][0], z: plants[3][1] });
-  L.item('flare', { x: plants[2][0], z: plants[2][1], amount: 3 });
-  L.item('almondWater', { x: plants[4][0], z: plants[4][1] });
-  L.item('medkit', { x: plants[1][0] + 2, z: plants[1][1] + 2 });
-  L.item('tape', { x: plants[4][0] + 2, z: plants[4][1], id: 'tape-pipes', title: 'TAPE — "THE COUNTING"' });
-
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: plants[0][0], z: plants[0][1] + 1, title: 'PENCIL ON A PIPE LABEL',
-    text: `Glowsticks over torches down here. A torch beam moves when you move and
-      that's what they follow. A stick on the floor doesn't move at all, and they
-      stand at the edge of it and wait, and you can watch them not come in.`,
-  });
-  L.note({
-    x: plants[1][0], z: plants[1][1] + 1, title: 'STEAM-CURLED PAGE',
-    text: `The hot pipes run north-south. I don't know how I know which way north
-      is, but I know, and so will you. Follow the hot ones downhill and you find
-      the plant rooms. Follow the cold ones and you find the things that live in
-      the cold ones.`,
-  });
-  L.note({
-    x: plants[2][0], z: plants[2][1] + 1, title: 'SCRATCHED INTO A VALVE HANDLE',
-    text: `IT IS SMILING BECAUSE IT CANNOT DO ANYTHING ELSE
-      IT IS NOT A THREAT DISPLAY
-      IT IS JUST HOW THE FACE IS BUILT`,
-  });
-  L.note({
-    x: plants[3][0], z: plants[3][1] + 1, title: 'MAINTENANCE CARD, HALF BURNED',
-    text: `Do not open the west gate valve. The tunnels beyond it are not on the
-      plan and the water that comes back through is warm and has hair in it.
-      Signed for by three people. Two of the signatures are the same handwriting.`,
-  });
-  L.note({
-    x: plants[4][0], z: plants[4][1] + 1, title: 'A COUNT, TALLIED IN GREASE PENCIL',
-    text: `Bulbs still working: 14. Then 12. Then 12. Then 9. I check them every
-      sleep. Nothing has broken them — the filaments are fine. They are being
-      turned off. That means a hand.`,
-  });
-
-  // ---------------------------------------------------------------- company
-  L.pack('smiler', 3, 40, 40, 12, { state: 'patrol', leash: 18 });
-  L.pack('smiler', 3, 96, 90, 12, { state: 'patrol', leash: 18 });
-  L.entity('smiler', { x: 66, z: 30, state: 'guard' });
-  L.pack('crawler', 4, 70, 70, 14, { state: 'patrol', leash: 16 });
-  L.entity('crawler', { x: 118, z: 60, state: 'dormant', wake: { after: 60 } });
-  L.pack('bacteria', 5, 80, 108, 10, { state: 'guard' });
-  L.entity('bacteria', { x: 30, z: 76, state: 'guard' });
-  L.entity('howler', { x: 52, z: 118, state: 'patrol', leash: 12 });
-  L.entity('duller', { x: 110, z: 40, state: 'patrol', leash: 10 });
-
   // ---------------------------------------------------------------- scares
   L.scare('breathing', { x: 34, z: 60, radius: 5, needsDark: true });
   L.scare('crawlerDrop', { x: 62, z: 44, radius: 5 });
@@ -166,9 +111,6 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- the way out
   L.spawnAt(4, 4, 0);
-  L.objective('Find the stairwell at the end of the hot pipe run.');
-  L.objective('Get a light source that stays where you put it.', { id: 'obj1' });
-  L.objective('Turn every valve you find a quarter turn. Someone will thank you.', { optional: true });
 
   L.trigger({ x: plants[0][0], z: plants[0][1], radius: 4, objective: 'obj1', say: 'Glowsticks. Four of them, still good.' });
   L.trigger({ x: 66, z: 66, radius: 6, say: 'The pipes here are hot enough to hurt. Follow them.' });
@@ -179,10 +121,14 @@ export function build(kit) {
   L.prop('stairFlight', { x: 124, z: 124, height: 2.4, steps: 8 });
   L.prop('doorFrame', { x: 124, z: 127 });
   L.light({ x: 124, z: 122, y: 4.2, color: 0xd8e8ff, intensity: 0.9, radius: 10, fixture: 'tube', flicker: 0.1 });
-  L.exit({
-    x: 124, z: 127, kind: 'stairs', to: 'level3', label: 'STAIRWELL C',
-    say: 'Up eleven steps. At the top the air is dry and everything is humming.',
-  });
+
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('steam');
+  L.hideSpots('crawl', 10);
+  L.monsterFar('smiler', { tell: 'smilerHum', speed: 5.2, patience: 1.6, wanders: 16, checksHides: 0.7 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: 124, z: 127 });
 
   return L.finish();
 }

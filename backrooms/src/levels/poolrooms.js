@@ -26,7 +26,9 @@ export function build(kit) {
     w: 144, h: 144, cell: 3.2, wallH: 4.6,
     palette: { wall: 'tileWhite', floor: 'wetTileFloor', ceil: 'tileWhite' },
     fog: { color: 0x9fd8e0, density: 0.020 },
-    ambient: { color: 0x9fdce8, intensity: 0.95, sky: 0xd8f4ff },
+    // Bright, but the tape still has to resolve the tile grout — ambient this high
+    // plus the skylights clips the top half of the frame to white.
+    ambient: { color: 0x9fdce8, intensity: 0.34, sky: 0xd8f4ff },
   });
 
   L.setAmbience({ room: 'water', hum: 0.15, drip: 0.85, wind: 0.1, music: 'calm', reverb: 0.9 });
@@ -54,7 +56,7 @@ export function build(kit) {
     L.ceilRect(x0, z0, x1, z1, 9.5);
     L.paintRect(x0, z0, x1, z1, { wall: 'tileMosaic' });
     const cx = Math.floor((x0 + x1) / 2), cz = Math.floor((z0 + z1) / 2);
-    L.light({ x: cx, z: cz, y: 8.6, color: 0xfff6e0, intensity: 2.2, radius: 26, fixture: 'sun', hum: 0 });
+    L.light({ x: cx, z: cz, y: 8.6, color: 0xfff6e0, intensity: 0.9, radius: 26, fixture: 'sun', hum: 0 });
     L.prop('fountain', { x: cx, z: cz });
   }
 
@@ -115,7 +117,7 @@ export function build(kit) {
   for (const [x0, z0, x1, z1] of chambers) {
     const cx = Math.floor((x0 + x1) / 2), cz = Math.floor((z0 + z1) / 2);
     L.light({
-      x: cx, z: cz, y: 4.0, color: 0xeafaff, intensity: 1.9,
+      x: cx, z: cz, y: 4.0, color: 0xeafaff, intensity: 1.15,
       radius: Math.max(18, (x1 - x0) * 1.5), fixture: 'none', flicker: 0, hum: 0,
     });
     if (kit.chance(0.5)) {
@@ -145,59 +147,7 @@ export function build(kit) {
   L.scatter('graffiti', 12);
   L.scatter('lounger', 8, { where: (x, z, c) => c === C.OPEN });
   L.scatter('bacteriaMat', 6);
-  L.scatter('tapePile', 3);
   L.prop('mirrorPanel', { x: mirrorAt[0], z: mirrorAt[1], rot: 0 });
-
-  // ---------------------------------------------------------------- pickups
-  L.item('battery', { x: spot(0)[0], z: spot(0)[1] });
-  L.item('battery', { x: spot(3)[0], z: spot(3)[1] });
-  L.item('almondWater', { x: spot(5)[0], z: spot(5)[1] });
-  L.item('almondWater', { x: spot(8)[0], z: spot(8)[1] });
-  L.item('flare', { x: spot(11)[0], z: spot(11)[1], amount: 2 });
-  L.item('tape', { x: spot(7)[0], z: spot(7)[1], id: 'tape-pool', title: 'TAPE — "THE DEEP END"' });
-  L.item('keycard', { x: keyAt[0], z: keyAt[1] });
-
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: spot(0, 1, 0)[0], z: spot(0, 1, 0)[1], title: 'POOL RULES — ENAMEL SIGN',
-    text: `NO RUNNING. NO DIVING. NO SWIMMING ALONE.
-      NO SWIMMING AFTER DARK — THERE IS NO AFTER DARK.
-      LIFEGUARD ON DUTY: [the nameplate slot is empty and has been painted over]`,
-  });
-  L.note({
-    x: spot(3, 1, 0)[0], z: spot(3, 1, 0)[1], title: 'DIVER\'S LOG, BALLPOINT ON WAX PAPER',
-    text: `Sounded the blue basin in Chamber 9. Line ran out at 60m and kept
-      going. There is no 60m of building above us. I am not going back in and
-      neither is Petra, who says something took the weight off her ankle and
-      set it down again gently, like it was being polite.`,
-  });
-  L.note({
-    x: spot(8, 1, 0)[0], z: spot(8, 1, 0)[1], title: 'SCRATCHED IN GROUT',
-    text: `Count the chambers. If you get the same number twice you're going in
-      a circle. If you get a different number every time you're fine.
-      I have counted 12, 12, 12, 40, 12.`,
-  });
-  L.note({
-    x: spot(7, 1, 0)[0], z: spot(7, 1, 0)[1], title: 'TAPE SLEEVE, SUN-BLEACHED',
-    text: `The echo is a half second long. Clap once, walk on. If the second
-      clap comes back late — later than a half second — something is standing
-      between you and the wall it should have bounced off.`,
-  });
-  L.note({
-    x: keyAt[0] + 1, z: keyAt[1], title: 'MAINTENANCE TAG, WIRED TO A VALVE',
-    text: `MAIN DRAIN CORRIDOR — CHAMBER 14 SOUTH-EAST. Keycard only.
-      Do not open both gates. The water is holding something up.`,
-  });
-
-  // ---------------------------------------------------------------- company
-  L.entity('wretch', { x: spot(9)[0], z: spot(9)[1], state: 'patrol', leash: 26 });
-  L.entity('wretch', { x: spot(2)[0], z: spot(2)[1], state: 'patrol', leash: 22 });
-  L.entity('wretch', { x: spot(12)[0], z: spot(12)[1], state: 'dormant', wake: { after: 90 } });
-  L.entity('watcher', { x: spot(4)[0], z: spot(4)[1], state: 'guard' });
-  L.entity('deathmoth', { x: spot(6)[0], z: spot(6)[1], state: 'patrol', leash: 16 });
-  L.entity('faceling', { x: spot(10)[0], z: spot(10)[1], state: 'patrol', leash: 20 });
-  L.pack('duller', 4, spot(1)[0], spot(1)[1], 5, { state: 'patrol', leash: 12 });
-
   // ---------------------------------------------------------------- scares
   L.scare('waterStir', { x: spot(6, 2, 0)[0], z: spot(6, 2, 0)[1], radius: 8 });
   L.scare('waterStir', { x: spot(9, 0, 2)[0], z: spot(9, 0, 2)[1], radius: 8 });
@@ -210,9 +160,6 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- the way out
   L.spawnAt(spawn[0], spawn[1], Math.PI * 0.75);
-  L.objective('Find the main drain corridor. Chamber 14, south-east.');
-  L.objective('Find the maintenance keycard — someone dropped it near the north ledge.', { id: 'obj1' });
-  L.objective('Don\'t be in a deep basin when the water moves.', { optional: true });
 
   L.trigger({ x: spot(7)[0], z: spot(7)[1], radius: 7, say: 'Your footsteps come back late.' });
   L.trigger({ x: keyAt[0], z: keyAt[1], radius: 4, objective: 'obj1', say: 'Keycard. Chamber 14 is the far south-east.' });
@@ -221,21 +168,17 @@ export function build(kit) {
   L.paintRect(drainRoom[0] - 4, drainRoom[1] - 4, drainRoom[0] + 4, drainRoom[1] + 4, { wall: 'tileBlue' });
   L.prop('drainGrate', { x: drainRoom[0], z: drainRoom[1] + 2, scale: 2.2 });
   L.light({ x: drainRoom[0], z: drainRoom[1], y: 4.0, color: 0x9fe8ff, intensity: 1.4, radius: 16, fixture: 'none', hum: 0 });
-  L.exit({
-    x: drainRoom[0], z: drainRoom[1] + 2, kind: 'drain', to: 'level7', needs: 'keycard', label: 'MAIN DRAIN',
-    say: 'The grate lifts. Below it the tile stops and the concrete starts.',
-  });
 
   // The other way down: swim to the bottom of the blue basin and keep going.
   const [dx, dz] = L.randomOpen((x, z, c) => c === C.DEEP);
-  L.exit({
-    x: dx, z: dz, kind: 'dive', to: 'level8', hidden: true, label: 'THE BOTTOM',
-    say: 'There is no bottom. There is a current, and it is warm, and it wants you.',
-  });
-  L.note({
-    x: dx, z: dz, title: 'PAINTED ON THE BASIN WALL, UNDERWATER',
-    text: `DOWN IS A DOOR`,
-  });
+
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('darkwater');
+  L.hideSpots('water', 10);
+  L.monsterFar('wretch', { tell: 'wretchGurgle', speed: 4.4, patience: 1.4, hearing: 1.5, wanders: 26, checksHides: 0.4 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: drainRoom[0], z: drainRoom[1] + 2 });
 
   return L.finish();
 }

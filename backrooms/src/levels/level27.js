@@ -127,62 +127,6 @@ export function build(kit) {
   L.scatter('pipeRun', 20, { opts: { len: 8, height: 2.4 } });
   L.scatter('carWreck', 6);
   L.scatter('signpost', 10);
-  L.scatter('tapePile', 3);
-
-  // ---------------------------------------------------------------- pickups
-  L.item('battery', { x: so[0] + 4, z: so[1] + 5 });
-  L.item('battery', { x: 20, z: 20 });
-  L.item('almondWater', { x: 130, z: 60 });
-  L.item('almondWater', { x: 30, z: 130 });
-  L.item('medkit', { x: so[0] + 8, z: so[1] + 5 });
-  L.item('flare', { x: 120, z: 120, amount: 3 });
-  L.item('crowbar', { x: 24, z: 90 });
-  L.item('tape', { x: so[0] + 6, z: so[1] + 3, id: 'tape-garage', title: 'TAPE — "CAMERA 9"' });
-
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: so[0] + 5, z: so[1] + 3, title: 'SECURITY LOG, CAMERA 9',
-    text: `03:12 movement P1 bay 400. 03:12 movement P2 bay 400. 03:12 movement P3
-      bay 400. All three at once, all three the same shape, and there is one of it.
-      I have watched the tape back and it is not a fault in the timestamp.`,
-  });
-  L.note({
-    x: 21, z: 20, title: 'PARKING TICKET, HANDWRITTEN ON THE BACK',
-    text: `Bay numbers go to 4,100 on this deck. I have counted. The building is
-      not wide enough for 400 of them. The numbers are correct and consecutive and
-      the deck is 140 metres across, and both of those are true.`,
-  });
-  L.note({
-    x: 131, z: 60, title: 'TAPED TO A PILLAR AT THE RAMP HEAD',
-    text: `They use the ramps. That's the whole tactic — they can't take a step up
-      and they can't turn tight, so if you go down a ramp and immediately double
-      back under it, they overshoot and you get thirty seconds. Thirty seconds is
-      a lot.`,
-  });
-  L.note({
-    x: 31, z: 130, title: 'SPRAYED ON THE DECK, ENORMOUS LETTERS',
-    text: `DON'T SHOUT FOR PEOPLE
-      IT ANSWERS IN THE VOICE YOU SHOUTED`,
-  });
-  L.note({
-    x: 25, z: 90, title: 'IN A CAR BOOT, WITH THE CROWBAR',
-    text: `Whoever needs this: the stair core door on P3 east is chained, not
-      locked. One good pull. I'd have done it myself but there's something on the
-      landing and it hasn't moved in two days and I'd rather it kept not moving.`,
-  });
-
-  // ---------------------------------------------------------------- company
-  L.pack('hound', 4, 40, 24, 8, { state: 'patrol', leash: 44 });
-  L.pack('hound', 4, 100, 76, 8, { state: 'patrol', leash: 44 });
-  L.pack('hound', 3, 60, 128, 8, { state: 'dormant', tag: 'p3', wake: { after: 120 } });
-  L.entity('crawler', { x: 138, z: 126, state: 'guard', tag: 'p3' });
-  L.entity('crawler', { x: 14, z: 50, state: 'patrol', leash: 20 });
-  L.pack('duller', 6, 80, 30, 12, { state: 'patrol', leash: 16 });
-  L.pack('duller', 5, 40, 110, 12, { state: 'patrol', leash: 16 });
-  L.entity('howler', { x: 120, z: 90, state: 'patrol', leash: 18 });
-  L.entity('watcher', { x: 6, z: 140, state: 'guard' });
-  L.entity('clump', { x: 90, z: 108, state: 'patrol', leash: 8 });
-
   // ---------------------------------------------------------------- scares
   L.scare('footstepsFollow', { x: 50, z: 30, radius: 9 });
   L.scare('doorSlam', { x: so[0] + 5, z: so[1] + 9, radius: 6 });
@@ -197,9 +141,6 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- the way out
   L.spawnAt(6, 10, Math.PI / 2);
-  L.objective('Get to P3 east and through the stair core door.');
-  L.objective('The door is chained. There is a crowbar in a car boot on P2.', { id: 'obj1' });
-  L.objective('Use the ramps against them: down, then straight back under.', { optional: true });
 
   L.trigger({ x: 24, z: 90, radius: 4, objective: 'obj1', say: 'A crowbar, and a note that says the door is only chained.' });
   L.trigger({ x: so[0] + 5, z: so[1] + 4, radius: 5, say: 'Three monitors, three decks, one shape on all of them at once.' });
@@ -212,10 +153,15 @@ export function build(kit) {
   L.prop('doubleDoor', { x: 141, z: 144, rot: 0 });
   L.prop('exitSign', { x: 141, z: 143 });
   L.light({ x: 141, z: 138, y: 7.6, color: 0xd0e8ff, intensity: 0.9, radius: 12, fixture: 'tube', flicker: 0.2 });
-  L.exit({
-    x: 141, z: 143, kind: 'stairs', to: 'level52', needs: 'crowbar', label: 'AMBULATORY ENTRANCE',
-    say: 'The chain goes. Behind the door: green tile, and a smell of disinfectant over something older.',
-  });
+
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('ceiling');
+  L.hideSpots('car', 10);
+  // The thing keeping pace with you on the deck above, and coming down the ramp.
+  L.monsterFar('crawler', { tell: 'clawStep', speed: 5.8, patience: 1.5, hearing: 1.5, wanders: 46, checksHides: 0.55 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: 141, z: 143 });
 
   return L.finish();
 }

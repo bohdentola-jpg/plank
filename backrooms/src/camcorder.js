@@ -9,7 +9,6 @@
 // does the furniture — REC, timecode, battery, focus box, zoom.
 
 import * as THREE from 'three';
-import { lensDirtTexture } from './textures.js';
 import { fmtTimecode, clamp01, damp } from './util.js';
 
 const VERT = `
@@ -23,7 +22,6 @@ const FRAG = `
 precision highp float;
 varying vec2 vUv;
 uniform sampler2D tDiffuse;
-uniform sampler2D tDirt;
 uniform vec2  uRes;
 uniform float uTime;
 uniform float uGlitch;     // tape damage 0..1
@@ -114,13 +112,20 @@ void main() {
   float deadLine = step(0.998, hash(vec2(floor(uv.y * 400.0), floor(uTime * 6.0))));
   col *= 1.0 - deadLine * 0.5 * uGlitch;
 
-  // ---- scanlines + shadow mask
-  col *= 0.93 + 0.07 * sin(uv.y * uRes.y * 1.6);
-  col *= 0.97 + 0.03 * sin(uv.x * uRes.x * 2.1);
+  // ---- VHS chroma bleed: colour is recorded at a quarter of the luma
+  // bandwidth, so it smears sideways and lags a pixel behind the edges
+  vec3 bleed = vec3(0.0);
+  for (int i = 1; i <= 4; i++) {
+    bleed += texture2D(tDiffuse, clamp(uv - vec2(float(i) * 3.0 / uRes.x, 0.0), 0.001, 0.999)).rgb;
+  }
+  bleed *= 0.25;
+  float luma = dot(col, vec3(0.299, 0.587, 0.114));
+  col = mix(col, vec3(luma) + (bleed - vec3(dot(bleed, vec3(0.299, 0.587, 0.114)))), 0.35);
 
-  // ---- lens dirt, lit by whatever is bright behind it
-  vec3 dirt = texture2D(tDirt, uv * vec2(1.0, uRes.y / uRes.x)).rgb;
-  col += dirt * (0.035 + uBloom * 0.06) * (0.25 + col.g);
+  // ---- scanlines, and the interlace comb that gives tape its texture
+  col *= 0.93 + 0.07 * sin(uv.y * uRes.y * 1.6);
+  float field = mod(floor(uv.y * uRes.y * 0.5) + floor(uTime * 50.0), 2.0);
+  col *= 1.0 - field * 0.035;
 
   // ---- damage pulse and vignette
   col = mix(col, vec3(0.55, 0.06, 0.05), uDamage * 0.42);
@@ -151,7 +156,6 @@ export class Camcorder {
     });
     this.uniforms = {
       tDiffuse: { value: this.target.texture },
-      tDirt: { value: lensDirtTexture() },
       uRes: { value: new THREE.Vector2(size.x, size.y) },
       uTime: { value: 0 },
       uGlitch: { value: 0 },
@@ -187,29 +191,22 @@ export class Camcorder {
     const el = document.createElement('div');
     el.id = 'tape';
     el.innerHTML = `
-      <div class="tape-tl">
+      <div class="tape-top">
         <span class="rec-dot"></span><span class="rec-word">REC</span>
+        <span class="tc">0:00:00:00</span>
         <span class="tape-sp">SP</span>
+        <span class="tape-gap"></span>
+        <span class="floor-tag"></span>
+        <span class="bat"><i></i></span>
       </div>
-      <div class="tape-tr">
-        <span class="bat"><i></i></span><span class="bat-pct">100</span>
-      </div>
-      <div class="tape-bl"><span class="tc">00:00:00:00</span></div>
-      <div class="tape-br">
-        <span class="zoom">W &nbsp;▬▬▬▬▬▬▬&nbsp; T</span>
-        <span class="nv" hidden>0 LUX · NIGHTSHOT</span>
-      </div>
-      <div class="tape-focus"><i></i><i></i><i></i><i></i></div>
-      <div class="tape-warn" hidden>BATT LOW</div>`;
+      <div class="tape-br"><span class="nv" hidden>0 LUX · NIGHTSHOT</span></div>`;
     this.host.appendChild(el);
     this.el = el;
     this.recDot = el.querySelector('.rec-dot');
     this.batBar = el.querySelector('.bat i');
-    this.batPct = el.querySelector('.bat-pct');
     this.tcEl = el.querySelector('.tc');
-    this.zoomEl = el.querySelector('.zoom');
     this.nvEl = el.querySelector('.nv');
-    this.warnEl = el.querySelector('.tape-warn');
+    this.floorEl = el.querySelector('.floor-tag');
   }
 
   resize(w, h) {
@@ -243,21 +240,17 @@ export class Camcorder {
     r.setRenderTarget(null);
     r.render(this.quadScene, this.quadCam);
 
-    // ---- overlay furniture
+    // ---- overlay furniture, all of it along the top edge
     this.tcEl.textContent = fmtTimecode(s.tapeTime);
     const b = Math.max(0, Math.round(s.battery));
-    this.batPct.textContent = String(b);
     this.batBar.style.width = `${b}%`;
-    this.batBar.style.background = b < 15 ? '#ff4030' : b < 35 ? '#ffb020' : '#e8e4d8';
-    this.warnEl.hidden = b >= 15;
+    this.batBar.style.background = b < 20 ? '#ff4030' : '#e8e4d8';
     this.recDot.classList.toggle('blink', s.recording);
     this.el.classList.toggle('paused', !s.recording);
     this.nvEl.hidden = !s.night;
-    if (this.lastZoom !== s.zoom) {
-      this.lastZoom = s.zoom;
-      const bars = 7;
-      const k = Math.round(((s.zoom - 1) / 2) * (bars - 1));
-      this.zoomEl.innerHTML = `W&nbsp;${'▬'.repeat(k)}<b>▮</b>${'▬'.repeat(bars - 1 - k)}&nbsp;T`;
+    if (s.floorTag !== this.lastFloor) {
+      this.lastFloor = s.floorTag;
+      this.floorEl.textContent = s.floorTag || '';
     }
   }
 

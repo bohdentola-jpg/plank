@@ -100,60 +100,18 @@ export function build(kit) {
       fixture: kit.chance(0.5) ? 'lantern' : 'campLight', flicker: kit.rand(0.05, 0.4),
     });
   }
-
-  // ---------------------------------------------------------------- pickups
   const at = (i, dx = 0, dz = 0) => [islands[i % islands.length][0] + dx, islands[i % islands.length][1] + dz];
-  L.item('battery', { x: at(0, 1)[0], z: at(0, 1)[1] });
-  L.item('battery', { x: at(4)[0], z: at(4)[1] });
-  L.item('almondWater', { x: at(2)[0], z: at(2)[1] });
-  L.item('almondWater', { x: at(9, 2)[0], z: at(9, 2)[1] });
-  L.item('medkit', { x: at(5)[0], z: at(5)[1] });
-  L.item('flare', { x: at(7)[0], z: at(7)[1], amount: 3 });
-  L.item('glowstick', { x: at(11)[0], z: at(11)[1], amount: 3 });
-  L.item('tape', { x: at(9, 1, 1)[0], z: at(9, 1, 1)[1], id: 'tape-water', title: 'TAPE — "EIGHT SECONDS"' });
 
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: at(0, 1, 1)[0], z: at(0, 1, 1)[1], title: 'WASHED UP IN A BOTTLE',
-    text: `Eight seconds. That is how long the longest crossing takes at a decent
-      swim. It goes under you at about six. If you are still swimming at nine you
-      were never going to make it and you should have waited for it to pass.`,
-  });
-  L.note({
-    x: at(4, 1)[0], z: at(4, 1)[1], title: 'PAINTED ON A CONCRETE SLAB',
-    text: `IT DOES NOT HUNT. IT PATROLS.
-      LEARN THE INTERVAL. THE INTERVAL IS LONGER THAN THE CROSSING.
-      I HAVE MADE ELEVEN CROSSINGS AND I AM STILL HERE, WHICH PROVES NOTHING.`,
-  });
-  L.note({
-    x: at(9, 2, 1)[0], z: at(9, 2, 1)[1], title: 'HOUSEBOAT LOG, LAST DRY PAGE',
-    text: `Anchored here because there is nowhere to anchor to. Depth sounder
-      reads 400 metres and then reads 4 and then reads 400. We have stopped
-      turning it on. Marta says the water tastes like a swimming pool and she is
-      right and neither of us wants to say what that means.`,
-  });
-  L.note({
-    x: at(5, 1)[0], z: at(5, 1)[1], title: 'TAPED INSIDE THE MAST BASE',
-    text: `The light at the top of the mast is on a timer nobody set. When it
-      blinks fast, the water is empty. When it goes steady, do not get in.
-      I do not know what is doing this. I am grateful and I do not want to know.`,
-  });
-  L.note({
-    x: at(11, 1)[0], z: at(11, 1)[1], title: 'CARVED INTO A LIFEBUOY',
-    text: `The drain tower is the tall one at the far corner with the grating on
-      the side. It goes down, not up. It is dry inside for the first thirty metres.
-      After that it is rock.`,
-  });
-
-  // ---------------------------------------------------------------- company
-  L.entity('leviathan', { x: 74, z: 74, state: 'patrol', leash: 60, tag: 'deep' });
-  L.entity('leviathan', { x: 120, z: 30, state: 'dormant', wake: { after: 180 } });
-  L.pack('wretch', 4, 60, 100, 12, { state: 'patrol', leash: 24 });
-  L.pack('wretch', 3, 110, 60, 12, { state: 'patrol', leash: 24 });
-  L.entity('wretch', { x: 24, z: 60, state: 'patrol', leash: 20 });
-  L.entity('watcher', { x: islands[13][0], z: islands[13][1], state: 'guard' });
-  L.entity('deathmoth', { x: mast[0], z: mast[1] + 2, state: 'patrol', leash: 10 });
-  L.entity('duller', { x: islands[8][0], z: islands[8][1], state: 'patrol', leash: 6 });
+  // Channel beacons on stands out in the water. Somebody marked this crossing once,
+  // and on this floor a light on the horizon is the whole of your navigation.
+  for (let z = 12; z < 140; z += 16) {
+    for (let x = 12; x < 140; x += 16) {
+      L.light({
+        x, z, y: 5.4, color: 0xffc060, intensity: 0.8, radius: 20, fixture: 'flood',
+        flicker: kit.chance(0.35) ? kit.rand(0.2, 0.7) : 0, dead: kit.chance(0.22),
+      });
+    }
+  }
 
   // ---------------------------------------------------------------- scares
   L.scare('waterStir', { x: 50, z: 40, radius: 10 });
@@ -168,9 +126,6 @@ export function build(kit) {
   // ---------------------------------------------------------------- the way out
   const tower = [140, 140];
   L.spawnAt(12, 12, Math.PI * 0.75);
-  L.objective('Cross to the drain tower in the far south-east corner.');
-  L.objective('Learn the interval. Watch the mast light before every swim.', { id: 'obj1' });
-  L.objective('Do not be in open water when the mast light goes steady.', { optional: true });
 
   L.trigger({ x: mast[0], z: mast[1], radius: 6, objective: 'obj1', say: 'The mast light is blinking fast. That is the good one.' });
   L.trigger({ x: boat[0], z: boat[1], radius: 7, say: 'A hull, up on the concrete, with a lantern still burning inside it.' });
@@ -188,10 +143,14 @@ export function build(kit) {
   L.prop('ladder', { x: tower[0], z: tower[1], height: 3.4 });
   L.prop('drainGrate', { x: tower[0] + 1, z: tower[1] + 1, scale: 1.6 });
   L.light({ x: tower[0], z: tower[1], y: 3.0, color: 0xd0e8ff, intensity: 0.9, radius: 12, fixture: 'cage', flicker: 0.2 });
-  L.exit({
-    x: tower[0], z: tower[1] + 1, kind: 'ladder', to: 'level8', label: 'DRAIN TOWER',
-    say: 'Thirty metres of dry ladder, and then the walls stop being concrete and start being rock.',
-  });
+
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('fogbank');
+  L.hideSpots('tent', 10);
+  L.monsterFar('leviathan', { tell: 'levDeep', speed: 6.0, patience: 1.0, hearing: 1.8, wanders: 60, checksHides: 0.15 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: tower[0], z: tower[1] + 1 });
 
   return L.finish();
 }

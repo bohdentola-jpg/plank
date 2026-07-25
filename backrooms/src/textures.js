@@ -1082,7 +1082,10 @@ export function material(name) {
     vertexColors: false,
     transparent: rec.opacity !== undefined,
     opacity: rec.opacity ?? 1,
-    side: THREE.FrontSide,
+    // Two-sided on purpose: level geometry is single-quad walls, and a wall that
+    // vanishes when you slide along it ruins the room. Backface culling saves
+    // nothing here — the whole level is eight draw calls.
+    side: THREE.DoubleSide,
     emissive: new THREE.Color(rec.emissive ?? 0x000000),
   });
   mat.name = name;

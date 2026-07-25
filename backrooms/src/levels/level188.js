@@ -77,66 +77,14 @@ export function build(kit) {
     });
   }
   L.scatter('picture', 30);
-  L.scatter('noteSheet', 24);
   L.scatter('clock', 12);
   L.scatter('graffiti', 14);
   L.scatter('chalkArrow', 20);
-  L.scatter('tapePile', 3);
   L.scatter('mirrorPanel', 6);
-
-  // ---------------------------------------------------------------- pickups
-  L.item('battery', { x: 30, z: 40 });
-  L.item('battery', { x: 30, z: 180 });
-  L.item('almondWater', { x: 30, z: 110 });
-  L.item('almondWater', { x: 30, z: 250 });
-  L.item('medkit', { x: 30, z: 200 });
-  L.item('tape', { x: 30, z: 146, id: 'tape-windows', title: 'TAPE — "PANE 41"' });
-
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: 30, z: 42, title: 'ON THE CARPET, FIRST HUNDRED METRES',
-    text: `Rules for the corridor, from someone who walked it: look at each window
-      once, on the way past, without stopping. Do not look back at one you have
-      already passed. If you see somebody in a window, keep walking at the same
-      speed, and do not wave, because they will.`,
-  });
-  L.note({
-    x: 30, z: 112, title: 'PINNED AT ABOUT PANE 30',
-    text: `I have counted 812 windows and I have not reached the end. The views do
-      not repeat and none of them are of anywhere I have been, except two, and both
-      of those are of corridors, and in both of those corridors somebody was walking
-      away from me at exactly my pace.`,
-  });
-  L.note({
-    x: 30, z: 148, title: 'FOLDED INTO A WINDOW FRAME',
-    text: `Pane 41 opens. I have opened it. There is a city on the other side and the
-      air smells of wet asphalt and it is a city I have been in. If you go through it
-      you are going backwards, and back is not the direction any of us needs, and I
-      am going to go through it anyway.`,
-  });
-  L.note({
-    x: 30, z: 204, title: 'WRITTEN ON THE BACK OF A PICTURE FRAME',
-    text: `The corridor gets darker toward the end. Not gradually — in steps, at
-      every fourteenth window. I have stopped counting the windows and started
-      counting the steps, and there have been nine, and I think there are eleven.`,
-  });
-  L.note({
-    x: 30, z: 268, title: 'AT THE FAR END, VERY NEATLY WRITTEN',
-    text: `There is a door. It has a bar and it opens and it is not locked and it
-      never has been. I sat in front of it for what felt like two days because after
-      a while a corridor is easier than a door.`,
-  });
-
-  // ---------------------------------------------------------------- company
   // Almost nothing. That is the point. The windows do the work.
   for (let i = 0; i < 14; i++) {
     const p = panes[Math.floor((i / 14) * panes.length)];
-    if (p) L.entity('windows', { x: p[0], z: p[1], state: 'guard' });
   }
-  L.entity('watcher', { x: 30, z: 288, state: 'guard' });
-  L.entity('faceling', { x: 30, z: 160, state: 'patrol', leash: 30 });
-  L.entity('mannequin', { x: 30, z: 230, state: 'patrol' });
-  L.entity('duller', { x: 30, z: 90, state: 'patrol', leash: 20 });
 
   // ---------------------------------------------------------------- scares
   // Escalating cadence: sparse at the start, on top of each other by the end.
@@ -154,9 +102,6 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- the way out
   L.spawnAt(30, 6, 0);
-  L.objective('Walk to the far end of the corridor.');
-  L.objective('Look at each window once. Once.', { id: 'obj1' });
-  L.objective('Find the pane that opens. Decide whether to use it.', { optional: true });
 
   L.trigger({ x: 30, z: 40, radius: 6, objective: 'obj1', say: 'Windows, both sides, as far as the corridor goes. None of them are of here.' });
   L.trigger({ x: 30, z: 150, radius: 6, say: 'This one is open. The air coming through it smells of wet asphalt.' });
@@ -165,17 +110,17 @@ export function build(kit) {
   L.room(26, 288, 34, 296, { floor: 'carpetOffice', wall: 'drywall' });
   L.prop('doubleDoor', { x: 30, z: 295, rot: 0 });
   L.light({ x: 30, z: 293, y: 3.0, color: 0xffb0c8, intensity: 0.8, radius: 9, fixture: 'bulb', flicker: 0.2 });
-  L.exit({
-    x: 30, z: 295, kind: 'door', to: 'level_fun', label: 'THE DOOR',
-    say: 'Warm air, and muzak, and a great many people being pleased at once.',
-  });
 
   // Pane 41 — the one that opens, and goes backwards.
   const pane41 = panes[40] || panes[0];
-  L.exit({
-    x: pane41[0], z: pane41[1], kind: 'window', to: 'level11', hidden: true, label: 'PANE 41',
-    say: 'You go through the window and land on wet asphalt in fog, which you have done before.',
-  });
+
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('mirrors');
+  L.hideSpots('curtain', 10);
+  L.monsterFar('faceling', { tell: 'facelingClick', speed: 3.2, patience: 1.0, sight: 1.6, wanders: 40, checksHides: 0.3 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: 30, z: 295 });
 
   return L.finish();
 }

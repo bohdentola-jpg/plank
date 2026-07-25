@@ -648,6 +648,54 @@ export class Audio {
     }
   }
 
+  // The sting under a scare or the start of a chase. `dread` picks how far up the
+  // register it lands: a low swell for something at the edge of the light, a shriek
+  // for something already moving.
+  stinger(dread = 0.5) {
+    if (!this.ready || this.muted) return;
+    const d = Math.max(0, Math.min(1, dread));
+    this.oneShot('stingerLow', 0.4 + d * 0.5);
+    if (d > 0.55) this.oneShot('stingerHigh', (d - 0.5) * 1.4);
+  }
+
+  // A steady note that gets louder as you close on the lift. It is the only
+  // thing down here that is trying to be found.
+  hum(level) {
+    if (!this.ready || this.muted || level <= 0.02) return;
+    if (!this.humNode) {
+      const o = this.ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.value = 74;
+      const g = this.ctx.createGain();
+      g.gain.value = 0;
+      o.connect(g).connect(this.master);
+      o.start();
+      const o2 = this.ctx.createOscillator();
+      o2.type = 'triangle';
+      o2.frequency.value = 148.6;
+      const g2 = this.ctx.createGain();
+      g2.gain.value = 0;
+      o2.connect(g2).connect(this.master);
+      o2.start();
+      this.humNode = { g, g2 };
+    }
+    const t = this.ctx.currentTime;
+    this.humNode.g.gain.setTargetAtTime(0.05 * level * this.volSfx, t, 0.25);
+    this.humNode.g2.gain.setTargetAtTime(0.02 * level * this.volSfx, t, 0.25);
+    this.humSeen = true;
+  }
+
+  // called every frame by the game; fades the hum out when nothing feeds it
+  humIdle(dt) {
+    if (!this.humNode) return;
+    if (!this.humSeen) {
+      const t = this.ctx.currentTime;
+      this.humNode.g.gain.setTargetAtTime(0, t, 0.3);
+      this.humNode.g2.gain.setTargetAtTime(0, t, 0.3);
+    }
+    this.humSeen = false;
+  }
+
   setListener(x, z, yaw) {
     this.listener.x = x;
     this.listener.z = z;

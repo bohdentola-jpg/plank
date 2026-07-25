@@ -266,17 +266,18 @@ const GAMES = {
   },
   noclip: {
     title: 'NOCLIP',
-    tag: 'You noclipped out of reality. Twenty-three levels down.',
+    tag: 'Ten floors down. One thing on each of them. Find the lift.',
     path: 'backrooms/',
     desc: `First-person found-footage horror, shot on a camcorder you cannot put
-      down: the battery is your light and the tape is your health bar. Twenty-three
-      levels of the backrooms, generated fresh from your tape's seed — the yellow
-      rooms, the poolrooms, pipe tunnels, an endless hotel, a hospital, a snowfield,
-      a party that has been going for decades — eighteen things that hunt you by
-      sight, sound, silence or the fact that you looked away. Find the way out of
-      each one. There is a way out of all of them.`,
+      down — the whole screen is VHS, tracking bands and all. Every floor has a
+      service lift to find, exactly one thing hunting you, and somewhere of its own
+      to hide: crates in the yellow rooms, lockers in the school, the water itself in
+      the poolrooms. Contact is death. Filming the thing that is chasing you is what
+      pays, and the lift has a stall in it selling upgrades that last the rest of the
+      run. Twenty-three floors in the pool, ten to a descent, generated fresh every
+      time.`,
     shots: ['docs/noclip-lobby.png', 'docs/noclip-poolrooms.png'],
-    meta: ['survival horror', '1 player', 'mouse + keyboard', '3 tape slots, auto-save', 'headphones'],
+    meta: ['survival horror', '1 player', 'mouse + keyboard', 'runs of ten floors', 'headphones'],
   },
 };
 

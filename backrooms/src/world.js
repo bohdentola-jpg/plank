@@ -19,7 +19,7 @@ import { buildProp } from './props.js';
 import { gridClear, clamp01, lerp, rng, Noise2 } from './util.js';
 
 const POOL_SIZE = 7;            // real point lights alive at once
-const BAKE_GAIN = 2.6;          // baked irradiance → what the eye expects after tone mapping
+const BAKE_GAIN = 3.2;          // baked irradiance → what the eye expects after tone mapping
 const HALF_H = 1.15;            // height of a HALF cell (counters, cubicle rows)
 
 // A growing set of triangles for one material.
@@ -92,6 +92,8 @@ export class World {
     this._buildSky();
     this._buildLightPool();
     this._buildColliders();
+    this._buildHides();
+    this._buildArrows(opts.arrows ?? 0);
   }
 
   // ------------------------------------------------------------------ indexing
@@ -233,7 +235,11 @@ export class World {
       if (facing <= 0.02) continue;
       // shadow: skip the march for very close lights, march the grid otherwise
       if (dist > this.cell * 1.4 && !gridClear((qx, qz) => this.isOpaque(qx, qz), px, pz, lx, lz, this.cell)) continue;
-      const atten = Math.pow(1 - dist / rad, 1.7);
+      // A fitting hangs a hand's width under the ceiling, and at that range inverse
+      // falloff blows the tile it is mounted on to white while the floor three metres
+      // down stays brown. Give every source a minimum throw so the room lights the
+      // way a room does.
+      const atten = Math.pow(1 - Math.max(dist, 1.15) / rad, 1.7);
       const e = atten * facing * l.intensity * gain * BAKE_GAIN * (l.on ? 1 : 0.05);
       const col = new THREE.Color(l.color);
       out[0] += col.r * e;
@@ -241,7 +247,7 @@ export class World {
       out[2] += col.b * e;
     }
     // Soft knee: two fixtures overlapping should read brighter, not blown out.
-    for (let k = 0; k < 3; k++) out[k] = out[k] / (1 + out[k] * 0.75);
+    for (let k = 0; k < 3; k++) out[k] = out[k] / (1 + out[k] * 0.5);
     return out;
   }
 
@@ -294,8 +300,20 @@ export class World {
           );
         }
 
-        // ---- HALF cells: a solid block you can see over
+        // ---- HALF cells: a solid block you can see over. It still needs the
+        // ceiling drawn above it, or the level has a hole in its roof.
         if (code === C.HALF) {
+          if (!openSky && cMat !== 'void') {
+            const tc = tileScale(cMat);
+            const cb2 = buf(cMat);
+            const bkc = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]].map(([px, pz]) => this.fieldAt(this.ceilLight, px, pz));
+            cb2.quad(
+              [x0, cy, z0], [x1, cy, z0], [x1, cy, z1], [x0, cy, z1],
+              [0, -1, 0],
+              [[x0 * tc, z0 * tc], [x1 * tc, z0 * tc], [x1 * tc, z1 * tc], [x0 * tc, z1 * tc]],
+              [bkc[0], bkc[1], bkc[2], bkc[3]],
+            );
+          }
           const t = tileScale(wMat);
           const top = fy + HALF_H;
           const tb = buf(wMat);
@@ -351,7 +369,16 @@ export class World {
           if (nc === C.HALF) continue;   // the HALF cell draws its own sides
           const nWall = this.inside(cx + dx, cz + dz) ? d.matW[this.idx(cx + dx, cz + dz)] : wMat;
           const mName = nc === C.GLASS ? 'glass' : nWall;
-          this._wallQuad(buf(mName), cx, cz, dx, dz, fy, cy, mName, false);
+          // run the wall from the lowest floor to the highest ceiling of every
+          // walkable cell touching this wall block — no seams at the top
+          let top = cy, bottom = fy;
+          for (const [ex, ez] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const qx = cx + dx + ex, qz = cz + dz + ez;
+            if (!WALKABLE.has(this.code(qx, qz))) continue;
+            top = Math.max(top, this.cellCeil(qx, qz));
+            bottom = Math.min(bottom, this.cellFloor(qx, qz));
+          }
+          this._wallQuad(buf(mName), cx, cz, dx, dz, bottom, top, mName, false);
         }
       }
     }
@@ -595,6 +622,151 @@ export class World {
     }));
   }
 
+  // ------------------------------------------------------------------ hiding
+  // Each floor's cover, with a prop to make it read from across the room and a
+  // collider so you cannot stand inside it by accident.
+  _buildHides() {
+    const S = this.cell;
+    const PROP = {
+      locker: 'lockers', cubicle: 'cubicle', gurney: 'gurney', shelf: 'archiveShelf',
+      crate: 'crateStack', stall: 'bathStall', car: 'car', water: null,
+      drift: 'snowDrift', wheat: 'wheatPatch', vent: 'ventFloor', tent: 'tent',
+      curtain: 'bathStall', crawl: 'pipeRun',
+    };
+    this.hides = (this.data.hides || []).map((h) => {
+      const wx = h.x * S, wz = h.z * S;
+      const y = this.floorAtWorld(wx, wz);
+      const propName = PROP[h.kind];
+      if (propName) {
+        try {
+          const g = buildProp({ name: propName, px: wx, pz: wz, rot: h.rot || 0, y: null, len: 4, height: 2 }, y, this.cellCeil(h.x, h.z));
+          const bk = this.fieldAt(this.floorLight, wx, wz);
+          g.traverse((o) => {
+            if (!o.isMesh || o.geometry.getAttribute('abake')) return;
+            const n = o.geometry.getAttribute('position').count;
+            const arr = new Float32Array(n * 3);
+            for (let i = 0; i < n; i++) { arr[i * 3] = bk[0]; arr[i * 3 + 1] = bk[1]; arr[i * 3 + 2] = bk[2]; }
+            o.geometry.setAttribute('abake', new THREE.BufferAttribute(arr, 3));
+            this.disposables.push(o.geometry);
+          });
+          this.group.add(g);
+        } catch { /* the kind has no prop; the spot still works */ }
+      }
+      return { ...h, wx, wz, y, kind: h.kind };
+    });
+  }
+
+  nearestHide(x, z, r = 2.4) {
+    let best = null, bd = r;
+    for (const h of this.hides) {
+      const d = Math.hypot(h.wx - x, h.wz - z);
+      if (d < bd) { bd = d; best = h; }
+    }
+    return best;
+  }
+
+  // ------------------------------------------------------------------ arrows
+  // Somebody who got out chalked the way. The route is the real breadth-first
+  // path from the spawn to the lift, marked every few cells — enough to keep you
+  // moving, never enough to tell you what is between you and it.
+  _buildArrows(extra = 0) {
+    const S = this.cell;
+    const d = this.data;
+    const lift = (d.exits || []).find((e) => e.kind === 'elevator') || d.exits?.[0];
+    if (!lift) { this.arrows = []; return; }
+    // flood from the lift so every cell knows its distance to the way out
+    const dist = new Int32Array(this.w * this.h).fill(-1);
+    const q = new Int32Array(this.w * this.h);
+    let head = 0, tail = 0;
+    const start = this.idx(Math.round(lift.x), Math.round(lift.z));
+    dist[start] = 0;
+    q[tail++] = start;
+    while (head < tail) {
+      const i = q[head++];
+      const cx = i % this.w, cz = (i / this.w) | 0;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = cx + dx, nz = cz + dz;
+        if (!this.inside(nx, nz)) continue;
+        const j = this.idx(nx, nz);
+        if (dist[j] !== -1 || !this.walkStep(cx, cz, nx, nz)) continue;
+        dist[j] = dist[i] + 1;
+        q[tail++] = j;
+      }
+    }
+    this.liftDist = dist;
+
+    // Mark the whole floor, not just the one route: whoever came through here was
+    // lost too, and chalked as they went. Every cell whose distance to the lift is a
+    // multiple of `every` is a candidate, thinned so the marks read as occasional
+    // rather than as a painted line — so wherever you are, walking a little in any
+    // direction finds a mark, and the mark points down the gradient.
+    const every = Math.max(3, 8 - extra * 2);
+    const gap = Math.max(2, Math.round(every * 0.8));
+    const taken = new Uint8Array(this.w * this.h);
+    const marks = [];
+    const spacedOut = (cx, cz) => {
+      for (let z = Math.max(0, cz - gap); z <= Math.min(this.h - 1, cz + gap); z++) {
+        for (let x = Math.max(0, cx - gap); x <= Math.min(this.w - 1, cx + gap); x++) {
+          if (taken[this.idx(x, z)]) return false;
+        }
+      }
+      return true;
+    };
+    const cand = [];
+    for (let cz = 1; cz < this.h - 1; cz++) {
+      for (let cx = 1; cx < this.w - 1; cx++) {
+        const here = dist[this.idx(cx, cz)];
+        if (here >= 2 && here % every === 0) cand.push(cz * this.w + cx);
+      }
+    }
+    // Take candidates in a strided order rather than row by row, so hitting the cap
+    // thins the marks everywhere instead of leaving half the floor unmarked.
+    const CAP = 220;
+    const stride = cand.length ? (cand.length % 7 ? 7 : 11) : 1;
+    for (let n = 0, k = 0; n < cand.length && marks.length < CAP; n++) {
+      k = (k + stride) % cand.length;
+      const i = cand[k];
+      const cx = i % this.w, cz = (i / this.w) | 0;
+      const here = dist[i];
+      // point at whichever neighbour is closer to the lift
+      let step = null, best = here;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const v = this.inside(cx + dx, cz + dz) ? dist[this.idx(cx + dx, cz + dz)] : -1;
+        if (v >= 0 && v < best) { best = v; step = [dx, dz]; }
+      }
+      if (!step || !spacedOut(cx, cz)) continue;
+      taken[i] = 1;
+      marks.push([cx, cz, step[0], step[1]]);
+    }
+
+    this.arrows = [];
+    for (const [cx, cz, dx, dz] of marks) {
+      const wx = cx * S, wz = cz * S;
+      const rot = Math.atan2(-dx, -dz);
+      try {
+        const g = buildProp({ name: 'chalkArrow', px: wx, pz: wz, rot, y: null }, this.floorAtWorld(wx, wz), 3);
+        // chalk lifts itself out of the dark a little, or it may as well not be there
+        g.traverse((o) => { if (o.isMesh) { o.material.emissive?.setHex?.(0x6a6a5e); this.disposables.push(o.geometry); } });
+        this.group.add(g);
+        this.arrows.push({ x: wx, z: wz, rot });
+      } catch { /* no arrow, no harm */ }
+    }
+  }
+
+  // Which way is the lift from here, for the FLOOR PLAN powerup.
+  liftBearing(x, z) {
+    if (!this.liftDist) return null;
+    const [cx, cz] = this.toCell(x, z);
+    let best = this.liftDist[this.idx(cx, cz)], dir = null;
+    if (best < 0) return null;
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const v = this.inside(cx + dx, cz + dz) ? this.liftDist[this.idx(cx + dx, cz + dz)] : -1;
+      if (v >= 0 && v < best) { best = v; dir = [dx, dz]; }
+    }
+    if (!dir) return { angle: 0, dist: 0 };
+    return { angle: Math.atan2(-dir[0], -dir[1]), dist: best };
+  }
+
   // ------------------------------------------------------------------ runtime
   douse(x, z, radius, secs) {
     const [cx, cz] = this.toCell(x, z);
@@ -676,7 +848,7 @@ export class World {
       pl.position.set(l.x * this.cell, y, l.z * this.cell);
       pl.color.setHex(l.color);
       pl.distance = l.radius * this.cell * 0.5 + l.radius * 0.5;
-      pl.intensity = l.intensity * (l.level ?? 1) * 1.5;
+      pl.intensity = l.intensity * (l.level ?? 1) * 2.2;
       pl.visible = true;
     }
 

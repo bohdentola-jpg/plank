@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>NOCLIP — The Backrooms, on tape</title>
+<title>NOCLIP — descend, film it, buy better odds</title>
 <link rel="stylesheet" href="styles.css" />
 <script type="importmap">
 { "imports": { "three": "../vendor/three.module.js" } }
@@ -27,26 +27,20 @@
   <!-- ============================ TITLE ============================ -->
   <section class="screen" id="scr-title">
     <div class="title-card">
-      <div class="title-kicker">EB AFTER DARK · TAPE 1 OF 1</div>
+      <div class="title-kicker">EB AFTER DARK</div>
       <img id="title-logo" alt="NOCLIP" />
-      <div class="title-sub">You noclipped out of reality. Twenty-three levels down. Get out.</div>
+      <div class="title-sub">Ten floors down. One thing on each of them. Find the lift,
+        film what is chasing you, and spend the footage on getting further next time.</div>
       <div class="title-menu">
-        <button id="t-new" class="menu-btn gold">▶ NEW TAPE</button>
-        <button id="t-continue" class="menu-btn">CONTINUE</button>
-        <button id="t-archive" class="menu-btn">THE ARCHIVE — levels &amp; tapes found</button>
+        <button id="t-new" class="menu-btn gold">▶ NEW DESCENT</button>
+        <button id="t-archive" class="menu-btn">THE ARCHIVE — floors you have seen</button>
         <button id="t-how" class="menu-btn">HOW TO SURVIVE</button>
         <button id="t-options" class="menu-btn">OPTIONS</button>
         <a class="menu-btn back-link" href="../index.html">◀ BACK TO EB GAMES</a>
       </div>
-      <div class="title-build">NOCLIP · BUILD 1 · 23 LEVELS · HEADPHONES STRONGLY ADVISED</div>
+      <div class="title-record" id="title-record"></div>
+      <div class="title-build">NOCLIP · BUILD 2 · 22 FLOORS IN THE POOL · HEADPHONES STRONGLY ADVISED</div>
     </div>
-  </section>
-
-  <!-- ============================ SLOTS ============================ -->
-  <section class="screen" id="scr-slots">
-    <header class="ribbon"><span id="slot-title">PICK A TAPE</span></header>
-    <div class="pane" id="slot-list"></div>
-    <button class="menu-btn" data-back>◀ BACK</button>
   </section>
 
   <!-- ============================ ARCHIVE ============================ -->
@@ -61,34 +55,41 @@
     <header class="ribbon"><span>HOW TO SURVIVE</span></header>
     <div class="pane how">
       <div class="how-col">
+        <h3>THE RUN</h3>
+        <ul>
+          <li>Each floor has one <b>service lift</b>. Find it and you are off the floor.</li>
+          <li>Somebody chalked <b>arrows</b> toward the lift. Follow them. You can hear it humming when you get close.</li>
+          <li>Each floor has <b>one thing living on it</b>. It kills you on contact. There is no health bar.</li>
+          <li>There is always <b>somewhere to hide</b>, and it is different on every floor. <b>[E]</b> gets you in.</li>
+          <li>In the lift there is a <b>stall</b>. It takes <b>footage</b> and sells you the rest of the run.</li>
+        </ul>
         <h3>THE CAMERA</h3>
         <ul>
-          <li><b>R</b> — record / pause. The tape only advances while recording.</li>
-          <li><b>N</b> — NIGHTSHOT. Sees in the dark, drinks the battery twice as fast.</li>
-          <li><b>SCROLL</b> — zoom. Useful for looking at something you should not.</li>
-          <li><b>F</b> / right mouse — torch. Its own battery. D-cells refill both.</li>
-        </ul>
-        <h3>THE BODY</h3>
-        <ul>
-          <li><b>WASD</b> move · <b>SHIFT</b> run (loud) · <b>CTRL</b> crouch (quiet)</li>
-          <li><b>SPACE</b> hop a ledge · water: <b>SPACE</b> up, <b>CTRL</b> down</li>
-          <li><b>E</b> take / read / use a door · <b>Q</b> use item · <b>G</b> throw it</li>
-          <li><b>1–5</b> / <b>TAB</b> pick an item · <b>ESC</b> pause</li>
+          <li><b>R</b> — record / pause. No tape running, no footage earned.</li>
+          <li><b>N</b> — NIGHTSHOT. Sees in the dark, eats the battery.</li>
+          <li><b>F</b> / right mouse — torch. It is the only thing you carry.</li>
+          <li>Keep the thing <b>in frame from a distance</b> while recording and the stall pays for it.</li>
         </ul>
       </div>
       <div class="how-col">
-        <h3>THE RULES OTHERS WROTE DOWN</h3>
+        <h3>THE BODY</h3>
+        <ul>
+          <li><b>WASD</b> move · <b>SHIFT</b> run (loud) · <b>CTRL</b> crouch (quiet)</li>
+          <li><b>SPACE</b> hop a ledge · in water: <b>SPACE</b> up, <b>CTRL</b> down</li>
+          <li><b>E</b> hide / come out / take the lift · <b>ESC</b> pause</li>
+        </ul>
+        <h3>WHAT OTHERS WORKED OUT</h3>
         <ol>
-          <li>Noise is the whole game. Most of what lives here is blind and none of it is deaf.</li>
-          <li>Light stops some things and calls others. Learn which is which per level.</li>
-          <li>If a thing is smiling in the dark, put light on it and do not stop putting light on it.</li>
-          <li>If a thing has no face, don't keep looking at it.</li>
-          <li>If a thing hasn't moved and is closer, do not look away.</li>
-          <li>Almond water is real and it does help. Nobody knows why.</li>
-          <li>Every level has a way out. It is never signposted, and it is never where the level wants you to be.</li>
+          <li>Noise is the whole game. Most of what lives here is blind. None of it is deaf.</li>
+          <li>Hiding works. It works much better if it did not see you get in.</li>
+          <li>If it is smiling in the dark, keep the torch on it and do not stop.</li>
+          <li>If it has no face, don't keep looking at it.</li>
+          <li>If it hasn't moved and is closer, don't look away.</li>
+          <li>Every floor has one trick that belongs to it. Learn it on the way in, not on the way out.</li>
         </ol>
-        <p class="how-note">Nerve falls in the dark, near things that hunt, and when the tape damages.
-          At zero the walls start moving on their own. Read the pages you find — that helps too.</p>
+        <p class="how-note">Nothing carries between runs except what you know. The stall
+          resets, the floors are drawn fresh, and the way out is never where the floor
+          wants you to be.</p>
       </div>
     </div>
     <button class="menu-btn" data-back>◀ BACK</button>
@@ -104,16 +105,36 @@
   <!-- ============================ LOADING ============================ -->
   <section class="screen" id="scr-load">
     <div class="load-box">
-      <div class="load-title">READING TAPE</div>
+      <div class="load-title">THREADING THE TAPE</div>
       <div class="load-track"><i id="load-bar"></i></div>
       <div class="load-label" id="load-label">…</div>
-      <div class="load-hint">Every level is generated fresh from your tape's seed. Nobody
-        else's map of this place will help you.</div>
+      <div class="load-hint">Every floor is generated fresh for this descent. Nobody
+        else's map of this place will help you, including your own from last time.</div>
     </div>
   </section>
 
-  <!-- ============================ PLAY (the HUD lives in #overlay) ======= -->
+  <!-- ============================ PLAY (HUD lives in #overlay) ======= -->
   <section class="screen" id="scr-play"></section>
+
+  <!-- ============================ THE LIFT ============================ -->
+  <section class="screen" id="scr-lift">
+    <div class="lift">
+      <div class="lift-head">
+        <span class="lift-title">SERVICE LIFT</span>
+        <span class="lift-floor" id="lift-floor"></span>
+      </div>
+      <div class="lift-body">
+        <div class="lift-pay" id="lift-pay"></div>
+        <div class="lift-stallwrap">
+          <div class="lift-stall-head">THE STALL — somebody has set up against the back wall</div>
+          <div class="lift-stall" id="lift-stall"></div>
+          <div class="lift-owned-head">CARRYING</div>
+          <div class="lift-owned" id="lift-owned"></div>
+        </div>
+      </div>
+      <button class="menu-btn gold" id="lift-go">GO DOWN  ▼</button>
+    </div>
+  </section>
 
   <!-- ============================ PAUSE ============================ -->
   <section class="screen" id="scr-pause">
@@ -121,9 +142,9 @@
       <h2>TAPE PAUSED</h2>
       <button id="p-resume" class="menu-btn gold">BACK TO IT</button>
       <button id="p-options" class="menu-btn">OPTIONS</button>
-      <button id="p-quit" class="menu-btn">SAVE &amp; EJECT</button>
-      <p class="pause-keys">WASD move · SHIFT run · CTRL crouch · E interact ·
-        F torch · N nightshot · R record · Q use · G throw · TAB item · SCROLL zoom</p>
+      <button id="p-quit" class="menu-btn">ABANDON THE DESCENT</button>
+      <p class="pause-keys">WASD move · SHIFT run · CTRL crouch · E hide / lift ·
+        F torch · N nightshot · R record</p>
     </div>
   </section>
 
@@ -132,8 +153,9 @@
     <div class="title-card">
       <div class="title-kicker">TAPE ENDS</div>
       <h1 class="end-h">YOU GOT OUT</h1>
-      <p class="end-p">The train doesn't stop again. Wherever this is, it has weather,
-        and the weather is happening to you, and that is enough to be going on with.</p>
+      <p class="end-p">The lift goes up, which it has never done before, and keeps going.
+        Somewhere with weather in it, and the weather is happening to you, and that is
+        enough to be going on with. Keep the camera running.</p>
       <div id="end-stats" class="end-stats"></div>
       <button class="menu-btn gold" id="end-back">◀ BACK TO THE TITLE</button>
     </div>

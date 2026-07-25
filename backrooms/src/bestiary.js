@@ -472,11 +472,11 @@ export const SPECIES = {
   // ---------------------------------------------------------------- shepherd
   shepherd: {
     name: 'SHEPHERD',
-    note: 'Hums. Points. Does not follow you in. Nobody knows why it helps.',
-    speed: 1.4, walk: 1.4, hp: 9999, damage: 0, radius: 0.45, height: 2.4,
+    note: 'Hums. Points at the way out, and is right every time. Walks the whole while.',
+    speed: 2.2, walk: 2.2, hp: 9999, damage: 99, radius: 0.45, height: 2.4,
     senses: { sight: 30, hearing: 20, fov: 6.28 },
-    aggro: { lose: 0, patience: 0 },
-    flags: { friendly: true, harmless: true, invulnerable: true, pointsTheWay: true },
+    aggro: { lose: 30, patience: 60 },
+    flags: { invulnerable: true, pointsTheWay: true, relentless: true },
     sound: { idle: 'shepherdHum', alert: 'shepherdHum', attack: 'none' },
     model() {
       const g = new THREE.Group();

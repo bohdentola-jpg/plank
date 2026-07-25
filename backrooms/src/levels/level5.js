@@ -26,7 +26,9 @@ export function build(kit) {
     w: 140, h: 140, cell: 3.1, wallH: 3.4,
     palette: { wall: 'wallpaperHotel', floor: 'carpetHotel', ceil: 'ceilTile' },
     fog: { color: 0x1a0e10, density: 0.032 },
-    ambient: { color: 0x30181c, intensity: 0.18 },
+    // A hotel with the house lights still on a timer somewhere: dim, warm, and never
+    // so dark that you cannot see which end of the corridor you are at.
+    ambient: { color: 0x30181c, intensity: 0.30 },
   });
   L.setAmbience({ room: 'crowd', hum: 0.3, drip: 0.05, wind: 0, music: 'muzak', reverb: 0.6 });
   L.setRules({ noiseLimit: 0.6, sanityDrain: 1.1 });
@@ -100,11 +102,13 @@ export function build(kit) {
   L.light({ x: 64, z: 123, y: 3.2, color: 0xffb0c8, intensity: 1.2, radius: 12, fixture: 'bulb', flicker: 0.12 });
 
   // ---------------------------------------------------------------- light
+  // Sconces down every corridor, close enough together that the dark patches between
+  // them read as gaps rather than as the whole floor.
   for (const z of corridorsZ) {
-    for (let x = 10; x < 132; x += 10) {
+    for (let x = 8; x < 134; x += 6) {
       L.light({
-        x, z: z + 1, y: 3.2, color: 0xffc890, intensity: 0.85, radius: 12,
-        fixture: 'lamp', flicker: kit.chance(0.28) ? kit.rand(0.2, 0.8) : 0, dead: kit.chance(0.12),
+        x, z: z + 1, y: 3.2, color: 0xffc890, intensity: 0.95, radius: 12,
+        fixture: 'lamp', flicker: kit.chance(0.28) ? kit.rand(0.2, 0.8) : 0, dead: kit.chance(0.1),
       });
     }
   }
@@ -113,6 +117,12 @@ export function build(kit) {
       L.light({ x, z, y: 3.2, color: 0xffb878, intensity: 0.7, radius: 10, fixture: 'bulb', flicker: kit.rand(0, 0.4) });
     }
   }
+  // And a fitting in every guest room, a quarter of them dead. A hotel has a light in
+  // each room whether anybody is using it or not.
+  L.lightGrid(6, 6, 133, 133, {
+    every: 7, color: 0xffc890, intensity: 0.6, radius: 11, fixture: 'bulb',
+    flickerChance: 0.3, deadChance: 0.24, brokenChance: 0.06,
+  });
 
   // ---------------------------------------------------------------- dressing
   L.scatter('trolley', 16);
@@ -125,70 +135,6 @@ export function build(kit) {
   L.scatter('partyHatPile', 8);
   L.scatter('streamers', 12, { opts: { height: 3.3 } });
   L.scatter('bodyBag', 3, { where: (x, z) => x > 96 && z > 96 });
-  L.scatter('tapePile', 3);
-
-  // ---------------------------------------------------------------- pickups
-  L.item('key', { x: 31, z: 13, key: 'room' });
-  L.item('battery', { x: 15, z: 22 });
-  L.item('battery', { x: 112, z: 104 });
-  L.item('almondWater', { x: bx + 17, z: bz + 15 });
-  L.item('almondWater', { x: 22, z: 100 });
-  L.item('medkit', { x: 120, z: 118 });
-  L.item('flare', { x: 118, z: 40, amount: 2 });
-  L.item('tape', { x: 64, z: 126, id: 'tape-hotel', title: 'TAPE — "ROOM 302, SIDE B"' });
-
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: 32, z: 13, title: 'GUEST REGISTER, FRONT DESK',
-    text: `Every line filled in the same hand, going back further than the paper
-      should allow. Arrival dates only. In the margin beside tonight's date,
-      somebody has written my name, spelled correctly, and I have not spoken to
-      anyone since the office floor.`,
-  });
-  L.note({
-    x: 16, z: 22, title: 'HOTEL COMPLIMENTS SLIP',
-    text: `We hope you enjoy your stay. Breakfast is served from 6. Breakfast is
-      served until 6. The dining room is not on this floor and will be brought to
-      you. Please do not attempt to leave via the ballroom during service.`,
-  });
-  L.note({
-    x: bx + 18, z: bz + 15, title: 'PROGRAMME, BALLROOM FLOOR',
-    text: `8:00 DRINKS. 8:30 SPEECHES. 9:00 DANCING. 9:00 DANCING. 9:00 DANCING.
-      The chandelier is still lit and the floor is polished and there is a smell of
-      hairspray and nobody has been in this room for a very long time.`,
-  });
-  L.note({
-    x: 113, z: 104, title: 'KITCHEN ORDER SPIKE',
-    text: `Forty-one covers, every service, no cancellations. The stoves are warm
-      and there is nothing in the pans. I have stopped checking the walk-in.
-      Whatever is doing the cooking is doing it somewhere else and bringing it here.`,
-  });
-  L.note({
-    x: 23, z: 100, title: 'SCRATCHED INTO A DOOR NUMBER PLATE',
-    text: `The rooms are all the same room. Go in one, come out, go in the next:
-      same bed, same dent in the pillow, same suitcase, one item fewer each time.
-      Room 302 is not the same room. Room 302 has people in it.`,
-  });
-  L.note({
-    x: 64, z: 125, title: 'PARTY INVITATION, HAND-LETTERED',
-    text: `You came! We saved you a seat and we have been saving it for a while and
-      the cake has your name on it and it has had your name on it since before you
-      got here. Don't be shy. There is another room like this one, much bigger,
-      and everybody there is having a lovely time.`,
-  });
-
-  // ---------------------------------------------------------------- company
-  L.entity('skinstealer', { x: 31, z: 14, state: 'guard', keepsDistance: 9, tag: 'clerk' });
-  L.pack('partygoer', 4, 64, 124, 3, { state: 'dormant', tag: 'party', wake: { after: 240 } });
-  L.pack('duller', 5, 118, 70, 12, { state: 'patrol', leash: 14 });
-  L.pack('duller', 4, 24, 60, 12, { state: 'patrol', leash: 14 });
-  L.entity('faceling', { x: 70, z: 40, state: 'patrol', leash: 24 });
-  L.entity('faceling', { x: 90, z: 100, state: 'patrol', leash: 20 });
-  L.entity('watcher', { x: 132, z: 120, state: 'guard' });
-  L.entity('mannequin', { x: bx + 4, z: bz + 26, state: 'patrol' });
-  L.entity('howler', { x: 40, z: 128, state: 'patrol', leash: 16 });
-  L.entity('crawler', { x: 110, z: 20, state: 'dormant', wake: { after: 150 } });
-
   // ---------------------------------------------------------------- scares
   L.scare('crowdLaugh', { x: 64, z: 110, radius: 10 });
   L.scare('doorSlam', { x: 40, z: 40, radius: 7 });
@@ -204,9 +150,6 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- the way out
   L.spawnAt(12, 14, 0);
-  L.objective('Take the service stairs down, at the far end of the east cross-corridor.');
-  L.objective('The stairwell is locked. There is a key on the front desk.', { id: 'obj1' });
-  L.objective('Do not go into room 302.', { optional: true });
 
   L.trigger({ x: 31, z: 13, radius: 4, objective: 'obj1', say: 'A brass fob with no number on it. The clerk does not look up.' });
   L.trigger({ x: bx + 17, z: bz + 15, radius: 8, say: 'The chandelier is on. The floor has been polished this week.' });
@@ -217,14 +160,14 @@ export function build(kit) {
   L.prop('stairFlight', { x: 131, z: 131, height: 2.4, steps: 8 });
   L.prop('exitSign', { x: 130, z: 128 });
   L.light({ x: 130, z: 129, y: 3.2, color: 0x60ff90, intensity: 0.6, radius: 8, fixture: 'none' });
-  L.exit({
-    x: 131, z: 131, kind: 'stairs', to: 'level6', needs: 'key', label: 'SERVICE STAIRS',
-    say: 'Bare concrete, no carpet, no lights below the second landing.',
-  });
-  L.exit({
-    x: 64, z: 124, kind: 'door', to: 'level_fun', hidden: true, label: 'ROOM 302',
-    say: 'They make room for you at the table. The cake does have your name on it.',
-  });
+
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('mirrors');
+  L.hideSpots('curtain', 10);
+  L.monsterFar('partygoer', { tell: 'partyGiggle', speed: 5.6, patience: 1.2, hearing: 1.5, wanders: 30, checksHides: 0.6 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: 131, z: 131 });
 
   return L.finish();
 }

@@ -25,7 +25,10 @@ export function build(kit) {
     w: 146, h: 146, cell: 3.1, wallH: 4.6,
     palette: { wall: 'shelfWall', floor: 'carpetOffice', ceil: 'ceilTile' },
     fog: { color: 0x100d08, density: 0.036 },
-    ambient: { color: 0x241e14, intensity: 0.13 },
+    // The shelving blocks nearly all of the light from the bulbs, so the stacks get
+    // their readable minimum from ambient instead — enough to see an aisle, never
+    // enough to see the end of one.
+    ambient: { color: 0x241e14, intensity: 0.24 },
   });
   L.setAmbience({ room: 'silence', hum: 0.12, drip: 0.05, wind: 0, music: 'choir', reverb: 0.75 });
   L.setRules({ noiseLimit: 0.18, sanityDrain: 1.25, batteryDrain: 0.95 });
@@ -86,8 +89,8 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- lights
   // The stacks get almost nothing: a bulb every few aisles, on a pull cord.
-  for (let z = 12; z < 138; z += 16) {
-    for (let x = 12; x < 138; x += 14) {
+  for (let z = 10; z < 140; z += 9) {
+    for (let x = 10; x < 140; x += 8) {
       L.light({
         x, z, y: 4.4, color: 0xffdca0, intensity: 0.5, radius: 8, fixture: 'bulb',
         flicker: kit.chance(0.3) ? kit.rand(0.2, 0.7) : 0, dead: kit.chance(0.22),
@@ -99,72 +102,12 @@ export function build(kit) {
   L.scatter('archiveShelf', 60, { where: (x, z, c) => c === C.OPEN });
   L.scatter('bookshelf', 40);
   L.scatter('trolley', 24);
-  L.scatter('noteSheet', 70);
   L.scatter('filingCabinet', 20);
   L.scatter('clock', 10);
   L.scatter('lamp', 22);
   L.scatter('chair', 26);
   L.scatter('boxStack', 20);
-  L.scatter('tapePile', 4);
   L.scatter('graffiti', 8);
-
-  // ---------------------------------------------------------------- pickups
-  L.item('battery', { x: readers[0][0], z: readers[0][1] });
-  L.item('battery', { x: readers[3][0], z: readers[3][1] });
-  L.item('almondWater', { x: readers[1][0], z: readers[1][1] });
-  L.item('almondWater', { x: readers[4][0], z: readers[4][1] });
-  L.item('medkit', { x: readers[2][0], z: readers[2][1] });
-  L.item('glowstick', { x: cx + 13, z: cz + 9, amount: 3 });
-  L.item('key', { x: kx + 7, z: kz + 7, key: 'cage' });
-  L.item('tape', { x: readers[5][0], z: readers[5][1], id: 'tape-arch', title: 'TAPE — "ACCESSION 41"' });
-
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: cx + 13, z: cz + 10, title: 'CATALOGUE DRAWER, PULLED OUT',
-    text: `Index cards, typed, in your surname's range. One of them is your movements
-      since you arrived in the archive: aisle by aisle, timed to the second, in the
-      past tense, and the last line is not written yet but the card has room for it.`,
-  });
-  L.note({
-    x: readers[0][0], z: readers[0][1] + 1, title: 'READING ROOM RULES, FRAMED',
-    text: `SILENCE IS REQUIRED. Items may not be removed. Readers may not be removed.
-      Do not speak to staff. There is no staff. If a member of staff speaks to you,
-      you are not required to answer, and you are strongly advised not to.`,
-  });
-  L.note({
-    x: readers[2][0], z: readers[2][1] + 1, title: 'SLIP LEFT IN A BOOK',
-    text: `Two whole days without making a sound. I have taken my boots off. I have
-      learned which of the shelves creak. The one in the stacks doesn't hunt like a
-      dog — it waits for a noise and then it is simply there, at the end of the aisle,
-      already looking at you.`,
-  });
-  L.note({
-    x: readers[4][0], z: readers[4][1] + 1, title: 'ON A TROLLEY OF UNSHELVED BOOKS',
-    text: `Somebody is still shelving. The trolleys move overnight and the books go
-      to the right places. I have followed the sequence four aisles and it is correct
-      and it is faster than I could do it and it is done in the dark.`,
-  });
-  L.note({
-    x: kx + 7, z: kz + 8, title: 'RARE BOOKS CAGE, INSIDE, ON THE PADLOCK',
-    text: `Locked from in here, by me, and I am aware of what that means. The stairs
-      up are in the north-east and they are not on the plan on the wall, which is
-      wrong in several other ways too. The key is on the desk. Take it. I have
-      finished with doors.`,
-  });
-
-  // ---------------------------------------------------------------- company
-  L.entity('howler', { x: 40, z: 40, state: 'patrol', leash: 30, tag: 'shush' });
-  L.entity('howler', { x: 100, z: 90, state: 'patrol', leash: 30, tag: 'shush' });
-  L.entity('howler', { x: 70, z: 130, state: 'patrol', leash: 30 });
-  L.pack('mannequin', 4, 80, 60, 22, { state: 'patrol' });
-  L.pack('mannequin', 3, 30, 100, 18, { state: 'patrol' });
-  L.entity('watcher', { x: 6, z: 70, state: 'guard' });
-  L.entity('watcher', { x: 140, z: 30, state: 'guard' });
-  L.entity('watcher', { x: 70, z: 140, state: 'guard' });
-  L.pack('duller', 6, 108, 40, 12, { state: 'patrol', leash: 16 });
-  L.entity('faceling', { x: 52, z: 100, state: 'patrol', leash: 26 });
-  L.entity('crawler', { x: 132, z: 100, state: 'dormant', wake: { after: 150 } });
-
   // ---------------------------------------------------------------- scares
   L.scare('whisper', { x: 30, z: 30, radius: 7, text: 'From the next aisle, very quietly: "quiet, please."' });
   L.scare('faceInHall', { x: 52, z: 50, radius: 8 });
@@ -179,9 +122,6 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- the way out
   L.spawnAt(6, 31, 0);
-  L.objective('Find the stairs in the north-east corner and go up.');
-  L.objective('The stair door is locked. The key is in the rare-books cage.', { id: 'obj1' });
-  L.objective('Read the drawer with your name in it.', { optional: true });
 
   L.trigger({ x: cx + 13, z: cz + 9, radius: 6, say: 'A drawer is already open at your surname. The card is up to date.' });
   L.trigger({ x: kx + 7, z: kz + 7, radius: 5, objective: 'obj1', say: 'A key on a desk, and a padlock closed from this side.' });
@@ -192,10 +132,14 @@ export function build(kit) {
   L.prop('stairFlight', { x: 136, z: 12, height: 2.4, steps: 8 });
   L.prop('door', { x: 136, z: 20, metal: true });
   L.light({ x: 136, z: 16, y: 4.4, color: 0xd8e8ff, intensity: 0.8, radius: 10, fixture: 'tube', flicker: 0.15 });
-  L.exit({
-    x: 136, z: 12, kind: 'stairs', to: 'level99', needs: 'key', label: 'NORTH-EAST STAIRS',
-    say: 'Up two flights, and the air gets colder every step, and at the top there is snow blowing under the door.',
-  });
+
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('silence');
+  L.hideSpots('shelf', 10);
+  L.monsterFar('howler', { tell: 'howlerWheeze', speed: 4.6, patience: 1.8, hearing: 2.2, wanders: 34, checksHides: 0.6 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: 136, z: 12 });
 
   return L.finish();
 }

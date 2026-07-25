@@ -169,6 +169,51 @@ export const ITEMS = [
 ];
 const ITEMSET = new Set(ITEMS);
 
+// ------------------------------------------------------------------ hiding
+// Every floor has somewhere to get out of sight, and it is different every time:
+// you learn a level by learning what counts as cover in it.
+export const HIDES = [
+  'locker',    // stand in it, look through the vents
+  'cubicle',   // under the desk, knees up
+  'gurney',    // under the sheet, on the trolley
+  'shelf',     // between two stacks, sideways
+  'crate',     // behind the pallet stack
+  'stall',     // feet up on the pan, door latched
+  'car',       // back seat, head down
+  'water',     // under the surface, holding it
+  'drift',     // dug into the snow
+  'wheat',     // flat in the crop
+  'vent',      // floor duct, lid pulled over
+  'tent',      // somebody else's, still zipped
+  'curtain',   // behind the drape, breathing shallow
+  'crawl',     // under the pipe run, on your side
+];
+const HIDESET = new Set(HIDES);
+
+// ------------------------------------------------------------------ gimmicks
+// The one thing that makes a floor itself, mechanically. main.js implements them.
+export const GIMMICKS = [
+  'flicker',    // the grid stutters and drops whole wings for a few seconds
+  'blackout',   // periodic total darkness, on a rhythm you can learn
+  'darkwater',  // the water is opaque and something is under it
+  'steam',      // vents blind you at intervals; the monster likes the noise
+  'sparks',     // arcs kill the nearest lights whenever the monster closes
+  'ceiling',    // it travels above the tiles and comes down
+  'noisefloor', // metal and grating: every footstep carries
+  'silence',    // no ambience at all — you only ever hear your own noise and its
+  'crowd',      // standing bodies you have to push past, and it hides among them
+  'fogbank',    // fog thick enough to hide the walls, thinner near the lift
+  'mirrors',    // it shows up in glass a beat before it shows up in the room
+  'cold',       // you freeze away from heat; the lift lobby is warm
+];
+const GIMSET = new Set(GIMMICKS);
+
+// The shortest walk, in cells, that counts as a floor: below this the lift is a
+// formality rather than an objective. Capped at one crossing of the floor's own
+// area so a genuinely small level isn't measured against a big one.
+const MIN_TREK = 45;
+export const minTrek = (walkable) => Math.min(MIN_TREK, Math.round(Math.sqrt(walkable)));
+
 // ------------------------------------------------------------------ sound beds
 export const ROOM_TONES = [
   'buzz',        // the hum of ten thousand fluorescent tubes
@@ -231,6 +276,9 @@ class Level {
     this.links = [];
     this.exits = [];
     this.objectives = [];
+    this.hides = [];
+    this.monsterRec = null;
+    this.gimmickName = null;
     this._spawn = null;
     this.openSky = opts.openSky ?? false;   // no ceiling quads; sky dome instead
     this.sky = opts.sky ?? null;            // { top, bottom, sun, stars, clouds }
@@ -523,6 +571,87 @@ class Level {
     return out;
   }
 
+  // Exactly one hunter per floor. It one-shots you, so everything about it —
+  // where it starts, how fast, how it finds you — is a deliberate choice.
+  monster(type, o = {}) {
+    const m = {
+      type, x: o.x, z: o.z,
+      speed: o.speed ?? null,
+      patience: o.patience ?? 1,       // how long it keeps searching
+      hearing: o.hearing ?? 1,         // multiplier on its ears
+      sight: o.sight ?? 1,
+      tell: o.tell ?? null,            // the sound it makes when it's near
+      wanders: o.wanders ?? 26,        // how far it roams while it hasn't found you
+      checksHides: o.checksHides ?? 0.45,
+      ...o,
+    };
+    this._place(`monster ${type}`, m, 20);
+    this.monsterRec = m;
+    // it is also an entity for the runtime, and the only one
+    this.entities.push({ ...m, state: 'patrol', leash: 0, isMonster: true });
+    return m;
+  }
+
+  // A place to get out of sight. Kinds are per-floor: lockers in the school,
+  // gurneys in the hospital, the water itself in the poolrooms.
+  hide(kind, x, z, o = {}) {
+    const h = { kind, x, z, rot: o.rot ?? 0, ...o };
+    this._place(`hide ${kind}`, h);
+    this.hides.push(h);
+    return h;
+  }
+
+  // Scatter hiding places across the floor, spread out so no corner is safe and
+  // no corner is hopeless.
+  hideSpots(kind, n, o = {}) {
+    const out = [];
+    let guard = 0;
+    const minGap = (o.minGap ?? 12);
+    while (out.length < n && guard++ < n * 120) {
+      const [x, z] = this.randomOpen(o.where);
+      if (out.some(([hx, hz]) => Math.hypot(hx - x, hz - z) < minGap)) continue;
+      out.push([x, z]);
+      this.hide(kind, x, z, { rot: this.kit.rand(0, Math.PI * 2) });
+    }
+    return out;
+  }
+
+  // Put the monster a long way from the spawn — most of the way to the far end of
+  // the floor, so the first minute is yours and the rest of it is not.
+  monsterFar(type, o = {}) {
+    const sp = this._spawn || { x: 2, z: 2 };
+    const [fx, fz] = this.farthestOpen(sp.x, sp.z);
+    const t = o.at ?? 0.72;
+    const [mx, mz] = this.snap(
+      Math.round(sp.x + (fx - sp.x) * t),
+      Math.round(sp.z + (fz - sp.z) * t),
+      20,
+    ) || [fx, fz];
+    return this.monster(type, { ...o, x: mx, z: mz });
+  }
+
+  // The old chain is gone: every floor now ends at a lift, and the lift is where
+  // the shop is. `to` is always the next floor of the descent.
+  elevatorAt(o = {}) {
+    const { to, needs, kind, hidden, ...rest } = o;
+    return this.elevator(o.x, o.z, { ...rest, to: 'NEXT' });
+  }
+
+  gimmick(name, o = {}) {
+    this.gimmickName = name;
+    this.gimmickOpts = o;
+    return this;
+  }
+
+  // The way off the floor. One per level, and the shop rides down with you.
+  elevator(x, z, o = {}) {
+    return this.exit({
+      x, z, kind: 'elevator', to: o.to ?? 'NEXT', label: o.label ?? 'SERVICE LIFT',
+      say: o.say ?? 'The doors part. Inside it is lit, and warm, and there is somebody\'s stall set up against the back wall.',
+      ...o,
+    });
+  }
+
   scare(name, o = {}) {
     const s = {
       name, x: o.x, z: o.z,
@@ -752,6 +881,13 @@ class Level {
     if (!L.isOpen(L._spawn.x, L._spawn.z)) bad(`spawn ${L._spawn.x},${L._spawn.z} is inside a wall`);
     if (!L.exits.length) bad('no exits — the whole point is getting out');
     if (!L.objectives.length) bad('no objectives — tell the player what to do');
+    if (!L.monsterRec) bad('no monster — one per floor, that is the rule');
+    if (L.entities.filter((e) => e.isMonster).length !== 1) bad('more than one monster on the floor');
+    if (L.hides.length < 5) bad(`only ${L.hides.length} hiding places — a floor needs at least five`);
+    for (const h of L.hides) if (!HIDESET.has(h.kind)) bad(`unknown hiding place "${h.kind}"`);
+    if (!L.gimmickName) bad('no gimmick — every floor needs its own trick');
+    if (!GIMSET.has(L.gimmickName)) bad(`unknown gimmick "${L.gimmickName}"`);
+    if (!L.exits.some((e) => e.kind === 'elevator')) bad('no elevator — that is the way out now');
 
     for (const m of [...L.matF, ...L.matW, ...L.matC]) if (!MATSET.has(m)) bad(`unknown material "${m}"`);
     for (const p of L.props) {
@@ -767,6 +903,7 @@ class Level {
     for (const e of L.exits) {
       if (!EXITSET.has(e.kind)) bad(`unknown exit kind "${e.kind}"`);
       if (!e.to) bad(`exit at ${e.x},${e.z} goes nowhere (set \`to\`)`);
+      if (e.kind === 'elevator' && e.to !== 'NEXT') bad('an elevator always goes to NEXT');
     }
     if (!TONESET.has(L.ambience.room)) bad(`unknown room tone "${L.ambience.room}"`);
     if (!MUSICSET.has(L.ambience.music)) bad(`unknown music bed "${L.ambience.music}"`);
@@ -780,13 +917,33 @@ class Level {
     const dist = L.flood(L._spawn.x, L._spawn.z);
     const reach = (x, z) => L.inside(x, z) && dist[L.idx(Math.round(x), Math.round(z))] >= 0;
     for (const e of L.exits) if (!reach(e.x, e.z)) bad(`exit ${e.kind}→${e.to} at ${e.x},${e.z} is unreachable from the spawn`);
-    for (const it of L.items) if (!reach(it.x, it.z)) L.warnings.push(`item ${it.type} at ${it.x},${it.z} unreachable`);
-    for (const n of L.notes) if (!reach(n.x, n.z)) L.warnings.push(`note "${n.title}" at ${n.x},${n.z} unreachable`);
-    for (const e of L.entities) if (!L.isOpen(Math.round(e.x), Math.round(e.z))) L.warnings.push(`entity ${e.type} spawned in a wall at ${e.x},${e.z}`);
 
     let walkable = 0;
     for (let i = 0; i < L.cells.length; i++) if (WALKABLE.has(L.cells[i])) walkable++;
     if (walkable < 40) bad(`only ${walkable} walkable cells — did the generator run?`);
+
+    // A floor has to be a trek. If the lift ended up on the doorstep — a generator
+    // handing back two seed points that happen to be neighbours, say — push it out
+    // to the far end rather than ship a floor you finish in four steps. Small floors
+    // are held to a smaller standard: roughly one crossing of their own area.
+    const lift = L.exits.find((e) => e.kind === 'elevator');
+    if (lift) {
+      const liftD = dist[L.idx(Math.round(lift.x), Math.round(lift.z))];
+      if (liftD < minTrek(walkable)) {
+        let far = -1, fx = lift.x, fz = lift.z;
+        for (let i = 0; i < dist.length; i++) {
+          if (dist[i] > far) { far = dist[i]; fx = i % L.w; fz = (i / L.w) | 0; }
+        }
+        L.warnings.push(`lift sat ${liftD} cells from the spawn — moved it to ${fx},${fz} (${far} away)`);
+        lift.x = fx; lift.z = fz;
+      }
+    }
+
+    // Nothing lies around on a floor any more: the torch is the only thing you carry
+    // and the only kit in the game comes off the stall in the lift.
+    if (L.items.length) L.warnings.push(`${L.items.length} item pickup(s) — kit comes from the lift now, not the floor`);
+    for (const n of L.notes) if (!reach(n.x, n.z)) L.warnings.push(`note "${n.title}" at ${n.x},${n.z} unreachable`);
+    for (const e of L.entities) if (!L.isOpen(Math.round(e.x), Math.round(e.z))) L.warnings.push(`entity ${e.type} spawned in a wall at ${e.x},${e.z}`);
 
     return {
       w: L.w, h: L.h, cell: L.cell, wallH: L.wallH,
@@ -795,10 +952,14 @@ class Level {
       lights: L.lights, props: L.props, colliders: L.colliders,
       entities: L.entities, scares: L.scares, items: L.items, notes: L.notes,
       triggers: L.triggers, links: L.links, exits: L.exits, objectives: L.objectives,
+      hides: L.hides, monster: L.monsterRec, gimmick: L.gimmickName, gimmickOpts: L.gimmickOpts || {},
       spawn: L._spawn, openSky: L.openSky, sky: L.sky, fog: L.fog, ambient: L.ambient,
       ambience: L.ambience, rules: L.rules, tint: L.tint,
       waterLevel: L.waterLevel ?? null,
-      stats: { walkable, lights: L.lights.length, props: L.props.length, entities: L.entities.length },
+      stats: {
+        walkable, lights: L.lights.length, props: L.props.length,
+        entities: L.entities.length, hides: L.hides.length,
+      },
       warnings: L.warnings,
     };
   }
@@ -1066,7 +1227,7 @@ export function makeKit(seed = 1) {
   const R = randoms(seed);
   const kit = {
     seed,
-    C, MATS, PROPS, ENTITIES, SCARES, ITEMS, ROOM_TONES, MUSIC_BEDS, EXIT_KINDS,
+    C, MATS, PROPS, ENTITIES, SCARES, ITEMS, HIDES, GIMMICKS, ROOM_TONES, MUSIC_BEDS, EXIT_KINDS,
     gen,
     r: R.r,
     rand: R.rand,

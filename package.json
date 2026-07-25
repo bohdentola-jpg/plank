@@ -1,7 +1,7 @@
 {
   "name": "eb-games-shelf",
   "version": "2.0.0",
-  "description": "EB GAMES SHELF — VARSITY 27 (football), BIG INNING '27 (baseball), RIM CITY (basketball), LOAM (voxels), MASCOT MELEE 64 (platform fighter), NOCLIP (backrooms horror). Six 3D browser games, zero asset files, one Windows-95 desktop to launch them.",
+  "description": "EB GAMES SHELF \u2014 VARSITY 27 (football), BIG INNING '27 (baseball), RIM CITY (basketball), LOAM (voxels), MASCOT MELEE 64 (platform fighter), NOCLIP (backrooms horror). Six 3D browser games, zero asset files, one Windows-95 desktop to launch them.",
   "type": "module",
   "scripts": {
     "start": "python3 serve.py",
@@ -14,7 +14,8 @@
     "shot:loam": "node tools/shot-loam.mjs",
     "smoke:melee": "node tools/melee-sim.mjs 18",
     "smoke:backrooms": "node tools/smoke-backrooms.mjs --verbose",
-    "shot:backrooms": "node tools/shot-backrooms.mjs"
+    "shot:backrooms": "node tools/shot-backrooms.mjs",
+    "play:backrooms": "node tools/play-backrooms.mjs"
   },
   "dependencies": {
     "three": "^0.160.0"

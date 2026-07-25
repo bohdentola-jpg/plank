@@ -91,65 +91,8 @@ export function build(kit) {
   L.scatter('clawMarks', 8);
   L.scatter('trafficCone', 16);
   L.scatter('wetFloorSign', 6);
-  L.scatter('tapePile', 3);
   L.prop('vendingMachine', { x: 78, z: 66, rot: -Math.PI / 2 });
-
-  // ---------------------------------------------------------------- pickups
   // Three fuses, one per wing, and the fourth wing has the thing that follows.
-  L.item('fuse', { x: wingSpots[0][0], z: wingSpots[0][1] });
-  L.item('fuse', { x: wingSpots[1][0], z: wingSpots[1][1] });
-  L.item('fuse', { x: wingSpots[2][0], z: wingSpots[2][1] });
-  L.item('battery', { x: 62, z: 62 });
-  L.item('battery', { x: wingSpots[1][0] + 2, z: wingSpots[1][1] });
-  L.item('almondWater', { x: 74, z: 70 });
-  L.item('medkit', { x: 60, z: 72 });
-  L.item('flare', { x: wingSpots[2][0] + 2, z: wingSpots[2][1], amount: 2 });
-  L.item('tape', { x: 67, z: 63, id: 'tape-elec', title: 'TAPE — "IT KNEW MY SISTER\'S NAME"' });
-
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: 67, z: 73, title: 'CONTROL ROOM LOG, LAST PAGE',
-    text: `Load on the west bus has been steady at 4.1MW for nine months.
-      Nothing is drawing it. I traced the feeder out past the wing and it goes
-      into the wall, and the wall is forty centimetres thick, and on the other
-      side of the wall is the wing I just came from.`,
-  });
-  L.note({
-    x: 68, z: 73, title: 'STICKY NOTE ON THE GLASS',
-    text: `GATE NEEDS 3 FUSES. THE CRATE BY THE GATE HAS 1 IN IT. IT IS THE WRONG
-      SIZE. WHOEVER KEEPS SWAPPING IT: I KNOW, AND IT ISN'T FUNNY.`,
-  });
-  L.note({
-    x: wingSpots[0][0], z: wingSpots[0][1] + 1, title: 'FOLDED INTO A CABINET DOOR',
-    text: `There's a man in here who says he's from bay four and he knew the layout
-      before I told him. His voice is right. His words are right. He stands too far
-      away to see properly and he never comes closer while I'm looking at him.`,
-  });
-  L.note({
-    x: wingSpots[1][0], z: wingSpots[1][1] + 1, title: 'GREASE PENCIL ON A TRANSFORMER',
-    text: `The hum is 60Hz and it is in tune with itself everywhere except the
-      north-east wing, where it is a quarter-tone flat. I have started avoiding
-      that wing. I cannot explain why a flat hum is worse. It is worse.`,
-  });
-  L.note({
-    x: wingSpots[2][0], z: wingSpots[2][1] + 1, title: 'HAND-DRAWN MAP, MOSTLY CROSSED OUT',
-    text: `Cable chase under cabinet 40 goes down. I put a stone in and counted:
-      four seconds, then a wet sound, then red light coming up out of it.
-      I am not going down there. I am writing it down so someone else can be
-      stupid instead.`,
-  });
-
-  // ---------------------------------------------------------------- company
-  L.entity('skinstealer', { x: wingSpots[3][0], z: wingSpots[3][1], state: 'patrol', leash: 40, keepsDistance: 10 });
-  L.entity('skinstealer', { x: 100, z: 66, state: 'dormant', wake: { after: 200 } });
-  L.pack('smiler', 3, 120, 66, 8, { state: 'patrol', leash: 12 });
-  L.pack('deathmoth', 6, 67, 40, 10, { state: 'patrol', leash: 20 });
-  L.pack('deathmoth', 5, 40, 100, 10, { state: 'patrol', leash: 20 });
-  L.entity('duller', { x: 30, z: 66, state: 'patrol', leash: 16 });
-  L.entity('duller', { x: 92, z: 120, state: 'patrol', leash: 16 });
-  L.entity('howler', { x: 66, z: 110, state: 'patrol', leash: 18 });
-  L.entity('watcher', { x: 118, z: 30, state: 'guard' });
-
   // ---------------------------------------------------------------- scares
   L.scare('lightBurst', { x: 48, z: 48, radius: 5 });
   L.scare('staticBurst', { x: 84, z: 40, radius: 7 });
@@ -163,9 +106,6 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- the way out
   L.spawnAt(4, 66, 0);
-  L.objective('Get through the freight gate at the east end.');
-  L.objective('Find three ceramic fuses — one in each of the transformer wings.', { id: 'obj1' });
-  L.objective('Whatever is copying a survivor: don\'t let it get inside ten metres.', { optional: true });
 
   L.trigger({ x: 67, z: 66, radius: 6, say: 'The control room still has power and a chair that is still warm.' });
   L.trigger({ x: wingSpots[0][0], z: wingSpots[0][1], radius: 5, say: 'Fuse. Ceramic, unbroken, the right size for once.' });
@@ -174,17 +114,17 @@ export function build(kit) {
   L.room(126, 60, 132, 72, { floor: 'metalPlate', wall: 'cinder' });
   L.prop('elevatorDoors', { x: 131, z: 66, rot: -Math.PI / 2 });
   L.light({ x: 128, z: 66, y: 4.0, color: 0xff4030, intensity: 0.8, radius: 8, fixture: 'emergencyLight', flicker: 0.4 });
-  L.exit({
-    x: 131, z: 66, kind: 'gate', to: 'level4', needs: 'fuse', label: 'FREIGHT GATE',
-    say: 'Three fuses in, the gate grinds up, and behind it is carpet. Office carpet.',
-  });
 
   // The cable chase under cabinet 40. Four seconds, a wet sound, red light.
   L.prop('trapdoor', { x: 40, z: 122 });
-  L.exit({
-    x: 40, z: 122, kind: 'trapdoor', to: 'level_run', hidden: true, label: 'CABLE CHASE',
-    say: 'You are falling in a straight line and the light coming up at you is red.',
-  });
+
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('sparks');
+  L.hideSpots('crate', 10);
+  L.monsterFar('skinstealer', { tell: 'stealerHello', speed: 4.4, patience: 1.5, sight: 1.3, wanders: 34, checksHides: 0.55 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: 131, z: 66 });
 
   return L.finish();
 }

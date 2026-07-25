@@ -85,60 +85,8 @@ export function build(kit) {
   L.scatter('crate', 20);
   L.scatter('skull', 10);
   L.scatter('chalkArrow', 30);
-  L.scatter('tapePile', 3);
-
-  // ---------------------------------------------------------------- pickups
-  L.item('flare', { x: bar[0][0], z: bar[0][1], amount: 3 });
-  L.item('flare', { x: bar[3][0], z: bar[3][1], amount: 3 });
-  L.item('medkit', { x: bar[1][0], z: bar[1][1] });
-  L.item('medkit', { x: bar[4][0], z: bar[4][1] });
-  L.item('almondWater', { x: bar[2][0], z: bar[2][1] });
-  L.item('battery', { x: bar[5][0], z: bar[5][1] });
-  L.item('crowbar', { x: bar[2][0] + 1, z: bar[2][1] });
-  L.item('tape', { x: bar[4][0] + 1, z: bar[4][1], id: 'tape-run', title: 'TAPE — "NINE SECONDS OF IT"' });
-
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: bar[0][0], z: bar[0][1] + 1, title: 'SCRAWLED ON A CRATE, ONE LINE',
-    text: `KEEP GOING. THAT IS THE WHOLE STRATEGY. I AM SORRY.`,
-  });
-  L.note({
-    x: bar[1][0], z: bar[1][1] + 1, title: 'ON THE FLOOR, IN A HURRY',
-    text: `They come from behind, always, and they keep coming, and there are always
-      more. Do not clear a corridor — you cannot. Take the corner, take the next
-      corner, drop a flare at the third one and do not look at what stops.`,
-  });
-  L.note({
-    x: bar[2][0], z: bar[2][1] + 1, title: 'TAPED INSIDE A DOOR',
-    text: `The doors only open one way. That is deliberate, and it is not on your
-      side, and it is not on theirs either — they cannot follow you through, they go
-      round, and they know the way round better than you do.`,
-  });
-  L.note({
-    x: bar[4][0], z: bar[4][1] + 1, title: 'A TAPE LABEL, NOTHING ELSE WRITTEN',
-    text: `Nine seconds of it is on this tape and I am not going to describe the
-      nine seconds. If you find the door — and there is a door, east side, and it is
-      grey and it is heavy and it says NO ADMITTANCE — go through it without
-      slowing down.`,
-  });
-  L.note({
-    x: bar[5][0], z: bar[5][1] + 1, title: 'BOARD BY A LIGHT FITTING',
-    text: `Every light in here works. Every single one, in a place where nothing else
-      is maintained. Somebody wants you to be able to see this happening to you.`,
-  });
-
-  // ---------------------------------------------------------------- company
   // The level spawns hounds behind you on a timer (rules.chase). These are the
   // ones already here.
-  L.pack('hound', 4, 66, 40, 10, { state: 'hunt' });
-  L.pack('hound', 3, 40, 100, 10, { state: 'patrol', leash: 50 });
-  L.pack('partygoer', 4, 100, 66, 12, { state: 'patrol', leash: 30 });
-  L.pack('partygoer', 3, 60, 120, 10, { state: 'dormant', wake: { after: 60 } });
-  L.entity('clump', { x: 100, z: 100, state: 'guard' });
-  L.entity('clump', { x: 30, z: 66, state: 'guard' });
-  L.entity('howler', { x: 76, z: 20, state: 'patrol', leash: 24 });
-  L.entity('howler', { x: 20, z: 120, state: 'patrol', leash: 24 });
-  L.entity('crawler', { x: 120, z: 40, state: 'patrol', leash: 30 });
 
   // ---------------------------------------------------------------- scares
   L.scare('lightsOut', { x: 60, z: 60, radius: 8 });
@@ -153,9 +101,6 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- the way out
   L.spawnAt(6, 6, Math.PI * 0.25);
-  L.objective('EAST SIDE. GREY DOOR. NO ADMITTANCE. GO.');
-  L.objective('Do not clear a corridor. You cannot.', { id: 'obj1' });
-  L.objective('Drop a flare at the third corner.', { optional: true });
 
   L.trigger({ x: 12, z: 12, radius: 6, objective: 'obj1', say: 'Something started running the moment you did.' });
   L.trigger({ x: 66, z: 66, radius: 8, say: 'More of them, ahead as well as behind. Take a branch, any branch.' });
@@ -164,10 +109,14 @@ export function build(kit) {
   L.room(126, 94, 133, 108, { floor: 'metalPlate', wall: 'cinder' });
   L.prop('doubleDoor', { x: 132, z: 101, rot: -Math.PI / 2 });
   L.light({ x: 129, z: 101, y: 3.1, color: 0xffb040, intensity: 1.0, radius: 10, fixture: 'flood' });
-  L.exit({
-    x: 132, z: 101, kind: 'door', to: 'level_end', label: 'NO ADMITTANCE',
-    say: 'Through, and shoulder it shut, and on the other side something enormous is idling.',
-  });
+
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('noisefloor');
+  L.hideSpots('crate', 10);
+  L.monsterFar('hound', { tell: 'houndSnarl', speed: 6.2, patience: 3.0, hearing: 2.0, wanders: 40, checksHides: 0.6 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: 132, z: 101 });
 
   return L.finish();
 }

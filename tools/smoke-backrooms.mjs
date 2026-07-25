@@ -72,7 +72,7 @@ globalThis.localStorage = { getItem: () => null, setItem() {}, removeItem() {} }
 globalThis.performance = globalThis.performance || { now: () => Date.now() };
 
 const kitMod = await import('../backrooms/src/kit.js');
-const { makeKit, C, WALKABLE, WET, MATS, PROPS, ENTITIES, SCARES, ITEMS, climbable } = kitMod;
+const { makeKit, C, WALKABLE, WET, MATS, PROPS, ENTITIES, SCARES, ITEMS, HIDES, GIMMICKS, climbable, minTrek } = kitMod;
 
 // ------------------------------------------------------------------ discover
 const files = (await readdir(levelsDir)).filter((f) => f.endsWith('.js') && f !== 'index.js').sort();
@@ -111,6 +111,11 @@ for (const m of mods) {
     for (const e of d.entities) seen.ents.add(e.type);
     for (const s of d.scares) seen.scares.add(s.name);
     for (const it of d.items) seen.items.add(it.type);
+    for (const h of d.hides) if (!HIDES.includes(h.kind)) fail(`${meta.id}: unknown hiding place "${h.kind}"`);
+    if (!GIMMICKS.includes(d.gimmick)) fail(`${meta.id}: unknown gimmick "${d.gimmick}"`);
+    if (!d.monster) fail(`${meta.id}: no monster`);
+    if (d.hides.length < 5) fail(`${meta.id}: only ${d.hides.length} hiding places`);
+    if (!d.exits.some((e) => e.kind === 'elevator')) fail(`${meta.id}: no lift`);
     for (const [set, vocab, what] of [
       [seen.mats, MATS, 'material'], [seen.props, PROPS, 'prop'],
       [seen.ents, ENTITIES, 'entity'], [seen.scares, SCARES, 'scare'], [seen.items, ITEMS, 'item'],
@@ -135,15 +140,7 @@ for (const m of mods) {
     if (nan) fail(`${meta.id}: ${nan} cells with broken floor/ceiling heights`);
     if (walkable < 300) warn(`${meta.id}: only ${walkable} walkable cells — small for a level of the backrooms`);
 
-    // ---- graph
-    for (const e of d.exits) {
-      if (e.to === 'END' || e.to === 'BACK' || ids.has(e.to)) continue;
-      // in --level mode a neighbour may simply not be written yet
-      const say = `${meta.id}: exit → "${e.to}" but there is no such level`;
-      if (only) warn(say); else fail(say);
-    }
     if (!d.objectives.length) fail(`${meta.id}: no objectives`);
-    if (!d.notes.length) warn(`${meta.id}: no notes — the lore lives in those`);
 
     // ---- determinism
     const again = build(makeKit(seed));
@@ -158,8 +155,9 @@ for (const m of mods) {
 
     for (const w of d.warnings) warn(`${meta.id}: ${w}`);
 
-    const dist = (() => {
-      // longest walk from spawn, as a rough "how big does this feel" number
+    const { dist, trek } = (() => {
+      // longest walk from spawn (how big the floor feels) and the walk to the lift
+      // (how much floor the player actually has to cross to finish it)
       let far = 0;
       const L = { w: d.w, h: d.h };
       const q = [d.spawn.z * d.w + d.spawn.x];
@@ -178,14 +176,18 @@ for (const m of mods) {
           q.push(j);
         }
       }
-      return far;
+      const e = d.exits.find((x) => x.kind === 'elevator') || d.exits[0];
+      return { dist: far, trek: seenD[Math.round(e.z) * d.w + Math.round(e.x)] };
     })();
+    if (trek < 0) fail(`${meta.id}: the lift is not walkable to from the spawn`);
+    else if (trek < minTrek(walkable)) warn(`${meta.id}: the lift is only ${trek} cells from the spawn`);
 
     ok(`${label}  ${String(walkable).padStart(6)} cells · ${String(d.lights.length).padStart(4)} lights · `
-      + `${String(d.props.length).padStart(4)} props · ${String(d.entities.length).padStart(3)} entities · `
-      + `${String(d.notes.length).padStart(2)} notes · walk ${dist} · ${ms.toFixed(0)}ms`);
+      + `${String(d.props.length).padStart(4)} props · ${String(d.hides.length).padStart(2)} hides · `
+      + `${(d.monster?.type || '—').padEnd(12)} ${String(d.gimmick).padEnd(10)} `
+      + `walk ${String(dist).padStart(3)} · lift ${String(trek).padStart(3)} · ${ms.toFixed(0)}ms`);
     if (VERBOSE) {
-      console.log(`      exits: ${d.exits.map((e) => `${e.kind}→${e.to}${e.hidden ? ' (hidden)' : ''}${e.needs ? ` [${e.needs}]` : ''}`).join(', ')}`);
+      console.log(`      lift at ${d.exits[0].x},${d.exits[0].z} · monster ${d.monster.type} at ${d.monster.x},${d.monster.z}`);
       console.log(`      tone: ${d.ambience.room}/${d.ambience.music} · fog ${d.fog.density} · objectives ${d.objectives.length}`);
     }
   } catch (e) {
@@ -194,8 +196,8 @@ for (const m of mods) {
   }
 }
 
-// ------------------------------------------------------------------ the chain
-if (!only) {
+// ------------------------------------------------------------------ the pool
+if (false) {
   const start = 'level0';
   if (!built.has(start)) {
     warn('no level0 — cannot check the chain');
@@ -227,6 +229,9 @@ if (!enginePresent) {
   console.log('skip  engine coverage (textures/props/bestiary/fx not present yet)');
 } else {
   try {
+    const powerups = await import('../backrooms/src/powerups.js');
+    if (Object.keys(powerups.CATALOG).length < 8) fail('the lift stall is too thin');
+    else ok(`stall: ${Object.keys(powerups.CATALOG).length} upgrades for sale`);
     const tex = await import('../backrooms/src/textures.js');
     const missingMats = MATS.filter((m) => !tex.RECIPES[m]);
     if (missingMats.length) fail(`textures.js has no recipe for: ${missingMats.join(', ')}`);

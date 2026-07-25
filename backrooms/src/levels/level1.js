@@ -94,64 +94,6 @@ export function build(kit) {
   L.scatter('wetFloorSign', 5);
   L.prop('dumpster', { x: 60, z: 18, rot: 0.2 });
   L.prop('shrine', { x: 74, z: 76 });
-
-  // ---------------------------------------------------------------- pickups
-  L.item('battery', { x: 22, z: 12 });
-  L.item('battery', { x: mz[0] + 10, z: mz[1] + 2 });
-  L.item('almondWater', { x: 74, z: 74 });
-  L.item('almondWater', { x: 120, z: 130 });
-  L.item('flare', { x: 62, z: 18, amount: 2 });
-  L.item('medkit', { x: 30, z: 118 });
-  L.item('crowbar', { x: mz[0] + 14, z: mz[1] + 6 });
-  L.item('tape', { x: 76, z: 78, id: 'tape-hab', title: 'TAPE — "SHIFT LOG"' });
-
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: 23, z: 12, title: 'CLIPBOARD, SHIFT LOG',
-    text: `06:00 — bay 4 restocked. 09:00 — bay 4 restocked. 12:00 — bay 4
-      restocked. Nothing has been taken out of bay 4 in the eleven weeks I have
-      been signing this sheet. I have started signing other people's names.`,
-  });
-  L.note({
-    x: 75, z: 76, title: 'CARDBOARD, MARKER, PROPPED ON A CRATE',
-    text: `Whoever left the candles: thank you. I sat here two days and nothing
-      came down the aisle. They don't like it lit and they don't like standing
-      water. That's two things. Two things is a plan.`,
-  });
-  L.note({
-    x: mz[0] + 11, z: mz[1] + 2, title: 'SAFETY NOTICE, LAMINATED',
-    text: `HEARING PROTECTION MUST BE WORN IN THIS AREA. Overleaf: HEARING
-      PROTECTION MUST NOT BE WORN IN THIS AREA. Both sides are signed by the
-      same manager, four minutes apart.`,
-  });
-  L.note({
-    x: 31, z: 118, title: 'WATERPROOF NOTEBOOK, PIT EDGE',
-    text: `Waded the pit end to end. Floor's cracked open at the deep corner and
-      there's air coming up out of it — cold, and it smells like a cave, like
-      wet stone. Something down there is a lot bigger than this building.`,
-  });
-  L.note({
-    x: 121, z: 130, title: 'SPRAYED ON A COLLAPSED WALL',
-    text: `RUN AND THEY COME. WALK AND THEY WAIT. STOP AND THEY LEAVE.
-      I HAVE ONLY EVER MANAGED TWO OF THE THREE.`,
-  });
-  L.note({
-    x: 62, z: 19, title: 'INVOICE, WATER-STAINED',
-    text: `SHIPPED TO: LEVEL 1, BAY 4. CONTENTS: 1 × PALLET, EMPTY.
-      QUANTITY: 41,000. DELIVERY WINDOW: ONGOING.`,
-  });
-
-  // ---------------------------------------------------------------- company
-  L.entity('duller', { x: 54, z: 60, state: 'patrol', leash: 14 });
-  L.pack('duller', 3, 88, 40, 6, { state: 'patrol', leash: 10 });
-  L.entity('howler', { x: 70, z: 100, state: 'patrol', leash: 20 });
-  L.pack('hound', 4, 128, 126, 8, { state: 'dormant', tag: 'bay4', wake: { after: 150 } });
-  L.entity('hound', { x: 104, z: 74, state: 'patrol', leash: 34 });
-  L.entity('hound', { x: 40, z: 138, state: 'dormant', tag: 'bay4' });
-  L.entity('clump', { x: 132, z: 96, state: 'patrol', leash: 8 });
-  L.entity('watcher', { x: 72, z: 6, state: 'guard' });
-  L.entity('crawler', { x: 118, z: 118, state: 'dormant', tag: 'bay4' });
-
   // ---------------------------------------------------------------- scares
   L.scare('lightBurst', { x: 60, z: 44, radius: 5 });
   L.scare('bodyFall', { x: 88, z: 66, radius: 9 });
@@ -165,9 +107,6 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- the way out
   L.spawnAt(8, 8, Math.PI * 0.25);
-  L.objective('Find the fire door in the far corner of the bays.');
-  L.objective('The mezzanine office has the breaker for the door lights.', { id: 'obj1' });
-  L.objective('Don\'t run in the aisles. They hear it.', { optional: true });
 
   L.trigger({ x: mz[0] + 8, z: mz[1] + 4, radius: 4, objective: 'obj1', say: 'The breaker throws. Somewhere behind you, a row of lights comes back on.' });
   L.trigger({ x: 70, z: 70, radius: 8, say: 'Claw marks on the concrete. Waist height, four of them, a metre apart.' });
@@ -177,16 +116,16 @@ export function build(kit) {
   L.prop('doubleDoor', { x: 145, z: 73, rot: Math.PI / 2 });
   L.prop('exitSign', { x: 144, z: 73 });
   L.light({ x: 143, z: 73, y: 3.4, color: 0x60ff90, intensity: 0.7, radius: 8, fixture: 'none' });
-  L.exit({
-    x: 145, z: 73, kind: 'door', to: 'level2', label: 'FIRE DOOR B',
-    say: 'The bar gives. Behind it: stairs down, and the smell of hot metal.',
-  });
 
   // The crack in the flooded pit. Cold cave air, and a long way down.
-  L.exit({
-    x: 19, z: 123, kind: 'crack', to: 'level8', hidden: true, label: 'THE CRACK',
-    say: 'The concrete has split. The water is running into it, and so are you.',
-  });
+
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('noisefloor');
+  L.hideSpots('crate', 10);
+  L.monsterFar('clump', { tell: 'clumpWet', speed: 2.0, patience: 1.3, hearing: 1.4, wanders: 22, checksHides: 0.5 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: 145, z: 73 });
 
   return L.finish();
 }

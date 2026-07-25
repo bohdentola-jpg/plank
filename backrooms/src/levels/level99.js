@@ -103,62 +103,6 @@ export function build(kit) {
   L.scatter('campLight', 8);
   L.scatter('skull', 6);
   L.scatter('carWreck', 4);
-  L.scatter('tapePile', 3);
-
-  // ---------------------------------------------------------------- pickups
-  L.item('battery', { x: masts[0][0] + 6, z: masts[0][1] + 5, amount: 2 });
-  L.item('battery', { x: masts[2][0] + 6, z: masts[2][1] + 5 });
-  L.item('almondWater', { x: masts[1][0] + 6, z: masts[1][1] + 5 });
-  L.item('almondWater', { x: masts[3][0] + 6, z: masts[3][1] + 5 });
-  L.item('medkit', { x: masts[1][0] + 7, z: masts[1][1] + 6 });
-  L.item('flare', { x: masts[2][0] + 7, z: masts[2][1] + 6, amount: 3 });
-  L.item('tape', { x: 76, z: 62, id: 'tape-snow', title: 'TAPE — "THE QUEUE"' });
-
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: masts[0][0] + 6, z: masts[0][1] + 6, title: 'MAST HUT 1, LOG BOOK',
-    text: `Transmitting on the hour, receiving nothing. The mast light is on a timer
-      I can't find and can't reset. I have moved the hut's thermometer three times
-      to check it: minus nine, everywhere, even in here with the heater going, and
-      the heater is going, and the tea is hot. Minus nine.`,
-  });
-  L.note({
-    x: masts[1][0] + 6, z: masts[1][1] + 6, title: 'MAST HUT 2, TAPED TO THE RADIO',
-    text: `You get about forty minutes out there before the shivering starts and
-      about ninety before the decisions get stupid. Do not walk mast to mast in a
-      straight line — you cannot walk in a straight line out there and you will
-      believe you are.`,
-  });
-  L.note({
-    x: masts[3][0] + 6, z: masts[3][1] + 6, title: 'MAST HUT 4, SCRATCHED INTO THE DOOR FRAME',
-    text: `Counted the masts: four. Walked to all four in one day. Counted again from
-      hut 4: five. The fifth is in the direction with no tracks in the snow, and
-      there are tracks in the snow going toward it, and they are mine.`,
-  });
-  L.note({
-    x: 77, z: 62, title: 'DROPPED BESIDE THE LINE OF PEOPLE',
-    text: `Fourteen of them, standing, facing north-east, snow up to their knees and
-      no drift built up against them, which means they were not standing there when
-      it fell. I walked round the front of one. There is nothing wrong with its face.
-      That is the worst part and I cannot explain why.`,
-  });
-  L.note({
-    x: 140, z: 140, title: 'ON THE SHACK DOOR, PAINTED',
-    text: `INSIDE IS WARM. INSIDE IS NOT RIGHT. GO IN ANYWAY — YOU HAVE NINETY
-      MINUTES OUT HERE AND THE DOOR IS THE ONLY THING LEFT.`,
-  });
-
-  // ---------------------------------------------------------------- company
-  for (const [lx, lz] of line) L.entity('duller', { x: lx, z: lz, state: 'guard' });
-  L.pack('hound', 4, 60, 100, 12, { state: 'patrol', leash: 60 });
-  L.pack('hound', 3, 110, 70, 12, { state: 'patrol', leash: 60 });
-  L.pack('deathmoth', 6, masts[1][0], masts[1][1] + 2, 8, { state: 'patrol', leash: 12 });
-  L.entity('watcher', { x: 76, z: 8, state: 'guard' });
-  L.entity('watcher', { x: 8, z: 76, state: 'guard' });
-  L.entity('faceling', { x: 100, z: 130, state: 'patrol', leash: 30 });
-  L.entity('howler', { x: 40, z: 70, state: 'patrol', leash: 24 });
-  L.entity('skinstealer', { x: 130, z: 90, state: 'dormant', wake: { after: 180 }, keepsDistance: 14 });
-
   // ---------------------------------------------------------------- scares
   L.scare('shadowCross', { x: 50, z: 50, radius: 9 });
   L.scare('whisper', { x: 80, z: 66, radius: 8, text: 'One of them, without turning round, says you are nearly there.' });
@@ -172,9 +116,6 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- the way out
   L.spawnAt(8, 8, Math.PI * 0.25);
-  L.objective('Reach the radio shack in the far south-east corner.');
-  L.objective('Warm up in the mast huts on the way. All of them, if you can.', { id: 'obj1' });
-  L.objective('Do not walk in a straight line. You cannot, and you will think you are.', { optional: true });
 
   L.trigger({ x: masts[0][0] + 6, z: masts[0][1] + 5, radius: 5, objective: 'obj1', say: 'Warm. The kettle is hot and the thermometer still says minus nine.' });
   L.trigger({ x: 76, z: 62, radius: 8, say: 'Fourteen people, standing in the snow, facing away, with no drift built up against them.' });
@@ -187,10 +128,14 @@ export function build(kit) {
   L.prop('table', { x: 142, z: 141, rot: 0 });
   L.prop('radio', { x: 142, z: 141, y: 0.78 });
   L.light({ x: 142, z: 141, y: 2.5, color: 0xff4030, intensity: 1.3, radius: 12, fixture: 'bulb', flicker: 0.25 });
-  L.exit({
-    x: 142, z: 145, kind: 'door', to: 'level_run', label: 'RADIO SHACK',
-    say: 'Inside it is warm and red and the far wall is a corridor, and the corridor is already running.',
-  });
+
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('cold');
+  L.hideSpots('drift', 10);
+  L.monsterFar('hound', { tell: 'houndBreath', speed: 5.6, patience: 1.4, hearing: 1.9, wanders: 60, checksHides: 0.4 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: 142, z: 145 });
 
   return L.finish();
 }

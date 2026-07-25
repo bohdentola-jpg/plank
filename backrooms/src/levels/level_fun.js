@@ -88,6 +88,13 @@ export function build(kit) {
     L.prop('chair', { x: hx + kit.rand(-9, 9), z: hz + kit.rand(-7, 7), rot: kit.rand(0, 6.28) });
   }
 
+  // Party lights strung through everything: the level is warm and bright, and that is
+  // most of why it is unbearable.
+  L.lightGrid(5, 5, 135, 135, {
+    every: 6, color: 0xffd0b0, intensity: 0.7, radius: 12, fixture: 'bulb',
+    flickerChance: 0.22, deadChance: 0.08, brokenChance: 0.03,
+  });
+
   // ---------------------------------------------------------------- dressing
   L.scatter('balloonCluster', 60);
   L.scatter('streamers', 60, { opts: { height: 3.2 } });
@@ -98,66 +105,10 @@ export function build(kit) {
   L.scatter('picture', 20);
   L.scatter('rug', 20);
   L.scatter('graffiti', 12);
-  L.scatter('tapePile', 3);
-
-  // ---------------------------------------------------------------- pickups
   const at = (i, dx = 0, dz = 0) => [rooms[i % rooms.length][0] + dx, rooms[i % rooms.length][1] + dz];
-  L.item('almondWater', { x: at(1)[0], z: at(1)[1] });
-  L.item('almondWater', { x: at(5)[0], z: at(5)[1] });
-  L.item('battery', { x: at(3)[0], z: at(3)[1] });
-  L.item('battery', { x: at(8)[0], z: at(8)[1] });
-  L.item('medkit', { x: at(11)[0], z: at(11)[1] });
-  L.item('flare', { x: at(6)[0], z: at(6)[1], amount: 2 });
-  L.item('tape', { x: hx + 2, z: hz + 2, id: 'tape-fun', title: 'TAPE — "MANY HAPPY RETURNS"' });
-
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: at(1, 1)[0], z: at(1, 1)[1], title: 'PLACE CARD, HAND-LETTERED',
-    text: `Your name, spelled correctly, in gold pen, on a card that has been
-      leaned against a paper plate for long enough that the plate has gone soft
-      underneath it. There is a party hat next to it, adjusted to a size that would
-      fit you.`,
-  });
-  L.note({
-    x: at(5, 1)[0], z: at(5, 1)[1], title: 'CRUMPLED IN A PARTY HAT',
-    text: `They are polite for as long as you are quiet. I have walked four rooms
-      of them with my hands at my sides and they only turned their heads. Then I
-      sneezed. I got the door shut. I am not going to write about the noise they
-      made because I do not want to read it back.`,
-  });
-  L.note({
-    x: at(8, 1)[0], z: at(8, 1)[1], title: 'BIRTHDAY CARD, UNSIGNED',
-    text: `Inside, printed: SORRY YOU'RE LEAVING. Somebody has crossed out LEAVING
-      and written STAYING, and then crossed that out too, and written LEAVING again
-      underneath, in a much shakier hand.`,
-  });
-  L.note({
-    x: hx + 1, z: hz + 1, title: 'ON THE BIG CAKE, ON A PLASTIC PICK',
-    text: `41 CANDLES. Nobody in this level can be forty-one, because nobody in this
-      level is anything. I have counted the candles four times and it is forty-one
-      and one of them has been lit recently.`,
-  });
-  L.note({
-    x: hx, z: hall[5] - 2, title: 'PINNED TO THE BIG BANNER',
-    text: `The banner is a door. Look at the bottom of it — the carpet under it is
-      worn in a strip, which means it has been pushed aside a lot, which means
-      somebody has done this before you. That is the only good news in this level and
-      you should take it.`,
-  });
-
-  // ---------------------------------------------------------------- company
   for (let i = 0; i < rooms.length; i++) {
     const [cx, cz] = rooms[i];
-    L.pack('partygoer', kit.randInt(2, 4), cx, cz, 4, {
-      state: i % 3 === 0 ? 'patrol' : 'dormant', leash: 10, tag: 'guests',
-      wake: { after: 30 + i * 12 },
-    });
   }
-  L.pack('duller', 10, hx, hz, 8, { state: 'patrol', leash: 12 });
-  L.entity('skinstealer', { x: at(4)[0], z: at(4)[1], state: 'patrol', leash: 30, keepsDistance: 8 });
-  L.entity('howler', { x: at(9)[0], z: at(9)[1], state: 'patrol', leash: 14 });
-  L.entity('clump', { x: at(13)[0], z: at(13)[1], state: 'patrol', leash: 8 });
-  L.entity('watcher', { x: at(2)[0], z: at(2)[1], state: 'guard' });
 
   // ---------------------------------------------------------------- scares
   L.scare('crowdLaugh', { x: at(0)[0], z: at(0)[1], radius: 9 });
@@ -173,18 +124,18 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- the way out
   L.spawnAt(rooms[0][0], rooms[0][1], 0);
-  L.objective('Get to the main hall and behind the biggest banner.');
-  L.objective('Walk. Do not run in here, not once.', { id: 'obj1' });
-  L.objective('Read your place card. Then leave it where it is.', { optional: true });
 
   L.trigger({ x: rooms[0][0], z: rooms[0][1], radius: 6, objective: 'obj1', say: 'Muzak, warm light, and every head in the room turning to see who came in.' });
   L.trigger({ x: hx, z: hz, radius: 8, say: 'Forty-one candles, and one of them has been lit recently.' });
   L.trigger({ x: hx, z: hall[5] - 3, radius: 5, say: 'The carpet under the banner is worn in a strip.' });
 
-  L.exit({
-    x: hx, z: hall[5] - 1, kind: 'door', to: 'level_archives', label: 'BEHIND THE BANNER',
-    say: 'Behind the paper: a fire door, and past it, shelving, and a silence you can feel on your teeth.',
-  });
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('crowd');
+  L.hideSpots('crate', 10);
+  L.monsterFar('partygoer', { tell: 'partyGiggle', speed: 6.0, patience: 1.6, hearing: 2.0, wanders: 30, checksHides: 0.7 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: hx, z: hall[5] - 1 });
 
   return L.finish();
 }

@@ -127,7 +127,6 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- dressing
   L.scatter('lockers', 40);
-  L.scatter('noteSheet', 60);
   L.scatter('corkboard', 20);
   L.scatter('picture', 40);
   L.scatter('trashcan', 22);
@@ -138,71 +137,8 @@ export function build(kit) {
   L.scatter('graffiti', 16);
   L.scatter('chalkArrow', 20);
   L.scatter('balloonCluster', 6);
-  L.scatter('tapePile', 3);
-
-  // ---------------------------------------------------------------- pickups
-  L.item('battery', { x: rooms[0][0], z: rooms[0][1] });
-  L.item('battery', { x: rooms[7][0], z: rooms[7][1] });
-  L.item('almondWater', { x: cx + 20, z: cz + 10 });
-  L.item('almondWater', { x: lx + 17, z: lz + 2 });
-  L.item('medkit', { x: rooms[4][0], z: rooms[4][1] });
-  L.item('glowstick', { x: rooms[10][0], z: rooms[10][1], amount: 3 });
-  L.item('flare', { x: gx + 6, z: gz + 6, amount: 2 });
-  L.item('tape', { x: rooms[5][0], z: rooms[5][1], id: 'tape-school', title: 'TAPE — "ROOM 8, WEDNESDAY"' });
-
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: rooms[0][0], z: rooms[0][1] + 1, title: 'CRAYON ON SUGAR PAPER, TAPED AT KNEE HEIGHT',
-    text: `A drawing of a corridor, done in orange, with lockers on both sides done
-      carefully. At the far end there is a stick figure holding a small black
-      rectangle up to its face. Underneath, in pencil, an adult hand has written the
-      date. The date is today.`,
-  });
-  L.note({
-    x: rooms[4][0], z: rooms[4][1] + 1, title: 'CLASS REGISTER, ROOM 8',
-    text: `Twenty-nine names, every one ticked present, every day, for as long as
-      the book goes back. At the bottom of the last page, in the same neat teacher's
-      hand: they are all present. They have always all been present. I would like
-      to be marked absent, please.`,
-  });
-  L.note({
-    x: rooms[7][0], z: rooms[7][1] + 1, title: 'PINNED TO A CORKBOARD, LAMINATED',
-    text: `FIRE DRILL PROCEDURE: on hearing the bell, line up quietly and proceed
-      to the gymnasium. Do not stop for coats. Do not stop for anyone. Underneath,
-      in biro: the bell has gone forty times since I got here and I have never once
-      seen anyone in the corridor when it does.`,
-  });
-  L.note({
-    x: lx + 17, z: lz + 3, title: 'LIBRARY, SLIP IN A BOOK POCKET',
-    text: `DUE BACK: the date has been stamped and re-stamped so many times the card
-      has gone soft. Every stamp is the same day. The book is a picture book about a
-      boy who gets lost in a building and the last page has been carefully cut out
-      of every copy.`,
-  });
-  L.note({
-    x: cx + 21, z: cz + 10, title: 'CAFETERIA, CHALKED MENU BOARD',
-    text: `TODAY: gravy, potatoes, sponge and custard. TOMORROW: gravy, potatoes,
-      sponge and custard. Someone has added, very small, in the corner: it is warm
-      when I get here and I have never seen it served and I eat it every day.`,
-  });
-  L.note({
-    x: gx + 7, z: gz + 6, title: 'GYMNASIUM, WRITTEN ON A CRASH MAT',
-    text: `The uniforms in the classrooms are on stands. They are wearing shoes,
-      which stands don't. Do not turn your back on one in a room with more than one
-      of them. Count them going in and count them coming out.`,
-  });
-
-  // ---------------------------------------------------------------- company
   for (let i = 0; i < rooms.length; i += 2) {
-    L.entity('mannequin', { x: rooms[i][0] + 4, z: rooms[i][1] - 3, state: 'patrol' });
   }
-  L.pack('faceling', 4, gx + 17, gz + 20, 12, { state: 'patrol', leash: 18 });
-  L.entity('howler', { x: cx + 20, z: cz + 10, state: 'guard' });
-  L.pack('partygoer', 3, 129, 27, 4, { state: 'dormant', tag: 'music', wake: { after: 200 } });
-  L.pack('duller', 6, 68, 84, 14, { state: 'patrol', leash: 18 });
-  L.entity('watcher', { x: 21, z: 138, state: 'guard' });
-  L.entity('crawler', { x: lx + 17, z: lz + 10, state: 'dormant', wake: { after: 120 } });
-  L.entity('skinstealer', { x: 68, z: 20, state: 'patrol', leash: 40, keepsDistance: 12 });
 
   // ---------------------------------------------------------------- scares
   L.scare('faceInHall', { x: 40, z: 21, radius: 8 });
@@ -219,9 +155,6 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- the way out
   L.spawnAt(6, 21, 0);
-  L.objective('Get to the gymnasium and out through the fire door at the back of it.');
-  L.objective('Read what is taped up in Room 8.', { id: 'obj1' });
-  L.objective('Count the uniforms in every classroom, going in and coming out.', { optional: true });
 
   L.trigger({ x: rooms[0][0], z: rooms[0][1], radius: 5, objective: 'obj1', say: 'The drawing has today\'s date on it in an adult\'s handwriting.' });
   L.trigger({ x: 69, z: 85, radius: 6, say: 'The bell goes. Nothing comes out of any of the doors.' });
@@ -230,10 +163,14 @@ export function build(kit) {
   L.prop('doubleDoor', { x: gx + 32, z: gz + 39, rot: 0 });
   L.prop('exitSign', { x: gx + 32, z: gz + 38 });
   L.light({ x: gx + 32, z: gz + 37, y: 3.2, color: 0x60ff90, intensity: 0.7, radius: 8, fixture: 'none' });
-  L.exit({
-    x: gx + 32, z: gz + 38, kind: 'door', to: 'level188', label: 'GYM FIRE DOOR',
-    say: 'The bar gives, and behind it is a corridor with windows, going a very long way.',
-  });
+
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('blackout');
+  L.hideSpots('locker', 10);
+  L.monsterFar('mannequin', { tell: 'mannequinScrape', speed: 6.6, patience: 2.2, wanders: 40, checksHides: 0.4 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: gx + 32, z: gz + 38 });
 
   return L.finish();
 }

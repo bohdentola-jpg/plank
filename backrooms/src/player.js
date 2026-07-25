@@ -36,6 +36,12 @@ export class Player {
     this.waist = 0;               // how deep the water is right now
     this.swimming = false;
     this.speedScale = 1;
+    this.mods = null;              // run modifiers from the lift shop
+    this.hidden = false;
+    this.hideSpot = null;
+    this.hideT = 0;                // how long we have been in cover
+    this.hideJustEntered = false;   // true for a moment after getting in
+    this.hideBreath = 100;          // holding still is not free
     this.onFootstep = opts.onFootstep || null;
     this.onSplash = opts.onSplash || null;
     this.onLand = opts.onLand || null;
@@ -134,12 +140,14 @@ export class Player {
     // ---- speed and stamina
     const wantSprint = input.sprint && mag > 0 && !wantCrouch && this.stamina > 1 && !this.swimming;
     this.sprinting = wantSprint;
-    let speed = wantCrouch ? 1.25 : wantSprint ? 5.1 : 2.85;
+    const mod = this.mods || {};
+    let speed = (wantCrouch ? 1.25 : wantSprint ? 5.1 : 2.85) * (mod.speed ?? 1);
     if (this.swimming) speed = 2.1 * (rules.swimSpeed ?? 1);
     else if (this.waist > 0.35) speed *= 1 - clamp01(this.waist / 1.6) * 0.45;
     if (rules.cold) speed *= 0.88;
     speed *= this.speedScale;
-    const drain = (wantSprint ? 16 : 0) + (rules.cold ? 3.5 : 0) + (this.swimming ? 7 : 0);
+    const drain = ((wantSprint ? 16 : 0) + (rules.cold ? 3.5 : 0) + (this.swimming ? 7 : 0))
+      / (mod.stamina ?? 1);
     this.stamina = clamp(this.stamina - drain * dt + (wantSprint || this.swimming ? 0 : 10 * dt), 0, 100);
 
     // ---- integrate
@@ -150,7 +158,10 @@ export class Player {
       // tread water: sink slowly, rise while holding jump/up
       const want = input.jump ? 1.4 : input.crouch ? -1.6 : (surf - 0.55 - this.pos.y) * 1.6;
       this.vel.y = damp(this.vel.y, want, 4, dt);
-      this.breath = this.submerged ? clamp(this.breath - 12 * dt, 0, 100) : clamp(this.breath + 22 * dt, 0, 100);
+      const lung = mod.breath ?? 1;
+      this.breath = this.submerged
+        ? clamp(this.breath - (12 / lung) * dt, 0, 100)
+        : clamp(this.breath + 22 * dt, 0, 100);
       this.onGround = false;
       this.fallFrom = null;
     } else {
@@ -208,10 +219,46 @@ export class Player {
     this.sway = Math.sin(this.walkCycle * Math.PI * 0.5) * 0.012 * clamp01(planar / 3);
 
     // noise: sprinting in water is the loudest thing you can do down here
-    const made = (planar / 5.2) * (wantSprint ? 1 : wantCrouch ? 0.18 : 0.5) * (this.waist > 0.2 ? 1.5 : 1);
+    const made = (planar / 5.2) * (wantSprint ? 1 : wantCrouch ? 0.18 : 0.5)
+      * (this.waist > 0.2 ? 1.5 : 1) * (mod.noise ?? 1);
     this.noise = Math.max(damp(this.noise, 0, 1.6, dt), Math.min(1, made));
 
     return { depth, floorY, ground };
+  }
+
+  // ---------------------------------------------------------------- hiding
+  // In cover you cannot move and you cannot see much, and nothing can see you
+  // either — unless it watched you climb in.
+  enterHide(spot) {
+    if (this.hidden) return;
+    this.hidden = true;
+    this.hideSpot = spot;
+    this.hideT = 0;
+    this.hideJustEntered = true;
+    this.hideBreath = 100;
+    this.vel.x = this.vel.z = 0;
+    this.noise = Math.min(this.noise, 0.2);
+  }
+
+  leaveHide() {
+    if (!this.hidden) return;
+    this.hidden = false;
+    this.hideSpot = null;
+    this.hideJustEntered = false;
+  }
+
+  updateHide(dt, mods = {}) {
+    if (!this.hidden) return;
+    this.hideT += dt;
+    // the window in which the monster can have seen you get in
+    if (this.hideT > 1.6 / (mods.hideSpeed ?? 1)) this.hideJustEntered = false;
+    // holding still is fine; holding your breath while it stands there is not
+    const near = this.hideThreat ?? 0;
+    this.hideBreath = clamp(
+      this.hideBreath - near * (9 / (mods.breath ?? 1)) * dt + (near < 0.2 ? 14 * dt : 0),
+      0, 100,
+    );
+    this.noise = Math.max(0, this.noise - dt * 2);
   }
 
   turn(dx, dy, sens = 1) {

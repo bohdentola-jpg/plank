@@ -107,65 +107,10 @@ export function build(kit) {
   L.scatter('deadTree', 20);
   L.scatter('graffiti', 24);
   L.scatter('rubblePile', 14);
-  L.scatter('tapePile', 3);
-
-  // ---------------------------------------------------------------- pickups
-  L.item('battery', { x: px + 3, z: pz + 3 });
-  L.item('battery', { x: 40, z: 121 });
-  L.item('almondWater', { x: px - 4, z: pz - 4 });
-  L.item('almondWater', { x: 130, z: 30 });
-  L.item('medkit', { x: 30, z: 60 });
-  L.item('flare', { x: 126, z: 120, amount: 2 });
-  L.item('glowstick', { x: 60, z: 30, amount: 3 });
-  L.item('tape', { x: px, z: pz + 4, id: 'tape-city', title: 'TAPE — "THE WINDOWS ON 5TH"' });
-
-  // ---------------------------------------------------------------- lore
-  L.note({
-    x: px + 1, z: pz + 3, title: 'PLAQUE ON THE FOUNTAIN, RE-ENGRAVED',
-    text: `THIS FOUNTAIN WAS GIVEN TO THE CITY BY ITS PEOPLE. Underneath, cut
-      much more recently and much less neatly: THE CITY IS STILL HERE. THE PEOPLE
-      ARE THE PART THAT DIDN'T ARRIVE.`,
-  });
-  L.note({
-    x: 41, z: 121, title: 'UNDERPASS, SPRAYED WAIST HEIGHT',
-    text: `Traffic noise but no traffic. I stood on the ramp for two hours with a
-      stopwatch: the sound comes past every forty seconds, north to south, at about
-      fifty. There is nothing to see. The fog moves when it goes by.`,
-  });
-  L.note({
-    x: 131, z: 30, title: 'IN A CAR, ON THE PASSENGER SEAT',
-    text: `Keys in it, tank half full, turns over first time. I have driven eleven
-      blocks in every direction and arrived back at this junction each time, which
-      is fine, because the fuel gauge does not move either.`,
-  });
-  L.note({
-    x: 31, z: 60, title: 'SHOP DOOR, TAPED FROM THE INSIDE',
-    text: `The ones in the windows are not statues and they are not alive. They are
-      in a different window on every block and always the same distance from the
-      street. If you count six blocks and one of them is missing, the missing one is
-      the one behind you.`,
-  });
-  L.note({
-    x: 127, z: 120, title: 'BUS TIMETABLE, ANNOTATED',
-    text: `EVERY 12 MINUTES, ALL NIGHT. Someone has ticked every column for six
-      pages. Then: it does come. It has no driver and it does not open its doors and
-      it is full and everybody on it is facing the back.`,
-  });
-
-  // ---------------------------------------------------------------- company
   for (let i = 0; i < 10; i++) {
     const b = blocks[(i * 3) % blocks.length];
     if (!b) break;
-    L.entity('windows', { x: b[0] - 1, z: Math.floor((b[1] + b[3]) / 2), state: 'guard' });
   }
-  L.pack('mannequin', 4, 100, 60, 20, { state: 'patrol' });
-  L.pack('mannequin', 3, 40, 90, 18, { state: 'patrol' });
-  L.pack('duller', 8, px, pz + 20, 10, { state: 'patrol', leash: 22 });
-  L.pack('duller', 6, 130, 100, 12, { state: 'patrol', leash: 18 });
-  L.entity('howler', { x: 26, z: 20, state: 'patrol', leash: 12 });
-  L.entity('faceling', { x: 60, z: 140, state: 'patrol', leash: 30 });
-  L.entity('watcher', { x: 150, z: 78, state: 'guard' });
-  L.entity('crawler', { x: 40, z: 121, state: 'dormant', wake: { after: 90 } });
 
   // ---------------------------------------------------------------- scares
   L.scare('facePressWindow', { x: 60, z: 40, radius: 6 });
@@ -181,9 +126,6 @@ export function build(kit) {
 
   // ---------------------------------------------------------------- the way out
   L.spawnAt(6, 78, 0);
-  L.objective('Cross the city to the parking ramp on the east edge.');
-  L.objective('Get through the plaza — it is the only place you can see more than ten metres.', { id: 'obj1' });
-  L.objective('Count the mannequins per block. Notice when one is missing.', { optional: true });
 
   L.trigger({ x: px, z: pz, radius: 10, objective: 'obj1', say: 'The fountain is running. There is nowhere for the water to come from.' });
   L.trigger({ x: 40, z: 121, radius: 6, say: 'A ceiling. After all that fog, a ceiling, and it is a relief, and it should not be.' });
@@ -193,10 +135,14 @@ export function build(kit) {
   L.ramp(150, 94, 150, 106, 0, -2.4, { width: 4 });
   L.prop('trafficCone', { x: 150, z: 96 });
   L.light({ x: 150, z: 100, y: 4, color: 0xffa040, intensity: 0.9, radius: 12, fixture: 'tube', flicker: 0.3 });
-  L.exit({
-    x: 150, z: 106, kind: 'stairs', to: 'level27', label: 'PARKING RAMP',
-    say: 'Down the ramp. The fog stops at the height bar as if it has been told to.',
-  });
+
+  // ---------------------------------------------------------------- the floor
+  // One thing lives here, there is cover, and the way out is a lift.
+  L.gimmick('fogbank');
+  L.hideSpots('car', 10);
+  L.monsterFar('mannequin', { tell: 'none', speed: 7.0, patience: 2.4, wanders: 50, checksHides: 0.3 });
+  L.objective('Find the service lift.');
+  L.elevatorAt({ x: 150, z: 106 });
 
   return L.finish();
 }
