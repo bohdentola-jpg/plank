@@ -105,6 +105,12 @@ html, body {
 .how-col ul, .how-col ol { margin: 0 0 14px; padding-left: 18px; }
 .how-col li { margin-bottom: 5px; }
 .how-note { font-size: 11px; color: #8a8674; border-left: 2px solid #3a3a44; padding-left: 8px; }
+/* somebody wrote the cheat on the inlay card before they sold the tape on */
+.how-cheat {
+  font-size: 10px; letter-spacing: 1px; color: #6f8f78;
+  border-left: 2px solid #2a4a36; padding-left: 8px; margin-top: 12px;
+}
+.how-cheat b { color: #40ff90; letter-spacing: 2px; }
 
 /* options */
 .opt-row {
@@ -224,6 +230,17 @@ html, body {
   font-size: 13px; letter-spacing: 6px; color: #ff5040;
   animation: blink 0.55s steps(2, end) infinite;
 }
+
+/* the cheat's readout: bottom-centre, out of the way of everything real */
+.hud-xray {
+  position: absolute; left: 50%; bottom: 4.5vh; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 14px;
+  font-size: 10px; letter-spacing: 2px; color: #8ef0b4;
+  background: rgba(4, 10, 6, 0.5); padding: 4px 12px; border: 1px solid #1e4030;
+}
+.hud-xray .xr-tag { color: #40ff90; letter-spacing: 4px; }
+.hud-xray .xr-m { color: #ff8a7a; }
+.hud-xray .xr-m.near { color: #ff4030; animation: blink 0.55s steps(2, end) infinite; }
 
 /* in cover: the frame closes down to slats and you cannot move */
 .hide-frame { position: absolute; inset: 0; }

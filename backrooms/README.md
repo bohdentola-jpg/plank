@@ -58,6 +58,12 @@ reason to go again.
 The torch starts on, because some of these floors have nothing else. Recording
 advances the tape, and the timecode in the corner is the only clock you get.
 
+**CTRL + SHIFT + X** is the cheat, written on the inlay card by whoever owned the tape
+before you: the thing hunting you and the way off the floor, outlined through every wall
+in the level, with a column of light over each so you can see them from the far end of
+the floor and the range to both along the bottom of the frame. It works from anywhere on
+any floor. It also takes the game away from you.
+
 ## The floors
 
 Every floor brings its own trick — the thing that makes it that floor and not the

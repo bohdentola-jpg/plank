@@ -83,6 +83,51 @@ async function playFloor() {
   });
   if (!hid.inCover) fail('could not get into cover'); else ok(`hid in the ${hid.kind}, and got out again (${hid.outAgain})`);
 
+  // ---------------------------------------------------------------- the cheat
+  // CTRL+SHIFT+X, pressed for real, and then counted in pixels: a marker that is
+  // clipped by the far plane or eaten by the fog is a marker that is not there.
+  await page.keyboard.down('Control');
+  await page.keyboard.down('Shift');
+  await page.keyboard.press('KeyX');
+  await page.keyboard.up('Shift');
+  await page.keyboard.up('Control');
+  await page.waitForTimeout(500);
+  const cheat = await page.evaluate(() => {
+    const g = window.NOCLIP;
+    const count = (green) => {
+      const t = g.cam.target;
+      const buf = new Uint8Array(t.width * t.height * 4);
+      g.renderer.readRenderTargetPixels(t, 0, 0, t.width, t.height, buf);
+      let n = 0;
+      for (let i = 0; i < buf.length; i += 4) {
+        const r = buf[i], gr = buf[i + 1], b = buf[i + 2];
+        if (green ? (gr > 90 && gr > r * 1.35 && gr > b * 1.25) : (r > 90 && r > gr * 1.5 && r > b * 1.5)) n++;
+      }
+      return n;
+    };
+    const look = (t) => {
+      g.player.pitch = 0;
+      g.player.yaw = Math.atan2(-(t.x - g.player.pos.x), -(t.z - g.player.pos.z));
+    };
+    const m = g.entities.monster;
+    const lift = g.exitObjs[0]?.mesh.position;
+    const out = { on: g.xray, markers: g.xrayObjs?.all.length ?? 0, hud: !document.querySelector('.hud-xray').hidden };
+    if (m) { m.frozen = true; look(m.pos); }
+    return new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(() => {
+      out.monsterPx = count(false);
+      if (lift) look(lift);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        out.liftPx = count(true);
+        res(out);
+      }));
+    })));
+  });
+  if (!cheat.on || cheat.markers < 2) fail(`the cheat did not come on (${cheat.markers} markers)`);
+  else if (!cheat.monsterPx) fail('the monster marker draws no pixels');
+  else if (!cheat.liftPx) fail('the lift marker draws no pixels');
+  else ok(`x-ray on · ${cheat.markers} markers · ${cheat.monsterPx}px on the thing, ${cheat.liftPx}px on the lift`);
+  await page.evaluate(() => { const g = window.NOCLIP; if (g.xray) g.toggleXray(); });
+
   // ------------------------------------------------------- the chase, then contact
   // The chase banner and its sting are a code path of their own, and one that only
   // fires when the thing notices you — so ring it deliberately on every floor.
@@ -102,15 +147,32 @@ async function playFloor() {
     const m = g.entities.monster;
     m.spawnGrace = 0;
     m.frozen = false;
+    // This check is about one rule: contact kills. Two species rules gate on being
+    // watched — a mannequin does not move while you look at it, a smiler stops when you
+    // light it — and both are correct, and both stop it ever reaching you in a rigged
+    // test. Lift them off this one instance (its own copy, not the shared species) so
+    // the contact path is what gets tested.
+    if (m.sp.flags.movesWhenUnobserved || m.sp.flags.freezeWhenLit) {
+      m.sp = { ...m.sp, flags: { ...m.sp.flags, movesWhenUnobserved: false, freezeWhenLit: false } };
+    }
     m.pos.x = g.player.pos.x + 1.2;
     m.pos.z = g.player.pos.z;
     m.pos.y = g.player.pos.y;
     m.state = 'hunt';
     m.alert = 1;
-    for (let i = 0; i < 90 && !g.dead; i++) await new Promise((r) => requestAnimationFrame(r));
-    return { dead: g.dead, deathVisible: !document.querySelector('.death').hidden };
+    for (let i = 0; i < 120 && !g.dead; i++) await new Promise((r) => requestAnimationFrame(r));
+    return {
+      dead: g.dead, deathVisible: !document.querySelector('.death').hidden,
+      // if it did not kill, say why — the answer is usually the species behaving itself
+      why: g.dead ? null : {
+        state: m.state, dist: +m.dist.toFixed(2), frozen: !!m.frozen,
+        observed: m.observedByPlayer(), alert: +m.alert.toFixed(2),
+        hidden: g.player.hidden, grace: +m.spawnGrace.toFixed(1),
+        at: [+m.pos.x.toFixed(1), +m.pos.z.toFixed(1)], player: [+g.player.pos.x.toFixed(1), +g.player.pos.z.toFixed(1)],
+      },
+    };
   });
-  if (!caught.dead) fail('the monster reached the player and nothing happened');
+  if (!caught.dead) fail(`the monster reached the player and nothing happened — ${JSON.stringify(caught.why)}`);
   else ok(`contact is lethal, death card shown (${caught.deathVisible})`);
   if (shots) await page.screenshot({ path: join(root, `qa/play-${level}-death.png`) });
 

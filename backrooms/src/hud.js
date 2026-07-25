@@ -28,6 +28,11 @@ export class Hud {
       <div class="hud-toast" hidden></div>
       <div class="hud-crosshair"><i></i></div>
       <div class="hud-chase" hidden><span></span></div>
+      <div class="hud-xray" hidden>
+        <span class="xr-tag">X-RAY</span>
+        <span class="xr-m">—</span>
+        <span class="xr-l">—</span>
+      </div>
       <div class="hide-frame" hidden><i class="hf-l"></i><i class="hf-r"></i><i class="hf-t"></i><i class="hf-b"></i></div>
       <div class="level-card" hidden>
         <div class="lc-floor"></div>
@@ -54,6 +59,9 @@ export class Hud {
     this.cardEl = this.el.querySelector('.level-card');
     this.deathEl = this.el.querySelector('.death');
     this.chaseEl = this.el.querySelector('.hud-chase');
+    this.xrayEl = this.el.querySelector('.hud-xray');
+    this.xrayM = this.el.querySelector('.xr-m');
+    this.xrayL = this.el.querySelector('.xr-l');
     this.hideFrame = this.el.querySelector('.hide-frame');
     this.filmEl = this.el.querySelector('.hud-filming');
     this.filmT = this.el.querySelector('.film-t');
@@ -130,6 +138,18 @@ export class Hud {
   }
 
   chaseOff() { this.chaseEl.hidden = true; }
+
+  // ---------------------------------------------------------------- the cheat
+  setXray(on) { this.xrayEl.hidden = !on; }
+
+  setXrayRange(monsterM, liftM, state) {
+    if (this.xrayEl.hidden) return;
+    this.xrayM.textContent = monsterM === null ? 'nothing on the floor'
+      : `${monsterM}m ${state ? `· ${state}` : ''}`;
+    this.xrayL.textContent = liftM === null ? 'no lift' : `lift ${liftM}m`;
+    // the closer it is, the harder the line reads
+    this.xrayM.classList.toggle('near', monsterM !== null && monsterM < 25);
+  }
 
   // ---------------------------------------------------------------- messages
   prompt(text) {

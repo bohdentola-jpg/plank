@@ -32,6 +32,9 @@ you is what pays, and you spend the footage in the lift, where a stall sells twe
 upgrades that last the rest of the run: better shoes, a low-light CCD, a tracker pip
 on the tape edge, a spare life in gaffer tape.
 
+Somebody wrote a cheat on the inlay card before they sold the tape on: **CTRL+SHIFT+X**
+outlines the monster and the lift through every wall, from anywhere on the floor.
+
 Twenty-three floors in the pool, drawn by depth and generated fresh each run — the
 original yellow rooms, the poolrooms with the lights out under the water, pipe
 tunnels, an endless hotel, a hospital with a nurse in it, a snowfield with a queue of

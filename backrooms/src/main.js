@@ -100,6 +100,8 @@ class Game {
     this.dead = false;
     this.paused = false;
     this.gimmickT = 0;
+    this.xray = false;          // the cheat: CTRL+SHIFT+X
+    this.xrayObjs = null;
     this.blackoutT = 0;
     this.steamT = 0;
     this.input = { fwd: 0, back: 0, left: 0, right: 0, sprint: 0, crouch: 0, jump: 0 };
@@ -242,6 +244,7 @@ class Game {
         case 'KeyF': this.toggleLamp(); break;
         case 'KeyN': this.toggleNight(); break;
         case 'KeyR': this.toggleRecording(); break;
+        case 'KeyX': if (e.ctrlKey && e.shiftKey) this.toggleXray(); break;
         case 'Escape': this.setPaused(!this.paused); break;
         default: break;
       }
@@ -448,6 +451,7 @@ class Game {
   }
 
   clearFloorObjects() {
+    this.clearXray();
     for (const o of this.exitObjs || []) {
       this.scene.remove(o.mesh);
       o.mesh.traverse?.((m) => m.geometry?.dispose?.());
@@ -507,6 +511,140 @@ class Game {
       this.audio.oneShot('clawStep', 0.35);
       this.hud.subtitle(HIDE_LINE[hide.kind] || 'You get out of sight and stay very still.', 3);
     }
+  }
+
+  // ------------------------------------------------------------------ the cheat
+  // CTRL+SHIFT+X. Puts the thing that is hunting you and the way off the floor on
+  // screen through every wall in the level: a silhouette where they stand, a column of
+  // light you can see from the far end of the floor, and the range to both.
+  //
+  // Everything here draws with depthTest off and a late renderOrder, so it goes on top
+  // of the room. It is still inside the camcorder pass, which means the tape treats it
+  // like anything else it records — the cheat looks like a fault on the tape, which is
+  // the only way a cheat belongs in this game.
+  toggleXray() {
+    this.xray = !this.xray;
+    this.audio.oneShot(this.xray ? 'staticHit' : 'tapeStop', 0.45);
+    this.fx.glitchAmt = Math.max(this.fx.glitchAmt, 0.55);
+    this.hud.setXray(this.xray);
+    if (this.xray) this.buildXray();
+    else this.clearXray();
+    this.hud.toast(this.xray ? 'X-RAY — the thing, and the way out' : 'x-ray off');
+  }
+
+  clearXray() {
+    for (const o of this.xrayObjs?.all || []) {
+      this.scene.remove(o);
+      o.traverse?.((m) => { m.geometry?.dispose?.(); m.material?.dispose?.(); });
+    }
+    this.xrayObjs = null;
+  }
+
+  // A silhouette and a column, in one colour, drawn through everything.
+  _xrayMarker(colour, height, radius) {
+    const g = new THREE.Group();
+    // Two things make or break this material:
+    //   fog: false  — every floor's fog is thick enough to bury a marker a hundred
+    //     metres out, and a column that is mathematically there and invisible is the
+    //     same as no column at all.
+    //   normal blending, not additive — added light over the lobby's bright yellow
+    //     wallpaper washes to white and stops reading as a colour at all. At this
+    //     opacity the marker paints its own colour over the room instead.
+    const skin = (op) => new THREE.MeshBasicMaterial({
+      color: colour, transparent: true, opacity: op, depthTest: false, depthWrite: false,
+      side: THREE.DoubleSide, fog: false,
+    });
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(radius, Math.max(0.2, height - radius * 2), 4, 10), skin(0.62));
+    body.position.y = height / 2;
+    const edge = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.CapsuleGeometry(radius * 1.06, Math.max(0.2, height - radius * 2), 4, 10)),
+      new THREE.LineBasicMaterial({ color: colour, depthTest: false, fog: false }),
+    );
+    edge.position.y = height / 2;
+    // The column runs 400m: from below the floor to well past any ceiling, so however
+    // far away it is and wherever you are looking, it crosses the frame top to bottom
+    // instead of being a stub near the horizon.
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12, 0.12, 400, 6, 1, true),
+      skin(0.78),
+    );
+    beam.position.y = 150;
+    g.add(body, edge, beam);
+    g.traverse((o) => { o.renderOrder = 998; o.frustumCulled = false; });
+    g.userData.beam = beam;
+    this.scene.add(g);
+    return g;
+  }
+
+  // Where to draw a marker for something that may be 600 metres away.
+  //
+  // The camera's far plane is 400m and these floors are bigger than that, so a marker
+  // at its true position is simply clipped — the cheat would work everywhere except
+  // where you actually need it. Draw it along the exact same bearing, pulled inside the
+  // frustum, and shrink it by the same factor so it still subtends the size it would at
+  // its real distance. Direction stays true, depth is compressed, and since none of
+  // this depth-tests anyway nothing about the look changes. The range on the HUD is the
+  // real one.
+  _placeMarker(marker, x, y, z) {
+    const c = this.camera.position;
+    const dx = x - c.x, dy = y - c.y, dz = z - c.z;
+    const d = Math.hypot(dx, dy, dz) || 1;
+    const MAXD = 240;
+    const k = d > MAXD ? MAXD / d : 1;
+    marker.position.set(c.x + dx * k, c.y + dy * k, c.z + dz * k);
+    marker.scale.setScalar(k);
+    const beam = marker.userData.beam;
+    if (!beam) return;
+    // Widen with the TRUE distance: the group's own scale cancels out, so the column
+    // holds the same apparent thickness from anywhere on the floor. A 12cm pole is two
+    // pixels at 400 metres, which is the same as nothing.
+    const wide = clamp(d / 15, 1, 34);
+    beam.scale.set(wide, 1, wide);
+    beam.material.opacity = clamp(0.6 + d / 900, 0.6, 0.9);
+  }
+
+  buildXray() {
+    this.clearXray();
+    if (!this.world) return;
+    const all = [];
+    const m = this.entities.monster;
+    const sp = m?.sp;
+    const monster = this._xrayMarker(0xff2a2a, sp?.height ?? 2.0, Math.max(0.28, sp?.radius ?? 0.4));
+    all.push(monster);
+    const lifts = [];
+    for (const o of this.exitObjs || []) {
+      const mark = this._xrayMarker(0x40ff90, 2.6, 1.1);
+      this._placeMarker(mark, o.mesh.position.x, o.mesh.position.y, o.mesh.position.z);
+      lifts.push(mark);
+      all.push(mark);
+    }
+    this.xrayObjs = { monster, lifts, all };
+  }
+
+  // Called every frame while the cheat is on: the lift does not move, the thing does.
+  updateXray() {
+    if (!this.xray) return;
+    if (!this.xrayObjs || this.xrayObjs.lifts.length !== (this.exitObjs || []).length) this.buildXray();
+    const x = this.xrayObjs;
+    const m = this.entities.monster;
+    if (m) {
+      x.monster.visible = true;
+      x.monster.rotation.y = m.yaw;
+      this._placeMarker(x.monster, m.pos.x, m.pos.y, m.pos.z);
+    } else {
+      x.monster.visible = false;
+    }
+    for (let i = 0; i < x.lifts.length; i++) {
+      const at = this.exitObjs[i]?.mesh.position;
+      if (at) this._placeMarker(x.lifts[i], at.x, at.y, at.z);
+    }
+    const p = this.player.pos;
+    const lift = (this.exitObjs || [])[0];
+    this.hud.setXrayRange(
+      m ? Math.round(Math.hypot(m.pos.x - p.x, m.pos.z - p.z)) : null,
+      lift ? Math.round(Math.hypot(lift.mesh.position.x - p.x, lift.mesh.position.z - p.z)) : null,
+      m?.state || null,
+    );
   }
 
   toggleLamp() {
@@ -761,6 +899,7 @@ class Game {
     this.entities.update(dt);
     this.fx.update(dt);
     this.runGimmick(dt);
+    this.updateXray();
 
     // ---- camera
     const eye = p.eye();
