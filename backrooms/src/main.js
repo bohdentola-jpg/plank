@@ -467,12 +467,30 @@ class Game {
       );
       doors.position.y = 1.2;
       g.add(doors);
-      const light = new THREE.PointLight(0xffe0a0, 1.6, 14, 2);
+      const light = new THREE.PointLight(0xffe0a0, 2.4, 18, 1.6);
       light.position.y = 1.8;
       g.add(light);
+      // A call light above the doors. Finding the lift should be a thing you can SEE
+      // from the far end of a corridor, not something you only learn from the chalk —
+      // the marks tell you which way, this tells you that you have arrived.
+      const beacon = new THREE.Mesh(
+        new THREE.SphereGeometry(0.16, 10, 8),
+        new THREE.MeshBasicMaterial({ color: 0xfff0c0 }),
+      );
+      beacon.position.y = 2.7;
+      g.add(beacon);
+      const halo = new THREE.Mesh(
+        new THREE.SphereGeometry(0.62, 10, 8),
+        new THREE.MeshBasicMaterial({ color: 0xffd070, transparent: true, opacity: 0.16, depthWrite: false }),
+      );
+      halo.position.y = 2.7;
+      g.add(halo);
+      const spill = new THREE.PointLight(0xffd070, 2.0, 26, 1.2);
+      spill.position.y = 2.7;
+      g.add(spill);
       g.position.set(e.x * S, this.world.floorAtWorld(e.x * S, e.z * S), e.z * S);
       this.scene.add(g);
-      this.exitObjs.push({ mesh: g, rec: e, glow: doors });
+      this.exitObjs.push({ mesh: g, rec: e, glow: doors, beacon, halo });
     }
   }
 
@@ -789,7 +807,10 @@ class Game {
       o.glow.lookAt(this.camera.position.x, o.glow.position.y, this.camera.position.z);
       o.glow.material.opacity = 0.2 + Math.sin(this.levelTime * 2.2) * 0.05;
       const d = Math.hypot(o.mesh.position.x - p.pos.x, o.mesh.position.z - p.pos.z);
-      if (d < 22) this.audio.hum(clamp01(1 - d / 22));
+      if (d < 40) this.audio.hum(clamp01(1 - d / 40));
+      const beat = 0.55 + Math.sin(this.levelTime * 3.1) * 0.45;
+      if (o.halo) o.halo.material.opacity = 0.10 + beat * 0.16;
+      if (o.beacon) o.beacon.material.color.setRGB(1, 0.88 + beat * 0.1, 0.6 + beat * 0.25);
     }
 
     // ---- prompts

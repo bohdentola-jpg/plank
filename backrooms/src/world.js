@@ -615,9 +615,13 @@ export class World {
 
   _buildColliders() {
     const S = this.cell;
+    // Straight cell→world conversion. This used to pad every box by half a cell on
+    // each side "for the body", which turned a 1.4-cell cabinet into a 7.7-metre
+    // invisible block — enough to seal a corridor with nothing visible in it. The
+    // player's own radius probes handle clearance; the box is the box.
     this.colliders = this.data.colliders.map((c) => ({
-      x0: c.x0 * S - S * 0.5, x1: c.x1 * S + S * 0.5,
-      z0: c.z0 * S - S * 0.5, z1: c.z1 * S + S * 0.5,
+      x0: c.x0 * S, x1: c.x1 * S,
+      z0: c.z0 * S, z1: c.z1 * S,
       y0: c.y0, y1: c.y1,
     }));
   }
@@ -688,7 +692,12 @@ export class World {
         const nx = cx + dx, nz = cz + dz;
         if (!this.inside(nx, nz)) continue;
         const j = this.idx(nx, nz);
-        if (dist[j] !== -1 || !this.walkStep(cx, cz, nx, nz)) continue;
+        // This floods OUT from the lift, but the player walks IN — so the step has to
+        // be walkable in their direction, j → i. Traversal is not symmetric (you drop
+        // off a loading bank, you do not climb back up it), and testing the wrong way
+        // round hands the player a route that ends at a ledge with an arrow on it.
+        if (dist[j] !== -1 || !this.isOpenCell(nx, nz)) continue;
+        if (!this.walkStep(nx, nz, cx, cz)) continue;
         dist[j] = dist[i] + 1;
         q[tail++] = j;
       }
@@ -727,13 +736,7 @@ export class World {
       k = (k + stride) % cand.length;
       const i = cand[k];
       const cx = i % this.w, cz = (i / this.w) | 0;
-      const here = dist[i];
-      // point at whichever neighbour is closer to the lift
-      let step = null, best = here;
-      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        const v = this.inside(cx + dx, cz + dz) ? dist[this.idx(cx + dx, cz + dz)] : -1;
-        if (v >= 0 && v < best) { best = v; step = [dx, dz]; }
-      }
+      const step = this.downhill(cx, cz);
       if (!step || !spacedOut(cx, cz)) continue;
       taken[i] = 1;
       marks.push([cx, cz, step[0], step[1]]);
@@ -742,29 +745,50 @@ export class World {
     this.arrows = [];
     for (const [cx, cz, dx, dz] of marks) {
       const wx = cx * S, wz = cz * S;
-      const rot = Math.atan2(-dx, -dz);
+      // chalkArrow is drawn pointing along its own +X (the head sits at u≈1), so the
+      // yaw that aims it at (dx, dz) is atan2(-dz, dx) — not the -Z convention the
+      // rest of the props use. Get this wrong and every mark points at a wall.
+      const rot = Math.atan2(-dz, dx);
       try {
         const g = buildProp({ name: 'chalkArrow', px: wx, pz: wz, rot, y: null }, this.floorAtWorld(wx, wz), 3);
         // chalk lifts itself out of the dark a little, or it may as well not be there
         g.traverse((o) => { if (o.isMesh) { o.material.emissive?.setHex?.(0x6a6a5e); this.disposables.push(o.geometry); } });
         this.group.add(g);
-        this.arrows.push({ x: wx, z: wz, rot });
+        this.arrows.push({ x: wx, z: wz, rot, step: [dx, dz] });
       } catch { /* no arrow, no harm */ }
     }
+  }
+
+  // Which way is the lift from here: the neighbour that is closer to it AND that a
+  // body can actually step to. Skip the second half of that and the mark on the floor
+  // ends up pointing at the face of a loading bank you cannot climb — the flood is
+  // happy to route through the drop, a person is not.
+  downhill(cx, cz) {
+    const dist = this.liftDist;
+    if (!dist || !this.inside(cx, cz)) return null;
+    const here = dist[this.idx(cx, cz)];
+    if (here < 0) return null;
+    let step = null, best = here;
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = cx + dx, nz = cz + dz;
+      if (!this.inside(nx, nz)) continue;
+      const v = dist[this.idx(nx, nz)];
+      if (v < 0 || v >= best) continue;
+      if (!this.walkStep(cx, cz, nx, nz)) continue;
+      best = v; step = [dx, dz];
+    }
+    return step;
   }
 
   // Which way is the lift from here, for the FLOOR PLAN powerup.
   liftBearing(x, z) {
     if (!this.liftDist) return null;
     const [cx, cz] = this.toCell(x, z);
-    let best = this.liftDist[this.idx(cx, cz)], dir = null;
-    if (best < 0) return null;
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const v = this.inside(cx + dx, cz + dz) ? this.liftDist[this.idx(cx + dx, cz + dz)] : -1;
-      if (v >= 0 && v < best) { best = v; dir = [dx, dz]; }
-    }
-    if (!dir) return { angle: 0, dist: 0 };
-    return { angle: Math.atan2(-dir[0], -dir[1]), dist: best };
+    const here = this.liftDist[this.idx(cx, cz)];
+    if (here < 0) return null;
+    const dir = this.downhill(cx, cz);
+    if (!dir) return { angle: 0, dist: here };
+    return { angle: Math.atan2(-dir[0], -dir[1]), dist: here - 1 };
   }
 
   // ------------------------------------------------------------------ runtime

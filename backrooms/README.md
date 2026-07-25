@@ -132,8 +132,16 @@ from the wrong side.
 Because levels are data, the whole library is checkable without a browser:
 
     npm run smoke:backrooms                       # builds all 23 floors
+    npm run walk:backrooms -- --all --auditonly   # can you WALK to the lift?
     npm run play:backrooms -- --all               # plays the loop on every floor
     npm run shot:backrooms level0 --frames 3      # screenshots in headless Chromium
+
+The walk harness is the one that catches the cruel bugs. It follows the chalk from the
+spawn to the lift one cell at a time and asks the *player's own collision function*
+whether each step is possible — because the flood fill that draws the arrows does not
+know about body radius, step height, or a pillar's collider. Then it drives the real
+player with real input down the same route and reports where it wedges. Any mark that
+points somewhere a person cannot follow is a failure, and the game used to have a few.
 
 The data harness proves each floor encloses itself, that the spawn is on floor, that
 the lift is reachable *on foot* and far enough away to be an objective, that there is

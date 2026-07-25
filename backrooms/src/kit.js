@@ -242,12 +242,22 @@ const EXITSET = new Set(EXIT_KINDS);
 
 const MAX_STEP = 0.7;   // how much floor height a body can climb in one cell
 
-// Can a body get from cell a to cell b? Dry cells need a curb-sized step. Water
-// is different: you can drop into it from any height and haul yourself back out
-// over a pool lip, which is why the poolrooms connect at all.
+// Can a body get from cell a to cell b? This has to agree with what the player can
+// actually do, because it is what the chalk arrows and the lift bearing are drawn
+// from: a route the flood fill likes and a body cannot take is worse than no route.
+//
+//   · out of water: always — you haul yourself over the lip, which is why the
+//     poolrooms connect at all
+//   · up: a curb, no more. A 1-metre pool lip from dry land is a wall.
+//   · into water: from any height. You land in it.
+//   · down: a drop you can take without hurting yourself.
 export function climbable(codeA, codeB, yA, yB) {
-  if (WET.has(codeA) || WET.has(codeB)) return true;
-  return Math.abs(yB - yA) <= MAX_STEP;
+  if (WET.has(codeA)) return true;
+  const rise = yB - yA;
+  if (rise > MAX_STEP) return false;
+  if (rise >= -MAX_STEP) return true;
+  if (WET.has(codeB)) return true;
+  return rise > -3.0;
 }
 
 // ------------------------------------------------------------------ the level
@@ -506,7 +516,12 @@ class Level {
   prop(name, o = {}) {
     const p = { name, x: o.x, z: o.z, y: o.y ?? null, rot: o.rot ?? 0, scale: o.scale ?? 1, ...o };
     this.props.push(p);
-    if (o.blocks) this.collider(o.x - 0.4, o.z - 0.4, o.x + 0.4, o.z + 0.4, { y1: o.height ?? 1.2 });
+    // `blocks` is a footprint in METRES (true → 0.9m across), converted to cells here,
+    // because a prop's collider should be the size of the prop and nothing else.
+    if (o.blocks) {
+      const r = (o.blocks === true ? 0.45 : o.blocks) / this.cell;
+      this.collider(o.x - r, o.z - r, o.x + r, o.z + r, { y1: o.height ?? 1.2 });
+    }
     return p;
   }
 
@@ -1135,7 +1150,11 @@ export const gen = {
       for (let x = x0 + (o.offX ?? 2); x <= x1 - 1; x += every) {
         if (o.where && !o.where(x, z)) continue;
         placed.push(L.prop(o.prop ?? 'pillar', { x, z, height: o.h ?? L.wallH }));
-        L.collider(x - 0.5, z - 0.5, x + 0.5, z + 0.5, { y1: o.h ?? L.wallH, blocksSight: !!o.thick });
+        // The collider is the pillar, not the cell it stands in. A pillar is 0.7m
+        // across; a full-cell box is 3m and quietly walls off a bay that the pathing
+        // still thinks is open, so the chalk sends you into thin air you cannot cross.
+        const r = (o.radius ?? 0.45) / L.cell;
+        L.collider(x - r, z - r, x + r, z + r, { y1: o.h ?? L.wallH, blocksSight: !!o.thick });
       }
     }
     return placed;

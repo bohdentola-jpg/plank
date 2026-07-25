@@ -81,6 +81,7 @@ npm install              # playwright, for screenshots and browser smoke tests
 npm run smoke            # every game's headless harness, back to back
 npm run smoke:backrooms  # builds all 23 NOCLIP floors and checks every one
 npm run play:backrooms -- --all        # plays the loop on every NOCLIP floor
+npm run walk:backrooms -- --all --auditonly   # every floor: can you walk to the lift?
 npm run smoke:melee      # frame data + move drill + CPU-vs-CPU matches
 node tools/shot-backrooms.mjs poolrooms --frames 3     # drive NOCLIP in Chromium
 node tools/shot.mjs "/rimcity/?quick" shot.png --wait 9000   # screenshot QA

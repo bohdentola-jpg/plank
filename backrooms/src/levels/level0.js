@@ -138,11 +138,13 @@ export function build(kit) {
   L.prop('graffiti', { x: 133, z: 132, rot: 0, big: true });
   L.light({ x: 133, z: 131, color: 0xd8e8ff, intensity: 0.5, radius: 6, fixture: 'none', flicker: 0.5 });
 
-  // The classic accident: a soft spot in the floor of a flooded storeroom.
-  // Fall through it and you skip straight into the poolrooms.
+  // A flooded storeroom off the west wing: ankle-deep, tiled, and a dead end. It used
+  // to be the way people fell through into the poolrooms; there is no way down from
+  // here any more, so it carries no grate and promises nothing — wade in, look at it,
+  // and go back out. The way off this floor is the lift.
   L.room(4, 128, 12, 136, { floor: 'wetTileFloor', wall: 'tileWhite' });
   L.water(5, 129, 11, 135, { depth: 0.5, level: 0, floor: 'tilePool', wall: 'tileWhite' });
-  L.prop('drainGrate', { x: 8, z: 132 });
+  L.light({ x: 8, z: 132, y: 2.8, color: 0xcfe8f0, intensity: 0.7, radius: 10, fixture: 'tube', flicker: 0.3 });
 
   // ---------------------------------------------------------------- the floor
   // One thing lives here, there is cover, and the way out is a lift.

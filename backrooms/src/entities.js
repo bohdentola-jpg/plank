@@ -462,7 +462,10 @@ export class Entities {
         const nx = cx + dx, nz = cz + dz;
         if (!w.inside(nx, nz)) continue;
         const j = w.idx(nx, nz);
-        if (flow[j] !== -1 || !w.walkStep(cx, cz, nx, nz)) continue;
+        // flood out from the player, but the thing walks in: test j → i, the step it
+        // will actually take, or it queues up at the bottom of a drop it cannot climb
+        if (flow[j] !== -1 || !w.isOpenCell(nx, nz)) continue;
+        if (!w.walkStep(nx, nz, cx, cz)) continue;
         flow[j] = dv + 1;
         q[tail++] = j;
       }

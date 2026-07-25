@@ -15,7 +15,8 @@
     "smoke:melee": "node tools/melee-sim.mjs 18",
     "smoke:backrooms": "node tools/smoke-backrooms.mjs --verbose",
     "shot:backrooms": "node tools/shot-backrooms.mjs",
-    "play:backrooms": "node tools/play-backrooms.mjs"
+    "play:backrooms": "node tools/play-backrooms.mjs",
+    "walk:backrooms": "node tools/walk-backrooms.mjs"
   },
   "dependencies": {
     "three": "^0.160.0"

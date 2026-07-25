@@ -187,7 +187,10 @@ export class Player {
       if (this.pos.y <= ground + EPS) {
         if (!this.onGround) {
           const drop = this.fallFrom !== null ? this.fallFrom - ground : 0;
-          if (drop > 3.2 && rules.fallDamage !== false) this.onFall?.(drop);
+          // water catches you: the poolrooms and the flooded floors are meant to be
+          // jumped into, and a route down into deep water is a route
+          const intoWater = WET.has(w.codeAtWorld(this.pos.x, this.pos.z));
+          if (drop > 3.2 && !intoWater && rules.fallDamage !== false) this.onFall?.(drop);
           else if (drop > 0.8) this.onLand?.(drop);
           this.noise = Math.max(this.noise, clamp01(drop / 4) * 0.7);
         }
