@@ -32,9 +32,14 @@ Every floor is the same contract and never the same floor.
 
 ## The lift
 
-The doors close, the floor drops, and there is somebody's stall set up against the
-back wall. Three of twelve upgrades are on offer, priced in footage, and whatever you
-buy is yours for the rest of the run:
+Reaching it is not a menu. The doors part, you step into the car, and the car is a room
+like any other room in the game — panelling, a light that hums, a mirror on the back wall
+you have to look at yourself in, and a trestle table down one side with three things on it
+and the price of each written on card. You walk up to what you want and take it. When you
+have finished, you press the button by the doors and the floor drops.
+
+Three of twelve upgrades are on offer, priced in footage, and whatever you buy is yours for
+the rest of the run:
 
 | | | |
 | --- | --- | --- |
@@ -113,6 +118,8 @@ own voice, and you will learn all of them from behind a locker door.
 ## How it's built
 
     src/kit.js         the level-authoring vocabulary — levels are pure data
+    src/lift.js        the car between floors, built as level data like everywhere else
+    src/hazmat.js      what the others look like: the suits, for the online build
     src/levels/*.js    twenty-three floor modules, no three.js anywhere in them
     src/world.js       data → merged geometry + baked light with real occlusion
     src/camcorder.js   the tape: one render target, one fullscreen shader
@@ -161,3 +168,37 @@ the lift, buys from the stall, and confirms the upgrade survives the descent.
 
 Flashing lights, sudden loud sound, enclosed spaces, deep water. No gore.
 Headphones are strongly recommended and are also the worst decision you can make.
+
+## NOCLIP ONLINE
+
+`noclip-online.html` is the whole game in one file — drop it on any static host and it
+runs on a phone or a desktop with nothing to install:
+
+    npm run build:noclip-online          # → noclip-online.html (about 520 KB)
+
+- **Up to four of you.** Somebody hosts, gets a four-letter code, and sends it or the
+  invite link. Everybody else types the code. There is no server to run: PeerJS's free
+  cloud does the introductions and the game itself runs peer to peer over WebRTC.
+- **Nobody rides the lift alone.** It will not leave until everybody still breathing is
+  standing in it, and the host is told who they are waiting for.
+- **Dying is not leaving.** You keep the camera and you keep watching, and the rest of
+  them have to finish it without you.
+- **Everybody is in a hazmat suit** — hooded, taped at the cuffs, full-face respirator,
+  camcorder up at eye height — in one of six colours with their name over it, because at
+  forty metres down a corridor that is all you need to know.
+- **Phones get thumbs.** A stick under the left thumb (push it to the edge to run), drag
+  anywhere on the right to look, and USE / TORCH / CROUCH / REC / NIGHTSHOT as buttons big
+  enough to hit while something is chasing you.
+
+The level never goes over the wire. The generator is deterministic, so the host sends
+"floor 3 is level52, seed 91824" and every machine builds the same fifteen thousand cells
+locally; what actually crosses the channel is where people are, where the thing is, and
+who just died. That is a few hundred bytes at fifteen hertz.
+
+    npm run net:noclip                   # two real clients, one real data channel
+
+The network harness stands up a signalling server on localhost, opens two browsers against
+the built file, hosts on one and joins on the other, and then checks the things that break
+in multiplayer: that both ends built the *same* building from the same seed, that each can
+see the other's suit in the right place, that the monster the guest sees is the one the
+host is simulating, and that a death on one side lands on the other.

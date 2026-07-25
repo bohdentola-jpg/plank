@@ -38,6 +38,74 @@ const G = (...kids) => {
   return g;
 };
 
+
+// ------------------------------------------------------------------ chalk
+// Chalk on a hard floor: a stick of it dragged fast by somebody who was not stopping to
+// do a neat job. Every stroke is a scatter of dust along its path rather than a line —
+// heavier where the stick bit, gone where it skipped, with a smudge where a shoe went
+// over it afterwards. Six of them are drawn on demand and shared by every mark on the
+// floor; the variation you see is which of the six plus which way it points.
+const CHALK = [];
+function chalkMark(variant) {
+  const S = 128;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, S, S);
+  let seed = (variant * 9781 + 12345) | 0;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    return seed / 0x7fffffff;
+  };
+
+  // one stroke: dust along the path, thinning and skipping like real chalk
+  const stroke = (x0, y0, x1, y1, width, press) => {
+    const len = Math.hypot(x1 - x0, y1 - y0);
+    const steps = Math.max(8, Math.round(len * 2.2));
+    let skip = 0;
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      // pressure: firm in the middle of a stroke, light at both ends
+      const taper = Math.min(1, Math.sin(t * Math.PI) * 1.5);
+      if (skip > 0) { skip--; continue; }
+      if (rnd() < 0.06) { skip = 1 + Math.floor(rnd() * 2); continue; }   // the stick skips
+      const cx = x0 + (x1 - x0) * t + (rnd() - 0.5) * width * 0.5;
+      const cy = y0 + (y1 - y0) * t + (rnd() - 0.5) * width * 0.5;
+      const grains = 5 + Math.floor(rnd() * 5);
+      for (let k = 0; k < grains; k++) {
+        const a = rnd() * Math.PI * 2;
+        const r = Math.pow(rnd(), 0.6) * width * 0.55;
+        const dust = 0.10 + rnd() * 0.30;
+        ctx.fillStyle = `rgba(238,236,226,${(dust * taper * press).toFixed(3)})`;
+        const px = cx + Math.cos(a) * r, py = cy + Math.sin(a) * r;
+        ctx.fillRect(px, py, 1 + rnd() * 1.6, 1 + rnd() * 1.6);
+      }
+    }
+  };
+
+  // the arrow: shaft, then the head, drawn twice over with a wobble so the strokes
+  // double up the way a hand does when it goes back over a mark
+  const wob = () => (rnd() - 0.5) * 5;
+  for (let pass = 0; pass < 2; pass++) {
+    const press = pass === 0 ? 1 : 0.55;
+    stroke(20 + wob(), 64 + wob(), 96 + wob(), 64 + wob(), 9, press);
+    stroke(74 + wob(), 40 + wob(), 100 + wob(), 64 + wob(), 8, press);
+    stroke(74 + wob(), 88 + wob(), 100 + wob(), 64 + wob(), 8, press);
+  }
+  // a shoe went through it: a smear pulling the dust sideways
+  ctx.globalAlpha = 0.35;
+  ctx.drawImage(cv, Math.round(rnd() * 5) - 2, Math.round(rnd() * 7) - 3);
+  ctx.globalAlpha = 1;
+  // and the floor eats some of it back
+  for (let i = 0; i < 90; i++) {
+    ctx.fillStyle = `rgba(0,0,0,${(0.05 + rnd() * 0.12).toFixed(3)})`;
+    ctx.fillRect(rnd() * S, rnd() * S, 2 + rnd() * 7, 1 + rnd() * 3);
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  return new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 1, metalness: 0 });
+}
+
 // ------------------------------------------------------------------ palette
 // Shared materials: one instance each, so a hundred chairs are one material.
 const M = {};
@@ -264,6 +332,95 @@ export const BUILDERS = {
       box(0.3, 0.16, 0.04, mat('elevIndicator', 0x201a10, { rough: 0.5 }), 0, 2.5, 0.04),
       box(0.22, 0.09, 0.02, glowRed(), 0, 2.53, 0.06),
     );
+    return g;
+  },
+
+  // THE SERVICE LIFT. The one thing on a floor you are actually looking for, so it is
+  // built like a real one and gets the triangles to prove it: a recessed architrave in
+  // the wall, two centre-opening panels with a seam down the middle, a lantern above
+  // with the car's position lit up in it, a call plate at hand height, and a brass
+  // threshold worn pale by everyone who found it before you. The doors slide (main.js
+  // opens them as you come up), so `userData.doors` is the pair.
+  liftEntrance(o = {}) {
+    const g = new THREE.Group();
+    const frameM = brushed();
+    // The panels carry a little light of their own. A point light out in the corridor
+    // puts a hard hotspot in the middle of them and leaves the rest black; steel that
+    // glows very slightly reads as pale metal from the far end of a dark floor, which
+    // is the job this object has.
+    const panelM = mat('liftPanel', 0x8e959c, {
+      rough: 0.38, metal: 0.5, emissive: 0x4a463c, emissiveIntensity: 1.4,
+    });
+    const recessM = mat('liftRecess', 0x2b2e32, { rough: 0.7, metal: 0.3 });
+    const H = 2.45, W = 1.15;                     // door leaf height and width
+
+    // architrave: a raised surround, so it reads as set into the wall
+    g.add(box(3.1, 0.16, 0.3, frameM, 0, H + 0.18, 0.06));      // lintel
+    g.add(box(0.22, H + 0.34, 0.3, frameM, -1.44, 0, 0.06));    // jambs
+    g.add(box(0.22, H + 0.34, 0.3, frameM, 1.44, 0, 0.06));
+    // A shallow car behind the doors, lit and panelled, so opening them shows you
+    // somewhere to go rather than a black rectangle. The real car you can walk around
+    // in gets built when you step in; this is the metre and a bit you see from outside.
+    const carWall = mat('liftCarWall', 0x8a8474, { rough: 0.55, metal: 0.25, emissive: 0x241f16, emissiveIntensity: 0.8 });
+    const carFloor = mat('liftCarFloor', 0x3a352c, { rough: 0.8 });
+    g.add(box(2.4, H + 0.1, 0.08, carWall, 0, 0, -1.5));            // back wall
+    g.add(box(0.08, H + 0.1, 1.5, carWall, -1.2, 0, -0.78));        // sides
+    g.add(box(0.08, H + 0.1, 1.5, carWall, 1.2, 0, -0.78));
+    g.add(box(2.4, 0.06, 1.5, carFloor, 0, -0.03, -0.78));          // floor
+    g.add(box(2.4, 0.08, 1.5, recessM, 0, H + 0.02, -0.78));        // ceiling
+    g.add(box(1.1, 0.05, 0.5, mat('liftCarLamp', 0xfff2cc, {
+      emissive: 0xffe0a0, emissiveIntensity: 2.4, rough: 0.4,
+    }), 0, H - 0.06, -0.78));
+    // a handrail along the back, because every service lift has one
+    const rail = cyl(0.035, 0.035, 2.1, brushed(), 0, 0, -1.4, 8);
+    rail.rotation.z = Math.PI / 2;
+    rail.position.y = 0.95;
+    g.add(rail);
+
+    // the two leaves, centre-opening
+    const leaf = (side) => {
+      const l = new THREE.Group();
+      l.add(box(W, H, 0.09, panelM, 0, 0, 0));
+      // a raised style down each leaf and a scuffed kick plate at the bottom
+      l.add(box(0.05, H - 0.12, 0.02, frameM, side * (W / 2 - 0.09), 0.06, 0.055));
+      l.add(box(W - 0.1, 0.26, 0.02, mat('liftKick', 0x767c82, { rough: 0.55, metal: 0.7 }), 0, 0.03, 0.055));
+      l.position.x = side * (W / 2);
+      return l;
+    };
+    const dl = leaf(-1), dr = leaf(1);
+    g.add(dl, dr);
+
+    // the lantern: the car's floor, lit, above the doors
+    g.add(box(1.1, 0.34, 0.12, mat('liftLantern', 0x1a1c1e, { rough: 0.6 }), 0, H + 0.36, 0.14));
+    const lamp = box(0.86, 0.2, 0.03, mat('liftLampLit', 0xffcf7a, {
+      emissive: 0xffa020, emissiveIntensity: 2.1, rough: 0.4,
+    }), 0, H + 0.43, 0.2);
+    g.add(lamp);
+    // a down-arrow beside it, because the only direction this thing goes is down
+    const tri = new THREE.Mesh(
+      new THREE.ConeGeometry(0.1, 0.16, 3),
+      mat('liftArrow', 0xffe0a0, { emissive: 0xffb040, emissiveIntensity: 1.6, rough: 0.4 }),
+    );
+    tri.rotation.x = Math.PI;
+    tri.rotation.y = Math.PI / 2;
+    tri.position.set(0.72, H + 0.53, 0.2);
+    g.add(tri);
+
+    // call plate at hand height: worn steel, one lit button, a scratched legend
+    g.add(box(0.24, 0.44, 0.05, frameM, 1.66, 1.0, 0.1));
+    const btn = cyl(0.05, 0.05, 0.03, mat('liftBtn', 0xffd070, {
+      emissive: 0xff9020, emissiveIntensity: 1.8, rough: 0.4,
+    }), 1.66, 1.28, 0.13, 10);
+    btn.rotation.x = Math.PI / 2;
+    g.add(btn);
+    g.add(box(0.1, 0.03, 0.01, mat('liftLegend', 0x30343a, { rough: 0.8 }), 1.66, 1.1, 0.13));
+
+    // threshold: brass, and pale down the middle
+    g.add(box(2.7, 0.04, 0.34, mat('liftSill', 0x9c8a5e, { rough: 0.5, metal: 0.6 }), 0, 0, 0.2));
+    g.add(box(2.7, 0.05, 0.1, mat('liftSillWorn', 0xc4b489, { rough: 0.35, metal: 0.7 }), 0, 0, 0.2));
+
+    g.userData.doors = { l: dl, r: dr, closedL: -(W / 2), closedR: W / 2, open: W * 0.98 };
+    g.userData.lamp = lamp;
     return g;
   },
   window(o) {
@@ -1161,21 +1318,209 @@ export const BUILDERS = {
     g.rotation.z = 0.3;
     return g;
   },
+  // Chalk on a hard floor: a stick of it dragged fast by somebody who was not stopping
+  // to do a neat job. Every stroke is laid down as a scatter of dust along its path
+  // rather than a line — heavier where the stick bit, gone where it skipped, with the
+  // grit of the floor showing through and a smudge where a shoe went over it.
   chalkArrow(o) {
-    const cv = document.createElement('canvas');
-    cv.width = cv.height = 64;
-    const ctx = cv.getContext('2d');
-    ctx.clearRect(0, 0, 64, 64);
-    ctx.strokeStyle = 'rgba(230,230,220,0.8)';
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(14, 32); ctx.lineTo(50, 32);
-    ctx.moveTo(38, 20); ctx.lineTo(50, 32); ctx.lineTo(38, 44);
-    ctx.stroke();
-    const tex = new THREE.CanvasTexture(cv);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.7), new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.95 }));
+    // Six marks, drawn once and shared. A floor carries a couple of hundred of these and
+    // a canvas texture each would be a couple of hundred texture binds and ten megabytes
+    // of uploads — which is exactly how the poolrooms stopped being able to draw a frame.
+    const pick = Math.abs(Math.floor((o.px ?? 0) * 3.1 + (o.pz ?? 0) * 7.7)) % 6;
+    CHALK[pick] = CHALK[pick] || chalkMark(pick);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 1.15), CHALK[pick]);
     m.rotation.x = -Math.PI / 2;
     m.position.y = 0.02;
+    return G(m);
+  },
+
+  // ---------------------------------------------------------------- the stall
+  // Somebody set up a trestle table against the panelling of the lift car and put three
+  // things on it. This is the only commerce in the building.
+  shopStall(o = {}) {
+    const len = o.len ?? 3.4;
+    const top = mat('stallTop', 0x6a5334, { rough: 0.7 });
+    const cloth = mat('stallCloth', 0x5a2a2e, { rough: 0.95 });
+    const g = G(
+      box(0.78, 0.06, len, top, 0, 0.9, 0),                       // table top
+      box(0.7, 0.5, 0.04, cloth, 0, 0.4, len / 2 - 0.03),          // cloth over each end
+      box(0.7, 0.5, 0.04, cloth, 0, 0.4, -len / 2 + 0.03),
+      box(0.06, 0.9, 0.06, darkSteel(), -0.3, 0, len / 2 - 0.2),   // legs
+      box(0.06, 0.9, 0.06, darkSteel(), 0.3, 0, len / 2 - 0.2),
+      box(0.06, 0.9, 0.06, darkSteel(), -0.3, 0, -len / 2 + 0.2),
+      box(0.06, 0.9, 0.06, darkSteel(), 0.3, 0, -len / 2 + 0.2),
+    );
+    // a strip light clipped to the front edge, pointing at the goods
+    g.add(box(0.05, 0.05, len - 0.4, mat('stallStrip', 0xfff0c8, {
+      emissive: 0xffd890, emissiveIntensity: 1.5, rough: 0.4,
+    }), -0.34, 0.94, 0));
+    return g;
+  },
+
+  // What is actually for sale, built to look like the thing rather than an icon: a boot,
+  // a lens, a board, a roll of tape. `key` picks which.
+  shopGood(o = {}) {
+    const g = new THREE.Group();
+    const card = mat('goodCard', 0xb8ae94, { rough: 0.9 });
+    const glassy = mat('goodGlass', 0xa8c8d8, { rough: 0.1, metal: 0.3 });
+    switch (o.key) {
+      case 'shoes': {                                   // a pair of trainers, laces knotted
+        for (const x of [-0.11, 0.11]) {
+          g.add(box(0.11, 0.09, 0.28, mat('goodShoe', 0xd8d2c0, { rough: 0.8 }), x, 0.04, 0));
+          g.add(box(0.1, 0.07, 0.1, rubber(), x, 0.11, -0.08));
+        }
+        break;
+      }
+      case 'lens': {                                    // a screw-on wide-angle in its cap
+        g.add(cyl(0.09, 0.11, 0.1, darkSteel(), 0, 0, 0, 12));
+        g.add(cyl(0.085, 0.085, 0.02, glassy, 0, 0.1, 0, 12));
+        break;
+      }
+      case 'ccd': {                                     // a camera board in an antistatic bag
+        g.add(box(0.22, 0.02, 0.16, mat('goodBoard', 0x1f4a2a, { rough: 0.6 }), 0, 0.01, 0));
+        g.add(box(0.24, 0.005, 0.18, mat('goodBag', 0x8a94a0, { rough: 0.3, opacity: 0.5 }), 0, 0.03, 0));
+        break;
+      }
+      case 'soles': {                                   // sorbothane pads, cut to shape
+        for (let i = 0; i < 3; i++) g.add(box(0.16, 0.012, 0.1, mat('goodPad', 0x3a3a44, { rough: 0.9 }), 0, 0.006 + i * 0.014, i * 0.01));
+        break;
+      }
+      case 'tracker': {                                 // a field-strength meter
+        g.add(box(0.14, 0.16, 0.06, plasticGrey(), 0, 0.08, 0));
+        g.add(box(0.1, 0.06, 0.01, mat('goodDial', 0xd8e0c0, { emissive: 0x60ff90, emissiveIntensity: 0.6, rough: 0.5 }), 0, 0.12, 0.035));
+        g.add(cyl(0.006, 0.006, 0.3, steel(), 0.05, 0.16, 0, 6));
+        break;
+      }
+      case 'cells': {                                   // four D-cells in the shrink-wrap
+        for (let i = 0; i < 4; i++) g.add(cyl(0.017, 0.017, 0.06, mat('goodCell', 0x2a2a30, { rough: 0.5, metal: 0.4 }), -0.06 + i * 0.04, 0.03, 0, 8));
+        break;
+      }
+      case 'lungs': {                                   // a spirometer with a best on it
+        g.add(cyl(0.05, 0.05, 0.2, glassy, 0, 0.1, 0, 10));
+        g.add(cyl(0.02, 0.02, 0.09, rubber(), 0.07, 0.05, 0, 8));
+        break;
+      }
+      case 'quickhands': {                              // fingerless gloves, one bitten
+        for (const x of [-0.08, 0.08]) g.add(box(0.11, 0.04, 0.16, mat('goodGlove', 0x4a3a2a, { rough: 0.9 }), x, 0.02, 0));
+        break;
+      }
+      case 'chalk': {                                   // a tin of chalk stubs
+        g.add(cyl(0.08, 0.08, 0.05, mat('goodTin', 0x9aa0a6, { rough: 0.4, metal: 0.7 }), 0, 0.025, 0, 12));
+        for (let i = 0; i < 4; i++) g.add(cyl(0.012, 0.012, 0.06, mat('goodChalk', 0xefeade, { rough: 1 }), -0.03 + i * 0.02, 0.055, 0, 6));
+        break;
+      }
+      case 'gaffer': {                                  // a roll of two-inch tape
+        const r = cyl(0.07, 0.07, 0.05, mat('goodTape', 0x23232a, { rough: 0.85 }), 0, 0.035, 0, 14);
+        r.rotation.x = Math.PI / 2;
+        g.add(r);
+        break;
+      }
+      case 'adrenaline': {                              // two auto-injectors in a box
+        g.add(box(0.2, 0.05, 0.12, card, 0, 0.025, 0));
+        for (const x of [-0.04, 0.04]) g.add(cyl(0.014, 0.014, 0.14, mat('goodPen', 0xd8c860, { rough: 0.5 }), x, 0.06, 0, 8));
+        break;
+      }
+      default: {                                        // a photocopied floor plan
+        g.add(box(0.26, 0.004, 0.2, mat('goodPaper', 0xd8d2bc, { rough: 0.95 }), 0, 0.002, 0));
+        g.add(box(0.08, 0.005, 0.06, mat('goodInk', 0xc03028, { rough: 0.9 }), 0.05, 0.006, -0.03));
+        break;
+      }
+    }
+    g.position.y = o.y ?? 0;
+    return g;
+  },
+
+  // The price on a bit of card, biro on both sides, propped against the goods. SOLD OUT
+  // gets struck through, which is the only typography in the game.
+  shopTag(o = {}) {
+    const cv = document.createElement('canvas');
+    cv.width = 256; cv.height = 128;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#ded5b8';
+    ctx.fillRect(0, 0, 256, 128);
+    ctx.strokeStyle = 'rgba(120,110,80,0.5)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(4, 4, 248, 120);
+    ctx.fillStyle = '#23324a';
+    ctx.font = 'bold 30px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    const name = String(o.text ?? '').slice(0, 15);
+    ctx.fillText(name, 128, 52);
+    ctx.font = 'bold 40px "Courier New", monospace';
+    ctx.fillStyle = o.sold ? '#7a2a24' : '#1d3a24';
+    ctx.fillText(o.sold ? 'SOLD OUT' : `${o.price ?? '?'} ft`, 128, 100);
+    if (o.sold) {
+      ctx.strokeStyle = '#7a2a24';
+      ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(30, 92); ctx.lineTo(226, 86); ctx.stroke();
+    }
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.3, 0.15),
+      new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, side: THREE.DoubleSide }),
+    );
+    m.rotation.x = -0.5;
+    const g = G(m, box(0.02, 0.1, 0.02, mat('tagWire', 0x8a8a90, { rough: 0.5, metal: 0.6 }), 0, -0.08, 0.02));
+    g.position.y = o.y ?? 0.95;
+    return g;
+  },
+
+  // The car's own button panel: one per floor of the descent, the next one lit.
+  liftPanel(o = {}) {
+    const g = new THREE.Group();
+    const plate = mat('panelPlate', 0x8e959c, { rough: 0.35, metal: 0.85 });
+    g.add(box(0.05, 0.9, 0.34, plate, 0, 0, 0));
+    const lit = mat('panelBtnLit', 0xffd070, { emissive: 0xff9820, emissiveIntensity: 2.2, rough: 0.4 });
+    const dead = mat('panelBtnDead', 0x54585e, { rough: 0.6 });
+    const rows = o.floors ?? 10;
+    const on = o.at ?? 1;
+    for (let i = 0; i < rows; i++) {
+      const b = cyl(0.024, 0.024, 0.02, i === on ? lit : dead, 0.035, 0, 0, 8);
+      b.rotation.z = Math.PI / 2;
+      b.position.set(0.035, 0.82 - Math.floor(i / 2) * 0.15, (i % 2 ? 0.07 : -0.07));
+      g.add(b);
+    }
+    // and the big one you actually press
+    const go = cyl(0.055, 0.055, 0.03, lit, 0.04, 0, 0, 12);
+    go.rotation.z = Math.PI / 2;
+    go.position.set(0.04, 0.12, 0);
+    g.add(go);
+    g.userData.go = go;
+    g.position.y = o.y ?? 0;
+    return g;
+  },
+
+  // The inspection certificate nobody has signed since before you were born.
+  notice() {
+    const cv = document.createElement('canvas');
+    cv.width = 128; cv.height = 160;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#d8d2bc';
+    ctx.fillRect(0, 0, 128, 160);
+    ctx.fillStyle = 'rgba(40,40,50,0.75)';
+    ctx.font = 'bold 13px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('INSPECTION', 64, 26);
+    ctx.font = '10px "Courier New", monospace';
+    ctx.fillText('THIS CAR', 64, 46);
+    ctx.textAlign = 'left';
+    for (let i = 0; i < 7; i++) {
+      ctx.fillStyle = `rgba(60,60,70,${0.5 - i * 0.05})`;
+      ctx.fillRect(14, 60 + i * 12, 90 - i * 6, 3);
+    }
+    ctx.strokeStyle = 'rgba(120,30,30,0.8)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(90, 128, 22, 0, Math.PI * 2);
+    ctx.stroke();
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.24, 0.3),
+      new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }),
+    );
+    m.position.set(0, 1.45, 0.03);
     return G(m);
   },
   skull() {

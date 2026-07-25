@@ -368,7 +368,9 @@ export class World {
           }
           if (nc === C.HALF) continue;   // the HALF cell draws its own sides
           const nWall = this.inside(cx + dx, cz + dz) ? d.matW[this.idx(cx + dx, cz + dz)] : wMat;
-          const mName = nc === C.GLASS ? 'glass' : nWall;
+          // Glass takes whatever glazing the level painted on it, so the poolrooms can
+          // have clean pool windows and the hospital can have wired safety glass.
+          const mName = nc === C.GLASS ? (nWall.startsWith('glass') ? nWall : 'glass') : nWall;
           // run the wall from the lowest floor to the highest ceiling of every
           // walkable cell touching this wall block — no seams at the top
           let top = cy, bottom = fy;

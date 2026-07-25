@@ -60,6 +60,48 @@ export function build(kit) {
     L.prop('fountain', { x: cx, z: cz });
   }
 
+  // ---------------------------------------------------------------- windows
+  // The thing about the poolrooms is that you can see the next room before you can get
+  // to it. Every chamber gets glazing punched through the tile into whatever is on the
+  // other side: a long strip at chest height, or a run of tall lights floor to ceiling.
+  // Glass is solid to walk into and clear to look and to LIGHT through, so a chamber
+  // with a window in it borrows the blue off the water next door — and something moving
+  // two rooms away is visible long before it has any idea you are there.
+  const glazed = [];
+  for (const [x0, z0, x1, z1] of chambers) {
+    const wide = x1 - x0 >= z1 - z0;
+    // pick a wall with something behind it: step out from the middle of each side and
+    // look for open floor two cells beyond the tile
+    const sides = wide
+      ? [[Math.floor((x0 + x1) / 2), z0 - 1, 0, -1], [Math.floor((x0 + x1) / 2), z1 + 1, 0, 1]]
+      : [[x0 - 1, Math.floor((z0 + z1) / 2), -1, 0], [x1 + 1, Math.floor((z0 + z1) / 2), 1, 0]];
+    for (const [wx, wz, dx, dz] of kit.shuffle(sides)) {
+      if (!L.inside(wx + dx * 3, wz + dz * 3)) continue;
+      let behind = false;
+      for (let d = 1; d <= 4; d++) if (L.isOpen(wx + dx * d, wz + dz * d)) { behind = true; break; }
+      if (!behind) continue;
+      const run = kit.randInt(4, 9);
+      const tall = kit.chance(0.45);
+      for (let i = -run; i <= run; i++) {
+        const gx = wx + (dx ? 0 : i), gz = wz + (dz ? 0 : i);
+        if (!L.inside(gx, gz) || L.get(gx, gz) !== C.WALL) continue;
+        // leave a mullion every few cells so it reads as glazing and not a missing wall
+        if (!tall && Math.abs(i) % 4 === 3) continue;
+        L.set(gx, gz, C.GLASS);
+        L.paint(gx, gz, { wall: 'glassPool' });
+      }
+      glazed.push([wx, wz, dx, dz, tall]);
+      break;
+    }
+  }
+  // a working light on the far side of some of them, so the window is a bright hole in
+  // a dark wall rather than a grey one
+  for (const [wx, wz, dx, dz] of kit.shuffle(glazed).slice(0, 9)) {
+    const lx = wx + dx * 3, lz = wz + dz * 3;
+    if (!L.isOpen(lx, lz)) continue;
+    L.light({ x: lx, z: lz, y: 2.2, color: 0xa8e8ff, intensity: 0.9, radius: 14, fixture: 'none', hum: 0.15 });
+  }
+
   // ---------------------------------------------------------------- the water
   // Everything walkable is wet. Basins are deeper, and one of them is a lot
   // deeper than it looks from the doorway.

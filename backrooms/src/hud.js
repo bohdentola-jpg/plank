@@ -28,6 +28,11 @@ export class Hud {
       <div class="hud-toast" hidden></div>
       <div class="hud-crosshair"><i></i></div>
       <div class="hud-chase" hidden><span></span></div>
+      <div class="lift-docket" hidden>
+        <div class="ld-head"></div>
+        <div class="ld-rows"></div>
+        <div class="ld-foot">the stall is on your right · the button is by the doors</div>
+      </div>
       <div class="hud-xray" hidden>
         <span class="xr-tag">X-RAY</span>
         <span class="xr-m">—</span>
@@ -59,6 +64,7 @@ export class Hud {
     this.cardEl = this.el.querySelector('.level-card');
     this.deathEl = this.el.querySelector('.death');
     this.chaseEl = this.el.querySelector('.hud-chase');
+    this.docketEl = this.el.querySelector('.lift-docket');
     this.xrayEl = this.el.querySelector('.hud-xray');
     this.xrayM = this.el.querySelector('.xr-m');
     this.xrayL = this.el.querySelector('.xr-l');
@@ -139,6 +145,27 @@ export class Hud {
 
   chaseOff() { this.chaseEl.hidden = true; }
 
+  // ---------------------------------------------------------------- the lift
+  // What the floor you just left was worth, printed on the wall of the car. It stays up
+  // the whole time you are in there, because there is nothing else to read.
+  liftDocket(pay, footage, floor, floors) {
+    if (!pay) { this.docketEl.hidden = true; return; }
+    this.docketEl.hidden = false;
+    this.docketEl.querySelector('.ld-head').textContent =
+      floor >= floors ? 'THE LIFT GOES UP FROM HERE' : `FLOOR ${floor} CLEARED — ${floors - floor} TO GO`;
+    const row = (label, v) => (v ? `<div><span>${label}</span><b>+${v}</b></div>` : '');
+    this.docketEl.querySelector('.ld-rows').innerHTML = [
+      row('off the floor alive', pay.base),
+      row('footage of it', pay.film),
+      row('never chased', pay.clean),
+      row('brisk about it', pay.brisk),
+      row('used the cover', pay.cover),
+      `<div class="tot"><span>FOOTAGE</span><b>${footage}</b></div>`,
+    ].join('');
+  }
+
+  hideDocket() { this.docketEl.hidden = true; }
+
   // ---------------------------------------------------------------- the cheat
   setXray(on) { this.xrayEl.hidden = !on; }
 
@@ -159,6 +186,7 @@ export class Hud {
   }
 
   subtitle(text, secs = 4.5) {
+    if (!text) { this.subEl.hidden = true; this.subT = 0; return; }
     if (!this.game.settings.subtitles) return;
     this.subEl.hidden = false;
     this.subEl.textContent = text;

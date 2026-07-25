@@ -14,6 +14,7 @@ import * as THREE from 'three';
 import { makeKit } from './kit.js';
 import { CHAIN, loadLevelModule, levelSeed, makeRun } from './levels/index.js';
 import { World } from './world.js';
+import { buildProp } from './props.js';
 import { Player } from './player.js';
 import { Entities } from './entities.js';
 import { Camcorder } from './camcorder.js';
@@ -21,6 +22,7 @@ import { Audio } from './audio.js';
 import { Hud } from './hud.js';
 import { Fx } from './fx.js';
 import { CATALOG, applyOwned, priceOf, soldOut, offersFor, footageFor } from './powerups.js';
+import { buildLiftCar, carSpots } from './lift.js';
 import { logoCanvas } from './textures.js';
 import { loadSettings, saveSettings } from './save.js';
 import { clamp, clamp01, damp, fmtTime, rng } from './util.js';
@@ -465,41 +467,65 @@ class Game {
     for (const e of exits) {
       if (e.kind !== 'elevator') continue;      // one way off a floor now
       const g = new THREE.Group();
-      const doors = new THREE.Mesh(
-        new THREE.PlaneGeometry(2.6, 2.4),
-        new THREE.MeshBasicMaterial({ color: 0xffe6b0, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false }),
-      );
-      doors.position.y = 1.2;
-      g.add(doors);
-      const light = new THREE.PointLight(0xffe0a0, 2.4, 18, 1.6);
-      light.position.y = 1.8;
+      const wx = e.x * S, wz = e.z * S;
+      const fy = this.world.floorAtWorld(wx, wz);
+
+      // Which way does it face? Whichever side of the cell you can actually stand on —
+      // a lift built into the wrong wall is a lift you walk round the back of.
+      let facing = 0, bestOpen = -1;
+      for (const [dx, dz, yaw] of [[0, 1, 0], [0, -1, Math.PI], [1, 0, Math.PI / 2], [-1, 0, -Math.PI / 2]]) {
+        let open = 0;
+        for (let d = 1; d <= 4; d++) if (this.world.isOpenCell(e.x + dx * d, e.z + dz * d)) open++; else break;
+        if (open > bestOpen) { bestOpen = open; facing = yaw; }
+      }
+
+      const car = buildProp({ name: 'liftEntrance', px: 0, pz: 0, rot: 0, y: 0 }, 0, 3);
+      car.rotation.y = facing;
+      g.add(car);
+
+      // The spill sits in FRONT of the doors, not level with them: behind the leaves it
+      // lights the shaft and leaves the only landmark on the floor as a black rectangle.
+      const light = new THREE.PointLight(0xffd8a0, 1.7, 24, 1.15);
+      light.position.set(Math.sin(facing) * 2.6, 1.5, Math.cos(facing) * 2.6);
       g.add(light);
-      // A call light above the doors. Finding the lift should be a thing you can SEE
-      // from the far end of a corridor, not something you only learn from the chalk —
-      // the marks tell you which way, this tells you that you have arrived.
-      const beacon = new THREE.Mesh(
-        new THREE.SphereGeometry(0.16, 10, 8),
-        new THREE.MeshBasicMaterial({ color: 0xfff0c0 }),
-      );
-      beacon.position.y = 2.7;
-      g.add(beacon);
-      const halo = new THREE.Mesh(
-        new THREE.SphereGeometry(0.62, 10, 8),
-        new THREE.MeshBasicMaterial({ color: 0xffd070, transparent: true, opacity: 0.16, depthWrite: false }),
-      );
-      halo.position.y = 2.7;
-      g.add(halo);
-      const spill = new THREE.PointLight(0xffd070, 2.0, 26, 1.2);
-      spill.position.y = 2.7;
-      g.add(spill);
-      g.position.set(e.x * S, this.world.floorAtWorld(e.x * S, e.z * S), e.z * S);
+      // the car's own light, inside it, so an open door glows from within
+      const inside = new THREE.PointLight(0xffe0a8, 2.2, 9, 1.2);
+      inside.position.set(-Math.sin(facing) * 0.8, 2.1, -Math.cos(facing) * 0.8);
+      g.add(inside);
+      const lantern = new THREE.PointLight(0xffb050, 1.8, 14, 1.4);
+      lantern.position.set(Math.sin(facing) * 0.3, 2.95, Math.cos(facing) * 0.3);
+      g.add(lantern);
+
+      g.position.set(wx, fy, wz);
       this.scene.add(g);
-      this.exitObjs.push({ mesh: g, rec: e, glow: doors, beacon, halo });
+      this.exitObjs.push({
+        mesh: g, rec: e, car, facing,
+        doors: car.userData.doors, lamp: car.userData.lamp, lantern, light,
+      });
+    }
+  }
+
+  // The doors part when you are close enough to be sure, and close again if you walk
+  // off. It is the only welcoming thing in the building.
+  updateLiftDoors(dt) {
+    const p = this.player.pos;
+    for (const o of this.exitObjs || []) {
+      const d = Math.hypot(o.mesh.position.x - p.x, o.mesh.position.z - p.z);
+      const want = d < 5.5 ? 1 : 0;
+      o.doorT = damp(o.doorT ?? 0, want, 3.2, dt);
+      const dd = o.doors;
+      if (dd) {
+        dd.l.position.x = dd.closedL - dd.open * o.doorT;
+        dd.r.position.x = dd.closedR + dd.open * o.doorT;
+      }
+      if (o.lantern) o.lantern.intensity = 1.5 + Math.sin(this.levelTime * 2.4) * 0.35 + o.doorT * 1.2;
+      if (o.lamp) o.lamp.material.emissiveIntensity = 1.8 + o.doorT * 1.6;
     }
   }
 
   // ------------------------------------------------------------------ verbs
   interact() {
+    if (this.state === 'lift') { this.liftInteract(); return; }
     if (this.player.hidden) { this.player.leaveHide(); this.audio.oneShot('clawStep', 0.3); return; }
     const p = this.player.pos;
     const lift = (this.exitObjs || []).find((o) => Math.hypot(o.mesh.position.x - p.x, o.mesh.position.z - p.z) < 3.0);
@@ -665,14 +691,15 @@ class Game {
   }
 
   // ------------------------------------------------------------------ the lift
-  reachLift() {
+  // ------------------------------------------------------------------ the lift
+  // You do not get a menu. The doors close and you are in the car, and the car is a room
+  // like any other room in the game — you walk around it, you look at what is on the
+  // stall, you press the button when you have finished. The only difference is that
+  // nothing in here is hunting you.
+  async reachLift() {
     if (this.state !== 'play') return;
     this.state = 'lift';
-    document.exitPointerLock?.();
     this.audio.oneShot('exitOpen', 0.9);
-    this.audio.stopMusic();
-    this.audio.startTone({ room: 'drone', hum: 0.3, drip: 0, wind: 0, music: 'calm', reverb: 0.3 });
-    this.audio.startMusic('calm');
 
     const pay = footageFor({
       floorIndex: this.floorIndex,
@@ -682,11 +709,95 @@ class Game {
       hides: this.hidesUsed,
     });
     this.footage += pay.total;
+    this.lastPay = pay;
     this.records.bestFloor = Math.max(this.records.bestFloor || 0, this.floorIndex + 1);
     this.records.bestFootage = Math.max(this.records.bestFootage || 0, this.footage);
     saveRecords(this.records);
-    this.renderLift(pay);
-    this.showScreen('lift');
+
+    // what is on the stall this time
+    this.offers = offersFor(this.floorIndex, this.owned, this.runRand);
+    await this.buildCar();
+    this.hud.liftDocket(pay, this.footage, this.floorIndex + 1, this.floors.length);
+    this.showScreen('play');
+    this.renderer.domElement.requestPointerLock?.();
+  }
+
+  // The car, rebuilt whenever what is for sale in it changes.
+  async buildCar() {
+    const offers = this.offers || [];
+    const data = buildLiftCar({
+      offers,
+      labels: offers.map((k) => CATALOG[k].name),
+      prices: offers.map((k) => priceOf(k, this.owned)),
+      owned: offers.map((k) => soldOut(k, this.owned)),
+      seed: 1000 + this.floorIndex,
+    });
+    if (this.world) this.world.dispose();
+    this.entities.clear();
+    this.clearFloorObjects();
+    this.fx.reset();
+    this.world = new World(data, this.scene, { quality: this.settings.quality, arrows: 0 });
+    this.player.world = this.world;
+    this.player.mods = this.mods;
+    this.player.spawn(data.spawn.x * data.cell, data.spawn.z * data.cell, data.spawn.yaw);
+    this.scene.fog = new THREE.FogExp2(data.fog.color, data.fog.density);
+    this.scene.background = new THREE.Color(data.fog.color);
+    this.baseFog = data.fog.density;
+    this.ambient.color.setHex(data.ambient.color);
+    this.ambient.intensity = data.ambient.intensity;
+    this.hemi.visible = false;
+    this.levelTint = data.tint;
+    this.gimmick = 'silence';
+    this.liftSpots = carSpots(offers);
+    // the floor you just left is over: clear its objectives, its subtitle and its chase
+    this.hud.subtitle(null);
+    this.hud.chaseOff();
+    this.hud.setFilming(false, 0);
+    const last = this.floorIndex + 1 >= this.floors.length;
+    this.hud.setObjectives([
+      { text: 'Spend what you filmed. The stall is on your right.' },
+      { text: last ? 'Then ride it up.' : `Press ${this.floorIndex + 2} by the doors when you are ready.` },
+      { text: 'Nothing in here is hunting you. This is the only room like that.', optional: true },
+    ]);
+    this.audio.stopMusic();
+    this.audio.startTone(data.ambience);
+    this.audio.startMusic('calm');
+    this.audio.oneShot('exitOpen', 0.6);
+  }
+
+  // Walking up to something in the car. The stall and the button are places, so this is
+  // the same [E] you use on cover and on the lift itself.
+  liftLookAt() {
+    const p = this.player.pos;
+    let best = null, bd = Infinity;
+    for (const s of this.liftSpots || []) {
+      const d = Math.hypot(s.x - p.x, s.z - p.z);
+      if (d < s.r && d < bd) { bd = d; best = s; }
+    }
+    return best;
+  }
+
+  liftInteract() {
+    const spot = this.liftLookAt();
+    if (!spot) return;
+    if (spot.kind === 'go') { this.descend(); return; }
+    const key = spot.key;
+    const price = priceOf(key, this.owned);
+    if (soldOut(key, this.owned)) { this.hud.toast('sold out'); return; }
+    if (this.footage < price) {
+      this.hud.toast(`${price} ft — you have ${this.footage}`);
+      this.audio.oneShot('tapeStop', 0.4);
+      return;
+    }
+    this.footage -= price;
+    this.owned[key] = (this.owned[key] || 0) + 1;
+    this.mods = applyOwned(this.owned);
+    this.player.mods = this.mods;
+    this.applySettings();
+    this.audio.oneShot('objectiveDone', 0.6);
+    this.hud.toast(`${CATALOG[key].name} — yours`);
+    this.buildCar();                                  // the card on the table changes
+    this.hud.liftDocket(this.lastPay, this.footage, this.floorIndex + 1, this.floors.length);
   }
 
   renderLift(pay) {
@@ -738,6 +849,8 @@ class Game {
   }
 
   async descend() {
+    this.hud.hideDocket();
+    this.liftSpots = null;
     if (this.floorIndex + 1 >= this.floors.length) return this.finish();
     await this.enterFloor(this.floorIndex + 1);
   }
@@ -858,6 +971,7 @@ class Game {
     this.lastDt = dt;
 
     if (this.state === 'play' && !this.paused && !this.dead) this.tick(dt);
+    else if (this.state === 'lift' && !this.paused) this.tickCar(dt);
     else if (this.state === 'play') this.fx.update(dt * 0.2);
     this.hud.update(dt);
 
@@ -874,8 +988,50 @@ class Game {
       tapeTime: this.tapeTime,
       battery: this.camBattery,
       recording: this.recording && this.camBattery > 0,
-      floorTag: this.meta ? `FLOOR ${this.floorIndex + 1}/${this.floors.length} · LEVEL ${this.meta.num}` : '',
+      floorTag: this.state === 'lift'
+        ? `SERVICE LIFT · DESCENDING TO ${Math.min(this.floorIndex + 2, this.floors.length)}/${this.floors.length}`
+        : this.meta ? `FLOOR ${this.floorIndex + 1}/${this.floors.length} · LEVEL ${this.meta.num}` : '',
     });
+  }
+
+  // The car's own frame: you can walk, you can look, and the only interactive things are
+  // the stall and the button. No monster, no gimmick, no scares, and the tape keeps
+  // running because the tape always keeps running.
+  tickCar(dt) {
+    const p = this.player;
+    const w = this.world;
+    if (!w) return;
+    this.levelTime += dt;
+    if (this.recording && this.camBattery > 0) this.tapeTime += dt;
+    p.update(dt, this.input, w.rules || {});
+    w.update(dt, p.pos);
+    this.fx.update(dt * 0.3);
+
+    const eye = p.eye();
+    this.camera.position.set(eye.x, eye.y + (this.settings.headBob ? 0 : -p.bob), eye.z);
+    this.camera.rotation.set(p.pitch, p.yaw, p.sway * (this.settings.headBob ? 1 : 0), 'YXZ');
+    const look = p.look();
+    this.lamp.position.copy(this.camera.position);
+    this.lampTarget.position.set(eye.x + look.x * 8, eye.y + look.y * 8, eye.z + look.z * 8);
+    this.lamp.intensity = damp(this.lamp.intensity, this.lampOn ? 1.4 : 0, 10, dt);
+    this.glow.position.copy(this.camera.position);
+    this.glow.intensity = damp(this.glow.intensity, 1.1, 10, dt);
+    this.audio.setListener(eye.x, eye.z, p.yaw);
+    this.audio.humIdle(dt);
+
+    const spot = this.liftLookAt();
+    if (!spot) this.hud.prompt(null);
+    else if (spot.kind === 'go') {
+      const last = this.floorIndex + 1 >= this.floors.length;
+      this.hud.prompt(last ? '<b>[E]</b> ride it up — out' : `<b>[E]</b> press ${this.floorIndex + 2} — go down`);
+    } else {
+      const price = priceOf(spot.key, this.owned);
+      const def = CATALOG[spot.key];
+      this.hud.prompt(soldOut(spot.key, this.owned)
+        ? `${def.name} — sold out`
+        : `<b>[E]</b> ${def.name} — <b>${price} ft</b>${this.footage < price ? ' (you cannot)' : ''}`);
+    }
+    this.hud.update(dt);
   }
 
   tick(dt) {
@@ -900,6 +1056,7 @@ class Game {
     this.fx.update(dt);
     this.runGimmick(dt);
     this.updateXray();
+    this.updateLiftDoors(dt);
 
     // ---- camera
     const eye = p.eye();
@@ -943,13 +1100,8 @@ class Game {
 
     // ---- the lift, and the chalk
     for (const o of this.exitObjs) {
-      o.glow.lookAt(this.camera.position.x, o.glow.position.y, this.camera.position.z);
-      o.glow.material.opacity = 0.2 + Math.sin(this.levelTime * 2.2) * 0.05;
       const d = Math.hypot(o.mesh.position.x - p.pos.x, o.mesh.position.z - p.pos.z);
       if (d < 40) this.audio.hum(clamp01(1 - d / 40));
-      const beat = 0.55 + Math.sin(this.levelTime * 3.1) * 0.45;
-      if (o.halo) o.halo.material.opacity = 0.10 + beat * 0.16;
-      if (o.beacon) o.beacon.material.color.setRGB(1, 0.88 + beat * 0.1, 0.6 + beat * 0.25);
     }
 
     // ---- prompts

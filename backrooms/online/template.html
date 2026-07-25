@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#05050a" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>NOCLIP ONLINE — ten floors down, together</title>
+<meta name="description" content="Found-footage backrooms horror for up to four. One thing hunts each floor, contact is death, and the lift will not leave without you. Phone or desktop, no install." />
+<style>{{CSS}}</style>
+</head>
+<body>
+
+<div id="game"></div>
+<div id="tape" class="tape"></div>
+
+<!-- ============================ HUD ============================ -->
+<div id="hud">
+  <div id="party" class="party"></div>
+  <div class="right">
+    <div id="foot" class="foot">0 ft</div>
+    <div class="meter"><i id="batt"></i></div>
+    <div class="meter wind"><i id="wind"></i></div>
+  </div>
+  <div id="near" class="near">IT HAS YOU</div>
+  <div id="card" class="card"></div>
+  <div id="say" class="say"></div>
+  <div id="toast" class="toast"></div>
+  <div id="prompt" class="prompt"></div>
+  <div class="cross"></div>
+
+  <!-- phones only: a stick, and buttons big enough to hit while running -->
+  <div id="stick" class="stick"><i id="knob"></i></div>
+  <div class="pad">
+    <button id="b-use" class="tbtn big">USE</button>
+    <button id="b-torch" class="tbtn">TORCH</button>
+    <button id="b-crouch" class="tbtn">CROUCH</button>
+    <button id="b-film" class="tbtn small">REC</button>
+    <button id="b-night" class="tbtn small">N/S</button>
+    <button id="b-menu" class="tbtn small">☰</button>
+  </div>
+</div>
+
+<!-- ============================ THE DOOR ============================ -->
+<section class="screen door on" id="scr-door">
+  <div class="card-box">
+    <img id="logo" alt="NOCLIP" />
+    <div class="kicker">ONLINE · UP TO FOUR · NO INSTALL</div>
+    <p class="pitch">Ten floors down. One thing hunts each of them, contact is death, and the
+      service lift will not leave until everybody still breathing is standing in it.</p>
+    <label class="field">NAME<input id="name" maxlength="12" autocomplete="off" spellcheck="false" /></label>
+    <div class="label">SUIT</div>
+    <div id="suits" class="suits"></div>
+    <div class="row">
+      <button id="d-host" class="btn gold">HOST A DESCENT</button>
+      <button id="d-solo" class="btn">GO DOWN ALONE</button>
+    </div>
+    <div class="row join">
+      <input id="code" class="code" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false" />
+      <button id="d-join" class="btn">JOIN</button>
+    </div>
+    <div id="door-note" class="note"></div>
+    <div class="foot-note">WASD + mouse, or thumbs on a phone · headphones strongly advised</div>
+  </div>
+</section>
+
+<!-- ============================ LOBBY ============================ -->
+<section class="screen" id="scr-lobby">
+  <div class="card-box">
+    <div class="kicker">LOBBY</div>
+    <div class="bigcode">CODE <b id="lobby-code">—</b></div>
+    <button id="d-copy" class="btn small-btn">COPY THE INVITE LINK</button>
+    <div id="lobby-list" class="crews"></div>
+    <div id="lobby-note" class="note"></div>
+    <button id="lobby-go" class="btn gold">▼ GO DOWN</button>
+    <div id="lobby-wait" class="note" hidden>waiting for the host…</div>
+    <button id="lobby-back" class="btn small-btn">◀ BACK</button>
+  </div>
+</section>
+
+<!-- ============================ LOADING ============================ -->
+<section class="screen" id="scr-load">
+  <div class="card-box thin">
+    <div class="kicker">THREADING THE TAPE</div>
+    <div id="load-label" class="note"></div>
+  </div>
+</section>
+
+<!-- ============================ PAUSE ============================ -->
+<section class="screen" id="scr-pause">
+  <div class="card-box thin">
+    <div class="kicker">TAPE PAUSED</div>
+    <p class="pitch">The floor does not pause. Your friends are still down there.</p>
+    <button id="p-resume" class="btn gold">BACK IN</button>
+    <button id="p-quit" class="btn small-btn">EJECT</button>
+  </div>
+</section>
+
+<!-- ============================ DEAD / OVER / OUT ============================ -->
+<section class="screen dead" id="scr-dead">
+  <div class="card-box thin">
+    <div class="kicker red">THE TAPE STOPS HERE</div>
+    <div id="dead-by" class="note big-note"></div>
+    <div id="dead-note" class="note"></div>
+    <button id="dead-watch" class="btn small-btn">KEEP FILMING</button>
+  </div>
+</section>
+
+<section class="screen" id="scr-over">
+  <div class="card-box thin">
+    <div class="kicker red">ALL OF YOU</div>
+    <p class="pitch">Nobody came back up. The tape was found in the drive.</p>
+    <button class="btn gold" onclick="location.reload()">PUT IN A NEW TAPE</button>
+  </div>
+</section>
+
+<section class="screen" id="scr-out">
+  <div class="card-box thin">
+    <div class="kicker">YOU GOT OUT</div>
+    <p class="pitch">Daylight, and a car park, and the tape still running.</p>
+    <div id="out-stats" class="note"></div>
+    <button class="btn gold" onclick="location.reload()">AGAIN</button>
+  </div>
+</section>
+
+<div id="rotate" class="rotate">turn the phone sideways</div>
+
+<script src="{{PEER_URL}}"></script>
+<script type="importmap">{ "imports": { "three": "{{THREE_URL}}" } }</script>
+<script type="module">
+{{BUNDLE}}
+</script>
+</body>
+</html>

@@ -231,6 +231,22 @@ html, body {
   animation: blink 0.55s steps(2, end) infinite;
 }
 
+/* the docket in the lift car: what the floor you just left was worth, on the wall */
+.lift-docket {
+  position: absolute; top: 30vh; left: 3.6vw; width: 250px;
+  background: rgba(10, 8, 5, 0.62); border: 1px solid #3d3524; padding: 10px 12px;
+  font-size: 11px; color: #cfc9b6; letter-spacing: 0.5px;
+}
+.lift-docket .ld-head {
+  font-size: 10px; letter-spacing: 3px; color: #f0e0a8; margin-bottom: 8px;
+  border-bottom: 1px solid #3d3524; padding-bottom: 6px;
+}
+.lift-docket .ld-rows div { display: flex; justify-content: space-between; margin-bottom: 3px; }
+.lift-docket .ld-rows b { color: #a8d8a0; font-weight: normal; }
+.lift-docket .ld-rows .tot { margin-top: 7px; border-top: 1px solid #3d3524; padding-top: 6px; letter-spacing: 2px; }
+.lift-docket .ld-rows .tot b { color: #f0e0a8; }
+.lift-docket .ld-foot { margin-top: 9px; font-size: 9px; color: #8a8674; line-height: 1.5; }
+
 /* the cheat's readout: bottom-centre, out of the way of everything real */
 .hud-xray {
   position: absolute; left: 50%; bottom: 4.5vh; transform: translateX(-50%);

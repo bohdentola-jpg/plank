@@ -35,6 +35,11 @@ on the tape edge, a spare life in gaffer tape.
 Somebody wrote a cheat on the inlay card before they sold the tape on: **CTRL+SHIFT+X**
 outlines the monster and the lift through every wall, from anywhere on the floor.
 
+**[NOCLIP ONLINE](backrooms/README.md#noclip-online)** is the same game in a single HTML
+file for up to four people — four-letter lobby codes over WebRTC, hazmat suits with names
+over them, thumb controls on a phone, and a lift that will not leave without you. Build it
+with `npm run build:noclip-online`.
+
 Twenty-three floors in the pool, drawn by depth and generated fresh each run — the
 original yellow rooms, the poolrooms with the lights out under the water, pipe
 tunnels, an endless hotel, a hospital with a nurse in it, a snowfield with a queue of

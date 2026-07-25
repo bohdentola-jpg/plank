@@ -941,6 +941,29 @@ export const RECIPES = {
   },
 
   // ---------------------------------------------------------- odds and ends
+  // Pool glazing: no wire, no frost, just thick clean glass with the water line dried
+  // on it and a chlorine bloom in the corners. What matters is that you can see the next
+  // flooded room through it long before you can work out how to get in there.
+  glassPool: {
+    tile: 0.5, rough: 0.04, metal: 0.05, opacity: 0.16,
+    draw(ctx, s, R) {
+      base(ctx, s, 0xbfe4ec);
+      clouds(ctx, s, 77, 70, [220, 245, 250], 0.4);
+      // dried water lines and runs
+      streaks(ctx, s, 26, '255,255,255', 0.12, true, R, 0.9);
+      for (let i = 0; i < 5; i++) {
+        const y = R() * s;
+        ctx.strokeStyle = `rgba(230,250,255,${(0.06 + R() * 0.1).toFixed(2)})`;
+        ctx.lineWidth = 1 + R() * 2.5;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        for (let x = 0; x < s; x += 8) ctx.lineTo(x, y + Math.sin(x * 0.07 + i) * 2);
+        ctx.stroke();
+      }
+      blotches(ctx, s, 10, '210,240,246', 6, 26, 0.16, R);
+      grain(ctx, s, 4, R);
+    },
+  },
   glass: {
     tile: 0.4, rough: 0.05, metal: 0.1, opacity: 0.28,
     draw(ctx, s, R) {

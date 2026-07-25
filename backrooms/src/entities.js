@@ -11,10 +11,13 @@
 // hearing reads the player's noise and the inverse square of the distance. A hound
 // has no eyes at all. A mannequin has nothing but eyes. Both work off this file.
 
-import { SPECIES, buildCreature } from './bestiary.js';
+import { SPECIES, buildCreature, bulkOf } from './bestiary.js';
 import { clamp, clamp01, damp, wrapAngle } from './util.js';
 
-const FLOW_EVERY = 0.25;
+// How often the route to the player is rebuilt. It is a whole-floor flood, so this is
+// the AI's largest cost — but at a quarter second a thing chasing you round a corner
+// follows a route you have already left, and it reads as stupid rather than frightening.
+const FLOW_EVERY = 0.16;
 
 export class Monster {
   constructor(rec, game) {
@@ -41,6 +44,13 @@ export class Monster {
     this.stareT = 0;
     this.speed = (rec.speed ?? sp.speed) * (game.difficulty ?? 1);
     this.walk = sp.walk || sp.speed * 0.35;
+    // The model is scaled up, so the thing's reach and its senses are too: something
+    // three metres tall hears the room better than a person does, and a floor this size
+    // needs it to, or it never finds you at all.
+    this.bulk = bulkOf(rec.type);
+    this.size = { radius: sp.radius * this.bulk, height: sp.height * this.bulk * 1.12 };
+    this.ears = 1.45;
+    this.eyes = 1.3;
     this.spawnGrace = 6;        // it does not know anything for the first few seconds
   }
 
@@ -48,7 +58,21 @@ export class Monster {
   ensureMesh() {
     if (this.mesh) return;
     this.mesh = buildCreature(this.rec.type);
+    this.baseScale = this.mesh.scale.clone();
     this.game.scene.add(this.mesh);
+  }
+
+  // A thing two and a half metres tall in a room with a two-metre ceiling grows through
+  // the roof, which looks like a bug and kills the shot. So it stoops: squashed down to
+  // fit whatever it is standing under, which on the crawl floors is most of the reason
+  // they are horrible.
+  fitToRoom() {
+    if (!this.mesh || !this.baseScale) return;
+    const w = this.game.world;
+    const room = w.ceilAtWorld(this.pos.x, this.pos.z) - w.floorAtWorld(this.pos.x, this.pos.z);
+    const fit = clamp((room - 0.14) / Math.max(0.5, this.size.height), 0.55, 1);
+    const s = this.baseScale;
+    this.mesh.scale.set(s.x, s.y * fit, s.z);
   }
 
   dropMesh() {
@@ -83,7 +107,7 @@ export class Monster {
     const noise = Math.max(p.noise * (g.mods?.noise ?? 1), g.noiseBoost || 0)
       * (g.world.rules?.noisefloor ? 1.5 : 1);
     if (noise <= 0.02) return 0;
-    const range = sp.senses.hearing * g.world.cell * (0.45 + noise) * (this.rec.hearing ?? 1);
+    const range = sp.senses.hearing * g.world.cell * (0.45 + noise) * (this.rec.hearing ?? 1) * this.ears;
     const d = this.dist;
     if (d > range) return 0;
     return clamp01((1 - d / range) * (0.4 + noise));
@@ -94,7 +118,7 @@ export class Monster {
     const p = g.player;
     const sp = this.sp;
     if (!sp.senses.sight || p.hidden) return 0;
-    const range = sp.senses.sight * g.world.cell * (this.rec.sight ?? 1);
+    const range = sp.senses.sight * g.world.cell * (this.rec.sight ?? 1) * this.eyes;
     const d = this.dist;
     if (d > range) return 0;
     if (!g.world.sightClear(this.pos.x, this.pos.z, p.pos.x, p.pos.z)) return 0;
@@ -259,8 +283,14 @@ export class Monster {
         break;
       }
       case 'stalk':
-        if (this.lastKnown) this.moveToward(this.lastKnown.x, this.lastKnown.z, dt, this.walk * 1.6);
-        else this.prowl(dt);
+        // Stalking means closing, not ambling towards where you used to be. It takes the
+        // route to you at a walk — never running, never stopping, and it does not need to
+        // see you to keep coming.
+        if (this.sp.flags.keepsDistance && d < this.sp.flags.keepsDistance * 0.7) {
+          this.faceCamera(dt, 2);
+        } else {
+          this.chase(dt, this.walk * 2.2);
+        }
         break;
       case 'search': {
         this.searchT -= dt;
@@ -275,10 +305,13 @@ export class Monster {
                 * (1 - (g.mods?.hideSafety ?? 0));
               if (Math.random() < chance * dt * 1.4) { this.kill('found you in cover'); return; }
             }
-            // otherwise sweep outward from it
+            // Otherwise cast about — but biased towards where you actually are, because
+            // a thing that searches uniformly at random never finds anybody on a floor
+            // this size. It is not cheating: it has to walk every metre of it.
+            const toward = p.hidden ? 0.35 : 0.7;
             this.lastKnown = {
-              x: spot.x + (Math.random() - 0.5) * 14,
-              z: spot.z + (Math.random() - 0.5) * 14,
+              x: spot.x + (p.pos.x - spot.x) * toward + (Math.random() - 0.5) * 12,
+              z: spot.z + (p.pos.z - spot.z) * toward + (Math.random() - 0.5) * 12,
             };
             this.checkHide = null;
           } else {
@@ -299,7 +332,7 @@ export class Monster {
     }
 
     // ---- contact
-    const reach = this.sp.radius + 0.95 + (flags.huge ? 2 : 0);
+    const reach = this.size.radius + 1.05 + (flags.huge ? 2 : 0);
     const canTouch = flags.needsDeep ? p.swimming
       : flags.needsWater ? w.waterDepthAt(p.pos.x, p.pos.z) > 0.25 : true;
     if (!p.hidden && d < reach && canTouch && !this.frozen && this.spawnGrace <= 0) {
@@ -308,24 +341,53 @@ export class Monster {
     }
 
     this.animate(dt, Math.hypot(this.vel.x, this.vel.z));
-    this.tell(dt, d, this.state === 'hunt' ? 1 : this.state === 'stalk' ? 0.7 : 0.45);
+    // the head keeps you: whatever the body is doing, once it is interested the face
+    // stays pointed at you, and it turns before the body does
+    const parts = this.mesh?.userData.parts;
+    if (parts?.head && this.alert > 0.2) {
+      const want = wrapAngle(Math.atan2(-(p.pos.x - this.pos.x), -(p.pos.z - this.pos.z)) - this.yaw);
+      parts.head.rotation.y = damp(parts.head.rotation.y, clamp(want, -1.3, 1.3), 5, dt);
+    } else if (parts?.head) {
+      parts.head.rotation.y = damp(parts.head.rotation.y, Math.sin(this.cycle * 0.35) * 0.5, 1.5, dt);
+    }
+    this.tell(dt, d, this.state === 'hunt' ? 1 : this.state === 'stalk' ? 0.75 : 0.5);
   }
 
+  // Prowling is not idling. A floor is fifteen thousand cells and a thing that wanders
+  // at random will spend a run in the wrong wing, which reads as an empty building — so
+  // most of its casts are biased down the building towards you. It still has to walk
+  // every metre of the route, it still does not know where you are, and you still hear
+  // it coming: what it means is that if you stand still long enough, it arrives.
   prowl(dt) {
     const w = this.game.world;
+    const p = this.game.player;
     this.wander.t -= dt;
     if (this.wander.t <= 0) {
-      this.wander.t = 4 + Math.random() * 6;
+      this.wander.t = 3.5 + Math.random() * 5;
       const r = (this.rec.wanders ?? 26) * w.cell;
+      const drift = Math.random() < 0.65;
       for (let i = 0; i < 30; i++) {
-        const a = Math.random() * 6.283;
-        const x = this.pos.x + Math.cos(a) * r * (0.3 + Math.random() * 0.7);
-        const z = this.pos.z + Math.sin(a) * r * (0.3 + Math.random() * 0.7);
+        let x, z;
+        if (drift) {
+          // somewhere between here and you, wide of the mark
+          const t = 0.35 + Math.random() * 0.45;
+          x = this.pos.x + (p.pos.x - this.pos.x) * t + (Math.random() - 0.5) * r * 0.7;
+          z = this.pos.z + (p.pos.z - this.pos.z) * t + (Math.random() - 0.5) * r * 0.7;
+        } else {
+          const a = Math.random() * 6.283;
+          x = this.pos.x + Math.cos(a) * r * (0.3 + Math.random() * 0.7);
+          z = this.pos.z + Math.sin(a) * r * (0.3 + Math.random() * 0.7);
+        }
         const [cx, cz] = w.toCell(x, z);
         if (w.isOpenCell(cx, cz)) { this.wander.x = x; this.wander.z = z; break; }
       }
     }
-    this.moveToward(this.wander.x, this.wander.z, dt, this.walk);
+    // walk the flow field when the cast is roughly your way, so it uses doors and
+    // corridors instead of grinding along a wall towards a point behind it
+    const toWander = Math.hypot(this.wander.x - this.pos.x, this.wander.z - this.pos.z);
+    const towardPlayer = Math.hypot(this.wander.x - p.pos.x, this.wander.z - p.pos.z);
+    if (towardPlayer < toWander * 0.8) this.chase(dt, this.walk);
+    else this.moveToward(this.wander.x, this.wander.z, dt, this.walk);
   }
 
   faceCamera(dt, rate = 3) {
@@ -338,13 +400,18 @@ export class Monster {
   // only warning the game gives you, and it is the best thing in it.
   tell(dt, dist, urgency) {
     const g = this.game;
-    if (dist > 44) return;
+    if (dist > 62) return;                       // it carries further than it used to
     this.tellT -= dt;
     if (this.tellT > 0) return;
-    const near = clamp01(1 - dist / 44);
-    this.tellT = clamp(2.6 - near * 1.6 - urgency * 0.8, 0.45, 3);
+    const near = clamp01(1 - dist / 62);
+    // closer and more interested means more often, down to under half a second apart
+    this.tellT = clamp(2.4 - near * 1.7 - urgency * 0.7, 0.35, 2.8);
     const name = this.state === 'hunt' ? this.sp.sound.alert : this.sp.sound.idle;
-    g.audio?.oneShot(this.rec.tell || name, 0.35 + near * 0.85 * urgency, this.pos);
+    g.audio?.oneShot(this.rec.tell || name, 0.4 + near * 0.9 * urgency, this.pos);
+    // and inside ten metres it also breathes, which is the sound people remember
+    if (dist < 10 && Math.random() < 0.5) {
+      g.audio?.oneShot('breathClose', 0.3 + (1 - dist / 10) * 0.5, this.pos);
+    }
   }
 
   kill(reason) {
@@ -356,6 +423,7 @@ export class Monster {
   // ---------------------------------------------------------------- animation
   animate(dt, speed) {
     if (!this.mesh) return;
+    this.fitToRoom();
     const m = this.mesh;
     m.position.set(this.pos.x, this.pos.y, this.pos.z);
     m.rotation.y = this.yaw;

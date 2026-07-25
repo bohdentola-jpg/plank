@@ -28,7 +28,17 @@ const sph = (r, mat, x = 0, y = 0, z = 0, seg = 8) => {
 
 // Creature materials are per-species (a few instances only) so they can pulse,
 // go translucent, or catch the flashlight differently.
-const skin = (color, opts = {}) => simple(color, { rough: 0.72, ...opts });
+// Creatures are lit only by what you are carrying — they get no baked room light, which
+// is right — but with nothing else they read as pure black cut-outs even with the torch
+// on them, and you cannot film what you cannot see. A little light of their own keeps
+// the shape legible at range without making them glow in the dark.
+const dim = (color, f) => {
+  const r = Math.round(((color >> 16) & 255) * f), g = Math.round(((color >> 8) & 255) * f);
+  return (r << 16) | (g << 8) | Math.round((color & 255) * f);
+};
+const skin = (color, opts = {}) => simple(color, {
+  rough: 0.72, emissive: dim(color, 0.22), emissiveIntensity: 0.55, ...opts,
+});
 const wetSkin = (color) => simple(color, { rough: 0.28, metal: 0.05 });
 const shadow = (color = 0x05050a) => simple(color, { rough: 1, bake: false });
 const teeth = () => simple(0xe8e2d0, { rough: 0.4 });
@@ -496,11 +506,32 @@ export const SPECIES = {
 
 // Instantiate a species model. Kept out of SPECIES so a level can place fifty
 // dullers and still only pay for fifty small groups.
+// How much bigger than a person a thing is. The models are all built at roughly human
+// scale because that is the easy scale to build at, and a human-sized silhouette at the
+// end of a corridor is not frightening — it is a colleague. `bulk` scales the model, and
+// it is stretched a little more in Y than across, so everything down here reads as too
+// tall for the room it is standing in.
+// Bipeds land around two and a half to three metres — half again as tall as you, which
+// is enormous in a three-metre corridor without being unable to stand up in one. The
+// low, wide things (the hound on all fours, the clump, the crawler) can go bigger
+// because their height was never the problem. world.js is asked for the ceiling before
+// the mesh is scaled, so a big thing in a low room ducks rather than growing through it.
+const BULK = {
+  hound: 1.85, smiler: 1.35, faceling: 1.4, skinstealer: 1.35, clump: 2.0,
+  deathmoth: 1.7, partygoer: 1.35, wretch: 1.45, howler: 1.5, crawler: 1.8,
+  mannequin: 1.4, nurse: 1.35, leviathan: 1.6, duller: 1.4, shepherd: 1.35,
+  bacteria: 1.4, windows: 1.3, watcher: 1.6,
+};
+export const bulkOf = (type) => BULK[type] ?? 1.7;
+
 export function buildCreature(type) {
   const s = SPECIES[type];
   if (!s) throw new Error(`no species "${type}"`);
   const g = s.model();
+  const b = bulkOf(type);
+  g.scale.set(b, b * 1.12, b);
   g.userData.species = type;
+  g.userData.bulk = b;
   return g;
 }
 

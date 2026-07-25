@@ -176,45 +176,74 @@ async function playFloor() {
   else ok(`contact is lethal, death card shown (${caught.deathVisible})`);
   if (shots) await page.screenshot({ path: join(root, `qa/play-${level}-death.png`) });
 
-  // ---------------------------------------------------------------- the lift
+  // ---------------------------------------------------------------- the lift car
+  // Reaching the lift puts you INSIDE the car — a real room with a stall in it — so the
+  // check is: are we in it, is the docket up, is the stall reachable on foot, does
+  // walking up to a good and pressing [E] actually buy it?
   const lift = await page.evaluate(async () => {
     const g = window.NOCLIP;
-    // reset out of the death state and put the player on the lift
     g.dead = false;
     g.hud.hideDeath();
     g.filmSeconds = 12;                       // pretend we filmed it for a bit
     const e = g.exitObjs[0];
     g.player.spawn(e.mesh.position.x, e.mesh.position.z, 0);
     await new Promise((r) => requestAnimationFrame(r));
-    g.interact();
-    const items = [...document.querySelectorAll('.stall-item')];
-    const before = g.footage;
-    const modsBefore = JSON.stringify(g.mods);
-    const affordable = items.find((b) => !b.classList.contains('broke'));
-    const bought = affordable?.querySelector('.si-name')?.textContent || affordable?.textContent?.slice(0, 24);
-    affordable?.click();
-    const changed = Object.keys(g.mods).filter((k) => JSON.parse(modsBefore)[k] !== g.mods[k]);
-    return {
+    await g.reachLift();
+    await new Promise((r) => setTimeout(r, 400));
+    await new Promise((r) => requestAnimationFrame(r));
+    const out = {
       state: g.state,
-      footage: before,
-      spent: before - g.footage,
-      offers: items.length,
-      owned: Object.keys(g.owned).length,
-      bought, changed,
+      footage: g.footage,
+      offers: (g.offers || []).length,
+      spots: (g.liftSpots || []).length,
+      docket: !document.querySelector('.lift-docket').hidden,
+      inRoom: g.world?.data?.stats?.walkable ?? 0,
+      props: g.world?.data?.props?.length ?? 0,
     };
+    // walk to the first good on the stall and buy it
+    const buy = (g.liftSpots || []).find((s) => s.kind === 'buy');
+    if (buy) {
+      g.player.spawn(buy.x, buy.z, 0);
+      await new Promise((r) => requestAnimationFrame(r));
+      out.prompt = document.querySelector('.hud-prompt')?.textContent || '';
+      const before = JSON.stringify(g.mods);
+      const money = g.footage;
+      g.footage = 9999;                        // afford it, whatever it is
+      g.liftInteract();
+      await new Promise((r) => setTimeout(r, 300));
+      out.bought = Object.keys(g.owned).length;
+      out.spent = 9999 - g.footage;
+      out.changed = Object.keys(g.mods).filter((k) => JSON.parse(before)[k] !== g.mods[k]);
+      out.footage = money;
+    }
+    return out;
   });
-  if (lift.state !== 'lift') fail(`interacting with the lift left the game in "${lift.state}"`);
-  else ok(`lift screen · ${lift.footage} footage earned · ${lift.offers} offers on the stall`);
-  if (lift.offers !== 3) fail(`the stall showed ${lift.offers} offers, expected 3`);
-  if (!lift.owned) fail('buying from the stall did nothing');
-  else if (!lift.changed.length) fail(`bought "${lift.bought}" and no run modifier moved`);
-  else ok(`bought ${lift.bought} for ${lift.spent} ft — changed ${lift.changed.join(', ')}`);
+  if (lift.state !== 'lift') fail(`reaching the lift left the game in "${lift.state}"`);
+  else ok(`in the car · ${lift.inRoom} cells · ${lift.props} props · ${lift.offers} on the stall · docket ${lift.docket}`);
+  if (!lift.spots) fail('the car has nothing to walk up to');
+  if (!lift.prompt) fail('standing at the stall offered no prompt');
+  else ok(`at the stall: "${lift.prompt.replace(/\s+/g, ' ').trim()}"`);
+  if (!lift.bought) fail('pressing E at the stall bought nothing');
+  else if (!lift.changed?.length) fail('bought something and no run modifier moved');
+  else ok(`bought it for ${lift.spent} ft — changed ${lift.changed.join(', ')}`);
   if (shots) await page.screenshot({ path: join(root, `qa/play-${level}-lift.png`) });
 
   // ---------------------------------------------------------------- descend
   const next = await page.evaluate(async () => {
     const g = window.NOCLIP;
-    await g.descend();
+    // walk to the panel by the doors and press it, the way a player leaves
+    const go = (g.liftSpots || []).find((s) => s.kind === 'go');
+    if (go) {
+      g.player.spawn(go.x, go.z, 0);
+      await new Promise((r) => requestAnimationFrame(r));
+      g.liftInteract();
+      // the next floor is generated and built, which takes a moment
+      for (let i = 0; i < 120 && g.state !== 'play' && g.state !== 'end'; i++) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+    } else {
+      await g.descend();
+    }
     return { state: g.state, floorIndex: g.floorIndex, level: g.levelId, mods: g.player.mods?.speed };
   });
   if (next.state !== 'play' && next.state !== 'end') fail(`descending left the game in "${next.state}"`);

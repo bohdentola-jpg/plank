@@ -16,12 +16,17 @@
     "smoke:backrooms": "node tools/smoke-backrooms.mjs --verbose",
     "shot:backrooms": "node tools/shot-backrooms.mjs",
     "play:backrooms": "node tools/play-backrooms.mjs",
-    "walk:backrooms": "node tools/walk-backrooms.mjs"
+    "walk:backrooms": "node tools/walk-backrooms.mjs",
+    "hunt:backrooms": "node tools/hunt-backrooms.mjs",
+    "build:noclip-online": "node tools/build-noclip-online.mjs",
+    "net:noclip": "node tools/net-noclip.mjs"
   },
   "dependencies": {
     "three": "^0.160.0"
   },
   "devDependencies": {
-    "playwright": "1.56.1"
+    "playwright": "1.56.1",
+    "peer": "^1.0.2",
+    "peerjs": "^1.5.4"
   }
 }

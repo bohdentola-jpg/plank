@@ -66,7 +66,7 @@ export const MATS = [
   // the outdoors that isn't
   'grassDry', 'wheat', 'dirt', 'gravel', 'rock', 'moss', 'sand', 'snow', 'ice', 'mud',
   // odds and ends
-  'glass', 'mirror', 'void', 'blackout', 'fleshWall', 'paper', 'foam',
+  'glass', 'glassPool', 'mirror', 'void', 'blackout', 'fleshWall', 'paper', 'foam',
 ];
 const MATSET = new Set(MATS);
 
@@ -78,7 +78,9 @@ export const PROPS = [
   'exitSign', 'emergencyLight', 'chandelier', 'lantern', 'streetlight', 'poolLight',
   // structure
   'pillar', 'pillarSquare', 'beam', 'ductRun', 'pipeRun', 'pipeCluster', 'vent', 'ventFloor',
-  'doorFrame', 'door', 'doubleDoor', 'elevatorDoors', 'window', 'archway', 'railing',
+  'doorFrame', 'door', 'doubleDoor', 'elevatorDoors', 'liftEntrance', 'window', 'archway', 'railing',
+  // the lift car: the stall, what is on it, the price cards, the buttons, the notice
+  'shopStall', 'shopGood', 'shopTag', 'liftPanel', 'notice',
   'chainFence', 'ladder', 'stairFlight', 'rubblePile', 'columnBroken', 'trapdoor',
   // rooms people used to work in
   'desk', 'officeChair', 'cubicle', 'filingCabinet', 'shelf', 'bookshelf', 'archiveShelf',
@@ -978,6 +980,31 @@ class Level {
       warnings: L.warnings,
     };
   }
+
+  // A room that is not a floor of the game: the lift car, and anything else that wants
+  // the world builder's geometry, collision and lighting without the floor contract.
+  // No monster, no cover, no gimmick, nothing to escape — just somewhere to stand.
+  finishRoom() {
+    const L = this;
+    L.enclose();
+    if (!L._spawn) throw new Error('[room] no spawn — call L.spawnAt(x, z, yaw)');
+    let walkable = 0;
+    for (let i = 0; i < L.cells.length; i++) if (WALKABLE.has(L.cells[i])) walkable++;
+    return {
+      w: L.w, h: L.h, cell: L.cell, wallH: L.wallH,
+      cells: L.cells, floorYs: L.floorYs, ceilYs: L.ceilYs,
+      matF: L.matF, matW: L.matW, matC: L.matC,
+      lights: L.lights, props: L.props, colliders: L.colliders,
+      entities: [], scares: [], items: [], notes: [],
+      triggers: L.triggers, links: [], exits: [], objectives: [],
+      hides: [], monster: null, gimmick: 'silence', gimmickOpts: {},
+      spawn: L._spawn, openSky: false, sky: L.sky, fog: L.fog, ambient: L.ambient,
+      ambience: L.ambience, rules: L.rules, tint: L.tint,
+      waterLevel: null,
+      stats: { walkable, lights: L.lights.length, props: L.props.length, entities: 0, hides: 0 },
+      warnings: [],
+    };
+  }
 }
 
 // ------------------------------------------------------------------ generators
@@ -1080,6 +1107,56 @@ export const gen = {
       const a = kit.pick(centers), b = kit.pick(centers);
       if (a !== b) L.corridor(a[0], a[1], b[0], b[1], o.corridorW ?? 1, code);
     }
+
+    // ---- architecture, so a "room" is a room and not a rectangle
+    // Every room gets its own ceiling within a hand's width of its neighbours', a few go
+    // properly tall, and every threshold between a room and what leads into it gets a
+    // frame in it. Costs nothing at runtime and it is most of the difference between a
+    // building and a floor plan.
+    if (o.architecture !== false) {
+      for (const [cx, cz, rx0, rz0, rx1, rz1] of centers) {
+        const base = o.ceil ?? L.wallH;
+        const tall = kit.chance(0.16) && (rx1 - rx0) > 7 && (rz1 - rz0) > 7;
+        const h = tall ? base + kit.rand(1.6, 3.2) : base + kit.rand(-0.35, 0.45);
+        L.ceilRect(rx0, rz0, rx1, rz1, Math.max(2.1, h));
+        if (tall) {
+          // a coffer: the middle of the ceiling steps up again, and it is the only place
+          // in the room a light can hide
+          const ix0 = rx0 + 2, iz0 = rz0 + 2, ix1 = rx1 - 2, iz1 = rz1 - 2;
+          if (ix1 > ix0 && iz1 > iz0) L.ceilRect(ix0, iz0, ix1, iz1, h + 0.5);
+        }
+        // an alcove punched into one wall of some rooms: somewhere to stand that is not
+        // the middle of the floor
+        if (kit.chance(0.3) && rx1 - rx0 > 8) {
+          const ax = kit.randInt(rx0 + 2, rx1 - 3);
+          const north = kit.chance(0.5);
+          const az = north ? rz0 - 1 : rz1 + 1;
+          for (let d = 0; d < 2; d++) {
+            for (let w2 = 0; w2 < 3; w2++) {
+              const px = ax + w2, pz = az + (north ? -d : d);
+              if (!L.inside(px, pz) || L.get(px, pz) !== C.WALL) continue;
+              L.set(px, pz, code);
+              L.ceilAt(px, pz, 2.3);
+            }
+          }
+        }
+      }
+      // doorframes: any open cell with walls either side of it is a threshold
+      let frames = 0;
+      for (let z = z0 + 1; z < z1 && frames < 90; z++) {
+        for (let x = x0 + 1; x < x1 && frames < 90; x++) {
+          if (!L.isOpen(x, z)) continue;
+          const ew = L.get(x - 1, z) === C.WALL && L.get(x + 1, z) === C.WALL;
+          const ns = L.get(x, z - 1) === C.WALL && L.get(x, z + 1) === C.WALL;
+          if (!ew && !ns) continue;
+          // one frame per doorway, not one per cell of a wide one
+          if (L.get(x - (ns ? 1 : 0), z - (ew ? 1 : 0)) === code) continue;
+          L.prop('doorFrame', { x, z, rot: ns ? Math.PI / 2 : 0 });
+          frames++;
+        }
+      }
+    }
+
     L.roomCenters = centers;
     return centers;
   },

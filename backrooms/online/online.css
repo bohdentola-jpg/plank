@@ -1,0 +1,183 @@
+/* NOCLIP ONLINE — the chrome. Same camcorder OSD as the shelf version, but laid out for a
+   phone held sideways as much as for a desk: everything anchors to a safe-area inset, the
+   type never gets smaller than you can read at arm's length, and nothing important sits
+   under a thumb. */
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0; padding: 0; height: 100%; overflow: hidden;
+  background: #05050a; color: #d8d4c4;
+  font-family: "Courier New", Courier, monospace;
+  user-select: none; -webkit-user-select: none;
+  overscroll-behavior: none; touch-action: none;
+}
+
+#game { position: fixed; inset: 0; }
+#game canvas { display: block; width: 100%; height: 100%; }
+.tape { position: fixed; inset: 0; z-index: 20; pointer-events: none; opacity: 0; }
+.tape.on { opacity: 1; }
+
+/* ------------------------------------------------------------------ hud */
+#hud {
+  position: fixed; inset: 0; z-index: 25; pointer-events: none; opacity: 0;
+  padding: max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right))
+           max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  font-size: 12px; letter-spacing: 1px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+#hud.on { opacity: 1; }
+
+.party { position: absolute; top: 9vh; left: 3vw; display: flex; flex-direction: column; gap: 4px; }
+.ptag { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #cfc9b6; }
+.ptag i { width: 9px; height: 9px; display: inline-block; }
+.ptag.out { color: #6a5a54; text-decoration: line-through; }
+
+.right { position: absolute; top: 9vh; right: 3vw; text-align: right; display: flex; flex-direction: column; gap: 5px; align-items: flex-end; }
+.foot { font-size: 17px; color: #f0e0a8; letter-spacing: 2px; }
+.meter { width: 74px; height: 5px; background: rgba(0, 0, 0, 0.5); border: 1px solid #3a3a44; }
+.meter i { display: block; height: 100%; background: #b8a860; }
+.meter.wind i { background: #8ad0e0; }
+
+.near {
+  position: absolute; top: 4.5vh; left: 50%; transform: translateX(-50%);
+  font-size: 13px; letter-spacing: 6px; color: #ff5040; opacity: 0;
+}
+.near.on { opacity: 1; animation: blink 0.55s steps(2, end) infinite; }
+@keyframes blink { 50% { opacity: 0.15; } }
+
+.card {
+  position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%);
+  text-align: center; opacity: 0; transition: opacity 500ms linear;
+}
+.card.on { opacity: 1; }
+.card .c-floor { font-size: 11px; letter-spacing: 5px; color: #a89a60; }
+.card .c-num { font-size: 11px; letter-spacing: 7px; color: #8a8674; margin-top: 5px; }
+.card .c-name { font-size: 27px; letter-spacing: 7px; color: #f0e8cc; margin: 7px 0 3px; }
+.card .c-sub { font-size: 12px; letter-spacing: 3px; color: #8a8674; }
+.card .c-tag { font-size: 12px; font-style: italic; color: #b8b2a0; margin-top: 8px; }
+
+.say {
+  position: absolute; left: 50%; bottom: 22vh; transform: translateX(-50%);
+  max-width: 74vw; text-align: center; font-size: 13px; line-height: 1.5;
+  color: #efe9d8; opacity: 0; transition: opacity 220ms linear;
+}
+.say.on { opacity: 1; }
+.toast {
+  position: absolute; left: 50%; bottom: 29vh; transform: translateX(-50%);
+  font-size: 11px; letter-spacing: 3px; color: #f0e0a8; opacity: 0;
+  background: rgba(6, 6, 10, 0.5); padding: 4px 12px;
+}
+.toast.on { opacity: 1; }
+.prompt {
+  position: absolute; left: 50%; bottom: 15vh; transform: translateX(-50%);
+  font-size: 13px; letter-spacing: 2px; color: #e8e2d0; opacity: 0;
+  background: rgba(6, 6, 10, 0.5); padding: 5px 12px; border: 1px solid #2e2e38;
+}
+.prompt.on { opacity: 1; }
+.cross {
+  position: absolute; left: 50%; top: 50%; width: 3px; height: 3px;
+  transform: translate(-50%, -50%); border-radius: 50%;
+  background: rgba(244, 240, 224, 0.5);
+}
+
+/* ------------------------------------------------------------------ touch */
+.stick, .pad { display: none; }
+body.touch.playing .stick, body.touch.playing .pad { display: block; }
+.stick {
+  position: absolute; width: 116px; height: 116px; margin: -58px 0 0 -58px;
+  border: 2px solid rgba(230, 226, 210, 0.22); border-radius: 50%;
+  pointer-events: none; opacity: 0; transition: opacity 120ms linear;
+}
+.stick.on { opacity: 1; }
+.stick i {
+  position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px;
+  border-radius: 50%; background: rgba(230, 226, 210, 0.3);
+}
+.pad {
+  position: absolute; right: max(14px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom));
+  display: grid; grid-template-columns: repeat(3, auto); gap: 9px; justify-items: end;
+  pointer-events: auto;
+}
+.tbtn {
+  font: inherit; font-size: 11px; letter-spacing: 1px; color: #e8e2d0;
+  background: rgba(14, 14, 20, 0.62); border: 1px solid #3e3e4a; border-radius: 8px;
+  width: 66px; height: 46px; pointer-events: auto;
+}
+.tbtn.big { grid-column: span 2; width: 100%; height: 58px; font-size: 15px; letter-spacing: 3px; border-color: #6a5a2a; color: #f0e0a8; }
+.tbtn.small { width: 46px; height: 38px; font-size: 10px; }
+.tbtn.down { background: rgba(60, 54, 30, 0.85); }
+
+.rotate { display: none; }
+@media (orientation: portrait) and (max-width: 900px) {
+  body.touch.playing .rotate {
+    display: flex; position: fixed; inset: 0; z-index: 90;
+    background: #05050a; color: #cfc9b6;
+    align-items: center; justify-content: center;
+    letter-spacing: 4px; font-size: 13px;
+  }
+}
+
+/* ------------------------------------------------------------------ screens */
+.screen {
+  position: fixed; inset: 0; z-index: 40; display: none;
+  align-items: center; justify-content: center; padding: 18px;
+  background: rgba(4, 4, 8, 0.9);
+  overflow-y: auto;
+}
+.screen.on { display: flex; }
+.screen.dead { background: rgba(20, 4, 4, 0.55); }
+
+.card-box {
+  width: min(560px, 96vw);
+  display: flex; flex-direction: column; gap: 11px; align-items: stretch;
+  border: 1px solid #26262e; padding: 20px;
+  background: linear-gradient(180deg, rgba(20, 20, 26, 0.94), rgba(8, 8, 12, 0.96));
+}
+.card-box.thin { width: min(440px, 94vw); text-align: center; }
+#logo { width: 100%; }
+.kicker { letter-spacing: 5px; font-size: 10px; color: #8a8674; text-align: center; }
+.kicker.red { color: #d86a5a; letter-spacing: 6px; font-size: 12px; }
+.pitch { font-size: 12.5px; line-height: 1.6; color: #b8b2a0; margin: 2px 0 6px; text-align: center; }
+.label { font-size: 10px; letter-spacing: 3px; color: #8a8674; }
+.note { font-size: 11px; color: #8a8674; letter-spacing: 1px; text-align: center; min-height: 15px; line-height: 1.5; }
+.big-note { font-size: 14px; color: #e8d0c0; letter-spacing: 2px; }
+.foot-note { font-size: 9.5px; color: #5d5a50; letter-spacing: 1px; text-align: center; margin-top: 4px; }
+
+.field { display: flex; flex-direction: column; gap: 5px; font-size: 10px; letter-spacing: 3px; color: #8a8674; }
+.field input, .code {
+  font: inherit; font-size: 16px; letter-spacing: 4px; color: #f0e8cc;
+  background: #0e0e14; border: 1px solid #3a3a44; padding: 10px 12px; width: 100%;
+}
+.code { text-align: center; letter-spacing: 10px; }
+
+.suits { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px; }
+.suit {
+  font: inherit; font-size: 10px; letter-spacing: 1px; color: #c4bfae; text-align: left;
+  display: flex; align-items: center; gap: 7px;
+  background: #14141a; border: 1px solid #2e2e38; padding: 8px 9px; cursor: pointer;
+}
+.suit i { width: 14px; height: 14px; display: inline-block; border: 1px solid rgba(0,0,0,0.4); }
+.suit.on { border-color: #6a5a2a; color: #f0e0a8; background: #22201a; }
+
+.row { display: flex; gap: 8px; }
+.row .btn { flex: 1; }
+.row.join .code { flex: 1; }
+.btn {
+  font: inherit; font-size: 14px; letter-spacing: 2px; color: #ded8c6; text-align: center;
+  background: #14141a; border: 1px solid #2e2e38; padding: 13px 14px; cursor: pointer;
+}
+.btn:hover { background: #22222c; color: #fff8e4; }
+.btn.gold { border-color: #6a5a2a; color: #f0e0a8; }
+.btn.small-btn { font-size: 11px; padding: 9px 12px; letter-spacing: 3px; }
+
+.bigcode { text-align: center; font-size: 12px; letter-spacing: 4px; color: #8a8674; }
+.bigcode b { display: block; font-size: 40px; letter-spacing: 14px; color: #f0e0a8; margin-top: 6px; }
+.crews { display: flex; flex-direction: column; gap: 5px; }
+.crew {
+  display: flex; align-items: center; gap: 9px; font-size: 12px; color: #cfc9b6;
+  border: 1px solid #26262e; padding: 8px 10px; background: rgba(12,12,18,0.6);
+}
+.crew i { width: 15px; height: 15px; }
+.crew b { flex: 1; letter-spacing: 2px; font-weight: normal; }
+.crew span { font-size: 9px; letter-spacing: 2px; color: #8a8674; }
