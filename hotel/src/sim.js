@@ -805,6 +805,9 @@ function rollDay(state, agg, ev) {
     logLine(state, `The account is ${money(state.cash)}. The bank left a message.`, 'bad');
     if (state.cash < -1200 && state.staff.length) {
       const gone = state.staff.pop();
+      // Hand back whatever they were holding, or the task stays claimed by a
+      // worker who no longer exists and nobody can ever pick it up again.
+      releaseJob(state, gone);
       logLine(state, `You could not make payroll. ${gone.name} handed back the keys.`, 'bad');
       ev('layoff', { staff: gone });
     }
@@ -930,19 +933,23 @@ export function offlineCatchUp(state, realSeconds) {
   const cov = coverage(state);
   const rooms = builtRooms(state).length;
   const report = {
-    hours: realSeconds / 3600, cappedHours: capped / 3600, capped: capped < realSeconds - 1,
+    hours: realSeconds / 3600, cappedHours: capped / 3600, capped: capped < realSeconds - 300,
     days, revenue: 0, wages: 0, upkeep: 0, net: 0, nights: 0, walkouts: 0,
     repFrom: starRating(state, agg), repTo: 0, note: '', unattended: !cov.have.clerk,
   };
   if (days < 0.02 || !rooms) { report.repTo = report.repFrom; return report; }
 
-  // Anything still in a room settles up before the fast-forward.
+  // Anything still in a room settles up before the fast-forward. settleBill
+  // already banks the cash, so this is kept out of report.net and folded into
+  // report.revenue only for display.
+  let preSettled = 0;
   for (const g of state.guests) {
-    if (g.state === 'inroom' || g.state === 'checkout' || g.state === 'toroom') {
+    if (g.state === 'inroom' || g.state === 'checkout' || g.state === 'toroom' || g.state === 'tocheckout') {
       settleBill(state, agg, g, cov.have.clerk ? 1 : 0.7, () => {});
-      report.revenue += g.bill;
+      preSettled += g.bill;
     }
   }
+  report.settled = preSettled;
 
   // Throughput per day for the crew you left behind.
   const nightFactor = cov.have.auditor ? 1 : 0.68;
@@ -952,8 +959,14 @@ export function offlineCatchUp(state, realSeconds) {
   const deskThroughput = clerks.reduce((n, s) => n + (DAY_SECONDS * 0.5 * staffSpeed(s, state) * agg.checkinSpeed) / (TASK_SECS.checkin + TASK_SECS.checkout), 0);
   const demand = demandPerDay(state, agg) * nightFactor;
 
-  const arrivalsPerDay = Math.max(0, Math.min(demand, hkThroughput, deskThroughput, rooms * 1.1));
+  // What a perfect crew could have sold, versus what this crew actually could.
+  // The gap is the only thing that counts as turning somebody away — travellers
+  // who never came because the place was full are not a service failure.
   const avgNights = 1.62;
+  const servable = Math.min(demand, rooms / avgNights);
+  const arrivalsPerDay = Math.max(0, Math.min(servable, hkThroughput, deskThroughput));
+  const unmet = Math.max(0, servable - arrivalsPerDay);
+  const unmetShare = servable > 0 ? unmet / servable : 0;
   const occ = clamp((arrivalsPerDay * avgNights) / rooms, 0, 1);
   const avgTier = builtRooms(state).reduce((n, r) => n + TIERS[r.tier].rate, 0) / rooms;
   const perNight = avgTier * state.rateMult * agg.rate + agg.pernight;
@@ -963,22 +976,25 @@ export function offlineCatchUp(state, realSeconds) {
   const wagesPerDay = dailyWages(state);
   const upkeepPerDay = dailyUpkeep(state, agg);
 
-  report.revenue += grossPerDay * days;
+  const gross = grossPerDay * days;
   report.wages = wagesPerDay * days;
   report.upkeep = upkeepPerDay * days;
   report.nights = Math.round(arrivalsPerDay * avgNights * days);
-  report.walkouts = Math.round(Math.max(0, demand - arrivalsPerDay) * days);
-  report.net = report.revenue - report.wages - report.upkeep;
+  report.walkouts = Math.round(unmet * days);
+  report.net = gross - report.wages - report.upkeep;
 
   state.cash += Math.round(report.net);
-  state.totals.earned += Math.round(report.revenue);
+  state.totals.earned += Math.round(gross);
+  report.revenue = gross + preSettled;
   state.totals.spent += Math.round(report.wages + report.upkeep);
   state.totals.nights += report.nights;
   state.totals.walkouts += report.walkouts;
 
-  // Standing drifts toward what this crew can actually deliver.
-  const serviceQuality = clamp(0.35 + cov.covered * 0.16 + (cov.have.auditor ? 0.1 : 0), 0, 1);
-  const repTarget = Math.min(repCeiling(state, agg), clamp(serviceQuality * 5.2 - report.walkouts * 0.05, 0.3, 5));
+  // Standing drifts toward what this crew can actually deliver. Judge them on
+  // the share of servable guests they missed, not the raw count — a hundred-day
+  // absence must not read a hundred times worse than a one-day absence.
+  const serviceQuality = clamp(0.35 + cov.covered * 0.16 + (cov.have.auditor ? 0.1 : 0) - unmetShare * 0.45, 0, 1);
+  const repTarget = Math.min(repCeiling(state, agg), clamp(serviceQuality * 5.2, 0.3, 5));
   state.rep = clamp(state.rep + (repTarget - state.rep) * clamp(days * 0.35, 0, 0.8), 0.2, 5);
 
   // Clear the floor and hand back a plausible morning.

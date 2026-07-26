@@ -200,6 +200,65 @@ await step('offline catch-up pays a staffed hotel and not an empty one', async (
   must(Number.isFinite(run.cash) && Number.isFinite(run.rep), 'offline produced NaN');
 });
 
+await step('a covered crew holds its standing while you are away', async () => {
+  // Regression: unmet demand used to be booked as walkouts, and the raw count
+  // then drove reputation, so any long absence bottomed out the stars.
+  const s = sim.newHotel();
+  s.cash = 90000;
+  for (const r of s.rooms) { r.built = true; r.state = 'empty'; }
+  sim.addFloor(s);
+  for (const r of s.rooms) { r.built = true; r.state = 'empty'; }
+  for (const id of ['wifi', 'coffee', 'breakfast', 'pool', 'chandelier', 'signneon']) sim.buyAmenity(s, id);
+  for (const role of ['clerk', 'housekeeper', 'housekeeper', 'maintenance', 'bellhop', 'auditor']) sim.hire(s, role);
+  s.rep = Math.min(4.2, sim.repCeiling(s));
+  const before = sim.starRating(s);
+  const rep = sim.offlineCatchUp(s, 6 * 3600);
+  must(rep.repTo > before - 0.6, `a covered crew should hold its stars: ${before.toFixed(2)} -> ${rep.repTo.toFixed(2)}`);
+  must(rep.walkouts < rep.nights * 0.5, `too many turn-aways for a covered crew: ${rep.walkouts} vs ${rep.nights} nights`);
+  must(rep.net > 0, 'a covered crew should turn a profit while away');
+
+  const bare = sim.newHotel();
+  bare.rep = 3.5;
+  const bareRep = sim.offlineCatchUp(bare, 6 * 3600);
+  must(bareRep.repTo < 3.4, 'leaving an unstaffed hotel for six hours should cost you standing');
+});
+
+await step('a live gap does not pay mid-stay guests twice', async () => {
+  // Regression: settleBill() banks the cash itself, so folding those bills into
+  // report.revenue and then adding report.net banked them a second time.
+  const s = sim.newHotel();
+  s.cash = 30000;
+  s.youAuto = true;
+  for (const r of s.rooms) { r.built = true; r.state = 'empty'; }
+  for (const role of ['clerk', 'housekeeper', 'maintenance', 'bellhop']) sim.hire(s, role);
+  for (let i = 0; i < 6000; i++) sim.stepSim(s, 0.1, () => {});
+  const inHouse = s.guests.filter((g) => ['inroom', 'toroom', 'checkout', 'tocheckout'].includes(g.state));
+  must(inHouse.length > 0, 'wanted at least one guest mid-stay for this check');
+  const cash0 = s.cash;
+  const r = sim.offlineCatchUp(s, 40 * 60);
+  const delta = s.cash - cash0;
+  const expected = r.net + (r.settled || 0);
+  must(Math.abs(delta - expected) <= 2, `cash moved ${delta} but the report says ${expected}`);
+});
+
+await step('a layoff hands back the job it was holding', async () => {
+  // Regression: a worker popped for missed payroll left task.claimedBy pointing
+  // at nobody, which no worker could ever pick up — a permanently dirty room.
+  const s = sim.newHotel();
+  s.cash = 4000;
+  s.youAuto = true;
+  for (const r of s.rooms) { r.built = true; r.state = 'empty'; }
+  for (const role of ['clerk', 'housekeeper', 'maintenance', 'bellhop']) sim.hire(s, role);
+  s.cash = -1500;                       // next rollover cannot make payroll
+  for (let i = 0; i < 40000; i++) {
+    sim.stepSim(s, 0.1, () => {});
+    if (s.staff.length < 4) break;
+  }
+  must(s.staff.length < 4, 'expected somebody to quit over the bounced payroll');
+  const ghosts = s.tasks.filter((t) => t.claimedBy && !sim.workerById(s, t.claimedBy));
+  must(!ghosts.length, `${ghosts.length} task(s) still claimed by a worker who left`);
+});
+
 await step('commands refuse what you cannot afford', async () => {
   const s = sim.newHotel();
   s.cash = 0;

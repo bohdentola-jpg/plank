@@ -118,7 +118,8 @@ actually rides the shaft, the chandelier lights the lobby at night.
 
 | | |
 | --- | --- |
-| ![Working the board](docs/hotel-play.png) | ![The build menu](docs/hotel-build.png) |
+| ![Working the board](docs/hotel-play.png) | ![A hotel with a crew](docs/hotel-build.png) |
+| ![The lobby at check-in](docs/hotel-lobby.png) | |
 
 **Then hire your way out of the job.** A front desk clerk, a housekeeper, a
 maintenance tech and a bellhop cover the four core roles between them — at which

@@ -7,11 +7,11 @@ import {
   mkCanvas, tex, shade, mix, carpetCanvas, roomCarpetCanvas, wallpaperCanvas, stuccoCanvas,
   brickCanvas, tileCanvas, asphaltCanvas, grassCanvas, bedCanvas, artCanvas, tvCanvas,
   signCanvas, vacancyCanvas, doorPlateCanvas, skyCanvas, posterCanvas, woodCanvas,
-  marbleCanvas, poolWaterCanvas,
+  marbleCanvas, poolWaterCanvas, ledCanvas,
 } from './textures.js';
 import { buildPerson, posePerson, setPersonMood, disposePerson, randomLook, staffLook } from './people.js';
 import * as nav from './nav.js';
-import { TIERS, SLOTS_PER_FLOOR } from './data.js';
+import { TIERS, SLOTS_PER_FLOOR, AMENITY_BY_ID } from './data.js';
 import { roomNumber } from './sim.js';
 
 const ROOM_H = 3.0;
@@ -78,12 +78,16 @@ export class World {
     this.hemi = new THREE.HemisphereLight('#bfd8ff', '#5a4a3a', 0.55);
     this.scene.add(this.hemi);
 
-    this.lobbyLight = new THREE.PointLight('#ffd9a0', 0, 26, 1.6);
-    this.lobbyLight.position.set(nav.DESK_X + 3, 2.6, -1.4);
+    // The lobby is under a balcony all day, so it needs its own light even at noon.
+    this.lobbyLight = new THREE.PointLight('#ffd9a0', 0, 30, 1.5);
+    this.lobbyLight.position.set(nav.DESK_X + 2, 2.7, -1.4);
     this.scene.add(this.lobbyLight);
+    this.lobbyLight2 = new THREE.PointLight('#ffe0b0', 0, 26, 1.5);
+    this.lobbyLight2.position.set(nav.DOOR_X - 1, 2.7, -1.0);
+    this.scene.add(this.lobbyLight2);
 
     this.signLight = new THREE.PointLight('#ff8f5a', 0, 22, 2);
-    this.signLight.position.set(-nav.HALF_W - 3, 7.5, 9);
+    this.signLight.position.set(-nav.HALF_W + 1.7, 7.5, 10.4);
     this.scene.add(this.signLight);
 
     this.buildStatic();
@@ -195,6 +199,9 @@ export class World {
     this.trimMat = mat(s.accent);
     this.slabMat = new THREE.MeshLambertMaterial({ map: tex(marbleCanvas('#cdc7bb', '#9b958a'), { repeat: [8, 2] }) });
 
+    this._rateMult = Object.keys(s.amenities)
+      .filter((k) => s.amenities[k])
+      .reduce((n, k) => n * (AMENITY_BY_ID[k]?.rate || 1), 1);
     this.walkwayLights = [];
     this.buildLobby();
     for (let f = 1; f <= s.floors; f++) this.buildFloor(f);
@@ -257,6 +264,25 @@ export class World {
     counter.position.set(nav.DESK_X, 1.19, nav.DESK_Z);
     g.add(counter);
     this.addPick(desk, 'desk', 'desk');
+
+    // A runner down the lobby aisle, a poster by the doors, and the rate board
+    // behind the desk — the three things every motel lobby actually has.
+    const runner = plane(nav.WIDTH - 6, 2.6, new THREE.MeshLambertMaterial({ map: tex(carpetCanvas(mix(s.ink, '#5a4636', 0.55), s.accent), { repeat: [6, 1] }) }));
+    runner.rotation.x = -Math.PI / 2;
+    runner.position.set(0, 0.05, nav.laneZ(0));
+    g.add(runner);
+
+    const poster = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.2, 1.6),
+      new THREE.MeshLambertMaterial({ map: tex(posterCanvas('STAY THE NIGHT', s.ink)) }),
+    );
+    poster.position.set(nav.DOOR_X + 4.6, 1.9, nav.LOBBY_BACK + 0.22);
+    g.add(poster);
+
+    this.rateBoard = box(3.4, 1.1, 0.1, new THREE.MeshBasicMaterial({ map: tex(ledCanvas(['RATES', '—'])) }));
+    this.rateBoard.position.set(nav.DESK_X - 3.9, 2.1, nav.LOBBY_BACK + 0.32);
+    g.add(this.rateBoard);
+    this._rateSig = null;
 
     const keyRack = box(3.0, 1.5, 0.16, mat('#5a3a1f'));
     keyRack.position.set(nav.DESK_X, 1.9, nav.LOBBY_BACK + 0.3);
@@ -673,8 +699,10 @@ export class World {
     const g = new THREE.Group();
     this.building.add(g);
     const big = !!s.amenities.signneon;
-    const px = -nav.HALF_W - 4.5;
-    const pz = 10;
+    // Out in the lot by the office end — far enough forward to read as a
+    // roadside sign, close enough in to stay inside the default framing.
+    const px = -nav.HALF_W + 1.7;
+    const pz = 11.5;
     const poleH = big ? 9.5 : 7.0;
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, poleH, 10), mat('#6e6a63'));
     pole.position.set(px, poleH / 2, pz);
@@ -890,7 +918,8 @@ export class World {
     this.hemi.intensity = 0.46 + day * 0.36;
     this.hemi.color.set(day > 0.15 ? '#bfd8ff' : '#4b5c8e');
     this.hemi.groundColor.set(day > 0.15 ? '#6a5a44' : '#2c2f3a');
-    this.lobbyLight.intensity = 0.5 + night * 1.7;
+    this.lobbyLight.intensity = 1.15 + night * 1.5;
+    this.lobbyLight2.intensity = 0.95 + night * 1.3;
     this.signLight.intensity = night * 2.6;
     if (this.walkwayLights) {
       for (const m of this.walkwayLights) m.material.opacity = 0.10 + night * 0.55;
@@ -930,6 +959,17 @@ export class World {
       }
       if (parts.tv) parts.tv.material.emissive.setScalar(room.state === 'occupied' && night > 0.2 ? 0.4 : 0);
     }
+    if (this.rateBoard) {
+      const lines = TIERS.slice(1).map((t) => `${t.name.toUpperCase().slice(0, 4)}  $${Math.round(t.rate * state.rateMult * this._rateMult)}`);
+      const sig = lines.join('|');
+      if (sig !== this._rateSig) {
+        this._rateSig = sig;
+        const old = this.rateBoard.material.map;
+        this.rateBoard.material.map = tex(ledCanvas(['NIGHTLY RATES', ...lines]));
+        this.rateBoard.material.needsUpdate = true;
+        if (old) old.dispose();
+      }
+    }
     const vacant = state.rooms.some((r) => r.built && r.state === 'empty');
     if (this.vacancySign && this._vacancyState !== vacant) {
       this._vacancyState = vacant;
@@ -960,15 +1000,17 @@ export class World {
   frameAll() {
     const s = this.state;
     const w = this.holder.clientWidth || 1280;
-    const gapFrac = Math.min(1, Math.max(0.42, (w - 660) / w));
+    // Let the very ends tuck behind the panels — a motel framed to clear them
+    // entirely ends up a smudge in the middle of the screen.
+    const gapFrac = Math.min(1, Math.max(0.62, (w - 660) / w));
     const halfTan = Math.tan((this.camera.fov * Math.PI / 180) / 2);
     const aspect = this.camera.aspect || 1.6;
-    const byWidth = (nav.WIDTH + 13) / gapFrac / (2 * halfTan * aspect);
+    const byWidth = (nav.WIDTH + 4) / gapFrac / (2 * halfTan * aspect);
     const byHeight = (nav.floorY(s.floors) + 9) * 1.25 / (2 * halfTan);
     this.orbit.dist = Math.max(30, Math.min(120, Math.max(byWidth, byHeight)));
     this.orbit.target.set(0, Math.min(11, 2.8 + s.floors * 1.5), -1);
     this.orbit.yaw = 0.17;
-    this.orbit.pitch = 0.30;
+    this.orbit.pitch = 0.27;
     this.userFramed = false;
   }
 

@@ -82,6 +82,7 @@ if (wait > clockAt) await page.waitForTimeout(wait - clockAt);
 if (evalJs) {
   const result = await page.evaluate(evalJs);
   if (result !== undefined) console.log('[eval]', JSON.stringify(result));
+  await page.waitForTimeout(500);   // let the change reach a rendered frame
 }
 
 await mkdir(join(root, 'qa'), { recursive: true });

@@ -31,7 +31,7 @@ export const TIERS = [
 ];
 
 export function roomBuildCost(builtRooms) {
-  return Math.round(440 * Math.pow(1.22, Math.max(0, builtRooms - 3)));
+  return Math.round(440 * Math.pow(1.15, Math.max(0, builtRooms - 3)));
 }
 export function floorCost(floors) {
   return Math.round(2600 * Math.pow(2.0, floors - 1));
@@ -149,7 +149,7 @@ export const START_REP = 2.0;
 export const START_LINENS = 4;
 export const BASE_LINENS = 4;
 
-export const OFFLINE_CAP_HOURS = { base: 3, auditor: 10, manager: 24 };
+export const OFFLINE_CAP_HOURS = { base: 2, auditor: 6, manager: 16 };
 // Nobody runs the place as tightly as you do; idling always trails active play.
 export const OFFLINE_EFFICIENCY = { base: 0.75, manager: 0.92 };
 

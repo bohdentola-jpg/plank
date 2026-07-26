@@ -17,6 +17,7 @@ const SAVE_KEY = 'novacancy_save_v1';
 const params = new URLSearchParams(location.search);
 const FRESH = params.has('fresh');
 const DEV = params.has('dev');
+const SHOWCASE = params.has('showcase');
 
 const INKS = ['#8f2d3c', '#1d3557', '#2f5d3a', '#5c3a6e', '#8a4a1e', '#2b4c52', '#7a2f5e', '#3d3b39'];
 const ACCENTS = ['#e0a92b', '#e8e2d2', '#5fb0c9', '#d9603f', '#8fbf5a', '#c98fb5', '#f0d98a', '#9aa7b5'];
@@ -36,21 +37,47 @@ function loadSave() {
   } catch { return null; }
 }
 
-// A furnished hotel that runs itself behind the title card.
-function demoState() {
-  const s = newHotel({ name: 'The Wayside Inn', facade: 'stucco', ink: '#8f2d3c', accent: '#e0a92b' });
+// A furnished hotel that runs itself: behind the title card, and behind
+// ?showcase, which is how the screenshots of a grown-up hotel get taken.
+function grownHotel(opts, floors, staff, extras) {
+  const s = newHotel(opts);
   s.cash = 1e9;
   const buildAll = () => { for (const r of s.rooms) { if (!r.built) { r.built = true; r.state = 'empty'; } } };
   buildAll();
-  addFloor(s); buildAll();
-  addFloor(s); buildAll();
+  for (let f = 1; f < floors; f++) { addFloor(s); buildAll(); }
+  for (const id of extras) buyAmenity(s, id);
+  for (const r of staff) hire(s, r);
+  s.log.length = 0;
+  return s;
+}
+
+function demoState() {
+  const s = grownHotel(
+    { name: 'The Wayside Inn', facade: 'stucco', ink: '#8f2d3c', accent: '#e0a92b' }, 3,
+    ['clerk', 'housekeeper', 'bellhop', 'maintenance'],
+    ['signneon', 'vending', 'coffee', 'pool', 'chandelier', 'breakfast', 'elevator', 'valet', 'wifi'],
+  );
   s.rooms[7].tier = 2; s.rooms[8].tier = 2; s.rooms[13].tier = 3;
-  for (const id of ['signneon', 'vending', 'coffee', 'pool', 'chandelier', 'breakfast', 'elevator', 'valet', 'wifi']) buyAmenity(s, id);
-  for (const r of ['clerk', 'housekeeper', 'bellhop', 'maintenance']) hire(s, r);
   s.cash = 14200;
   s.rep = 3.7;
-  s.clock = 17.4 * 60;
-  s.log.length = 0;
+  s.clock = 16.4 * 60;
+  return s;
+}
+
+function showcaseState() {
+  const s = grownHotel(
+    { name: 'The Cardinal Arms', facade: 'brick', ink: '#1d3557', accent: '#e0a92b' }, 4,
+    ['clerk', 'clerk', 'housekeeper', 'housekeeper', 'bellhop', 'maintenance', 'laundry', 'auditor'],
+    ['wifi', 'vending', 'carts', 'coffee', 'signneon', 'laundryroom', 'pms', 'chandelier',
+      'breakfast', 'giftshop', 'securitycam', 'elevator', 'gym', 'valet', 'pool', 'bar'],
+  );
+  for (const r of s.rooms) r.tier = r.floor >= 3 ? 3 : r.floor === 2 ? 2 : 1;
+  s.cash = 38600;
+  s.rep = 4.1;
+  s.rateMult = 1.2;
+  s.day = 63;
+  s.clock = 15.2 * 60;
+  s.youAuto = true;
   return s;
 }
 
@@ -87,10 +114,10 @@ class App {
     showScreen('title');
     this.titleState = demoState();
     this.titleWorld = new World($('#title-3d'), this.titleState);
-    this.titleWorld.orbit.target.set(7, 7.5, -1);
-    this.titleWorld.orbit.dist = 46;
-    this.titleWorld.orbit.pitch = 0.26;
-    this.titleWorld.orbit.yaw = -0.28;
+    this.titleWorld.orbit.target.set(9, 7.2, -2);
+    this.titleWorld.orbit.dist = 44;
+    this.titleWorld.orbit.pitch = 0.24;
+    this.titleWorld.orbit.yaw = -0.36;
     this.titleWorld.resize();
     this.bindTitle();
     this.titleLoop();
@@ -104,6 +131,7 @@ class App {
       $('#t-continue-sub').textContent = `${this.pending.name} · day ${this.pending.day} · ${money(this.pending.cash)}`;
       cont.onclick = () => this.start(deserialize(this.pending), this.pending);
     }
+    if (SHOWCASE) { setTimeout(() => this.start(showcaseState()), 60); return; }
     $('#t-new').onclick = () => { sfx.chime(); this.openSetup(); };
     $('#t-how').onclick = () => { sfx.chime(); this.howToPlay(true); };
 
@@ -222,7 +250,7 @@ class App {
       const report = offlineCatchUp(state, away);
       report.escrow = saved.escrow || 0;
       this.awayReport(report);
-    } else if (!saved) {
+    } else if (!saved && !SHOWCASE) {
       setTimeout(() => this.howToPlay(false), 700);
     }
 
@@ -452,7 +480,7 @@ class App {
   }
 
   awayReport(r) {
-    const net = r.net + (r.escrow || 0);
+    const net = r.net + (r.escrow || 0) + (r.settled || 0);
     const hrs = r.hours < 1 ? `${Math.round(r.hours * 60)} minutes` : `${r.hours.toFixed(1)} hours`;
     const body = `
       <p>You were gone <b>${hrs}</b>${r.capped ? ` — the crew traded for ${r.cappedHours.toFixed(1)} of them` : ''}.</p>
