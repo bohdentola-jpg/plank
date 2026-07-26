@@ -21,6 +21,10 @@ const el = (tag, cls, html) => {
   return n;
 };
 const pct = (v) => `${Math.round(v * 100)}%`;
+// The player names their own hotel and that name reaches the log; everything
+// rendered through innerHTML goes through here.
+const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ESC[c]);
 
 function clockText(state) {
   const h24 = Math.floor(state.clock / 60) % 24;
@@ -106,7 +110,7 @@ export class HUD {
 
   // ---------------------------------------------------------------- toasts
   toast(text, kind = 'info', icon = '') {
-    const n = el('div', `toast ${kind}`, `${icon ? `<span class="ti">${icon}</span>` : ''}<span>${text}</span>`);
+    const n = el('div', `toast ${kind}`, `${icon ? `<span class="ti">${esc(icon)}</span>` : ''}<span>${esc(text)}</span>`);
     this.elToasts.appendChild(n);
     requestAnimationFrame(() => n.classList.add('in'));
     setTimeout(() => { n.classList.remove('in'); setTimeout(() => n.remove(), 400); }, 3600);
@@ -184,8 +188,8 @@ export class HUD {
       row.innerHTML = `
         <span class="tk-icon">${TASK_ICON[t.type] || '•'}</span>
         <span class="tk-main">
-          <span class="tk-title">${taskTitle(state, t)}</span>
-          <span class="tk-sub">${worker ? `${worker.kind === 'you' ? 'You are on it' : `${worker.name} is on it`}` : this.hint(state, t)}</span>
+          <span class="tk-title">${esc(taskTitle(state, t))}</span>
+          <span class="tk-sub">${worker ? (worker.kind === 'you' ? 'You are on it' : `${esc(worker.name)} is on it`) : esc(this.hint(state, t))}</span>
         </span>
         <span class="tk-go">${worker ? '' : 'TAKE'}</span>`;
       const urg = Math.min(1, this.urg(state, t) / 9);
@@ -222,7 +226,7 @@ export class HUD {
   renderYou(state, agg) {
     const you = state.you;
     const job = you.job ? sortedTasks(state).find((t) => t.id === you.job.taskId) : null;
-    const doing = job ? taskTitle(state, job) : (state.youAuto ? 'Looking for the next job' : 'Standing at the desk');
+    const doing = esc(job ? taskTitle(state, job) : (state.youAuto ? 'Looking for the next job' : 'Standing at the desk'));
     const prog = you.job && you.job.phase === 'work' && you.job.dur
       ? 1 - Math.max(0, you.job.timer) / you.job.dur : 0;
     this.elYou.innerHTML = `
@@ -248,7 +252,7 @@ export class HUD {
   // ---------------------------------------------------------------- panels
   renderPanel(state, agg) {
     const sig = [
-      this.tab, state.cash | 0, builtRooms(state).length, state.floors,
+      this.tab, Math.round(state.cash), builtRooms(state).length, state.floors,
       Object.keys(state.amenities).length, state.staff.map((s) => s.id + s.level).join(),
       Math.round(state.rateMult * 100), state.reviews.length, state.day,
       this.selectedStaff,
@@ -336,7 +340,7 @@ export class HUD {
       const tCost = trainCost(s.level);
       h += `<div class="row staff">
         <span class="ri">${role.icon}</span>
-        <span class="rm"><b>${s.name} <em>lv${s.level}</em></b><i>${role.name} · ${money(staffWage(s))}/day${s.offShift ? ' · off shift' : ''}</i></span>
+        <span class="rm"><b>${esc(s.name)} <em>lv${s.level}</em></b><i>${role.name} · ${money(staffWage(s))}/day${s.offShift ? ' · off shift' : ''}</i></span>
         <span class="rc-group">
           ${s.level < 3 ? `<button class="mini" data-act="train:${s.id}" ${state.cash >= tCost ? '' : 'disabled'}>TRAIN ${money(tCost)}</button>` : '<span class="mini flat">MAXED</span>'}
           <button class="mini danger" data-act="fire:${s.id}">LET GO</button>
@@ -429,14 +433,14 @@ export class HUD {
     let h = '<div class="grp"><div class="grp-h">GUEST BOOK</div>';
     if (!state.reviews.length) h += '<div class="note">Nobody has stayed long enough to have an opinion.</div>';
     for (const r of state.reviews.slice(0, 14)) {
-      h += `<div class="review r-${r.band}">
-        <div class="rv-top"><b>${r.name}</b><span>${'★'.repeat(Math.max(1, Math.round(r.stars)))}<em>day ${r.day}</em></span></div>
-        <div class="rv-text">“${r.text}”</div>
+      h += `<div class="review r-${esc(r.band)}">
+        <div class="rv-top"><b>${esc(r.name)}</b><span>${'★'.repeat(Math.max(1, Math.round(r.stars)))}<em>day ${r.day | 0}</em></span></div>
+        <div class="rv-text">“${esc(r.text)}”</div>
       </div>`;
     }
     h += '</div><div class="grp"><div class="grp-h">THE LOG</div>';
     for (const l of state.log.slice(0, 14)) {
-      h += `<div class="logline l-${l.kind}"><em>D${l.day}</em> ${l.text}</div>`;
+      h += `<div class="logline l-${esc(l.kind)}"><em>D${l.day | 0}</em> ${esc(l.text)}</div>`;
     }
     h += '</div>';
     return h;
@@ -449,7 +453,7 @@ export class HUD {
     const room = roomById(state, id);
     if (!room) { this.selectedRoom = null; return; }
     const guest = room.guestId ? guestById(state, room.guestId) : null;
-    const sig = `${room.id}${room.state}${room.tier}${room.built}${guest ? guest.id + Math.round(guest.mood * 20) : ''}${state.cash | 0}`;
+    const sig = `${room.id}${room.state}${room.tier}${room.built}${guest ? guest.id + Math.round(guest.mood * 20) : ''}${Math.round(state.cash)}`;
     if (sig === this._inspSig) return;
     this._inspSig = sig;
     this.elInspector.classList.add('show');
@@ -482,10 +486,10 @@ export class HUD {
       <div class="insp-rows">
         <div><span>Rate</span><b>${money(tier.rate * state.rateMult * agg.rate)}/night</b></div>
         <div><span>Condition</span><b>${room.state === 'broken' ? 'Broken' : `${Math.max(0, Math.round((1 - room.wear * 0.2) * 100))}%`}</b></div>
-        ${guest ? `<div><span>Guest</span><b>${guest.name}</b></div>
+        ${guest ? `<div><span>Guest</span><b>${esc(guest.name)}</b></div>
         <div><span>Mood</span><b class="${guest.mood > 0.7 ? 'good' : guest.mood < 0.4 ? 'bad' : ''}">${Math.round(guest.mood * 100)}%</b></div>
         <div><span>Checking out</span><b>day ${guest.checkoutDay}</b></div>` : ''}
       </div>
-      ${room.tier < 3 ? `<button class="btn wide" data-act="upgrade:${room.id}" ${canUp ? '' : 'disabled'}>UPGRADE TO ${TIERS[room.tier + 1].NAME || TIERS[room.tier + 1].name.toUpperCase()} · ${money(upCost)}</button>` : ''}`;
+      ${room.tier < 3 ? `<button class="btn wide" data-act="upgrade:${room.id}" ${canUp ? '' : 'disabled'}>UPGRADE TO ${TIERS[room.tier + 1].name.toUpperCase()} · ${money(upCost)}</button>` : ''}`;
   }
 }

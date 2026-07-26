@@ -28,15 +28,19 @@ function mulberry32(a) {
 function mat(color, opts = {}) {
   return new THREE.MeshLambertMaterial({ color, ...opts });
 }
-function box(w, h, d, m) {
+// Shadow flags are opt-in: a thirty-room hotel is two thousand meshes, and
+// having every lamp and pillow cast its own shadow costs far more than it shows.
+// 0 none · 1 cast · 2 receive · 3 both.
+function box(w, h, d, m, shadow = 0) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
+  mesh.castShadow = !!(shadow & 1);
+  mesh.receiveShadow = !!(shadow & 2);
   return mesh;
 }
-function plane(w, h, m) {
+function plane(w, h, m, shadow = 2) {
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m);
-  mesh.receiveShadow = true;
+  mesh.castShadow = !!(shadow & 1);
+  mesh.receiveShadow = !!(shadow & 2);
   return mesh;
 }
 
@@ -44,9 +48,10 @@ function plane(w, h, m) {
 const SKY_STEP = 30;
 
 export class World {
-  constructor(holder, state) {
+  constructor(holder, state, opts = {}) {
     this.holder = holder;
     this.state = state;
+    this.pinQuality = !!opts.pinQuality;
     this.people = new Map();     // id -> rig
     this.roomVis = new Map();    // roomId -> parts
     this.pickables = [];
@@ -54,6 +59,8 @@ export class World {
     this.selected = null;
     this.time = 0;
     this._skyHour = -99;
+    this.quality = 2;
+    this._slow = 0;
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.8));
@@ -70,7 +77,7 @@ export class World {
 
     this.sun = new THREE.DirectionalLight('#fff4dd', 1.1);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(2048, 2048);
+    this.sun.shadow.mapSize.set(1536, 1536);
     const cam = this.sun.shadow.camera;
     cam.left = -46; cam.right = 46; cam.top = 40; cam.bottom = -24; cam.near = 1; cam.far = 160;
     this.scene.add(this.sun, this.sun.target);
@@ -226,12 +233,12 @@ export class World {
     floor.position.set(0, 0.02, (nav.LOBBY_BACK + nav.RAIL_Z) / 2);
     g.add(floor);
 
-    const back = box(nav.WIDTH, ROOM_H + 0.4, 0.35, new THREE.MeshLambertMaterial({ map: tex(wallpaperCanvas('#e3d9c4', s.ink), { repeat: [8, 1] }) }));
+    const back = box(nav.WIDTH, ROOM_H + 0.4, 0.35, new THREE.MeshLambertMaterial({ map: tex(wallpaperCanvas('#e3d9c4', s.ink), { repeat: [8, 1] }) }), 3);
     back.position.set(0, (ROOM_H + 0.4) / 2, nav.LOBBY_BACK);
     g.add(back);
 
     for (const sx of [-nav.HALF_W, nav.HALF_W]) {
-      const side = box(0.35, ROOM_H + 0.4, 8, this.facadeMat);
+      const side = box(0.35, ROOM_H + 0.4, 8, this.facadeMat, 3);
       side.position.set(sx, (ROOM_H + 0.4) / 2, (nav.LOBBY_BACK + nav.RAIL_Z) / 2);
       g.add(side);
     }
@@ -246,18 +253,18 @@ export class World {
       pane.castShadow = false;
       g.add(pane);
     }
-    const canopy = box(9, 0.3, 4.4, this.trimMat);
+    const canopy = box(9, 0.3, 4.4, this.trimMat, 3);
     canopy.position.set(nav.DOOR_X, ROOM_H + 0.35, nav.RAIL_Z + 1.6);
     g.add(canopy);
     for (const px of [nav.DOOR_X - 3.6, nav.DOOR_X + 3.6]) {
-      const post = box(0.28, ROOM_H + 0.3, 0.28, mat('#9a958c'));
+      const post = box(0.28, ROOM_H + 0.3, 0.28, mat('#9a958c'), 3);
       post.position.set(px, (ROOM_H + 0.3) / 2, nav.RAIL_Z + 3.3);
       g.add(post);
     }
 
     // ---- front desk
     const deskMat = new THREE.MeshLambertMaterial({ map: tex(woodCanvas('#6b4426'), { repeat: [3, 1] }) });
-    const desk = box(6.2, 1.15, 1.5, deskMat);
+    const desk = box(6.2, 1.15, 1.5, deskMat, 3);
     desk.position.set(nav.DESK_X, 0.575, nav.DESK_Z);
     g.add(desk);
     const counter = box(6.6, 0.14, 1.9, mat(shade('#6b4426', 40)));
@@ -313,7 +320,7 @@ export class World {
     g.add(potted(11.2, 0, -4.4));
 
     // ---- laundry / linen room
-    const linenWall = box(0.3, ROOM_H, 3.6, mat('#c8bda6'));
+    const linenWall = box(0.3, ROOM_H, 3.6, mat('#c8bda6'), 3);
     linenWall.position.set(nav.LAUNDRY_X - 2.2, ROOM_H / 2, nav.LAUNDRY_Z + 0.4);
     g.add(linenWall);
     for (let i = 0; i < 3; i++) {
@@ -453,7 +460,7 @@ export class World {
     this.building.add(g);
 
     // Balcony slab + railing.
-    const slab = box(nav.WIDTH + 4.2, 0.28, nav.RAIL_Z - nav.ROOM_BACK + 0.5, this.slabMat);
+    const slab = box(nav.WIDTH + 4.2, 0.28, nav.RAIL_Z - nav.ROOM_BACK + 0.5, this.slabMat, 3);
     slab.position.set(0, y - 0.14, (nav.RAIL_Z + nav.ROOM_BACK) / 2);
     g.add(slab);
 
@@ -467,7 +474,7 @@ export class World {
       g.add(post);
     }
 
-    const backWall = box(nav.WIDTH, ROOM_H, 0.3, this.facadeMat);
+    const backWall = box(nav.WIDTH, ROOM_H, 0.3, this.facadeMat, 3);
     backWall.position.set(0, y + ROOM_H / 2, nav.ROOM_BACK);
     g.add(backWall);
 
@@ -494,11 +501,11 @@ export class World {
   buildShell(g, room) {
     const x = nav.slotX(room.slot);
     const y = nav.floorY(room.floor);
-    const wall = box(nav.ROOM_W - 0.2, ROOM_H, 0.2, mat('#8e8a80'));
+    const wall = box(nav.ROOM_W - 0.2, ROOM_H, 0.2, mat('#8e8a80'), 3);
     wall.position.set(x, y + ROOM_H / 2, nav.ROOM_FRONT);
     g.add(wall);
     for (let i = 0; i < 3; i++) {
-      const ply = box(nav.ROOM_W - 0.9, 0.34, 0.08, mat('#a5834f'));
+      const ply = box(nav.ROOM_W - 0.9, 0.34, 0.08, mat('#a5834f'), 1);
       ply.rotation.z = (i - 1) * 0.06;
       ply.position.set(x, y + 1.0 + i * 0.5, nav.ROOM_FRONT + 0.16);
       g.add(ply);
@@ -673,7 +680,7 @@ export class World {
       rail.rotation.x = -0.55;
       g.add(rail);
     }
-    const landing = box(2.4, 0.2, 2.4, this.slabMat);
+    const landing = box(2.4, 0.2, 2.4, this.slabMat, 3);
     landing.position.set(nav.STAIR_X, 0.1, nav.LANE_Z);
     g.add(landing);
   }
@@ -688,7 +695,7 @@ export class World {
     const frame = box(2.7, 0.2, 2.9, this.trimMat);
     frame.position.set(nav.ELEV_X, h, nav.LANE_Z - 0.4);
     g.add(frame);
-    const car = box(1.8, 2.3, 1.9, mat('#c8ac6a'));
+    const car = box(1.8, 2.3, 1.9, mat('#c8ac6a'), 3);
     car.position.set(nav.ELEV_X, 1.15, nav.LANE_Z - 0.4);
     g.add(car);
     this.elevatorCar = car;
@@ -711,7 +718,7 @@ export class World {
     const w = big ? 8.4 : 6.2;
     const hgt = w * 0.375;
     const faceMat = new THREE.MeshBasicMaterial({ map: tex(signCanvas(s.name, { face: '#f3e7cf', ink: s.ink, lit: true, sub: signBrag(s) })) });
-    const face = box(w, hgt, 0.3, faceMat);
+    const face = box(w, hgt, 0.3, faceMat, 1);
     face.position.set(px, poleH + hgt / 2 - 0.4, pz);
     face.rotation.y = 0.34;
     g.add(face);
@@ -771,7 +778,7 @@ export class World {
       g.add(roof);
     }
     if (s.amenities.spa) {
-      const hut = box(5.2, 2.8, 4.2, mat('#7d6a52'));
+      const hut = box(5.2, 2.8, 4.2, mat('#7d6a52'), 3);
       hut.position.set(-nav.HALF_W - 8.5, 1.4, -2.4);
       g.add(hut);
       const roof = new THREE.Mesh(new THREE.ConeGeometry(4.4, 1.6, 4), mat(shade(s.ink, -20)));
@@ -785,10 +792,10 @@ export class World {
     for (let i = 0; i < 5; i++) {
       const c = new THREE.Group();
       const bodyMat = mat(carColors[i % carColors.length]);
-      const body = box(2.0, 0.7, 4.4, bodyMat);
+      const body = box(2.0, 0.7, 4.4, bodyMat, 3);
       body.position.y = 0.62;
       c.add(body);
-      const cabin = box(1.8, 0.62, 2.1, mat('#2f3338'));
+      const cabin = box(1.8, 0.62, 2.1, mat('#2f3338'), 1);
       cabin.position.set(0, 1.22, -0.2);
       c.add(cabin);
       for (const [wx, wz] of [[-0.95, 1.5], [0.95, 1.5], [-0.95, -1.5], [0.95, -1.5]]) {
@@ -839,6 +846,7 @@ export class World {
       let rig = this.people.get(g.id);
       if (!rig) {
         rig = buildPerson(randomLook(mulberry32(g.seed)));
+        blobShadow(rig);
         this.scene.add(rig);
         this.people.set(g.id, rig);
       }
@@ -852,6 +860,7 @@ export class World {
       let rig = this.people.get(w.id);
       if (!rig) {
         rig = buildPerson(staffLook(w.kind === 'you' ? 'you' : w.role, mulberry32(w.seed)));
+        blobShadow(rig);
         this.scene.add(rig);
         this.people.set(w.id, rig);
         if (w.kind === 'you') {
@@ -878,9 +887,38 @@ export class World {
   }
 
   // ---------------------------------------------------------------- update
+  // If the machine cannot hold a frame rate, shed quality rather than stutter.
+  // Degrade only — bouncing back and forth reads worse than a settled setting.
+  checkQuality() {
+    // Measured against the wall clock, not the frame delta — the frame delta is
+    // capped, so on a machine doing 1fps a dt-based average never even samples.
+    const now = performance.now();
+    this._fpsAt = this._fpsAt || now;
+    this._fpsN = (this._fpsN || 0) + 1;
+    const elapsed = (now - this._fpsAt) / 1000;
+    if (elapsed < 3) return;
+    const fps = this._fpsN / elapsed;
+    this._fpsAt = now;
+    this._fpsN = 0;
+    if (this.pinQuality) return;
+    if (fps >= 26 || this.quality === 0) { this._slow = 0; return; }
+    if (++this._slow < 2) return;
+    this._slow = 0;
+    this.quality = (this.quality ?? 2) - 1;
+    if (this.quality === 1) {
+      this.renderer.setPixelRatio(1);
+    } else {
+      this.renderer.shadowMap.enabled = false;
+      this.renderer.setPixelRatio(0.85);
+      this.scene.traverse((o) => { if (o.isMesh) o.receiveShadow = false; });
+    }
+    this.resize();
+  }
+
   update(dt, state) {
     this.state = state;
     this.time += dt;
+    this.checkQuality();
     if (this.structureKey(state) !== this._key) this.rebuild();
 
     const h = state.clock / 60;
@@ -1076,6 +1114,25 @@ export class World {
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
+}
+
+// Thirty guests casting real shadows means six hundred extra shadow-map draws
+// for a smudge you can barely see. A soft disc under each pair of feet reads
+// better and costs one transparent quad. The geometry and material are shared
+// and never disposed, which is why disposePerson does not free them.
+let blobGeo = null;
+let blobMat = null;
+function blobShadow(rig) {
+  rig.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+  if (!blobGeo) {
+    blobGeo = new THREE.CircleGeometry(0.34, 14);
+    blobMat = new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.26, depthWrite: false });
+  }
+  const blob = new THREE.Mesh(blobGeo, blobMat);
+  blob.rotation.x = -Math.PI / 2;
+  blob.position.y = 0.02;
+  blob.renderOrder = 1;
+  rig.add(blob);
 }
 
 function placeActor(rig, a) {

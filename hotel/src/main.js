@@ -18,6 +18,7 @@ const params = new URLSearchParams(location.search);
 const FRESH = params.has('fresh');
 const DEV = params.has('dev');
 const SHOWCASE = params.has('showcase');
+const HQ = params.has('hq');   // pin render quality — screenshots, not gameplay
 
 const INKS = ['#8f2d3c', '#1d3557', '#2f5d3a', '#5c3a6e', '#8a4a1e', '#2b4c52', '#7a2f5e', '#3d3b39'];
 const ACCENTS = ['#e0a92b', '#e8e2d2', '#5fb0c9', '#d9603f', '#8fbf5a', '#c98fb5', '#f0d98a', '#9aa7b5'];
@@ -113,7 +114,7 @@ class App {
   openTitle() {
     showScreen('title');
     this.titleState = demoState();
-    this.titleWorld = new World($('#title-3d'), this.titleState);
+    this.titleWorld = new World($('#title-3d'), this.titleState, { pinQuality: HQ });
     this.titleWorld.orbit.target.set(9, 7.2, -2);
     this.titleWorld.orbit.dist = 44;
     this.titleWorld.orbit.pitch = 0.24;
@@ -215,7 +216,7 @@ class App {
     this.state = state;
     showScreen('game');
 
-    this.world = new World($('#game-holder'), state);
+    this.world = new World($('#game-holder'), state, { pinQuality: HQ });
     this.world.frameAll();
     this.world.resize();
     this.world.onPick = (hit) => this.onPick(hit);
