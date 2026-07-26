@@ -1,6 +1,6 @@
 # EB GAMES 95 🖥
 
-Eight games. One repo. Zero asset files — every model, texture, animation, and
+Nine games. One repo. Zero asset files — every model, texture, animation, and
 note of music is generated in code, and it all runs straight in the browser.
 No install, no build step.
 
@@ -21,6 +21,7 @@ Spotify link) — the desktop keeps the music going while you play.
 | 📼 **[NOCLIP](backrooms/README.md)** | Found-footage backrooms horror: ten floors a run, one thing hunting each of them, a stall in the lift | `/backrooms/` |
 | 🚗 **[QUAHOG HIT & RUN](quahog/README.md)** | Cel-shaded open world: seven levels, one Griffin each, cutaway gags on every other corner | `/quahog/` |
 | 📺 **[FOCUS GROUP](focusgroup/README.md)** | Six mornings in your own flat, a 1974 commercial, and a camera that keeps taking the shot | `/focusgroup/` |
+| 🛎 **[NO VACANCY](hotel/README.md)** | Hotel management from the front desk up — build rooms, hire staff, set the rate, answer the bell | `/hotel/` |
 
 ## The new one
 
@@ -56,6 +57,20 @@ of them needs all twelve.
 | --- | --- |
 | ![Twenty to seven](docs/focusgroup-living.png) | ![CAM 03](docs/focusgroup-cam.png) |
 | ![Valco Home Products](docs/focusgroup-ad.png) | ![Sunday](docs/focusgroup-studio.png) |
+
+**NO VACANCY** is hotel management from the front desk up. Name the sign, pick
+the facade and the house colours, and take the keys to an empty building — then
+build rooms, hire and fire, set the nightly rate, and walk the floors while the
+guests let themselves in. They arrive on their own schedule, queue at the desk,
+take the room you put them in, use the beds and the chairs, ask for towels at
+the worst possible moment, and leave a review either way. Wages come out
+nightly, the ledger rolls over at midnight, and money you have not earned yet
+sits in escrow until somebody has actually slept there.
+
+| | |
+| --- | --- |
+| ![The lobby](docs/hotel-lobby.png) | ![Checking in](docs/hotel-assign.png) |
+| ![Building out](docs/hotel-build.png) | ![Night shift](docs/hotel-night.png) |
 
 **QUAHOG HIT & RUN** is a cel-shaded open world built like the licensed cartoon
 drivers of 2003. Seven levels, one Griffin per level, story jobs that unlock the
@@ -132,11 +147,13 @@ Focus Group got and which lenses you found, and the desktop's own preferences.
 
 ## The desktop
 
-Boots through a straight-faced fake BIOS (which now finds seven cartridges and two
+Boots through a straight-faced fake BIOS (which now finds eight cartridges and two
 tapes that were already in the drive — there was one of them last time), then it's
 1995: teal wallpaper, beveled
-windows you can drag, a Start menu, a taskbar clock, and an optional CRT scanline
-mode. Each game's window has the pitch, two screenshots, and a big PLAY button.
+windows you can drag, desktop icons you can drag (they snap to the grid, and
+neither they nor the windows can be dragged off the screen or under the taskbar
+— **Start → Line up icons** puts them back), a Start menu, a taskbar clock, and
+an optional CRT scanline mode. Each game's window has the pitch, two screenshots, and a big PLAY button.
 **EB Hi-Fi** is the music app — load local audio files into a playlist, or paste
 any Spotify song/album/playlist link (log in to Spotify in your browser for full
 tracks). Games open in new tabs, so the tunes never stop.
@@ -147,6 +164,8 @@ tracks). Games open in new tabs, so the tunes never stop.
 npm install              # playwright, for screenshots and browser smoke tests
 npm run smoke            # every game's headless harness, back to back
 npm run smoke:focusgroup # Focus Group: the week's wiring, all three sets
+npm run smoke:hotel      # No Vacancy: the sim, the ledger and the guests
+npm run balance:hotel    # …run sixty days of it and print the books
 npm run play:focusgroup  # plays all six mornings headless, both endings
 npm run smoke:quahog     # Quahog's town, cast, vehicles and whole campaign
 npm run play:quahog      # Quahog playtest in Chromium: drives every system

@@ -1,12 +1,13 @@
 {
   "name": "eb-games-shelf",
   "version": "2.0.0",
-  "description": "EB GAMES SHELF — VARSITY 27 (football), BIG INNING '27 (baseball), RIM CITY (basketball), LOAM (voxels), MASCOT MELEE 64 (platform fighter), NOCLIP (backrooms horror), QUAHOG HIT & RUN (open world), FOCUS GROUP (surveillance horror). Eight browser games, zero asset files, one Windows-95 desktop to launch them.",
+  "description": "EB GAMES SHELF — VARSITY 27 (football), BIG INNING '27 (baseball), RIM CITY (basketball), LOAM (voxels), MASCOT MELEE 64 (platform fighter), NOCLIP (backrooms horror), QUAHOG HIT & RUN (open world), FOCUS GROUP (surveillance horror), NO VACANCY (hotel management). Nine browser games, zero asset files, one Windows-95 desktop to launch them.",
   "type": "module",
   "scripts": {
     "start": "python3 serve.py",
     "shot": "node tools/shot.mjs",
-    "smoke": "node tools/smoke.mjs && node tools/smoke-baseball.mjs && node tools/smoke-rimcity.mjs && node tools/smoke-loam.mjs && node tools/melee-sim.mjs 6 && node tools/smoke-backrooms.mjs && node tools/smoke-quahog.mjs && node tools/smoke-focusgroup.mjs",
+    "desk": "node tools/desk-check.mjs",
+    "smoke": "node tools/smoke.mjs && node tools/smoke-baseball.mjs && node tools/smoke-rimcity.mjs && node tools/smoke-loam.mjs && node tools/melee-sim.mjs 6 && node tools/smoke-backrooms.mjs && node tools/smoke-quahog.mjs && node tools/smoke-focusgroup.mjs && node tools/hotel-smoke.mjs",
     "smoke:varsity": "node tools/smoke.mjs",
     "smoke:baseball": "node tools/smoke-baseball.mjs",
     "smoke:rimcity": "node tools/smoke-rimcity.mjs",
@@ -22,6 +23,10 @@
     "net:noclip": "node tools/net-noclip.mjs",
     "smoke:quahog": "node tools/smoke-quahog.mjs",
     "smoke:focusgroup": "node tools/smoke-focusgroup.mjs",
+    "smoke:hotel": "node tools/hotel-smoke.mjs",
+    "balance:hotel": "node tools/hotel-smoke.mjs --days 60",
+    "leakcheck:hotel": "node tools/hotel-leakcheck.mjs",
+    "uicheck:hotel": "node tools/hotel-uicheck.mjs",
     "shot:focusgroup": "node tools/shot-focusgroup.mjs",
     "play:focusgroup": "node tools/play-focusgroup.mjs",
     "play:quahog": "node tools/play-quahog.mjs"

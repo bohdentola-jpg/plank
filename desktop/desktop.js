@@ -1,4 +1,4 @@
-// EB GAMES 95 — a small operating system for a shelf of eight games.
+// EB GAMES 95 — a small operating system for a shelf of nine games.
 // Boot POST → teal desktop → double-click a cartridge. The Hi-Fi keeps
 // playing while you game in another tab, which is the whole point of tabs.
 
@@ -182,6 +182,24 @@ const ICONS = {
     'ddoooooooooooodd',
     'ddoooooooooooodd',
   ], { d: '#2a1c12', k: '#12101a', r: '#8c2c1c', c: '#f2e6c8', m: '#a83028', o: '#2a4a6a' }),
+  hotel: pixelIcon([
+    'nnnnnnnnnnnnnnnn',
+    'nnrrrrrrrrrrrrnn',
+    'nnrwwrwwrwwrwwrn',
+    'nnrrrrrrrrrrrrnn',
+    'nnnnnnnnnnnnnnnn',
+    'nbbbbbbbbbbbbbbn',
+    'nbyybbyybbyybbbn',
+    'nbyybbyybbyybbbn',
+    'nbbbbbbbbbbbbbbn',
+    'nbyybbyybbyybbbn',
+    'nbyybbyybbyybbbn',
+    'nbbbbbbbbbbbbbbn',
+    'nbbbbbyybbbbbbbn',
+    'nbbbbbyybbbbbbbn',
+    'nggggggggggggggn',
+    'nnnnnnnnnnnnnnnn',
+  ], { n: '#141220', r: '#c0243a', w: '#ffe9a8', b: '#3a3550', y: '#ffd873', g: '#20304a' }),
   hifi: pixelIcon([
     '................',
     '....k......k....',
@@ -332,6 +350,21 @@ const GAMES = {
     shots: ['docs/focusgroup-living.png', 'docs/focusgroup-cam.png'],
     meta: ['slow-burn horror', '1 player', 'mouse + keyboard', 'six mornings, ~40 min', 'headphones'],
   },
+  hotel: {
+    title: 'NO VACANCY',
+    tag: 'A hotel is just a building until somebody answers the bell.',
+    path: 'hotel/',
+    desc: `Hotel management, from the front desk up. Name the sign, pick the
+      facade and the house colours, and take the keys to an empty building: then
+      build rooms, hire and fire, set the nightly rate, and walk the floors while
+      the guests let themselves in. They arrive on their own schedule, queue at
+      the desk, take the room you put them in, use the beds and the chairs, ask
+      for towels at the worst moment, and leave a review either way. Wages come
+      out nightly, the ledger rolls over at midnight, and the money you have not
+      earned yet sits in escrow until they have actually slept there.`,
+    shots: ['docs/hotel-lobby.png', 'docs/hotel-night.png'],
+    meta: ['management sim', '1 player', 'mouse + keyboard', 'one hotel, auto-saved'],
+  },
   noclip: {
     title: 'NOCLIP',
     tag: 'Ten floors down. One thing on each of them. Find the lift.',
@@ -353,6 +386,24 @@ const GAMES = {
 const winsHost = () => document.getElementById('windows');
 const wins = new Map();   // id → { el, taskBtn, minimized }
 let zTop = 10;
+
+const TASKBAR_H = 30;
+
+/**
+ * Keep a window somewhere you can still get hold of it: the title bar never
+ * goes under the taskbar or off the top, and enough of the window stays on
+ * screen sideways to grab it by.
+ */
+function clampWin(el, x, y) {
+  const w = el.offsetWidth || 320;
+  const maxY = Math.max(0, window.innerHeight - TASKBAR_H - 26);
+  const minX = Math.min(-(w - 140), 0);
+  const maxX = Math.max(minX, window.innerWidth - 140);
+  return {
+    x: Math.round(Math.max(minX, Math.min(x, maxX))),
+    y: Math.round(Math.max(0, Math.min(y, maxY))),
+  };
+}
 
 function focusWin(id) {
   for (const [wid, w] of wins) {
@@ -403,8 +454,9 @@ function makeWindow(id, title, icon, bodyEl, { x = 120, y = 40, onClose = null }
     const r = el.getBoundingClientRect();
     const ox = e.clientX - r.left, oy = e.clientY - r.top;
     const move = (ev) => {
-      el.style.left = `${Math.max(-60, Math.min(window.innerWidth - 80, ev.clientX - ox))}px`;
-      el.style.top = `${Math.max(0, Math.min(window.innerHeight - 60, ev.clientY - oy))}px`;
+      const p = clampWin(el, ev.clientX - ox, ev.clientY - oy);
+      el.style.left = `${p.x}px`;
+      el.style.top = `${p.y}px`;
     };
     const up = () => {
       window.removeEventListener('pointermove', move);
@@ -451,11 +503,14 @@ function openWin(id) {
   }
   focusWin(id);
   openSfx();
-  // keep it on screen
+  // keep it on screen: centre it if it does not fit where it was left
   const r = w.el.getBoundingClientRect();
-  if (r.right > window.innerWidth || r.bottom > window.innerHeight - 30) {
-    w.el.style.left = `${Math.max(8, (window.innerWidth - r.width) / 2)}px`;
-    w.el.style.top = `${Math.max(8, (window.innerHeight - 30 - r.height) / 2)}px`;
+  if (r.right > window.innerWidth || r.bottom > window.innerHeight - TASKBAR_H) {
+    const p = clampWin(w.el,
+      Math.max(8, (window.innerWidth - r.width) / 2),
+      Math.max(8, (window.innerHeight - TASKBAR_H - r.height) / 2));
+    w.el.style.left = `${p.x}px`;
+    w.el.style.top = `${p.y}px`;
   }
 }
 
@@ -511,7 +566,7 @@ function aboutWindow() {
   body.className = 'about';
   body.innerHTML = `
     <h1>EB GAMES 95</h1>
-    <p>Eight games, one repo, zero asset files — every model, texture, animation,
+    <p>Nine games, one repo, zero asset files — every model, texture, animation,
     and note of music is generated in code and runs straight in the browser.</p>
     <ul>
       <li><b>VARSITY 27</b> — high school football, careers and all</li>
@@ -520,6 +575,7 @@ function aboutWindow() {
       <li><b>LOAM</b> — voxel survival with a generative score</li>
       <li><b>MASCOT MELEE 64</b> — twelve mascots, one trophy, no rules</li>
       <li><b>QUAHOG HIT & RUN</b> — cel-shaded open world, seven levels of it</li>
+      <li><b>NO VACANCY</b> — hotel management, from the front desk up</li>
       <li><b>NOCLIP</b> — twenty-three levels of the backrooms, on tape</li>
       <li><b>FOCUS GROUP</b> — six mornings in a flat, and somebody is filming</li>
     </ul>
@@ -709,22 +765,163 @@ const DESK_APPS = [
   { id: 'loam', label: 'LOAM' },
   { id: 'melee', label: 'MASCOT MELEE 64' },
   { id: 'quahog', label: 'QUAHOG HIT & RUN' },
+  { id: 'hotel', label: 'NO VACANCY' },
   { id: 'noclip', label: 'NOCLIP' },
   { id: 'focusgroup', label: 'FOCUS GROUP' },
   { id: 'hifi', label: 'EB Hi-Fi' },
   { id: 'about', label: 'About' },
 ];
 
+// Icons sit at absolute positions inside #desktop so they can be picked up and
+// put down. Two rules: they snap to a grid on release, and they are clamped to
+// the desktop, which stops 30px short of the bottom of the window because that
+// is where the taskbar is. Nothing can be dragged under it or off the edge.
+const ICON_W = 84;
+const ICON_H = 92;
+const ICON_COL = 96;    // grid pitch across
+const ICON_ROW = 98;    // grid pitch down
+const ICON_PAD = 10;
+
+const iconEls = new Map();
 let selected = null;
+let dragEndedAt = 0;
+
+function deskSize() {
+  const d = document.getElementById('desktop');
+  return { w: d?.clientWidth || window.innerWidth, h: d?.clientHeight || window.innerHeight - 30 };
+}
+
+function clampIcon(x, y) {
+  const { w, h } = deskSize();
+  return {
+    x: Math.round(Math.max(0, Math.min(x, Math.max(0, w - ICON_W - 4)))),
+    y: Math.round(Math.max(0, Math.min(y, Math.max(0, h - ICON_H - 4)))),
+  };
+}
+
+/** Down the left-hand side, starting a new column when the floor runs out. */
+function autoSlot(i) {
+  const { h } = deskSize();
+  const perCol = Math.max(1, Math.floor((h - ICON_PAD) / ICON_ROW));
+  return clampIcon(ICON_PAD + Math.floor(i / perCol) * ICON_COL,
+    ICON_PAD + (i % perCol) * ICON_ROW);
+}
+
+const cellOf = (x, y) => ({
+  c: Math.round((x - ICON_PAD) / ICON_COL),
+  r: Math.round((y - ICON_PAD) / ICON_ROW),
+});
+const posOf = (c, r) => clampIcon(ICON_PAD + c * ICON_COL, ICON_PAD + r * ICON_ROW);
+
+/** The nearest cell to (c,r) that nobody is standing on, searched in rings. */
+function freeCell(c, r, taken) {
+  const { w, h } = deskSize();
+  const maxC = Math.max(0, Math.floor((w - ICON_W - ICON_PAD) / ICON_COL));
+  const maxR = Math.max(0, Math.floor((h - ICON_H - ICON_PAD) / ICON_ROW));
+  const cc = Math.max(0, Math.min(c, maxC));
+  const rr = Math.max(0, Math.min(r, maxR));
+  for (let ring = 0; ring <= maxC + maxR + 2; ring++) {
+    for (let dr = -ring; dr <= ring; dr++) {
+      for (let dc = -ring; dc <= ring; dc++) {
+        if (Math.max(Math.abs(dr), Math.abs(dc)) !== ring) continue;
+        const nc = cc + dc, nr = rr + dr;
+        if (nc < 0 || nr < 0 || nc > maxC || nr > maxR) continue;
+        if (!taken.has(`${nc},${nr}`)) return { c: nc, r: nr };
+      }
+    }
+  }
+  return { c: cc, r: rr };   // a desktop this full has bigger problems
+}
+
+/** Everything where it asked to be, clamped to the desktop, no two in a slot. */
+function layoutIcons() {
+  const taken = new Set();
+  DESK_APPS.forEach(({ id }, i) => {
+    const el = iconEls.get(id);
+    if (!el) return;
+    const saved = store.iconPos?.[id];
+    // a saved place is re-clamped too, so shrinking the window cannot strand one
+    const want = saved ? clampIcon(saved.x, saved.y) : autoSlot(i);
+    const cell = cellOf(want.x, want.y);
+    const free = freeCell(cell.c, cell.r, taken);
+    taken.add(`${free.c},${free.r}`);
+    const p = posOf(free.c, free.r);
+    el.style.left = `${p.x}px`;
+    el.style.top = `${p.y}px`;
+  });
+}
+
+function lineUpIcons() {
+  store.iconPos = {};
+  save();
+  layoutIcons();
+}
+
+function dragIcon(el, id) {
+  let sx = 0, sy = 0, ox = 0, oy = 0, moved = false, dragging = false;
+
+  el.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    dragging = true;
+    moved = false;
+    sx = e.clientX;
+    sy = e.clientY;
+    ox = parseInt(el.style.left, 10) || 0;
+    oy = parseInt(el.style.top, 10) || 0;
+    el.setPointerCapture?.(e.pointerId);
+  });
+
+  el.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    // a click that wobbles four pixels is still a click
+    if (!moved && Math.hypot(dx, dy) < 4) return;
+    moved = true;
+    el.classList.add('dragging');
+    const p = clampIcon(ox + dx, oy + dy);
+    el.style.left = `${p.x}px`;
+    el.style.top = `${p.y}px`;
+  });
+
+  const drop = (e) => {
+    if (!dragging) return;
+    dragging = false;
+    el.releasePointerCapture?.(e.pointerId);
+    el.classList.remove('dragging');
+    if (!moved) return;
+    // snap to the grid the way a 1995 desktop does, but to a slot that is
+    // actually empty — dropping one icon on another leaves both unreadable
+    const taken = new Set();
+    for (const [other, oel] of iconEls) {
+      if (other === id) continue;
+      const oc = cellOf(parseInt(oel.style.left, 10) || 0, parseInt(oel.style.top, 10) || 0);
+      taken.add(`${oc.c},${oc.r}`);
+    }
+    const want = cellOf(parseInt(el.style.left, 10) || 0, parseInt(el.style.top, 10) || 0);
+    const free = freeCell(want.c, want.r, taken);
+    const snapped = posOf(free.c, free.r);
+    el.style.left = `${snapped.x}px`;
+    el.style.top = `${snapped.y}px`;
+    store.iconPos = store.iconPos || {};
+    store.iconPos[id] = snapped;
+    save();
+    // ...and the click that follows the drop is not a click either
+    dragEndedAt = Date.now();
+  };
+  el.addEventListener('pointerup', drop);
+  el.addEventListener('pointercancel', drop);
+}
+
 function buildIcons() {
   const host = document.getElementById('icons');
-  DESK_APPS.forEach(({ id, label }, i) => {
+  DESK_APPS.forEach(({ id, label }) => {
     const d = document.createElement('div');
     d.className = 'dicon';
     d.tabIndex = 0;
     d.innerHTML = `<img src="${ICONS[id]}" alt=""/><span>${label}</span>`;
     let selAt = 0;
     d.onclick = () => {
+      if (Date.now() - dragEndedAt < 250) return;
       clickSfx();
       const again = selected === d && Date.now() - selAt > 350;
       document.querySelectorAll('.dicon').forEach((x) => x.classList.remove('sel'));
@@ -733,10 +930,13 @@ function buildIcons() {
       selected = d;
       selAt = Date.now();
     };
-    d.ondblclick = () => openWin(id);
+    d.ondblclick = () => { if (Date.now() - dragEndedAt >= 250) openWin(id); };
     d.onkeydown = (e) => { if (e.key === 'Enter') openWin(id); };
     host.appendChild(d);
+    iconEls.set(id, d);
+    dragIcon(d, id);
   });
+  layoutIcons();
   document.getElementById('desktop').addEventListener('click', (e) => {
     if (e.target.id === 'desktop' || e.target.id === 'icons') {
       document.querySelectorAll('.dicon').forEach((x) => x.classList.remove('sel'));
@@ -763,6 +963,7 @@ function buildStartMenu() {
   mk(ICONS.loam, 'LOAM', () => openWin('loam'));
   mk(ICONS.melee, 'MASCOT MELEE 64', () => openWin('melee'));
   mk(ICONS.quahog, 'QUAHOG HIT & RUN', () => openWin('quahog'));
+  mk(ICONS.hotel, 'NO VACANCY', () => openWin('hotel'));
   mk(ICONS.noclip, 'NOCLIP (horror)', () => openWin('noclip'));
   mk(ICONS.focusgroup, 'FOCUS GROUP (horror)', () => openWin('focusgroup'));
   items.insertAdjacentHTML('beforeend', '<div class="sm-sep"></div>');
@@ -777,6 +978,7 @@ function buildStartMenu() {
   const setCrtLabel = () => { crtBtn.querySelector('span:last-child').textContent = `${store.crt ? '✓ ' : ''}CRT monitor mode`; };
   crtBtn.addEventListener('click', setCrtLabel);
   setCrtLabel();
+  mk(null, 'Line up icons', () => lineUpIcons());
   mk(null, 'Shut Down…', () => {
     const body = document.createElement('div');
     body.className = 'about';
@@ -825,13 +1027,14 @@ function boot() {
     'CPU : BLAST PROCESSOR AT 66 MHZ ......... OK',
     'MEMORY TEST : 640K BASE ... 8192K EXT ... OK',
     '',
-    'DETECTING SHELF .......... 7 CARTRIDGES FOUND',
+    'DETECTING SHELF .......... 8 CARTRIDGES FOUND',
     '  VARSITY 27 ............................ OK',
     "  BIG INNING '27 ........................ OK",
     '  RIM CITY .............................. OK',
     '  LOAM .................................. OK',
     '  MASCOT MELEE 64 ....................... OK',
     '  QUAHOG HIT & RUN ...................... OK',
+    '  NO VACANCY ............................ OK',
     '  NOCLIP ......................... [SEE NOTE]',
     '  FOCUS GROUP .................... [SEE NOTE]',
     'SOUND : EB-FM SYNTHESIS .................. OK',
@@ -862,6 +1065,17 @@ function boot() {
   window.addEventListener('keydown', function esc() { done(); window.removeEventListener('keydown', esc); });
 }
 
+/** A smaller window must not leave the icons or the windows out of reach. */
+function reflow() {
+  layoutIcons();
+  for (const [, w] of wins) {
+    if (w.el.classList.contains('max')) continue;
+    const p = clampWin(w.el, parseInt(w.el.style.left, 10) || 0, parseInt(w.el.style.top, 10) || 0);
+    w.el.style.left = `${p.x}px`;
+    w.el.style.top = `${p.y}px`;
+  }
+}
+
 // ------------------------------------------------------------------ go
 if (store.crt === undefined) store.crt = true;   // it's 1995, of course it's a CRT
 buildIcons();
@@ -875,10 +1089,13 @@ makeWindow('rimcity', 'RIM CITY', ICONS.rimcity, gameWindow('rimcity'), { x: 200
 makeWindow('loam', 'LOAM', ICONS.loam, gameWindow('loam'), { x: 260, y: 110 });
 makeWindow('melee', 'MASCOT MELEE 64', ICONS.melee, gameWindow('melee'), { x: 290, y: 130 });
 makeWindow('quahog', 'QUAHOG HIT & RUN', ICONS.quahog, gameWindow('quahog'), { x: 320, y: 150 });
+makeWindow('hotel', 'NO VACANCY', ICONS.hotel, gameWindow('hotel'), { x: 335, y: 160 });
 makeWindow('noclip', 'NOCLIP', ICONS.noclip, gameWindow('noclip'), { x: 350, y: 170 });
 makeWindow('focusgroup', 'FOCUS GROUP', ICONS.focusgroup, gameWindow('focusgroup'), { x: 380, y: 190 });
 makeWindow('hifi', 'EB Hi-Fi', ICONS.hifi, hifiWindow(), { x: 460, y: 90 });
 makeWindow('about', 'About EB GAMES 95', ICONS.about, aboutWindow(), { x: 380, y: 150 });
+
+window.addEventListener('resize', reflow);
 
 boot();
 

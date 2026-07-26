@@ -9,6 +9,7 @@ Run: python serve.py            → opens the desktop (pick a game there)
      python serve.py varsity    → straight into VARSITY 27
      python serve.py rimcity    → straight into RIM CITY
      python serve.py loam       → straight into LOAM
+     python serve.py hotel      → straight into NO VACANCY (hotel)
      python serve.py backrooms  → straight into NOCLIP (horror)
      python serve.py focusgroup → straight into FOCUS GROUP (horror)
 """
@@ -60,6 +61,7 @@ def main():
     print(f'  LOAM (voxels)            {url}/loam/')
     print(f'  MASCOT MELEE 64 (fights) {url}/melee/')
     print(f'  QUAHOG HIT & RUN (town)  {url}/quahog/')
+    print(f'  NO VACANCY (hotel)       {url}/hotel/')
     print(f'  NOCLIP (horror)          {url}/backrooms/')
     print(f'  FOCUS GROUP (horror)     {url}/focusgroup/')
     if port != START_PORT:

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NO VACANCY — Hotel Management</title>
+<link rel="stylesheet" href="styles.css" />
+<script type="importmap">
+{ "imports": { "three": "../vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============================ BOOT ============================ -->
+  <div id="boot">
+    <div class="boot-mark">EB<span>TYCOON</span></div>
+    <div class="boot-press">CLICK TO CHECK IN</div>
+    <div class="boot-sub">A HOTEL IS JUST A BUILDING UNTIL SOMEBODY ANSWERS THE BELL</div>
+  </div>
+
+  <!-- ============================ TITLE / SETUP ============================ -->
+  <section class="screen" id="scr-title">
+    <div id="title-3d"></div>
+    <div class="title-vig"></div>
+
+    <div class="title-overlay" id="title-menu">
+      <div class="title-card">
+        <div class="title-kicker">EB TYCOON · KEEP THE LIGHT ON</div>
+        <h1 class="title-word">NO<span>VACANCY</span></h1>
+        <div class="title-sub">RUN THE DESK · MAKE THE BEDS · BUILD THE EMPIRE</div>
+        <div class="title-menu">
+          <button id="t-continue" class="menu-btn hidden">CONTINUE — <span id="t-continue-sub"></span></button>
+          <button id="t-new" class="menu-btn">NEW HOTEL</button>
+          <button id="t-how" class="menu-btn">HOW IT WORKS</button>
+          <a class="menu-btn ghost back-link" href="../index.html">◀ BACK TO EB GAMES</a>
+        </div>
+        <div class="title-build">NO VACANCY · BUILD 1</div>
+      </div>
+    </div>
+
+    <div class="title-overlay hidden" id="setup-menu">
+      <div class="title-card setup">
+        <div class="title-kicker">STEP ONE · THE SIGN OUT FRONT</div>
+        <label class="field">
+          <span>NAME ON THE SIGN</span>
+          <input id="s-name" maxlength="26" value="The Wayside Inn" />
+        </label>
+        <div class="field">
+          <span>THE BUILDING</span>
+          <div class="swatchrow" id="s-facade">
+            <button data-v="stucco" class="on">STUCCO</button>
+            <button data-v="brick">BRICK</button>
+            <button data-v="modern">CONCRETE</button>
+          </div>
+        </div>
+        <div class="field">
+          <span>HOUSE COLOUR</span>
+          <div class="swatchrow chips" id="s-ink"></div>
+        </div>
+        <div class="field">
+          <span>TRIM</span>
+          <div class="swatchrow chips" id="s-accent"></div>
+        </div>
+        <div class="title-menu">
+          <button id="s-random" class="menu-btn ghost">↻ SURPRISE ME</button>
+          <button id="s-start" class="menu-btn">TAKE THE KEYS →</button>
+          <button id="s-back" class="menu-btn ghost">BACK</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ GAME ============================ -->
+  <section class="screen" id="scr-game">
+    <div id="game-holder"></div>
+
+    <header id="hud-top">
+      <div class="ht-block name">
+        <b id="hud-name">The Wayside Inn</b>
+        <span id="hud-stars" class="stars">★★</span>
+      </div>
+      <div class="ht-block"><span class="ht-k">TILL</span><b id="hud-cash">$900</b></div>
+      <div class="ht-block"><span class="ht-k">ROOMS</span><b id="hud-occ">0/3 full</b></div>
+      <div class="ht-block"><span class="ht-k">RATE</span><b id="hud-rate">$58/night</b></div>
+      <div class="ht-block clock"><b id="hud-clock">12:00 PM</b><span id="hud-day">DAY 1</span></div>
+      <div class="ht-block" id="speed-buttons">
+        <button id="btn-pause" data-pause="1" title="Pause (P)">❚❚</button>
+        <button data-speed="1" class="on">1×</button>
+        <button data-speed="2">2×</button>
+        <button data-speed="4">4×</button>
+      </div>
+      <div class="ht-block right">
+        <span id="auto-badge" class="badge grey">MANUAL</span>
+        <button id="btn-menu" title="Menu (Esc)">☰</button>
+      </div>
+    </header>
+
+    <aside id="jobs">
+      <div class="jobs-h">THE BOARD <span id="task-count">0</span></div>
+      <div id="tasklist"></div>
+      <div class="jobs-foot">Click a job to walk over and do it yourself · <b>1–9</b> or <b>space</b></div>
+    </aside>
+
+    <aside id="panel">
+      <div id="panel-tabs">
+        <button data-tab="build" class="on">BUILD</button>
+        <button data-tab="staff">STAFF</button>
+        <button data-tab="rates">BOOKS</button>
+        <button data-tab="book">GUESTS</button>
+      </div>
+      <div id="panel-body"></div>
+    </aside>
+
+    <div id="inspector"></div>
+    <div id="you-bar"></div>
+    <div id="toasts"></div>
+    <div id="news-ticker"></div>
+    <div id="overlay"></div>
+    <div id="tip"></div>
+  </section>
+
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
