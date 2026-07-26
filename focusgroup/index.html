@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FOCUS GROUP — you have been selected</title>
+<link rel="stylesheet" href="styles.css" />
+<script type="importmap">
+{ "imports": { "three": "../vendor/three.module.js" } }
+</script>
+</head>
+<body>
+
+<div id="game-holder"></div>
+<canvas id="adscreen" hidden></canvas>
+<div id="overlay"></div>
+
+<div id="app">
+
+  <!-- ============================ BOOT ============================ -->
+  <div id="boot">
+    <img id="boot-logo" alt="FOCUS GROUP" />
+    <div class="boot-press">PRESS ANY KEY</div>
+    <div class="boot-sub">EB AFTER DARK PRESENTS · A HOUSEHOLD STUDY</div>
+    <div class="boot-warn">nothing in this tape will chase you</div>
+  </div>
+
+  <!-- ============================ TITLE ============================ -->
+  <section class="screen" id="scr-title">
+    <div class="title-card">
+      <div class="title-kicker">EB AFTER DARK</div>
+      <img id="title-logo" alt="FOCUS GROUP" />
+      <div class="title-sub">Six mornings in a flat you have lived in for four years.
+        Turn off the alarm, make the coffee, go to work. You are not alone in here and
+        you have not been for some time.</div>
+      <div class="title-menu">
+        <button id="t-new" class="menu-btn gold">▶ TUESDAY — BEGIN THE WEEK</button>
+        <button id="t-continue" class="menu-btn">CONTINUE</button>
+        <button id="t-journal" class="menu-btn">WHAT YOU HAVE NOTICED</button>
+        <button id="t-how" class="menu-btn">HOW IT WORKS</button>
+        <button id="t-options" class="menu-btn">OPTIONS</button>
+        <a class="menu-btn back-link" href="../index.html">◀ BACK TO EB GAMES</a>
+      </div>
+      <div class="title-record" id="title-record"></div>
+      <div class="title-build">FOCUS GROUP · BUILD 1 · VALCO HOME PRODUCTS, A FAMILY OF BRANDS</div>
+    </div>
+  </section>
+
+  <!-- ============================ JOURNAL ============================ -->
+  <section class="screen" id="scr-journal">
+    <header class="ribbon"><span>WHAT YOU HAVE NOTICED</span></header>
+    <div class="pane" id="journal-list"></div>
+    <button class="menu-btn" data-back>◀ BACK</button>
+  </section>
+
+  <!-- ============================ HOW ============================ -->
+  <section class="screen" id="scr-how">
+    <header class="ribbon"><span>HOW IT WORKS</span></header>
+    <div class="pane how">
+      <div class="how-col">
+        <h3>THE MORNING</h3>
+        <ul>
+          <li><b>WASD</b> walk · <b>mouse</b> look · <b>SHIFT</b> hurry (they like it when you hurry)</li>
+          <li><b>E</b> do the thing you are looking at · <b>ESC</b> pause</li>
+          <li>The <b>list</b> in the corner is your morning. Work down it and leave for work.</li>
+          <li>You cannot die. There is nothing in here that wants to hurt you.</li>
+        </ul>
+        <h3>LOOKING CLOSER</h3>
+        <ul>
+          <li><b>Q</b> — look closer at something that has caught your eye.</li>
+          <li>There are <b>twelve lenses</b> in the flat across the week, hidden in
+            things you already own. Everything you find goes in your notes.</li>
+          <li>Finding them puts your <b>ENGAGEMENT</b> up. Engagement going up is good.
+            The bar says so.</li>
+        </ul>
+      </div>
+      <div class="how-col">
+        <h3>THE CUT</h3>
+        <ul>
+          <li>Now and again the picture will stop being yours. It will not warn you
+            and it will not explain.</li>
+          <li>Keep walking. Your body still goes the way your body is pointing.</li>
+          <li>Every angle it cuts to is a camera that is really in the room, and one
+            you could have found.</li>
+          <li>Every cut takes a photograph. Those are kept.</li>
+        </ul>
+        <p class="how-note">Six mornings: Tuesday to Sunday. It gets worse in the
+          order those come in.</p>
+        <p class="how-cheat">IF THE JUDDER IS TOO MUCH: <b>OPTIONS → CAMERA JUDDER</b>
+          turns off the frame-hold on the recorded shots. The game is the same. It is
+          just easier to watch.</p>
+      </div>
+    </div>
+    <button class="menu-btn" data-back>◀ BACK</button>
+  </section>
+
+  <!-- ============================ OPTIONS ============================ -->
+  <section class="screen" id="scr-options">
+    <header class="ribbon"><span>OPTIONS</span></header>
+    <div class="pane" id="opt-list"></div>
+    <button class="menu-btn" data-back>◀ BACK</button>
+  </section>
+
+  <!-- ============================ LOADING ============================ -->
+  <section class="screen" id="scr-load">
+    <div class="load-box">
+      <div class="load-title">VALCO HOME PRODUCTS</div>
+      <div class="load-label">preparing your morning</div>
+    </div>
+  </section>
+
+  <!-- ============================ PLAY (HUD lives in #overlay) ======= -->
+  <section class="screen" id="scr-play"></section>
+
+  <!-- ============================ BETWEEN DAYS ======================= -->
+  <section class="screen" id="scr-between">
+    <div class="between">
+      <div class="bt-day"></div>
+      <div class="bt-text"></div>
+    </div>
+  </section>
+
+  <!-- ============================ PAUSE ============================ -->
+  <section class="screen" id="scr-pause">
+    <div class="pause-card">
+      <h2>PAUSED</h2>
+      <button id="p-resume" class="menu-btn gold">BACK TO YOUR MORNING</button>
+      <button id="p-journal" class="menu-btn">WHAT YOU HAVE NOTICED</button>
+      <button id="p-quit" class="menu-btn">LEAVE THE PANEL</button>
+      <p class="pause-keys">WASD walk · SHIFT hurry · E interact · Q look closer ·
+        M mute · ESC pause</p>
+    </div>
+  </section>
+
+  <section class="screen" id="scr-pjournal">
+    <header class="ribbon"><span>WHAT YOU HAVE NOTICED</span></header>
+    <div class="pane" id="p-journal-list"></div>
+    <button class="menu-btn" id="pj-back">◀ BACK</button>
+  </section>
+
+  <!-- ============================ END ============================ -->
+  <section class="screen" id="scr-end">
+    <div class="title-card">
+      <div class="title-kicker">PANEL 74-C</div>
+      <h1 class="end-h"></h1>
+      <p class="end-p"></p>
+      <div class="end-kick"></div>
+      <div class="end-stats"></div>
+      <button class="menu-btn gold" id="end-back">◀ BACK TO THE TITLE</button>
+    </div>
+  </section>
+
+  <!-- ============================ THE LINE ============================ -->
+  <div id="choice" hidden></div>
+
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

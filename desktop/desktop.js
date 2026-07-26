@@ -1,4 +1,4 @@
-// EB GAMES 95 — a small operating system for a shelf of seven games.
+// EB GAMES 95 — a small operating system for a shelf of eight games.
 // Boot POST → teal desktop → double-click a cartridge. The Hi-Fi keeps
 // playing while you game in another tab, which is the whole point of tabs.
 
@@ -164,6 +164,24 @@ const ICONS = {
     'yycccccccccccyyy',
     'yycccccccccccyyy',
   ], { y: '#d8c877', k: '#20222a', s: '#4a4e58', l: '#9fd8e8', r: '#ff3020', d: '#3a3020', g: '#0a0a0c', c: '#9a8b3e' }),
+  focusgroup: pixelIcon([
+    'dddddddddddddddd',
+    'dddddddddddddddd',
+    'ddddddkkkkdddddd',
+    'ddddddkkkkdddddd',
+    'dddddrrrrrrddddd',
+    'dddkkkkkkkkkkddd',
+    'ddddccccccccdddd',
+    'dddccccccccccddd',
+    'dddcckcccckccddd',
+    'dddccccccccccddd',
+    'ddddmmmmmmmmdddd',
+    'ddddccccccccdddd',
+    'dddddccccccddddd',
+    'dddddddddddddddd',
+    'ddoooooooooooodd',
+    'ddoooooooooooodd',
+  ], { d: '#2a1c12', k: '#12101a', r: '#8c2c1c', c: '#f2e6c8', m: '#a83028', o: '#2a4a6a' }),
   hifi: pixelIcon([
     '................',
     '....k......k....',
@@ -297,6 +315,22 @@ const GAMES = {
       for a joke.`,
     shots: ['docs/quahog-street.png', 'docs/quahog-cutscene.png'],
     meta: ['open-world action', '1 player', 'mouse + keyboard, pad', 'story auto-saves'],
+  },
+  focusgroup: {
+    title: 'FOCUS GROUP',
+    tag: 'You have been selected.',
+    path: 'focusgroup/',
+    desc: `A slow, quiet horror that opens on a 1974 television commercial for
+      Valco Home Products and then puts you in a flat you have lived in for four
+      years. Six mornings: turn off the alarm, make the coffee, leave for work.
+      Nothing chases you and nothing can kill you — but every so often the picture
+      stops being yours and cuts to a hidden camera that is already in the room,
+      and it holds for a little longer each morning. Twelve lenses to find, a
+      survey card that remembers what you ticked, and a Sunday you should not
+      look forward to. Every cut takes a photograph, and the commercial over the
+      credits is made out of those photographs.`,
+    shots: ['docs/focusgroup-living.png', 'docs/focusgroup-cam.png'],
+    meta: ['slow-burn horror', '1 player', 'mouse + keyboard', 'six mornings, ~40 min', 'headphones'],
   },
   noclip: {
     title: 'NOCLIP',
@@ -477,7 +511,7 @@ function aboutWindow() {
   body.className = 'about';
   body.innerHTML = `
     <h1>EB GAMES 95</h1>
-    <p>Seven 3D games, one repo, zero asset files — every model, texture, animation,
+    <p>Eight games, one repo, zero asset files — every model, texture, animation,
     and note of music is generated in code and runs straight in the browser.</p>
     <ul>
       <li><b>VARSITY 27</b> — high school football, careers and all</li>
@@ -487,6 +521,7 @@ function aboutWindow() {
       <li><b>MASCOT MELEE 64</b> — twelve mascots, one trophy, no rules</li>
       <li><b>QUAHOG HIT & RUN</b> — cel-shaded open world, seven levels of it</li>
       <li><b>NOCLIP</b> — twenty-three levels of the backrooms, on tape</li>
+      <li><b>FOCUS GROUP</b> — six mornings in a flat, and somebody is filming</li>
     </ul>
     <p>Plug in a PS5 or Xbox controller for the sports titles. Games open in their
     own tabs; start some music in the EB Hi-Fi first and it keeps playing while
@@ -675,6 +710,7 @@ const DESK_APPS = [
   { id: 'melee', label: 'MASCOT MELEE 64' },
   { id: 'quahog', label: 'QUAHOG HIT & RUN' },
   { id: 'noclip', label: 'NOCLIP' },
+  { id: 'focusgroup', label: 'FOCUS GROUP' },
   { id: 'hifi', label: 'EB Hi-Fi' },
   { id: 'about', label: 'About' },
 ];
@@ -728,6 +764,7 @@ function buildStartMenu() {
   mk(ICONS.melee, 'MASCOT MELEE 64', () => openWin('melee'));
   mk(ICONS.quahog, 'QUAHOG HIT & RUN', () => openWin('quahog'));
   mk(ICONS.noclip, 'NOCLIP (horror)', () => openWin('noclip'));
+  mk(ICONS.focusgroup, 'FOCUS GROUP (horror)', () => openWin('focusgroup'));
   items.insertAdjacentHTML('beforeend', '<div class="sm-sep"></div>');
   mk(ICONS.hifi, 'EB Hi-Fi (music)', () => openWin('hifi'));
   mk(ICONS.about, 'About EB GAMES 95', () => openWin('about'));
@@ -788,7 +825,7 @@ function boot() {
     'CPU : BLAST PROCESSOR AT 66 MHZ ......... OK',
     'MEMORY TEST : 640K BASE ... 8192K EXT ... OK',
     '',
-    'DETECTING SHELF .......... 6 CARTRIDGES FOUND',
+    'DETECTING SHELF .......... 7 CARTRIDGES FOUND',
     '  VARSITY 27 ............................ OK',
     "  BIG INNING '27 ........................ OK",
     '  RIM CITY .............................. OK',
@@ -796,9 +833,11 @@ function boot() {
     '  MASCOT MELEE 64 ....................... OK',
     '  QUAHOG HIT & RUN ...................... OK',
     '  NOCLIP ......................... [SEE NOTE]',
+    '  FOCUS GROUP .................... [SEE NOTE]',
     'SOUND : EB-FM SYNTHESIS .................. OK',
-    'NOTE  : NOCLIP TAPE IS NOT A CARTRIDGE.',
-    '        IT WAS IN THE DRIVE WHEN WE OPENED IT.',
+    'NOTE  : THE TWO TAPES ARE NOT CARTRIDGES.',
+    '        THEY WERE IN THE DRIVE WHEN WE OPENED IT.',
+    '        THERE WAS ONE OF THEM LAST TIME.',
     'GAMEPAD : PLUG IN A PAD ANY TIME ...... READY',
     '',
     'BOOTING EB GAMES 95 ...',
@@ -837,6 +876,7 @@ makeWindow('loam', 'LOAM', ICONS.loam, gameWindow('loam'), { x: 260, y: 110 });
 makeWindow('melee', 'MASCOT MELEE 64', ICONS.melee, gameWindow('melee'), { x: 290, y: 130 });
 makeWindow('quahog', 'QUAHOG HIT & RUN', ICONS.quahog, gameWindow('quahog'), { x: 320, y: 150 });
 makeWindow('noclip', 'NOCLIP', ICONS.noclip, gameWindow('noclip'), { x: 350, y: 170 });
+makeWindow('focusgroup', 'FOCUS GROUP', ICONS.focusgroup, gameWindow('focusgroup'), { x: 380, y: 190 });
 makeWindow('hifi', 'EB Hi-Fi', ICONS.hifi, hifiWindow(), { x: 460, y: 90 });
 makeWindow('about', 'About EB GAMES 95', ICONS.about, aboutWindow(), { x: 380, y: 150 });
 
