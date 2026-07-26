@@ -514,8 +514,11 @@ function stepInRoom(state, agg, g, dt, h, ev) {
         : want === 'sit' ? nav.roomChair(room)
           : want === 'pool' ? nav.poolSpot(state.totals.guests % 6)
             : nav.roomInside(room);
-      if (want === 'pool') nav.goToVia(state, g, [nav.entrance(), spot]);
-      else if (g.action === 'pool') nav.goToVia(state, g, [nav.entrance(), spot]);
+      // Route on where they actually are, not what they were doing: somebody
+      // still walking out to the pool has action 'walk', and sending them
+      // straight back to the chair would take them through the wall.
+      const outside = g.z > nav.RAIL_Z;
+      if (want === 'pool' || outside) nav.goToVia(state, g, [nav.entrance(), spot]);
       else nav.goTo(state, g, spot);
       g.action = 'walk';
     }
@@ -534,7 +537,7 @@ function stepInRoom(state, agg, g, dt, h, ev) {
     g.settle = null;
     g.queueIdx = queueIndex(state);
     g.patience = 1;
-    if (g.action === 'pool' || g.z > nav.RAIL_Z) nav.goToVia(state, g, [nav.entrance(), nav.queueSpot(g.queueIdx)]);
+    if (g.z > nav.RAIL_Z) nav.goToVia(state, g, [nav.entrance(), nav.queueSpot(g.queueIdx)]);
     else nav.goTo(state, g, nav.queueSpot(g.queueIdx));
   }
 }
