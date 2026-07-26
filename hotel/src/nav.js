@@ -44,8 +44,9 @@ export function roomInside(room) {
 export function roomBed(room) {
   return { x: slotX(room.slot) - 1.0, y: floorY(room.floor) + 0.62, z: -2.9, floor: room.floor };
 }
+// Raised to seat height: posePerson('sit') folds the body where the caller put it.
 export function roomChair(room) {
-  return { x: slotX(room.slot) + 1.4, y: floorY(room.floor), z: -1.2, floor: room.floor };
+  return { x: slotX(room.slot) + 1.4, y: floorY(room.floor) + 0.46, z: -1.2, floor: room.floor };
 }
 export function deskStaff() { return { x: DESK_X, y: 0, z: DESK_Z - 1.1, floor: 0 }; }
 export function deskFront() { return { x: DESK_X, y: 0, z: DESK_Z + 1.5, floor: 0 }; }
@@ -70,6 +71,15 @@ export function pathTo(state, from, to) {
   const pts = [];
   const lane0 = laneZ(f0);
   const lane1 = laneZ(f1);
+
+  // Out in the lot there is no aisle to line up with — walk straight there.
+  // Anyone crossing between the lot and the lobby is routed through the doors
+  // by goToVia, so this never sends somebody through the plate glass.
+  const outside = (f0 === 0 && from.z > RAIL_Z + 0.3) || (f1 === 0 && to.z > RAIL_Z + 0.3);
+  if (outside) {
+    pts.push({ x: to.x, y: floorY(f1), z: to.z });
+    return pts;
+  }
 
   if (Math.abs(from.z - lane0) > 0.12) pts.push({ x: from.x, y: from.y, z: lane0 });
 
@@ -133,4 +143,18 @@ export function advance(state, actor, speed, dt) {
 export function goTo(state, actor, target) {
   actor.path = pathTo(state, actor, target);
   actor.target = { x: target.x, y: target.y, z: target.z };
+}
+
+// Walk a route with stops — used to send arrivals and departures through the
+// front doors instead of straight through the shopfront.
+export function goToVia(state, actor, stops) {
+  let from = { x: actor.x, y: actor.y, z: actor.z };
+  let path = [];
+  for (const stop of stops) {
+    path = path.concat(pathTo(state, from, stop));
+    from = { x: stop.x, y: stop.y ?? floorY(stop.floor ?? 0), z: stop.z };
+  }
+  actor.path = path;
+  const last = stops[stops.length - 1];
+  actor.target = { x: last.x, y: last.y, z: last.z };
 }

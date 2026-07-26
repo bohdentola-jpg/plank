@@ -8,7 +8,7 @@ import { genHotelName, ARRIVAL_QUIPS, WALKOUT_QUIPS, pick } from './names.js';
 import {
   newHotel, stepSim, serialize, deserialize, offlineCatchUp, claimTask, releaseJob,
   sortedTasks, roomById, money, buildRoom, addFloor, upgradeRoom, buyAmenity, hire, fire,
-  train, setRate, assignRoom, coverage, builtRooms, aggregate, starRating, offlineCapHours,
+  train, setRate, assignRoom, sendToLaundry, coverage, builtRooms, aggregate, starRating, offlineCapHours,
   claimEscrow, logLine, roomNumber,
 } from './sim.js';
 import { SPEEDS, MILESTONES, AMENITY_BY_ID, ROLE_BY_ID, starLabel } from './data.js';
@@ -393,6 +393,10 @@ class App {
     } else if (hit.kind === 'desk') {
       const task = sortedTasks(this.state).find((t) => (t.type === 'checkin' || t.type === 'checkout') && !t.claimedBy);
       if (task) this.claim(task.id);
+    } else if (hit.kind === 'laundry') {
+      const res = sendToLaundry(this.state, this.state.you);
+      if (res.ok) this.hud.toast('Heading down for clean linen.', 'info', '🧺');
+      else { sfx.nope(); this.hud.toast(res.why, 'bad', '🧺'); }
     }
   }
 

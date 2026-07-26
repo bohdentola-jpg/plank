@@ -302,7 +302,7 @@ function newGuest(state, agg) {
     party, nights, mood: clamp(0.62 + stars * 0.05 + agg.mood, 0.2, 1),
     patience: 1, reqPatience: 1, request: null, roomId: null,
     state: 'arriving', x: 0, y: 0, z: 0, heading: 0, path: null,
-    queueIdx: -1, seatIdx: -1, timer: 0, checkoutDay: 0, checkoutMin: 0,
+    queueIdx: -1, seatIdx: -1, timer: 0, settle: null, checkoutDay: 0, checkoutMin: 0,
     bill: 0, arrivedDay: state.day, action: 'walk',
   };
   return g;
@@ -341,7 +341,7 @@ function spawnGuest(state, agg, ev) {
   const start = nav.street(state.guests.length);
   g.x = start.x; g.y = 0; g.z = start.z;
   g.queueIdx = queueIndex(state);
-  nav.goTo(state, g, nav.queueSpot(g.queueIdx));
+  nav.goToVia(state, g, [nav.entrance(), nav.queueSpot(g.queueIdx)]);
   state.guests.push(g);
   ev('arrive', { guest: g });
   return g;
@@ -431,6 +431,11 @@ function stepGuest(state, agg, g, dt, h, ev) {
       break;
     }
     case 'inroom': {
+      // They may be walking to the bed, the chair or the pool.
+      if (g.path && g.path.length) {
+        if (nav.advance(state, g, speed, dt)) { g.path = null; g.action = g.settle || 'idle'; }
+        else g.action = 'walk';
+      }
       stepInRoom(state, agg, g, dt, h, ev);
       break;
     }
@@ -494,13 +499,26 @@ function stepInRoom(state, agg, g, dt, h, ev) {
     ev('request', { guest: g });
   }
 
-  // Pottering about: chair, pool, bed, depending on the hour.
+  // Pottering about: chair, pool, bed, depending on the hour. They walk to the
+  // furniture rather than striking the pose wherever they happen to be standing.
   g.timer -= dt;
   if (g.timer <= 0) {
-    g.timer = rnd(8, 26);
-    if (h >= 23 || h < 6) g.action = 'sleep';
-    else if (state.amenities.pool && h > 10 && h < 20 && Math.random() < 0.18) g.action = 'pool';
-    else g.action = Math.random() < 0.5 ? 'sit' : 'idle';
+    g.timer = rnd(9, 26);
+    let want = 'idle';
+    if (h >= 23 || h < 6) want = 'sleep';
+    else if (state.amenities.pool && h > 10 && h < 20 && Math.random() < 0.18) want = 'pool';
+    else if (room.tier >= 2 && Math.random() < 0.5) want = 'sit';
+    if (want !== g.settle) {
+      g.settle = want;
+      const spot = want === 'sleep' ? nav.roomBed(room)
+        : want === 'sit' ? nav.roomChair(room)
+          : want === 'pool' ? nav.poolSpot(state.totals.guests % 6)
+            : nav.roomInside(room);
+      if (want === 'pool') nav.goToVia(state, g, [nav.entrance(), spot]);
+      else if (g.action === 'pool') nav.goToVia(state, g, [nav.entrance(), spot]);
+      else nav.goTo(state, g, spot);
+      g.action = 'walk';
+    }
   }
 
   const due = state.day > g.checkoutDay || (state.day === g.checkoutDay && state.clock >= g.checkoutMin);
@@ -513,9 +531,11 @@ function stepInRoom(state, agg, g, dt, h, ev) {
     }
     g.state = 'tocheckout';
     g.action = 'walk';
+    g.settle = null;
     g.queueIdx = queueIndex(state);
     g.patience = 1;
-    nav.goTo(state, g, nav.queueSpot(g.queueIdx));
+    if (g.action === 'pool' || g.z > nav.RAIL_Z) nav.goToVia(state, g, [nav.entrance(), nav.queueSpot(g.queueIdx)]);
+    else nav.goTo(state, g, nav.queueSpot(g.queueIdx));
   }
 }
 
@@ -527,7 +547,7 @@ function walkOut(state, g, ev) {
   g.action = 'walk';
   g.queueIdx = -1;
   g.mood = 0.05;
-  nav.goTo(state, g, nav.street(state.today.walkouts + 1));
+  nav.goToVia(state, g, [nav.entrance(), nav.street(state.today.walkouts + 1)]);
   state.rep = clamp(state.rep - 0.055, 0.2, 5);
   state.today.walkouts++;
   state.totals.walkouts++;
@@ -567,7 +587,7 @@ function departGuest(state, agg, g, ev) {
   g.state = 'leaving';
   g.action = 'walk';
   g.queueIdx = -1;
-  nav.goTo(state, g, nav.street(state.totals.guests));
+  nav.goToVia(state, g, [nav.entrance(), nav.street(state.totals.guests)]);
   const delta = (g.mood - 0.60) * 0.09;
   const ceil = repCeiling(state, agg);
   state.rep = clamp(state.rep + (delta > 0 && state.rep >= ceil ? 0 : delta), 0.2, 5);
@@ -648,6 +668,19 @@ export function claimTask(state, w, taskId) {
   return true;
 }
 
+// Clicking the linen shelf sends you (or a housekeeper) to top the cart up now,
+// rather than waiting for the detour a cleaning job would force later.
+export function sendToLaundry(state, w) {
+  const agg = aggregate(state);
+  if (agg.instantLinen) return { ok: false, why: 'Your carts already refill on the floor.' };
+  if (w.linen >= agg.linenMax) return { ok: false, why: 'That cart is already full.' };
+  if (w.job) releaseJob(state, w);
+  w.job = { taskId: null, type: 'laundry', phase: 'restock', timer: 0 };
+  nav.goTo(state, w, nav.laundrySpot());
+  w.action = 'walk';
+  return { ok: true };
+}
+
 export function releaseJob(state, w) {
   if (!w.job) return;
   const task = state.tasks.find((t) => t.id === w.job.taskId);
@@ -689,29 +722,12 @@ function stepWorker(state, agg, w, dt, h, ev) {
     return;
   }
 
+  if (w.job.type === 'laundry' && !w.job.taskId) { stepRestock(state, agg, w, dt, ev, null); return; }
   const task = state.tasks.find((t) => t.id === w.job.taskId);
   if (!task) { w.job = null; w.action = 'idle'; return; }
   if (!taskStillValid(state, task)) { dropTask(state, task.id); return; }
 
-  if (w.job.phase === 'restock') {
-    if (nav.advance(state, w, walkSpeedOf(state, w), dt)) {
-      w.job.phase = 'restocking';
-      w.job.timer = TASK_SECS.laundry;
-      w.action = 'clean';
-    }
-    return;
-  }
-  if (w.job.phase === 'restocking') {
-    w.job.timer -= dt * workSpeed(state, agg, w, 'clean');
-    if (w.job.timer <= 0) {
-      w.linen = agg.linenMax;
-      w.job.phase = 'travel';
-      nav.goTo(state, w, taskAnchor(state, task));
-      w.action = 'walk';
-      ev('restock', { worker: w });
-    }
-    return;
-  }
+  if (w.job.phase === 'restock' || w.job.phase === 'restocking') { stepRestock(state, agg, w, dt, ev, task); return; }
   if (w.job.phase === 'travel') {
     w.action = task.type === 'service' ? 'carry' : 'walk';
     if (nav.advance(state, w, walkSpeedOf(state, w), dt)) {
@@ -727,6 +743,28 @@ function stepWorker(state, agg, w, dt, h, ev) {
     w.job.timer -= dt * workSpeed(state, agg, w, task.type);
     if (w.job.timer <= 0) finishTask(state, agg, w, task, ev);
   }
+}
+
+// Walking down to the linen room and filling the cart. `task` is the cleaning
+// job waiting at the other end, or null when the player asked for a top-up.
+function stepRestock(state, agg, w, dt, ev, task) {
+  if (w.job.phase === 'restock') {
+    w.action = 'walk';
+    if (nav.advance(state, w, walkSpeedOf(state, w), dt)) {
+      w.job.phase = 'restocking';
+      w.job.timer = TASK_SECS.laundry;
+      w.action = 'clean';
+    }
+    return;
+  }
+  w.job.timer -= dt * workSpeed(state, agg, w, 'clean');
+  if (w.job.timer > 0) return;
+  w.linen = agg.linenMax;
+  ev('restock', { worker: w });
+  if (!task) { w.job = null; w.action = 'idle'; w.idle = 0; return; }
+  w.job.phase = 'travel';
+  nav.goTo(state, w, taskAnchor(state, task));
+  w.action = 'walk';
 }
 
 function walkSpeedOf(state, w) {

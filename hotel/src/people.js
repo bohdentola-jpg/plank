@@ -729,7 +729,9 @@ export function posePerson(rig, dt, { action = 'idle', speed = 0 } = {}) {
   switch (action) {
     case 'walk':
     case 'carry': {
-      const amp = clamp(0.45 + clamp(sp, 0, 6) * 0.24, 0.42, 1.15);
+      // A bellhop standing at a door still uses 'carry'; without this gate the
+      // legs keep swinging and they march on the spot for the whole delivery.
+      const amp = sp > 0.06 ? clamp(0.45 + clamp(sp, 0, 6) * 0.24, 0.42, 1.15) : 0;
       const w = walkLegs(ph, amp);
       T.torsoPitch = 0.05 + clamp(sp, 0, 6) * 0.020;
       T.headPitch = -T.torsoPitch * 0.55;

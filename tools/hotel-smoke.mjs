@@ -363,6 +363,43 @@ await step('you can put a guest in the room you choose', async () => {
   must(!sim.assignRoom(s, g.id, s.rooms[0].id).ok, 'moved a guest who was already checked in');
 });
 
+await step('guests use the furniture and the front door', async () => {
+  // Regression: sleep/sit were struck wherever the guest happened to be, so
+  // they lay flat in the middle of the carpet; and arrivals walked a dogleg
+  // straight through the lobby's plate glass.
+  const s = sim.newHotel();
+  s.cash = 30000;
+  s.youAuto = true;
+  for (const r of s.rooms) { r.built = true; r.state = 'empty'; }
+  for (const r of s.rooms) r.tier = 2;         // every room has a chair to sit in
+  sim.hire(s, 'clerk');
+  sim.hire(s, 'housekeeper');
+  // Snapshot the distance at the moment we see the pose — the guest carries on
+  // living afterwards, so holding the reference and measuring later is useless.
+  let sleptAt = null;
+  let satAt = null;
+  for (let i = 0; i < 90000 && !(sleptAt !== null && satAt !== null); i++) {
+    sim.stepSim(s, 0.1, () => {});
+    for (const g of s.guests) {
+      if (g.path || !g.roomId) continue;
+      const room = sim.roomById(s, g.roomId);
+      if (!room) continue;
+      if (g.action === 'sleep' && sleptAt === null) sleptAt = nav.dist3(g, nav.roomBed(room));
+      if (g.action === 'sit' && satAt === null) satAt = nav.dist3(g, nav.roomChair(room));
+    }
+  }
+  must(sleptAt !== null, 'nobody ever went to bed');
+  must(sleptAt < 0.4, `asleep ${sleptAt.toFixed(2)} units from the bed`);
+  must(satAt === null || satAt < 0.4, `sitting ${(satAt || 0).toFixed(2)} units from the chair`);
+
+  const walker = { ...nav.street(0) };
+  nav.goToVia(s, walker, [nav.entrance(), nav.queueSpot(0)]);
+  must(walker.path.some((p) => Math.abs(p.x - nav.DOOR_X) < 0.7 && p.z > 1.4),
+    'arrivals never pass through the doorway');
+  const solid = walker.path.filter((p) => p.z > -5 && p.z < 2.6 && Math.abs(p.x - nav.DOOR_X) > 2.4 && p.z > 1.0);
+  must(!solid.length, `path crosses the shopfront at ${JSON.stringify(solid[0])}`);
+});
+
 await step('commands refuse what you cannot afford', async () => {
   const s = sim.newHotel();
   s.cash = 0;
