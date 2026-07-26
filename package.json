@@ -1,12 +1,14 @@
 {
-  "name": "friday-night-gridiron",
+  "name": "eb-games",
   "version": "1.0.0",
-  "description": "Friday Night Gridiron '04 — build your high school, build your team, play under the lights. A 2000s high school football 3D game.",
+  "description": "EB GAMES — a shelf of no-build-step 3D browser games. VARSITY 27 (high school football) and NO VACANCY (hotel tycoon).",
   "type": "module",
   "scripts": {
     "start": "python3 serve.py",
     "shot": "node tools/shot.mjs",
-    "smoke": "node tools/smoke.mjs"
+    "smoke": "node tools/smoke.mjs && node tools/hotel-smoke.mjs",
+    "smoke:hotel": "node tools/hotel-smoke.mjs",
+    "balance": "node tools/hotel-smoke.mjs --days 60"
   },
   "dependencies": {
     "three": "^0.160.0"

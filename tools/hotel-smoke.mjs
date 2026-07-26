@@ -1,0 +1,287 @@
+// Headless checks for NO VACANCY: every module imports under a DOM stub, the
+// rigs and textures build, a save survives a round trip, and — with --days N —
+// a greedy auto-player runs the economy so the balance curve is visible.
+const stubCtx = () => new Proxy({}, {
+  get(t, prop) {
+    if (prop === 'measureText') return () => ({ width: 10 });
+    if (prop === 'createLinearGradient' || prop === 'createRadialGradient') return () => ({ addColorStop() {} });
+    if (prop === 'createPattern') return () => null;
+    if (prop === 'canvas') return { width: 256, height: 256 };
+    if (typeof prop === 'string') return () => {};
+    return undefined;
+  },
+  set() { return true; },
+});
+const stubCanvas = () => ({ width: 0, height: 0, style: {}, getContext: () => stubCtx(), appendChild() {} });
+globalThis.document = {
+  createElement: (tag) => (tag === 'canvas' ? stubCanvas() : { style: {}, appendChild() {}, addEventListener() {}, classList: { add() {}, remove() {}, toggle() {} } }),
+  createElementNS: () => stubCanvas(),
+  getElementById: () => null,
+  querySelector: () => null,
+  addEventListener() {},
+};
+globalThis.window = globalThis;
+try { globalThis.navigator ??= { userAgent: 'node' }; } catch { /* node 21+ has a getter */ }
+globalThis.self = globalThis;
+globalThis.requestAnimationFrame = () => 0;
+globalThis.cancelAnimationFrame = () => {};
+globalThis.performance ??= { now: () => Date.now() };
+const store = new Map();
+globalThis.localStorage = {
+  getItem: (k) => (store.has(k) ? store.get(k) : null),
+  setItem: (k, v) => store.set(k, String(v)),
+  removeItem: (k) => store.delete(k),
+};
+
+let failures = 0;
+async function step(name, fn) {
+  try {
+    await fn();
+    console.log(`ok   ${name}`);
+  } catch (e) {
+    failures++;
+    console.error(`FAIL ${name}: ${e.message}`);
+    console.error(String(e.stack).split('\n').slice(1, 5).join('\n'));
+  }
+}
+const must = (cond, msg) => { if (!cond) throw new Error(msg); };
+
+const H = '../hotel/src';
+const data = await import(`${H}/data.js`);
+const names = await import(`${H}/names.js`);
+const nav = await import(`${H}/nav.js`);
+const sim = await import(`${H}/sim.js`);
+
+await step('names + flavour pools', async () => {
+  must(names.genGuestName().split(' ').length >= 2, 'guest name');
+  must(names.genHotelName().length > 3, 'hotel name');
+  must(names.REQUESTS.length >= 10, 'requests');
+  for (const band of ['great', 'good', 'meh', 'bad', 'awful']) {
+    must((names.REVIEW_LINES[band] || []).length >= 8, `reviews.${band}`);
+  }
+  must(names.NEWS_TICKER.length >= 14, 'ticker');
+  must(names.WALKOUT_QUIPS.length >= 8 && names.ARRIVAL_QUIPS.length >= 10, 'quips');
+});
+
+await step('textures render', async () => {
+  const t = await import(`${H}/textures.js`);
+  t.carpetCanvas('#6d5f52', '#8f2d3c');
+  t.roomCarpetCanvas('#6d5f52');
+  t.wallpaperCanvas('#e3d9c4', '#8f2d3c');
+  t.stuccoCanvas('#d8c9a8');
+  t.brickCanvas('#9a4a32');
+  t.tileCanvas('#eee', '#ccc');
+  t.asphaltCanvas('#3c3d43');
+  t.grassCanvas('#4e6b3c');
+  t.bedCanvas('#c8b8a0', '#e0a92b');
+  t.artCanvas(12345);
+  t.tvCanvas(true); t.tvCanvas(false);
+  t.signCanvas('The Cardinal Arms Extended Stay', { face: '#f3e7cf', ink: '#8f2d3c' });
+  t.vacancyCanvas(true, false);
+  t.doorPlateCanvas('204', 2);
+  for (let h = 0; h < 24; h += 3) t.skyCanvas(h);
+  t.posterCanvas('POOL', '#1d3557');
+  t.woodCanvas('#6b4426');
+  t.marbleCanvas('#cdc7bb', '#9b958a');
+  t.poolWaterCanvas(0.3);
+  must(t.contrastText('#ffffff') === '#16181d', 'contrast');
+  must(t.shade('#000000', 16) === '#101010', `shade got ${t.shade('#000000', 16)}`);
+  must(t.mix('#000000', '#ffffff', 0.5).length === 7, 'mix');
+});
+
+await step('people rigs + poses', async () => {
+  const p = await import(`${H}/people.js`);
+  const rand = () => 0.42;
+  const looks = [p.randomLook(), p.randomLook(rand)];
+  for (const role of ['you', 'clerk', 'housekeeper', 'maintenance', 'bellhop', 'laundry', 'auditor', 'manager']) {
+    looks.push(p.staffLook(role));
+  }
+  for (const look of looks) {
+    const rig = p.buildPerson(look);
+    for (const j of ['root', 'hips', 'torso', 'head', 'armL', 'armR', 'legL', 'legR', 'carry']) {
+      must(rig.j[j], `rig missing joint ${j}`);
+    }
+    for (const action of ['idle', 'walk', 'carry', 'clean', 'fix', 'desk', 'sit', 'sleep', 'wave', 'wait']) {
+      for (let i = 0; i < 20; i++) p.posePerson(rig, 0.05, { action, speed: 2.4 });
+      must(Number.isFinite(rig.j.torso.rotation.x), `NaN pose in ${action}`);
+    }
+    p.setPersonMood(rig, 0.2);
+    p.setPersonMood(rig, 0.95);
+    p.disposePerson(rig);
+  }
+});
+
+await step('nav paths', async () => {
+  const s = sim.newHotel();
+  sim.addFloor(s);
+  const room = s.rooms[s.rooms.length - 1];
+  const from = nav.deskStaff();
+  const pts = nav.pathTo(s, { ...from, y: 0 }, nav.roomInside(room));
+  must(pts.length >= 3, 'expected a multi-leg path');
+  must(pts.some((p) => p.vert), 'no vertical leg to another floor');
+  const secs = nav.travelSecs(s, from, nav.roomInside(room), 3.2);
+  must(secs > 1 && secs < 90, `odd travel time ${secs}`);
+  const actor = { ...from, path: nav.pathTo(s, from, nav.roomInside(room)) };
+  let guard = 0;
+  while (!nav.advance(s, actor, 3.2, 0.1) && guard++ < 4000);
+  must(guard < 4000, 'actor never arrived');
+});
+
+await step('a hotel opens, fills and gets paid', async () => {
+  const s = sim.newHotel({ name: 'Testville Motor Lodge' });
+  s.youAuto = true;
+  const seen = new Set();
+  for (let i = 0; i < 30000; i++) sim.stepSim(s, 0.1, (k) => seen.add(k));
+  must(seen.has('arrive'), 'nobody ever showed up');
+  must(seen.has('checkin'), 'nobody ever checked in');
+  must(seen.has('pay'), 'nobody ever paid');
+  must(seen.has('cleaned'), 'no room was ever cleaned');
+  must(s.day > 8, `clock barely moved: day ${s.day}`);
+  must(s.totals.nights > 5, `only ${s.totals.nights} nights sold in ${s.day} days`);
+  must(s.guests.every((g) => Number.isFinite(g.x) && Number.isFinite(g.mood)), 'guest went NaN');
+  must(!s.tasks.some((t) => t.claimedBy && !sim.workerById(s, t.claimedBy)), 'task claimed by a ghost');
+});
+
+await step('staff take over', async () => {
+  const s = sim.newHotel();
+  s.cash = 40000;
+  for (const r of s.rooms) { r.built = true; r.state = 'empty'; }
+  for (const role of ['clerk', 'housekeeper', 'maintenance', 'bellhop']) {
+    const res = sim.hire(s, role);
+    must(res.ok, `hire ${role}: ${res.why}`);
+  }
+  must(sim.isAutomated(s), 'four core roles should mean autopilot');
+  s.youAuto = false;
+  const before = s.totals.nights;
+  for (let i = 0; i < 12000; i++) sim.stepSim(s, 0.1, () => {});
+  must(s.totals.nights > before + 4, `staff sold only ${s.totals.nights - before} nights on their own`);
+  must(s.you.job === null, 'you should be idle with AUTO off');
+});
+
+await step('save round trip', async () => {
+  const s = sim.newHotel({ name: 'The Blue Heron' });
+  s.cash = 9000;
+  sim.buildRoom(s);
+  sim.buyAmenity(s, 'wifi');
+  sim.hire(s, 'housekeeper');
+  for (let i = 0; i < 4000; i++) sim.stepSim(s, 0.1, () => {});
+  const blob = JSON.parse(JSON.stringify(sim.serialize(s)));
+  const back = sim.deserialize(blob);
+  must(back, 'deserialize returned null');
+  must(back.name === 'The Blue Heron', 'name lost');
+  must(back.staff.length === 1 && back.staff[0].role === 'housekeeper', 'staff lost');
+  must(back.amenities.wifi, 'amenities lost');
+  must(sim.builtRooms(back).length === sim.builtRooms(s).length, 'rooms lost');
+  must(back.rooms.every((r) => r.state !== 'occupied'), 'occupied rooms should reset on load');
+  must(blob.escrow >= 0, 'escrow missing');
+  for (let i = 0; i < 2000; i++) sim.stepSim(back, 0.1, () => {});
+  must(Number.isFinite(back.cash), 'cash went NaN after reload');
+});
+
+await step('offline catch-up pays a staffed hotel and not an empty one', async () => {
+  const bare = sim.newHotel();
+  const r1 = sim.offlineCatchUp(bare, 4 * 3600);
+  must(r1.net <= 0, `an unstaffed hotel should not earn offline (got ${r1.net})`);
+
+  const run = sim.newHotel();
+  run.cash = 60000;
+  for (const r of run.rooms) { r.built = true; r.state = 'empty'; }
+  sim.addFloor(run);
+  for (const r of run.rooms) { r.built = true; r.state = 'empty'; }
+  run.rep = 3.4;
+  for (const role of ['clerk', 'housekeeper', 'housekeeper', 'maintenance', 'bellhop', 'auditor']) sim.hire(run, role);
+  const cash0 = run.cash;
+  const r2 = sim.offlineCatchUp(run, 6 * 3600);
+  must(r2.net > 0, `a staffed hotel should earn offline (got ${r2.net})`);
+  must(run.cash > cash0, 'cash did not move');
+  must(sim.offlineCapHours(run) === data.OFFLINE_CAP_HOURS.auditor, 'night auditor should extend the offline cap');
+  const r3 = sim.offlineCatchUp(run, 40 * 3600);
+  must(r3.capped, '40h away should be capped');
+  must(Number.isFinite(run.cash) && Number.isFinite(run.rep), 'offline produced NaN');
+});
+
+await step('commands refuse what you cannot afford', async () => {
+  const s = sim.newHotel();
+  s.cash = 0;
+  must(!sim.buildRoom(s).ok, 'built a room with no money');
+  must(!sim.hire(s, 'clerk').ok, 'hired with no money');
+  must(!sim.buyAmenity(s, 'pool').ok, 'bought a pool with no money');
+  must(!sim.addFloor(s).ok, 'added a floor with unbuilt slots');
+  s.cash = 999999;
+  for (const r of s.rooms) { r.built = true; r.state = 'empty'; }
+  must(sim.addFloor(s).ok, 'could not add a floor with everything built');
+  for (let i = 0; i < data.MAX_FLOORS + 2; i++) {
+    for (const r of s.rooms) { r.built = true; r.state = 'empty'; }
+    sim.addFloor(s);
+  }
+  must(s.floors === data.MAX_FLOORS, `floors ran past the cap: ${s.floors}`);
+  must(sim.builtRooms(s).length <= data.MAX_ROOMS, 'too many rooms');
+});
+
+// ------------------------------------------------------------------ balance
+const daysArg = process.argv.indexOf('--days');
+if (daysArg > 0) {
+  const days = Number(process.argv[daysArg + 1] || 30);
+  console.log(`\n--- greedy auto-player, ${days} days ---`);
+  console.log('day   cash   rooms staff  stars  occ   revenue  walkouts  note');
+  const s = sim.newHotel({ name: 'Balance Test Motel' });
+  s.youAuto = true;
+  let lastDay = 1;
+  let note = '';
+  const CORE = ['housekeeper', 'clerk', 'bellhop', 'maintenance'];
+  for (let i = 0; i < days * data.DAY_SECONDS * 10 + 10; i++) {
+    sim.stepSim(s, 0.1, () => {});
+    if (s.day !== lastDay) {
+      const y = s.yesterday || {};
+      const rev = (y.revenue || 0) + (y.incidentals || 0) + (y.tips || 0);
+      console.log(
+        `${String(lastDay).padStart(3)} ${sim.money(s.cash).padStart(8)} ${String(sim.builtRooms(s).length).padStart(5)} ${String(s.staff.length).padStart(5)}  ${sim.starRating(s).toFixed(2)}  ${(sim.occupancy(s) * 100).toFixed(0).padStart(3)}% ${sim.money(rev).padStart(8)} ${String(y.walkouts || 0).padStart(8)}  ${note}`,
+      );
+      note = '';
+      lastDay = s.day;
+
+      // Rooms first — they are what everything else multiplies — then the crew,
+      // then whatever amenity is cheapest, keeping a few days of payroll in hand.
+      const rooms = sim.builtRooms(s).length;
+      const reserve = sim.dailyWages(s) * 4 + 350;
+      const roomCost = data.roomBuildCost(rooms);
+      const missing = CORE.find((r) => !s.staff.some((x) => x.role === r));
+      const build = () => {
+        if (s.rooms.some((r) => !r.built)) {
+          if (s.cash - roomCost > reserve && sim.buildRoom(s).ok) { note = 'built a room'; return true; }
+          return false;
+        }
+        if (s.cash - data.floorCost(s.floors) > reserve && sim.addFloor(s).ok) { note = 'added a floor'; return true; }
+        return false;
+      };
+      const staffUp = () => {
+        if (rooms < 8) return false;
+        const want = missing || data.ROLES.map((r) => r.id).find((id) => {
+          const have = s.staff.filter((x) => x.role === id).length;
+          return have < data.roleCap(id, rooms) && (id !== 'manager' || rooms >= 20);
+        });
+        if (!want) return false;
+        if (s.cash - data.ROLE_BY_ID[want].hire < reserve * 2) return false;
+        if (sim.hire(s, want).ok) { note = `hired ${want}`; return true; }
+        return false;
+      };
+      const buy = () => {
+        // Do not fritter the float away when a whole floor is nearly in reach.
+        const savingForFloor = !s.rooms.some((r) => !r.built) && s.floors < data.MAX_FLOORS
+          && s.cash > data.floorCost(s.floors) * 0.45;
+        if (savingForFloor) return false;
+        const am = data.AMENITIES.filter((a) => !s.amenities[a.id]).sort((a, b) => a.cost - b.cost)[0];
+        if (am && s.cash - am.cost > reserve * 2) { sim.buyAmenity(s, am.id); note = `bought ${am.id}`; return true; }
+        return false;
+      };
+      build() || staffUp() || buy();
+      if (s.day > days) break;
+    }
+  }
+  const cov = sim.coverage(s);
+  console.log(`\nend: ${sim.money(s.cash)} · ${sim.builtRooms(s).length} rooms · ${s.staff.length} staff · ${sim.starRating(s).toFixed(2)}★ · autopilot: ${cov.full}`);
+  console.log(`totals: ${s.totals.nights} nights, ${sim.money(s.totals.earned)} earned, ${s.totals.walkouts} walkouts`);
+}
+
+console.log(failures ? `\n${failures} failure(s)` : '\nall hotel checks passed');
+process.exit(failures ? 1 : 0);

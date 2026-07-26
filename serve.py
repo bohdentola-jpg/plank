@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Friday Night Gridiron game server.
+"""EB GAMES library server.
 
 - Tells the browser never to cache, so updates always show after a refresh.
 - If the port is taken (a forgotten old server), it picks the next free one
   instead of fighting over it.
 - Opens the game in your browser automatically (pass --no-browser to skip).
+Opens the shelf; pick a game from there.
 Run: python serve.py   (or: py serve.py on Windows)
 """
 import http.server
@@ -44,8 +45,9 @@ def main():
 
     url = f'http://localhost:{port}'
     print()
-    print('  VARSITY 27')
-    print(f'  Game is live at  {url}')
+    print('  EB GAMES')
+    print(f'  The library is live at  {url}')
+    print('  VARSITY 27 (football)  ·  NO VACANCY (hotel)')
     if port != START_PORT:
         print(f'  (port {START_PORT} was busy — an old window may still be running)')
     print('  Keep this window open while you play. Ctrl+C or close it to stop.')

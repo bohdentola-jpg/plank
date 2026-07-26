@@ -1,10 +1,41 @@
-# VARSITY 27 🏈
+# EB GAMES 🕹️
+
+*No installer. No launcher. No patch notes.*
+
+A shelf of 3D games that run straight out of the browser — no build step, no npm
+install, no art assets. Everything you see, from the crowd in the bleachers to the
+duvet on the bed, is generated in code. Three.js is vendored.
+
+| | |
+| --- | --- |
+| **[VARSITY 27](varsity/)** — high school football | **[NO VACANCY](hotel/)** — hotel tycoon |
+
+## Run it
+
+**Windows:** double-click **`play.bat`** — it finds Python, starts the server, and
+opens the shelf in your browser. (If Python isn't installed it tells you where to
+get it.)
+
+**Mac/Linux:**
+
+```bash
+cd plank
+python3 serve.py
+# open http://localhost:8000  →  pick a game
+```
+
+`serve.py` is a tiny no-cache static server: updates always show after a refresh, it
+opens the browser by itself, and if the port is busy it picks the next free one and
+says so. Any static server works too — ES modules need `http://`, not `file://`.
+
+---
+
+# 🏈 VARSITY 27
 
 *Sunday has Madden. Saturday has NCAA. Friday is yours.*
 
-The high school chapter of the football-game trinity, in the browser — full 3D, no
-install, no build step. Boots with a cinematic flyover of America's football towns
-and an original synthesized score.
+The high school chapter of the football-game trinity. Boots with a cinematic flyover
+of America's football towns and an original synthesized score.
 
 **HOMETOWN HERO** — the player career: create your QB in a full face editor (skin,
 jaw, brows, eyes, hair, facial hair, eye black, visor, build), then live the week:
@@ -32,36 +63,14 @@ decisions (eligibility scandals, booster deals, the AD on line one), the **windo
 to run practice drills (Route Tree, the Gauntlet, Hit Stick — grades become Friday
 boosts), the **whiteboard** to open the play designer, the **trophy shelf** for the
 season. An 8-game schedule, playoffs, a State title, an AD trust meter that can get
-you fired, and a paint can to redecorate the whole office. The season starts at
-training camp; the playbook has 17 plays plus whatever you draw up yourself.
+you fired, and a paint can to redecorate the whole office.
 
 | | |
 | --- | --- |
 | ![School builder](docs/school-builder.png) | ![Uniform lab](docs/uniform-lab.png) |
 | ![Touchdown celebration](docs/touchdown.png) | ![Defense](docs/defense.png) |
 
-## Run it
-
-**Windows:** double-click **`play.bat`** — it finds Python, starts the server,
-and opens the game in your browser. (If Python isn't installed it tells you
-where to get it.)
-
-**Mac/Linux:**
-
-```bash
-cd plank
-python3 serve.py
-# open http://localhost:8000
-```
-
-`serve.py` is a tiny no-cache static server: updates always show after a
-refresh, it opens the game in your browser by itself, and if the port is busy
-(a forgotten old window) it just picks the next free one and says so. Any
-static server works too — ES modules need http://, not file://. Three.js is
-vendored — no npm install required to play. The title screen shows the BUILD
-number so you can confirm which version you're running.
-
-## How to play
+### How to play
 
 | Phase | Controls |
 | --- | --- |
@@ -80,36 +89,94 @@ press any button — the game announces it. **Left stick** moves (analog speed),
 
 Four 3-minute quarters. Touchdowns, extra points, field goals, punts, sacks,
 interceptions, broken tackles, gang tackles, overtime. No penalties — refs swallow
-their whistles on Friday night.
+their whistles on Friday night. Your school, uniform, and roster auto-save.
 
-Your school, uniform, and roster auto-save to the browser (`CONTINUE` on the title
-screen).
+---
 
-## Under the hood
+# 🏨 NO VACANCY
 
-Everything is generated in code — no art assets, no model files:
+*Run the desk. Make the beds. Build the empire.*
 
-- **Players** — articulated 16-joint rigs (shoulder pads, helmets with facemasks and
-  decals, number decals, four body types) posed by a hand-keyed clip system with
-  crossfades: run/sprint cycles, dropbacks, throws, catches, juke moves, blocks,
-  tackles, falls, celebrations, the ref's TD signal.
-- **The world** — parametric school architecture, procedural canvas textures (field
-  paint, brick, dusk sky, scoreboard LEDs), instanced animated crowd, light towers.
-- **The game** — role-based AI for all 22 on the field: routes, man/zone coverage,
-  pass rush vs. pass pro with shed timers, pursuit angles, a CPU QB that reads
-  separation, play-action that fools linebackers.
-- **Sound** — synthesized WebAudio: crowd bed, pea whistle, pad thud, horn.
+You bought a three-room roadside motel and there is nobody else on shift. A hotel
+management game you look into like a dollhouse — the front of every room is cut
+away, so you watch the beds get stripped, the TVs flicker on, and guests flop onto
+the mattress at 1am.
 
-The sim runs on its own clock (pause-safe), and quality auto-scales down
-(shadows/pixel ratio/bench players) if the machine can't hold frame rate.
+![The motel at dusk](docs/hotel-title.png)
+
+**Everything is your job.** The board down the left is every task waiting on you:
+somebody at the desk about to give up and drive on, a room that needs turning over
+before you can sell it again, the AC in 103, a guest on the phone asking for towels.
+Click a job — or press its number — and you walk over and do it. Run out of clean
+linen and your next cleaning job detours to the laundry room first.
+
+**Money buys rooms, rooms buy staff.** Open the boarded-up units one at a time, then
+stack floors on top, up to thirty rooms across five storeys. Upgrade a standard into
+a deluxe or a suite. Eighteen amenities, from a vending alcove to a lobby bar to a
+spa, and each one shows up in the building: the pool fills in, the elevator car
+actually rides the shaft, the chandelier lights the lobby at night.
+
+| | |
+| --- | --- |
+| ![Working the board](docs/hotel-play.png) | ![The build menu](docs/hotel-build.png) |
+
+**Then hire your way out of the job.** A front desk clerk, a housekeeper, a
+maintenance tech and a bellhop cover the four core roles between them — at which
+point the badge in the corner flips to **AUTOPILOT** and the hotel runs without you.
+
+**And then leave.** The simulation is driven off the wall clock, not the render loop,
+so a background tab keeps trading at full fidelity while you watch something else.
+Close it entirely and the crew keeps the doors open: three hours' worth on a bare
+crew, ten with a **Night Auditor**, a full day with a **General Manager**. You come
+back to a *while you were out* report — nights sold, wages paid, what your standing
+did, and who turned around in the lot because nobody was on the desk.
+
+### How to play
+
+| | |
+| --- | --- |
+| **click a job** / **1–9** | take it off the board — you walk over and do it |
+| **space** | take the most urgent job |
+| **A** | put yourself on auto and pick up jobs like staff do |
+| **drag** / **wheel** | orbit and zoom the hotel |
+| **click a room** | inspect it, upgrade it, or grab its job |
+| **1× 2× 4×** | speed · **P** pause · **M** mute · **Esc** menu |
+
+Stars are the shop window — they decide how many cars pull off the road and how much
+you can charge. You can't review your way to five of them out of a six-room motel:
+the ceiling is set by the property itself, and good service only walks you up to it.
+Everything auto-saves; **CONTINUE** picks up where you left off.
+
+---
 
 ## Dev
 
 ```bash
-npm install                  # dev tooling only (playwright for screenshots)
-npm run smoke                # node-based module/clip sanity checks
-node tools/shot.mjs "?gallery" g.png --wait 2500    # screenshot the anim gallery
+npm install                     # dev tooling only (playwright for screenshots)
+npm run smoke                   # both games: module, rig and simulation checks
+npm run balance                 # 60 in-game days of NO VACANCY, economy printed per day
+node tools/shot.mjs "hotel/?fresh" lobby.png --wait 20000 --keys "Space@1500"
+node tools/shot.mjs "varsity/?gallery" gallery.png --wait 2500
 ```
 
-QA URL modes: `?quick` jumps straight into a game, `?gallery` shows every animation
-clip on a grid of rigs (`&clips=run,sprint&camr=8&camy=2&ang=0.6` to frame shots).
+`tools/shot.mjs` serves the repo and drives a game in headless Chromium. The first
+argument is a page path plus an optional query (`--keys`, `--click`, `--series` and
+`--eval` drive it); shots land in `qa/`.
+
+QA URL modes — **varsity:** `?quick` jumps straight into a game, `?gallery` shows
+every animation clip on a grid of rigs. **hotel:** `?fresh` ignores the save,
+`?dev` starts you rich.
+
+### Layout
+
+```
+index.html · library.css   the shelf
+varsity/                   VARSITY 27  (index.html, styles.css, src/)
+hotel/                     NO VACANCY  (index.html, styles.css, src/)
+vendor/three.module.js     shared, vendored
+tools/                     smoke tests + screenshot harness
+```
+
+Inside `hotel/src`, `sim.js` is the whole hotel as pure logic — no THREE, no DOM — so
+it can be stepped headlessly, fast-forwarded for offline earnings, and serialised
+straight to a save. `world.js` only reads it.

@@ -1,0 +1,145 @@
+/* The shelf: two boxes, the way a games shop stacked them. */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --paper: #ece7dc;
+  --dim: #8d8577;
+}
+html, body { height: 100%; }
+body {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  color: var(--paper);
+  background:
+    radial-gradient(120% 90% at 50% -10%, #23201c 0%, #100e0d 55%, #080706 100%);
+  min-height: 100%;
+  padding: 4vh 4vw 6vh;
+}
+body::before {
+  /* the shelf itself */
+  content: '';
+  position: fixed; left: 0; right: 0; bottom: 0; height: 26vh; z-index: 0;
+  background: linear-gradient(180deg, rgba(70,48,28,0) 0%, rgba(58,40,24,0.55) 60%, rgba(30,20,12,0.9) 100%);
+  pointer-events: none;
+}
+#shelf { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; }
+
+.lib-head { text-align: center; margin-bottom: 5vh; }
+.lib-mark {
+  font-family: Impact, 'Arial Black', sans-serif;
+  font-size: clamp(38px, 6vw, 68px); letter-spacing: 0.06em; font-style: italic;
+  color: #f1e6cb; text-shadow: 0 3px 0 #2a211a, 0 10px 30px rgba(0,0,0,0.7);
+}
+.lib-mark span {
+  color: #d9ab4e;
+  -webkit-text-stroke: 1px rgba(0,0,0,0.35);
+}
+.lib-tag { margin-top: 8px; font-size: 11px; letter-spacing: 0.42em; color: var(--dim); }
+
+.cases { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 34px; }
+
+.case {
+  display: block; text-decoration: none; color: inherit; position: relative;
+  padding: 0 0 62px; border-radius: 6px; overflow: hidden;
+  background: linear-gradient(180deg, #241f1a 0%, #17130f 100%);
+  border: 1px solid rgba(255,255,255,0.09);
+  box-shadow: 0 22px 44px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.07);
+  transition: transform 0.22s cubic-bezier(.2,.8,.3,1), box-shadow 0.22s;
+}
+.case:hover { transform: translateY(-9px) rotate(-0.35deg); box-shadow: 0 34px 60px rgba(0,0,0,0.72); }
+
+.spine {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 26px; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+  border-right: 1px solid rgba(0,0,0,0.5);
+}
+.spine span {
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.32em;
+}
+.varsity .spine { background: linear-gradient(90deg, #0d1530, #1b2a52); color: #f2b705; }
+.novacancy .spine { background: linear-gradient(90deg, #1a1109, #3a2216); color: #d9ab4e; }
+
+.cover { margin-left: 26px; padding: 20px 24px 22px; position: relative; }
+.pub {
+  font-size: 9px; letter-spacing: 0.44em; font-weight: 700; opacity: 0.8;
+  padding-bottom: 9px; margin-bottom: 14px; border-bottom: 1px solid currentColor;
+  display: inline-block;
+}
+.varsity .cover { background: linear-gradient(160deg, #1d2c56 0%, #101a36 55%, #0a1024 100%); }
+.varsity .pub { color: #f2b705; }
+.novacancy .cover { background: linear-gradient(160deg, #3d1c22 0%, #241318 52%, #140d0b 100%); }
+.novacancy .pub { color: #d9ab4e; }
+
+.art { position: relative; height: 128px; margin-bottom: 14px; overflow: hidden; border-radius: 3px; }
+.art-varsity { background: linear-gradient(180deg, #16341f 0%, #1d4a2b 100%); }
+.art-varsity .v-lines {
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,0.28) 0 2px, transparent 2px 46px);
+}
+.art-varsity .v-num {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%) skewX(-9deg);
+  font-family: Impact, 'Arial Black', sans-serif; font-size: 92px; color: rgba(255,255,255,0.9);
+  -webkit-text-stroke: 3px #f2b705; letter-spacing: 0.02em;
+}
+.art-hotel { background: linear-gradient(180deg, #14203a 0%, #2a1a20 100%); }
+.art-hotel .neon {
+  position: absolute; left: 50%; top: 30px; transform: translateX(-50%);
+  font-family: Georgia, serif; font-size: 30px; letter-spacing: 0.16em; color: #ff8f7a;
+  text-shadow: 0 0 8px #ff5f4a, 0 0 22px rgba(255,95,74,0.7);
+}
+.art-hotel .neon::before {
+  content: 'NO '; color: #6a3a3a; text-shadow: none;
+}
+.art-hotel .h-rooms { position: absolute; left: 0; right: 0; bottom: 0; display: flex; gap: 4px; padding: 0 12px 10px; }
+.art-hotel .h-rooms i {
+  flex: 1; height: 30px; border-radius: 2px 2px 0 0;
+  background: linear-gradient(180deg, #f6d99a 0%, #b98a3c 100%);
+  box-shadow: 0 0 10px rgba(246,217,154,0.35);
+}
+.art-hotel .h-rooms i:nth-child(3), .art-hotel .h-rooms i:nth-child(6) { background: #2b2320; box-shadow: none; }
+
+h2 { font-weight: normal; line-height: 0.92; }
+.v-title {
+  font-family: Impact, 'Arial Black', sans-serif; font-style: italic; font-size: 40px;
+  letter-spacing: 0.01em; color: #fff; text-shadow: 0 3px 0 #0a1024;
+}
+.v-title em { font-style: italic; color: #f2b705; font-size: 0.6em; vertical-align: super; margin-left: 4px; }
+.v-sub { margin-top: 9px; font-size: 10.5px; letter-spacing: 0.26em; color: #9fb0d8; }
+.h-title { font-family: Georgia, 'Times New Roman', serif; font-size: 38px; letter-spacing: 0.02em; color: #f3e7cf; }
+.h-title em {
+  display: block; font-style: normal;
+  background: linear-gradient(180deg, #ffe9ab 0%, #d9ab4e 48%, #8a6415 54%, #ffd97a 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.h-sub { margin-top: 9px; font-size: 10.5px; letter-spacing: 0.24em; color: #b39c88; }
+
+.blurb { margin-left: 26px; padding: 18px 24px 4px; }
+.blurb p { font-size: 13.5px; line-height: 1.62; color: #bdb4a5; }
+.chips { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.chips li {
+  font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; padding: 5px 9px;
+  border: 1px solid rgba(255,255,255,0.16); border-radius: 999px; color: var(--dim);
+}
+
+.play {
+  position: absolute; left: 26px; right: 0; bottom: 0; padding: 16px 24px;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.22em;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  transition: background 0.2s, color 0.2s, letter-spacing 0.2s;
+}
+.varsity .play { color: #f2b705; }
+.novacancy .play { color: #d9ab4e; }
+.case:hover .play { background: currentColor; letter-spacing: 0.3em; }
+.varsity:hover .play { color: #f2b705; }
+.novacancy:hover .play { color: #d9ab4e; }
+.case:hover .play::after { content: ''; }
+.case:hover .play { -webkit-text-fill-color: #14100c; }
+
+.lib-foot {
+  margin-top: 6vh; text-align: center; font-size: 12px; line-height: 1.8; color: #6f675c;
+}
+.lib-foot span { display: block; margin-top: 5px; }
+.lib-foot code { font-family: 'Courier New', monospace; color: #a89a83; }
+
+@media (max-width: 720px) {
+  .cases { grid-template-columns: 1fr; }
+}

@@ -49,7 +49,7 @@ async function step(name, fn) {
 const THREE = await import('../vendor/three.module.js');
 
 await step('names', async () => {
-  const m = await import('../src/names.js');
+  const m = await import('../varsity/src/names.js');
   const roster = m.genRoster(2);
   if (roster.length < 22) throw new Error('roster too small');
   const rival = m.genRival('Westfield', 'Falcons');
@@ -57,12 +57,12 @@ await step('names', async () => {
 });
 
 await step('logos', async () => {
-  const m = await import('../src/logos.js');
+  const m = await import('../varsity/src/logos.js');
   for (const id of m.LOGO_IDS) m.logoCanvas(id, { fg: '#fff', bg: '#123', line: '#000', letter: 'W' });
 });
 
 await step('textures', async () => {
-  const m = await import('../src/textures.js');
+  const m = await import('../varsity/src/textures.js');
   m.brickCanvas('#9a4a32');
   m.skyCanvas();
   m.fieldCanvas({ schoolName: 'Westfield', mascot: 'Falcons', rivalName: 'Eastvale', primary: '#123', secondary: '#fb0', logo: stubCanvas() });
@@ -71,9 +71,9 @@ await step('textures', async () => {
 });
 
 await step('player model + clips + animator', async () => {
-  const pm = await import('../src/playerModel.js');
-  const an = await import('../src/animation.js');
-  const cl = await import('../src/clips.js');
+  const pm = await import('../varsity/src/playerModel.js');
+  const an = await import('../varsity/src/animation.js');
+  const cl = await import('../varsity/src/clips.js');
   const kit = pm.makeKit({
     jersey: '#14306e', pants: '#f2f1ec', helmet: '#14306e', sleeve: '#f2b705',
     numberFill: '#fff', numberStroke: '#f2b705', pantsStripe: '#14306e',
@@ -97,7 +97,7 @@ await step('player model + clips + animator', async () => {
 });
 
 await step('school (all styles)', async () => {
-  const m = await import('../src/school.js');
+  const m = await import('../varsity/src/school.js');
   for (const style of ['classic', 'brick', 'modern']) {
     const g = m.buildSchool({
       name: 'Westfield', mascot: 'Falcons',
@@ -109,7 +109,7 @@ await step('school (all styles)', async () => {
 });
 
 await step('stadium', async () => {
-  const m = await import('../src/stadium.js');
+  const m = await import('../varsity/src/stadium.js');
   const scene = new THREE.Scene();
   const st = m.buildStadium(scene,
     { name: 'Westfield', mascot: 'Falcons', colors: { primary: '#14306e', secondary: '#f2b705' }, building: { style: 'brick', floors: 2, length: 2, wingL: true, wingR: false, gym: true, cupola: true, brick: '#9a4a32', buses: true } },
@@ -120,14 +120,14 @@ await step('stadium', async () => {
 });
 
 await step('plays + art', async () => {
-  const m = await import('../src/plays.js');
+  const m = await import('../varsity/src/plays.js');
   for (const p of m.OFFENSE_PLAYS) m.drawPlayArt(p);
   for (const p of m.DEFENSE_PLAYS) m.drawDefArt(p);
 });
 
 await step('game module parses + helpers', async () => {
-  const g = await import('../src/game.js');
-  const { genRoster } = await import('../src/names.js');
+  const g = await import('../varsity/src/game.js');
+  const { genRoster } = await import('../varsity/src/names.js');
   const picked = g.rosterPick(genRoster(2));
   for (const role of [...g.OFF_ROLES, ...g.DEF_ROLES, 'K']) {
     if (!picked[role]) throw new Error(`rosterPick missing ${role}`);
@@ -136,11 +136,11 @@ await step('game module parses + helpers', async () => {
 });
 
 await step('audio module parses', async () => {
-  await import('../src/audio.js');
+  await import('../varsity/src/audio.js');
 });
 
 await step('franchise', async () => {
-  const f = await import('../src/franchise.js');
+  const f = await import('../varsity/src/franchise.js');
   const fr = f.newFranchise();
   if (fr.schedule.length !== 8) throw new Error('bad schedule');
   const opp = f.currentOpponent(fr);
@@ -161,7 +161,7 @@ await step('franchise', async () => {
 });
 
 await step('plays count + custom art', async () => {
-  const m = await import('../src/plays.js');
+  const m = await import('../varsity/src/plays.js');
   if (m.OFFENSE_PLAYS.length < 16) throw new Error('expected 16+ plays, got ' + m.OFFENSE_PLAYS.length);
   // a custom-style rawZ play renders art
   m.drawPlayArt({
