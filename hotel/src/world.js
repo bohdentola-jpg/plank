@@ -902,6 +902,10 @@ export class World {
     this._fpsAt = now;
     this._fpsN = 0;
     if (this.pinQuality) return;
+    // A window that long means the loop was not running at all — a hidden tab, a
+    // sleeping laptop — not a machine that is struggling. Scoring it would
+    // permanently degrade the renderer every time the player came back.
+    if (elapsed > 8) { this._slow = 0; return; }
     if (fps >= 26 || this.quality === 0) { this._slow = 0; return; }
     if (++this._slow < 2) return;
     this._slow = 0;
@@ -914,6 +918,14 @@ export class World {
       this.scene.traverse((o) => { if (o.isMesh) o.receiveShadow = false; });
     }
     this.resize();
+  }
+
+  // Called when the tab becomes visible again: the frames either side of a
+  // hidden stretch are not a meaningful sample.
+  resetQualitySample() {
+    this._fpsAt = performance.now();
+    this._fpsN = 0;
+    this._slow = 0;
   }
 
   update(dt, state) {

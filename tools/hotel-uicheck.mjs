@@ -70,6 +70,41 @@ await page.waitForTimeout(600);
 const afterEsc = await page.evaluate(() => ({ paused: window.game.paused, overlay: document.querySelector('#overlay').classList.contains('show') }));
 check('Escape closes the office and unpauses', pausedInMenu && !afterEsc.paused && !afterEsc.overlay, JSON.stringify({ pausedInMenu, afterEsc }));
 
+// 3b. reading the instructions from the office menu must not leave it paused
+await page.evaluate(() => window.game.pauseMenu());
+await page.waitForTimeout(400);
+await page.evaluate(() => {
+  const btns = [...document.querySelectorAll('#overlay .modal-buttons button')];
+  btns.find((b) => b.textContent.includes('HOW IT WORKS')).click();
+});
+await page.waitForTimeout(500);
+const readingPaused = await page.evaluate(() => window.game.paused);
+await page.evaluate(() => document.querySelector('#overlay .modal-buttons button').click());
+await page.waitForTimeout(500);
+const afterRead = await page.evaluate(() => window.game.paused);
+check('office -> how it works -> got it resumes', readingPaused && !afterRead, JSON.stringify({ readingPaused, afterRead }));
+
+// 3c. a long gap with no frames is not evidence of a slow machine
+const wd = await page.evaluate(async () => {
+  const w = window.game.world;
+  w.pinQuality = false;
+  w.quality = 2;
+  w.resetQualitySample();
+  w._fpsAt = performance.now() - 30000;    // as if the tab had been hidden 30s
+  w._fpsN = 2;
+  w.checkQuality();
+  const afterGap = { quality: w.quality, slow: w._slow };
+  w._fpsAt = performance.now() - 4000;     // a genuine 0.5fps window
+  w._fpsN = 2;
+  w.checkQuality();
+  w._fpsAt = performance.now() - 4000;
+  w._fpsN = 2;
+  w.checkQuality();
+  return { afterGap, afterRealSlowness: w.quality };
+});
+check('a hidden-tab gap does not degrade quality', wd.afterGap.quality === 2 && wd.afterGap.slow === 0, JSON.stringify(wd));
+check('genuine slowness still degrades quality', wd.afterRealSlowness < 2, JSON.stringify(wd));
+
 // 4. the inspector builds the shell you clicked, not the first free one
 const built = await page.evaluate(async () => {
   const g = window.game, s = g.state;

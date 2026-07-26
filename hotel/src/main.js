@@ -239,8 +239,9 @@ class App {
     $('#btn-menu').onclick = () => this.pauseMenu();
     window.addEventListener('keydown', (e) => this.onKey(e));
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) this.save();
-      else this.catchUp();
+      if (document.hidden) { this.save(); return; }
+      this.catchUp();
+      this.world?.resetQualitySample();
     });
     window.addEventListener('pagehide', () => this.save());
     window.addEventListener('beforeunload', () => this.save());
@@ -453,7 +454,7 @@ class App {
   }
 
   // ---------------------------------------------------------------- modals
-  howToPlay(fromTitle) {
+  howToPlay(fromTitle, onDone = null) {
     const body = `
       <p>You bought a roadside motel with three rooms and no staff. Everything that happens
       in this building is currently your job.</p>
@@ -476,7 +477,7 @@ class App {
     if (fromTitle) {
       this.titleModal('HOW IT WORKS', body);
     } else {
-      this.hud.modal('HOW IT WORKS', body, [{ label: 'GOT IT', primary: true }]);
+      this.hud.modal('HOW IT WORKS', body, [{ label: 'GOT IT', primary: true, onPick: onDone }], { onDismiss: onDone });
     }
   }
 
@@ -525,7 +526,7 @@ class App {
     // clock back the way it was, or the game silently freezes with no sign why.
     const resume = () => { this.paused = wasPaused; };
     this.hud.modal('THE OFFICE', body, [
-      { label: 'HOW IT WORKS', onPick: () => { resume(); this.howToPlay(false); } },
+      { label: 'HOW IT WORKS', onPick: () => this.howToPlay(false, resume) },
       { label: this.muted ? 'SOUND ON' : 'SOUND OFF', onPick: () => { this.muted = !this.muted; sfx.setMuted(this.muted); resume(); } },
       { label: 'SELL UP & START OVER', onPick: () => this.confirmReset() },
       { label: 'BACK TO WORK', primary: true, onPick: resume },
