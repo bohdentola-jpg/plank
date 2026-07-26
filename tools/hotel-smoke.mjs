@@ -334,6 +334,35 @@ await step('the day-so-far ledger survives a reload', async () => {
   must(back.today.cleaned === s.today.cleaned, "today's cleaning count lost");
 });
 
+await step('you can put a guest in the room you choose', async () => {
+  const s = sim.newHotel();
+  s.cash = 40000;
+  for (const r of s.rooms) { r.built = true; r.state = 'empty'; }
+  s.rooms[4].tier = 3;
+  let g = null;
+  for (let i = 0; i < 20000 && !g; i++) {
+    sim.stepSim(s, 0.1, () => {});
+    g = s.guests.find((x) => x.state === 'queue');
+  }
+  must(g, 'nobody ever queued at the desk');
+  const free = sim.freeRoomsFor(s, g);
+  must(free.length > 1, `expected a choice of rooms, got ${free.length}`);
+  must(free.some((r) => r.id === g.roomId), 'their provisional room should be in the list');
+  const suite = s.rooms[4];
+  const moved = sim.assignRoom(s, g.id, suite.id);
+  must(moved.ok, `could not move them: ${moved.why}`);
+  must(g.roomId === suite.id, 'guest was not moved');
+  must(suite.state === 'reserved' && suite.guestId === g.id, 'suite was not held for them');
+  const others = s.rooms.filter((r) => r.id !== suite.id && r.guestId === g.id);
+  must(!others.length, 'the old room is still held for them too');
+
+  // and you cannot park two guests in the same room, or move somebody already in
+  const other = s.guests.find((x) => x.state === 'queue' && x.id !== g.id);
+  if (other) must(!sim.assignRoom(s, other.id, suite.id).ok, 'double-booked a room');
+  g.state = 'inroom';
+  must(!sim.assignRoom(s, g.id, s.rooms[0].id).ok, 'moved a guest who was already checked in');
+});
+
 await step('commands refuse what you cannot afford', async () => {
   const s = sim.newHotel();
   s.cash = 0;

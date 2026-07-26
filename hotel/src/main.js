@@ -8,7 +8,7 @@ import { genHotelName, ARRIVAL_QUIPS, WALKOUT_QUIPS, pick } from './names.js';
 import {
   newHotel, stepSim, serialize, deserialize, offlineCatchUp, claimTask, releaseJob,
   sortedTasks, roomById, money, buildRoom, addFloor, upgradeRoom, buyAmenity, hire, fire,
-  train, setRate, coverage, builtRooms, aggregate, starRating, offlineCapHours,
+  train, setRate, assignRoom, coverage, builtRooms, aggregate, starRating, offlineCapHours,
   claimEscrow, logLine, roomNumber,
 } from './sim.js';
 import { SPEEDS, MILESTONES, AMENITY_BY_ID, ROLE_BY_ID, starLabel } from './data.js';
@@ -398,8 +398,13 @@ class App {
 
   panelAction(act, btn) {
     const s = this.state;
-    const [kind, id] = act.split(':');
+    const [kind, id, id2] = act.split(':');
     let res;
+    if (kind === 'assign') {
+      res = assignRoom(s, id, id2);
+      if (res.ok) { sfx.keycard(); this.hud._inspSig = ''; } else { sfx.nope(); this.hud.toast(res.why, 'bad', '✋'); }
+      return;
+    }
     if (kind === 'room') res = buildRoom(s, id || null);
     else if (kind === 'floor') res = addFloor(s);
     else if (kind === 'am') res = buyAmenity(s, id);

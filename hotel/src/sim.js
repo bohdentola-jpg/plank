@@ -126,6 +126,15 @@ export function roomRate(state, room, agg = aggregate(state)) {
   return Math.round(TIERS[room.tier].rate * state.rateMult * agg.rate);
 }
 
+// What a particular guest actually pays for a particular room. A traveller who
+// came for a standard booked a standard: put them in a suite and they are
+// delighted, but they are not paying suite money for it. That is the whole cost
+// of a free upgrade, and it is what makes choosing a room a decision.
+export function billedRate(state, room, guest, agg = aggregate(state)) {
+  const tier = Math.min(room.tier, guest.want);
+  return Math.round(TIERS[tier].rate * state.rateMult * agg.rate);
+}
+
 export function starRating(state, agg = aggregate(state)) {
   return clamp(state.rep + agg.rep, 0, 5);
 }
@@ -137,6 +146,31 @@ export function repCeiling(state, agg = aggregate(state)) {
   const avgTier = built.length ? built.reduce((n, r) => n + r.tier, 0) / built.length : 1;
   const extras = Object.keys(state.amenities).filter((k) => state.amenities[k]).length;
   return clamp(1.5 + extras * 0.16 + avgTier * 0.45 + Math.min(built.length, 30) * 0.03, 1, 5);
+}
+
+// What an average room actually takes per night, given that guests are billed
+// for the tier they booked rather than the one they end up in. Exact rather
+// than a fudge factor: a hotel of nothing but standards realises its full rack
+// rate, and a tower of suites only realises theirs once the hotel's standing is
+// pulling in guests who came for a suite.
+export function expectedNightlyRate(state, agg = aggregate(state)) {
+  const built = builtRooms(state);
+  if (!built.length) return 0;
+  const bump = clamp((starRating(state, agg) - 2) * 0.18, 0, 1);
+  const w = [0, 0, 0, 0];
+  let total = 0;
+  for (const b of BUDGETS) {
+    w[b.want] += b.weight * (1 - bump);
+    w[Math.min(3, b.want + 1)] += b.weight * bump;
+    total += b.weight;
+  }
+  let sum = 0;
+  for (const room of built) {
+    for (let want = 1; want <= 3; want++) {
+      if (w[want]) sum += (w[want] / total) * TIERS[Math.min(room.tier, want)].rate;
+    }
+  }
+  return (sum / built.length) * state.rateMult * agg.rate;
 }
 
 // Travellers per day the sign can pull in at the current price and standing.
@@ -259,10 +293,13 @@ function newGuest(state, agg) {
   const party = agg.groups && Math.random() < 0.18 ? 3 + ((Math.random() * 4) | 0)
     : Math.random() < 0.34 ? 2 : Math.random() < 0.9 ? 1 : 3;
   const nights = Math.random() < 0.55 ? 1 : Math.random() < 0.7 ? 2 : 3;
+  const stars = starRating(state, agg);
+  let want = budget.want;
+  if (Math.random() < (stars - 2) * 0.18) want = Math.min(3, want + 1);
   const g = {
     id: uid('g'), name: genGuestName(), seed: (Math.random() * 1e9) | 0,
-    budget: budget.id, want: budget.want, tolerance: budget.tolerance, tipRate: budget.tipRate,
-    party, nights, mood: clamp(0.62 + starRating(state, agg) * 0.05 + agg.mood, 0.2, 1),
+    budget: budget.id, want, tolerance: budget.tolerance, tipRate: budget.tipRate,
+    party, nights, mood: clamp(0.62 + stars * 0.05 + agg.mood, 0.2, 1),
     patience: 1, reqPatience: 1, request: null, roomId: null,
     state: 'arriving', x: 0, y: 0, z: 0, heading: 0, path: null,
     queueIdx: -1, seatIdx: -1, timer: 0, checkoutDay: 0, checkoutMin: 0,
@@ -500,7 +537,7 @@ function walkOut(state, g, ev) {
 
 function settleBill(state, agg, g, factor, ev) {
   const room = roomById(state, g.roomId);
-  const rate = room ? roomRate(state, room, agg) : TIERS[1].rate;
+  const rate = room ? billedRate(state, room, g, agg) : TIERS[1].rate;
   const base = rate * g.nights;
   const extras = agg.pernight * g.nights * Math.max(1, Math.round(g.party * 0.7));
   const tip = Math.round(base * g.tipRate * clamp((g.mood - 0.6) / 0.4, 0, 1.2));
@@ -954,6 +991,31 @@ export function train(state, staffId) {
   return { ok: true, cost };
 }
 
+// Putting people in rooms by hand. Every arrival is provisionally given the
+// cheapest room that meets what they came for; until they are actually checked
+// in you can move them anywhere that is made up, which is most of the judgement
+// in the early game — a suite guest in a standard sulks, and a thrifty guest
+// given a suite is delighted and slightly wasted.
+export function freeRoomsFor(state, guest) {
+  return state.rooms.filter((r) => r.built && (r.state === 'empty' || r.guestId === guest.id))
+    .sort((a, b) => a.floor - b.floor || a.slot - b.slot);
+}
+
+export function assignRoom(state, guestId, roomId) {
+  const g = guestById(state, guestId);
+  if (!g) return { ok: false, why: 'They have already gone.' };
+  if (g.state !== 'queue') return { ok: false, why: `${g.name.split(' ')[0]} is already checked in.` };
+  const room = roomById(state, roomId);
+  if (!room || !room.built) return { ok: false, why: 'There is no room there yet.' };
+  if (room.guestId === g.id) return { ok: true, room };
+  if (room.state !== 'empty') return { ok: false, why: `Room ${roomNumber(room)} is not ready to sell.` };
+  releaseRoom(state, g);
+  room.state = 'reserved';
+  room.guestId = g.id;
+  g.roomId = room.id;
+  return { ok: true, room };
+}
+
 export function setRate(state, mult) {
   state.rateMult = clamp(mult, 0.6, 1.8);
 }
@@ -1003,8 +1065,7 @@ export function offlineCatchUp(state, realSeconds) {
   const unmet = Math.max(0, servable - arrivalsPerDay);
   const unmetShare = servable > 0 ? unmet / servable : 0;
   const occ = clamp((arrivalsPerDay * avgNights) / rooms, 0, 1);
-  const avgTier = builtRooms(state).reduce((n, r) => n + TIERS[r.tier].rate, 0) / rooms;
-  const perNight = avgTier * state.rateMult * agg.rate + agg.pernight;
+  const perNight = expectedNightlyRate(state, agg) + agg.pernight;
   const efficiency = cov.have.manager ? OFFLINE_EFFICIENCY.manager : OFFLINE_EFFICIENCY.base;
   const grossPerDay = occ * rooms * perNight * efficiency
     * (cov.have.maintenance ? 1 : 0.9) * (cov.have.bellhop ? 1 : 0.94);
@@ -1084,7 +1145,7 @@ export function serialize(state) {
     // let a player reload on a full hotel to collect three nights in one second.
     const left = g.checkoutDay ? Math.max(0, g.checkoutDay - state.day) : g.nights - 1;
     const used = clamp(g.nights - left, 1, g.nights);
-    escrow += (room ? roomRate(state, room, agg) : TIERS[1].rate) * used + agg.pernight * used;
+    escrow += (room ? billedRate(state, room, g, agg) : TIERS[1].rate) * used + agg.pernight * used;
     escrowNights += used;
   }
   return {

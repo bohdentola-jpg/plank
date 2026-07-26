@@ -110,6 +110,12 @@ before you can sell it again, the AC in 103, a guest on the phone asking for tow
 Click a job — or press its number — and you walk over and do it. Run out of clean
 linen and your next cleaning job detours to the laundry room first.
 
+**You decide who goes where.** Every arrival is provisionally given the cheapest room
+that meets what they came for; click the room tag on their line to put them somewhere
+else. Guests pay for the tier they *booked*, not the room they end up in, so a free
+upgrade into a suite buys real goodwill and costs you the suite. Put a couple who came
+for a suite into a standard and they will remember it in the guest book.
+
 **Money buys rooms, rooms buy staff.** Open the boarded-up units one at a time, then
 stack floors on top, up to thirty rooms across five storeys. Upgrade a standard into
 a deluxe or a suite. Eighteen amenities, from a vending alcove to a lobby bar to a
@@ -119,7 +125,7 @@ actually rides the shaft, the chandelier lights the lobby at night.
 | | |
 | --- | --- |
 | ![Working the board](docs/hotel-play.png) | ![A hotel with a crew](docs/hotel-build.png) |
-| ![The lobby at check-in](docs/hotel-lobby.png) | |
+| ![The lobby at check-in](docs/hotel-lobby.png) | ![Choosing somebody's room](docs/hotel-assign.png) |
 
 **Then hire your way out of the job.** A front desk clerk, a housekeeper, a
 maintenance tech and a bellhop cover the four core roles between them — at which
@@ -142,6 +148,7 @@ did, and who turned around in the lot because nobody was on the desk.
 | **A** | put yourself on auto and pick up jobs like staff do |
 | **drag** / **wheel** | orbit and zoom the hotel |
 | **click a room** | inspect it, upgrade it, or grab its job |
+| **click the 🛏 tag** | on a check-in line, to put that guest in a different room |
 | **1× 2× 4×** | speed · **P** pause · **M** mute · **Esc** menu |
 
 Stars are the shop window — they decide how many cars pull off the road and how much

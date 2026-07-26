@@ -8,10 +8,10 @@ import {
 import {
   money, sortedTasks, taskTitle, roomNumber, builtRooms, occupancy, coverage,
   dailyWages, dailyUpkeep, aggregate, demandPerDay, starRating, repCeiling, guestById, roomById,
-  workerById, offlineCapHours, isAutomated,
+  workerById, offlineCapHours, freeRoomsFor, billedRate,
 } from './sim.js';
 import { TASK_ICON } from './data.js';
-import { NEWS_TICKER, pick } from './names.js';
+import { NEWS_TICKER, genPartyLabel, pick } from './names.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const el = (tag, cls, html) => {
@@ -80,6 +80,13 @@ export class HUD {
       this.renderTabs();
     });
     this.elTasks.addEventListener('click', (e) => {
+      const chip = e.target.closest('[data-assign]');
+      if (chip) {                       // the room chip opens the picker instead of taking the job
+        this.assignGuest = chip.dataset.assign;
+        this.selectedRoom = null;
+        this._inspSig = '';
+        return;
+      }
       const row = e.target.closest('.task');
       if (row) this.a.claim(row.dataset.id);
     });
@@ -98,7 +105,7 @@ export class HUD {
     this.elInspector.addEventListener('click', (e) => {
       const b = e.target.closest('[data-act]');
       if (b) this.a.panelAction(b.dataset.act, b.dataset.id, b);
-      if (e.target.closest('.insp-close')) this.selectedRoom = null;
+      if (e.target.closest('.insp-close')) { this.selectedRoom = null; this.assignGuest = null; }
     });
     this.elYou.addEventListener('click', (e) => {
       if (e.target.closest('#you-auto')) this.a.toggleAuto();
@@ -205,6 +212,17 @@ export class HUD {
           <span class="tk-sub">${worker ? (worker.kind === 'you' ? 'You are on it' : `${esc(worker.name)} is on it`) : esc(this.hint(state, t))}</span>
         </span>
         <span class="tk-go">${worker ? '' : 'TAKE'}</span>`;
+      if (t.type === 'checkin') {
+        const g = guestById(state, t.guestId);
+        const room = g && g.roomId ? roomById(state, g.roomId) : null;
+        if (g) {
+          const chip = el('span', `tk-room${room && room.tier < g.want ? ' under' : ''}`,
+            room ? `🛏 ${roomNumber(room)}` : '🛏 —');
+          chip.dataset.assign = g.id;
+          chip.title = 'Put them in a different room';
+          row.querySelector('.tk-go').before(chip);
+        }
+      }
       const urg = Math.min(1, this.urg(state, t) / 9);
       row.style.setProperty('--urg', urg.toFixed(2));
       this.elTasks.appendChild(row);
@@ -223,8 +241,9 @@ export class HUD {
     if (t.type === 'checkin' || t.type === 'checkout') {
       const g = guestById(state, t.guestId);
       if (!g) return '';
-      const p = t.type === 'service' ? g.reqPatience : g.patience;
-      return p < 0.3 ? 'About to walk out' : p < 0.6 ? 'Getting restless' : 'Waiting at the desk';
+      const mood = g.patience < 0.3 ? 'About to walk out' : g.patience < 0.6 ? 'Getting restless' : 'Waiting at the desk';
+      if (t.type === 'checkout') return mood;
+      return `${genPartyLabel(g.party)} · wants a ${TIERS[g.want].name.toLowerCase()} · ${mood}`;
     }
     if (t.type === 'service') {
       const g = guestById(state, t.guestId);
@@ -431,6 +450,9 @@ export class HUD {
         </div>
       </div>
       <div class="note" id="rate-demand">Expect about <b>${demand.toFixed(1)} arrivals a day</b> at this price with ${starLabel(starRating(state, agg))}. Push it too high and the cars keep driving.</div>
+      <div class="note">Guests pay for the tier they <b>booked</b>, not the room they end up in — a
+      free upgrade buys goodwill, not money. Better rooms only earn their keep once your standing
+      is pulling in travellers who came for one.</div>
     </div>`;
 
     const ceil = repCeiling(state, agg);
@@ -494,8 +516,39 @@ export class HUD {
     return h;
   }
 
+  // ---------------------------------------------------------------- room picker
+  renderAssign(state, agg) {
+    const g = guestById(state, this.assignGuest);
+    if (!g || g.state !== 'queue') { this.assignGuest = null; this._inspSig = ''; this.elInspector.classList.remove('show'); return; }
+    const free = freeRoomsFor(state, g);
+    const sig = `A${g.id}${g.roomId}${free.map((r) => r.id + r.tier).join()}`;
+    if (sig === this._inspSig) return;
+    this._inspSig = sig;
+    this.elInspector.classList.add('show');
+
+    const rows = free.map((r) => {
+      const fit = r.tier - g.want;
+      const takings = billedRate(state, r, g, agg) * g.nights;
+      const note = fit === 0 ? 'exactly what they booked'
+        : fit > 0 ? `a free upgrade — they booked a ${TIERS[g.want].name.toLowerCase()} and pay for one`
+          : `below what they booked — they will remember it`;
+      const cls = r.id === g.roomId ? ' on' : fit < 0 ? ' under' : fit > 0 ? ' over' : '';
+      return `<button class="assign-row${cls}" data-act="assign:${g.id}:${r.id}">
+        <b>Room ${roomNumber(r)}</b>
+        <span>${TIERS[r.tier].name} · ${money(takings)} the stay</span>
+        <i>${note}</i>
+      </button>`;
+    }).join('');
+
+    this.elInspector.innerHTML = `<button class="insp-close">×</button>
+      <div class="insp-h">${esc(g.name)}</div>
+      <div class="insp-sub">${genPartyLabel(g.party)} · ${g.nights} night${g.nights > 1 ? 's' : ''} · wants a ${TIERS[g.want].name.toLowerCase()}</div>
+      <div class="assign-list">${rows || '<div class="note">Nothing is made up. Clean a room first.</div>'}</div>`;
+  }
+
   // ---------------------------------------------------------------- room card
   renderInspector(state, agg) {
+    if (this.assignGuest) { this.renderAssign(state, agg); return; }
     const id = this.selectedRoom;
     if (!id) { this.elInspector.classList.remove('show'); this._inspSig = ''; return; }
     const room = roomById(state, id);

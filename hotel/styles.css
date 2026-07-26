@@ -366,3 +366,25 @@ button { cursor: pointer; border: none; background: none; color: inherit; }
   #you-bar { width: 268px; }
   #toasts { right: 320px; }
 }
+
+/* ---------------------------- room picker ---------------------------- */
+.tk-room {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.04em; padding: 4px 7px; border-radius: 3px;
+  background: rgba(217, 171, 78, 0.16); color: var(--brass); white-space: nowrap;
+  border: 1px solid transparent;
+}
+.tk-room:hover { background: var(--brass); color: var(--ink); }
+.tk-room.under { background: rgba(207, 91, 74, 0.2); color: #eda294; }
+.assign-list { display: flex; flex-direction: column; gap: 4px; max-height: 40vh; overflow-y: auto; margin-top: 8px; }
+.assign-row {
+  display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; text-align: left;
+  padding: 7px 10px; border-radius: 3px; background: rgba(255, 255, 255, 0.04);
+  border-left: 3px solid rgba(255, 255, 255, 0.14);
+}
+.assign-row:hover { background: rgba(217, 171, 78, 0.16); }
+.assign-row.on { border-left-color: var(--brass); background: rgba(217, 171, 78, 0.12); }
+.assign-row.over { border-left-color: var(--green); }
+.assign-row.under { border-left-color: var(--red); }
+.assign-row b { font-size: 12.5px; }
+.assign-row span { font-size: 11px; color: var(--dim); text-align: right; }
+.assign-row i { grid-column: 1 / -1; font-style: normal; font-size: 10.5px; color: var(--brass2); }
