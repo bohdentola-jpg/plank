@@ -9,7 +9,8 @@
     "smoke": "node tools/smoke.mjs && node tools/hotel-smoke.mjs",
     "smoke:hotel": "node tools/hotel-smoke.mjs",
     "balance": "node tools/hotel-smoke.mjs --days 60",
-    "leakcheck": "node tools/hotel-leakcheck.mjs"
+    "leakcheck": "node tools/hotel-leakcheck.mjs",
+    "uicheck": "node tools/hotel-uicheck.mjs"
   },
   "dependencies": {
     "three": "^0.160.0"

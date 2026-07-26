@@ -8,8 +8,8 @@ import { genHotelName, ARRIVAL_QUIPS, WALKOUT_QUIPS, pick } from './names.js';
 import {
   newHotel, stepSim, serialize, deserialize, offlineCatchUp, claimTask, releaseJob,
   sortedTasks, roomById, money, buildRoom, addFloor, upgradeRoom, buyAmenity, hire, fire,
-  train, setRate, coverage, builtRooms, aggregate, starRating, isAutomated, offlineCapHours,
-  logLine, roomNumber,
+  train, setRate, coverage, builtRooms, aggregate, starRating, offlineCapHours,
+  claimEscrow, logLine, roomNumber,
 } from './sim.js';
 import { SPEEDS, MILESTONES, AMENITY_BY_ID, ROLE_BY_ID, starLabel } from './data.js';
 
@@ -108,7 +108,7 @@ class App {
     };
     boot.addEventListener('click', go);
     window.addEventListener('keydown', go);
-    window.addEventListener('resize', () => { this.world?.resize(); });
+    window.addEventListener('resize', () => { this.world?.resize(); this.titleWorld?.resize(); });
   }
 
   openTitle() {
@@ -246,7 +246,7 @@ class App {
     window.addEventListener('beforeunload', () => this.save());
 
     // Anything owed by guests who were mid-stay when you last closed the tab.
-    if (saved && saved.escrow > 0) state.cash += Math.round(saved.escrow);
+    if (saved && saved.escrow > 0) claimEscrow(state, saved.escrow, saved.escrowNights || 0);
 
     const away = saved ? (Date.now() - (saved.lastSeen || Date.now())) / 1000 : 0;
     if (away > 90) {
@@ -399,7 +399,7 @@ class App {
     const s = this.state;
     const [kind, id] = act.split(':');
     let res;
-    if (kind === 'room') res = buildRoom(s);
+    if (kind === 'room') res = buildRoom(s, id || null);
     else if (kind === 'floor') res = addFloor(s);
     else if (kind === 'am') res = buyAmenity(s, id);
     else if (kind === 'hire') res = hire(s, id);
@@ -421,7 +421,7 @@ class App {
 
   onKey(e) {
     if (!this.state || $('#overlay').classList.contains('show')) {
-      if (e.key === 'Escape') this.hud.closeModal();
+      if (e.key === 'Escape') this.hud.closeModal();   // runs the dismiss handler, which unpauses
       return;
     }
     if (e.target.tagName === 'INPUT') return;
@@ -521,18 +521,22 @@ class App {
     : `Uncovered: ${cov.missing.map((m) => ROLE_BY_ID[m].name).join(', ')}.`}</p>`;
     const wasPaused = this.paused;
     this.paused = true;
+    // Every exit from this modal — button, Escape, backdrop — has to put the
+    // clock back the way it was, or the game silently freezes with no sign why.
+    const resume = () => { this.paused = wasPaused; };
     this.hud.modal('THE OFFICE', body, [
-      { label: 'HOW IT WORKS', onPick: () => this.howToPlay(false) },
-      { label: this.muted ? 'SOUND ON' : 'SOUND OFF', onPick: () => { this.muted = !this.muted; sfx.setMuted(this.muted); this.paused = wasPaused; } },
+      { label: 'HOW IT WORKS', onPick: () => { resume(); this.howToPlay(false); } },
+      { label: this.muted ? 'SOUND ON' : 'SOUND OFF', onPick: () => { this.muted = !this.muted; sfx.setMuted(this.muted); resume(); } },
       { label: 'SELL UP & START OVER', onPick: () => this.confirmReset() },
-      { label: 'BACK TO WORK', primary: true, onPick: () => { this.paused = wasPaused; } },
-    ]);
+      { label: 'BACK TO WORK', primary: true, onPick: resume },
+    ], { onDismiss: resume });
   }
 
   confirmReset() {
     this.paused = true;
+    const resume = () => { this.paused = false; };
     this.hud.modal('SELL THE PLACE?', '<p>This wipes the save and hands you the keys to a different three-room motel. There is no undo.</p>', [
-      { label: 'KEEP MY HOTEL', primary: true, onPick: () => { this.paused = false; } },
+      { label: 'KEEP MY HOTEL', primary: true, onPick: resume },
       {
         label: 'SELL UP',
         onPick: () => {
@@ -540,7 +544,7 @@ class App {
           location.reload();
         },
       },
-    ]);
+    ], { onDismiss: resume });
   }
 
   // ---------------------------------------------------------------- tips

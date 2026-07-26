@@ -113,6 +113,9 @@ export function aggregate(state) {
     if (am.elevator) a.elevator = true;
     if (am.groups) a.groups = true;
   }
+  // A laundry attendant is the staffed version of the linen room: they keep the
+  // carts topped up on the floor, which is what the job advert says.
+  if (state.staff.some((m) => m.role === 'laundry')) a.instantLinen = true;
   a.patience = (state.amenities.coffee ? 8 : 0) + (state.amenities.chandelier ? 4 : 0)
     + (state.amenities.bar ? 6 : 0) + (state.amenities.valet ? 8 : 0) + (state.amenities.giftshop ? 4 : 0);
   a.linenMax = BASE_LINENS + a.linens;
@@ -204,8 +207,11 @@ function dropTask(state, taskId) {
   }
   state.tasks.splice(i, 1);
 }
-export function taskFor(state, kind, id) {
-  return state.tasks.find((t) => (kind === 'room' ? t.roomId === id : t.guestId === id)) || null;
+// A guest can carry two tasks at once (a room-service request and a check-out),
+// so callers must say which one they mean.
+export function taskFor(state, kind, id, type = null) {
+  return state.tasks.find((t) => (kind === 'room' ? t.roomId === id : t.guestId === id)
+    && (!type || t.type === type)) || null;
 }
 
 export function taskTitle(state, task) {
@@ -334,9 +340,20 @@ export function stepSim(state, dt, ev = () => {}) {
   state.guests = state.guests.filter((g) => g.state !== 'gone');
 
   stepRooms(state, agg, dt, prevClock, ev);
+  sweepTasks(state);
   for (const w of workers(state)) stepWorker(state, agg, w, dt, h, ev);
 
   state.lastSeen = Date.now();
+}
+
+// Only a worker holding a job re-validates it, so an unclaimed task whose guest
+// has moved on would otherwise sit on the board forever.
+function sweepTasks(state) {
+  for (let i = state.tasks.length - 1; i >= 0; i--) {
+    const t = state.tasks[i];
+    if (t.claimedBy) continue;
+    if (!taskStillValid(state, t)) state.tasks.splice(i, 1);
+  }
 }
 
 function stepArrivals(state, agg, dt, h, ev) {
@@ -357,7 +374,7 @@ function stepGuest(state, agg, g, dt, h, ev) {
       if (nav.advance(state, g, speed, dt)) {
         g.state = 'queue';
         g.action = 'wait';
-        if (!taskFor(state, 'guest', g.id)) addTask(state, 'checkin', { guestId: g.id });
+        if (!taskFor(state, 'guest', g.id, 'checkin')) addTask(state, 'checkin', { guestId: g.id });
       }
       break;
     }
@@ -384,7 +401,7 @@ function stepGuest(state, agg, g, dt, h, ev) {
       if (nav.advance(state, g, speed, dt)) {
         g.state = 'checkout';
         g.action = 'wait';
-        if (!taskFor(state, 'guest', g.id)) addTask(state, 'checkout', { guestId: g.id });
+        if (!taskFor(state, 'guest', g.id, 'checkout')) addTask(state, 'checkout', { guestId: g.id });
       }
       break;
     }
@@ -394,7 +411,7 @@ function stepGuest(state, agg, g, dt, h, ev) {
         // Nobody came. They leave the cash on the counter and a grudge in the review.
         settleBill(state, agg, g, 0.7, ev);
         g.mood = clamp(g.mood - 0.18, 0, 1);
-        const t = taskFor(state, 'guest', g.id);
+        const t = taskFor(state, 'guest', g.id, 'checkout');
         if (t) dropTask(state, t.id);
         departGuest(state, agg, g, ev);
       }
@@ -427,7 +444,7 @@ function stepInRoom(state, agg, g, dt, h, ev) {
     g.mood -= dt * (g.request.mood || 0.06) * REQUEST_MOOD_RATE;
     if (g.reqPatience <= 0) {
       g.mood = clamp(g.mood - 0.22, 0, 1);
-      const t = taskFor(state, 'guest', g.id);
+      const t = taskFor(state, 'guest', g.id, 'service');
       if (t) dropTask(state, t.id);
       g.request = null;
       g.reqPatience = 1;
@@ -451,6 +468,12 @@ function stepInRoom(state, agg, g, dt, h, ev) {
 
   const due = state.day > g.checkoutDay || (state.day === g.checkoutDay && state.clock >= g.checkoutMin);
   if (due && h >= HOUR.checkoutOpen) {
+    if (g.request) {          // they are leaving; whatever they asked for is moot
+      const pending = taskFor(state, 'guest', g.id, 'service');
+      if (pending) dropTask(state, pending.id);
+      g.request = null;
+      g.reqPatience = 1;
+    }
     g.state = 'tocheckout';
     g.action = 'walk';
     g.queueIdx = queueIndex(state);
@@ -461,7 +484,7 @@ function stepInRoom(state, agg, g, dt, h, ev) {
 
 function walkOut(state, g, ev) {
   releaseRoom(state, g);
-  const t = taskFor(state, 'guest', g.id);
+  const t = taskFor(state, 'guest', g.id, 'checkin');
   if (t) dropTask(state, t.id);
   g.state = 'leaving';
   g.action = 'walk';
@@ -492,7 +515,7 @@ function settleBill(state, agg, g, factor, ev) {
   state.totals.nights += g.nights;
   state.totals.guests++;
   g.bill = total;
-  ev('pay', { guest: g, total });
+  ev('pay', { guest: g, total, factor });
 }
 
 function departGuest(state, agg, g, ev) {
@@ -501,7 +524,7 @@ function departGuest(state, agg, g, ev) {
     room.guestId = null;
     room.state = room.state === 'broken' ? 'broken' : 'dirty';
     room.dirt = clamp(0.45 + g.nights * 0.22 + g.party * 0.05, 0.3, 1);
-    if (room.state === 'dirty' && !taskFor(state, 'room', room.id)) addTask(state, 'clean', { roomId: room.id });
+    if (room.state === 'dirty' && !taskFor(state, 'room', room.id, 'clean')) addTask(state, 'clean', { roomId: room.id });
   }
   g.roomId = null;
   g.state = 'leaving';
@@ -709,9 +732,6 @@ function autoClaim(state, agg, w) {
   for (const task of state.tasks) {
     if (task.claimedBy) continue;
     if (!canHandle(state, w, task)) continue;
-    if (task.type === 'clean' && !agg.instantLinen && w.linen <= 0 && !state.staff.some((s) => s.role === 'laundry')) {
-      // still allowed — the worker will detour to the linen room, just less eagerly
-    }
     const anchor = taskAnchor(state, task);
     const travel = nav.travelSecs(state, w, anchor, walkSpeedOf(state, w));
     const score = taskUrgency(state, task) * 10 - travel;
@@ -815,6 +835,19 @@ function rollDay(state, agg, ev) {
   ev('day', { report: state.yesterday });
 }
 
+// Money owed by guests who were mid-stay when the tab closed. Credited on the
+// next load, and booked through the ledger so the all-time figures stay honest.
+export function claimEscrow(state, amount, nights) {
+  const total = Math.round(amount || 0);
+  if (total <= 0) return 0;
+  state.cash += total;
+  state.today.revenue += total;
+  state.today.nights += nights || 0;
+  state.totals.earned += total;
+  state.totals.nights += nights || 0;
+  return total;
+}
+
 export function money(n) {
   const v = Math.round(n);
   return (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString('en-US');
@@ -823,10 +856,12 @@ export function money(n) {
 // ------------------------------------------------------------------ commands
 export function canAfford(state, cost) { return state.cash >= cost; }
 
-export function buildRoom(state) {
+export function buildRoom(state, roomId = null) {
   const built = builtRooms(state).length;
   const cost = roomBuildCost(built);
-  const slot = state.rooms.find((r) => !r.built && r.floor <= state.floors);
+  const slot = roomId
+    ? state.rooms.find((r) => r.id === roomId && !r.built && r.floor <= state.floors)
+    : state.rooms.find((r) => !r.built && r.floor <= state.floors);
   if (!slot) return { ok: false, why: 'Every slot on every floor is built. Add a floor.' };
   if (!canAfford(state, cost)) return { ok: false, why: `You need ${money(cost)}.` };
   state.cash -= cost;
@@ -1041,14 +1076,20 @@ export function serialize(state) {
   // on the next load rather than quietly losing the night.
   const agg = aggregate(state);
   let escrow = 0;
+  let escrowNights = 0;
   for (const g of state.guests) {
-    if (g.state === 'inroom' || g.state === 'toroom' || g.state === 'checkout' || g.state === 'tocheckout') {
-      const room = g.roomId ? roomById(state, g.roomId) : null;
-      escrow += (room ? roomRate(state, room, agg) : TIERS[1].rate) * g.nights + agg.pernight * g.nights;
-    }
+    if (!['inroom', 'toroom', 'checkout', 'tocheckout'].includes(g.state)) continue;
+    const room = g.roomId ? roomById(state, g.roomId) : null;
+    // Only the nights they have actually slept — paying the whole booking would
+    // let a player reload on a full hotel to collect three nights in one second.
+    const left = g.checkoutDay ? Math.max(0, g.checkoutDay - state.day) : g.nights - 1;
+    const used = clamp(g.nights - left, 1, g.nights);
+    escrow += (room ? roomRate(state, room, agg) : TIERS[1].rate) * used + agg.pernight * used;
+    escrowNights += used;
   }
   return {
-    v: 1, nextId, escrow: Math.round(escrow),
+    v: 1, nextId, escrow: Math.round(escrow), escrowNights,
+    today: { ...state.today },
     name: state.name, facade: state.facade, ink: state.ink, accent: state.accent,
     cash: state.cash, rep: state.rep, day: state.day, clock: state.clock, t: state.t,
     speed: state.speed, rateMult: state.rateMult, floors: state.floors,
@@ -1075,12 +1116,17 @@ export function deserialize(data) {
   Object.assign(state, {
     cash: data.cash, rep: data.rep, day: data.day, clock: data.clock, t: data.t || 0,
     speed: data.speed || 1, rateMult: data.rateMult || 1, floors: data.floors || 1,
-    rooms: data.rooms.map((r) => ({ ...r, guestId: null, state: r.state === 'occupied' || r.state === 'reserved' ? 'dirty' : r.state })),
+    // An occupied room has been slept in; a reserved one was only being held.
+    rooms: data.rooms.map((r) => ({
+      ...r, guestId: null,
+      state: r.state === 'occupied' ? 'dirty' : r.state === 'reserved' ? 'empty' : r.state,
+    })),
     amenities: data.amenities || {},
     reviews: data.reviews || [],
     log: data.log || [],
     milestones: data.milestones || {},
     totals: { ...state.totals, ...(data.totals || {}) },
+    today: { ...blankLedger(), ...(data.today || {}) },
     yesterday: data.yesterday || null,
     tips: data.tips || {},
     youAuto: !!data.youAuto,

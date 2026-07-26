@@ -259,6 +259,81 @@ await step('a layoff hands back the job it was holding', async () => {
   must(!ghosts.length, `${ghosts.length} task(s) still claimed by a worker who left`);
 });
 
+await step('a guest who asked for towels can still check out', async () => {
+  // Regression: taskFor() matched any task carrying the guest's id, so an open
+  // room-service request blocked the check-out task from ever being created.
+  // The guest then timed out at the desk and was force-settled at 70%.
+  const s = sim.newHotel();
+  s.cash = 60000;
+  for (const r of s.rooms) { r.built = true; r.state = 'empty'; }
+  sim.addFloor(s);
+  for (const r of s.rooms) { r.built = true; r.state = 'empty'; }
+  for (const role of ['clerk', 'clerk', 'housekeeper', 'housekeeper', 'maintenance', 'bellhop', 'auditor']) sim.hire(s, role);
+  let partial = 0;
+  let paid = 0;
+  let requests = 0;
+  for (let i = 0; i < 60000; i++) {
+    sim.stepSim(s, 0.1, (kind, d) => {
+      if (kind === 'request') requests++;
+      if (kind === 'pay') { paid++; if (d.factor < 1) partial++; }
+    });
+  }
+  must(requests > 3, `expected some room-service requests, saw ${requests}`);
+  must(paid > 20, `expected plenty of checkouts, saw ${paid}`);
+  must(partial === 0, `${partial} of ${paid} guests gave up at the desk with a full crew on duty`);
+  const stale = s.tasks.filter((t) => {
+    const g = t.guestId ? sim.guestById(s, t.guestId) : null;
+    return t.guestId && !g;
+  });
+  must(!stale.length, `${stale.length} task(s) point at a guest who has left`);
+});
+
+await step('the laundry attendant does the job they were hired for', async () => {
+  const s = sim.newHotel();
+  s.cash = 5000;
+  must(!sim.aggregate(s).instantLinen, 'carts should not self-refill to begin with');
+  must(sim.hire(s, 'laundry').ok, 'could not hire a laundry attendant');
+  must(sim.aggregate(s).instantLinen, 'a laundry attendant should keep the carts stocked');
+});
+
+await step('escrow only covers nights actually slept', async () => {
+  // Regression: the save banked the whole booking, so reloading a full hotel
+  // collected three nights of every stay in one second, over and over.
+  const s = sim.newHotel();
+  s.cash = 20000;
+  s.youAuto = true;
+  for (const r of s.rooms) { r.built = true; r.state = 'empty'; }
+  sim.hire(s, 'clerk');
+  const inHouseNow = () => s.guests.filter((g) => ['inroom', 'toroom', 'checkout', 'tocheckout'].includes(g.state));
+  let multi = [];
+  for (let i = 0; i < 40000; i++) {
+    sim.stepSim(s, 0.1, () => {});
+    multi = inHouseNow().filter((g) => g.nights > 1 && g.checkoutDay > s.day);
+    if (multi.length) break;
+  }
+  must(multi.length, 'wanted a multi-night guest partway through their stay');
+  const blob = sim.serialize(s);
+  const inHouse = inHouseNow();
+  const wholeBooking = inHouse.reduce((n, g) => {
+    const room = g.roomId ? sim.roomById(s, g.roomId) : null;
+    return n + (room ? sim.roomRate(s, room) : 0) * g.nights;
+  }, 0);
+  must(blob.escrow > 0, 'a hotel with guests in it should escrow something');
+  must(blob.escrow < wholeBooking, `escrow ${blob.escrow} should be under the full bookings ${wholeBooking}`);
+  must(blob.escrowNights < inHouse.reduce((n, g) => n + g.nights, 0),
+    `escrowed every booked night (${blob.escrowNights}) instead of only the slept ones`);
+});
+
+await step('the day-so-far ledger survives a reload', async () => {
+  const s = sim.newHotel();
+  s.cash = 9000;
+  s.youAuto = true;
+  for (let i = 0; i < 6000; i++) sim.stepSim(s, 0.1, () => {});
+  const back = sim.deserialize(JSON.parse(JSON.stringify(sim.serialize(s))));
+  must(back.today.revenue === s.today.revenue, `today's revenue lost: ${s.today.revenue} -> ${back.today.revenue}`);
+  must(back.today.cleaned === s.today.cleaned, "today's cleaning count lost");
+});
+
 await step('commands refuse what you cannot afford', async () => {
   const s = sim.newHotel();
   s.cash = 0;

@@ -89,7 +89,11 @@ export class HUD {
       this.a.panelAction(b.dataset.act, b.dataset.id, b);
     });
     this.elPanel.addEventListener('input', (e) => {
-      if (e.target.id === 'rate-slider') this.a.setRate(Number(e.target.value) / 100);
+      if (e.target.id !== 'rate-slider') return;
+      this.a.setRate(Number(e.target.value) / 100);
+      // Repaint the readout now rather than on the next HUD tick, so the number
+      // tracks the thumb even on a machine that is only managing a few frames.
+      if (this._state) this.refreshRates(this._state, aggregate(this._state));
     });
     this.elInspector.addEventListener('click', (e) => {
       const b = e.target.closest('[data-act]');
@@ -117,14 +121,15 @@ export class HUD {
     while (this.elToasts.children.length > 6) this.elToasts.firstChild.remove();
   }
 
-  modal(title, html, buttons = []) {
+  modal(title, html, buttons = [], { onDismiss = null } = {}) {
+    this._onDismiss = onDismiss;
     const card = el('div', 'modal-card');
     card.appendChild(el('h2', null, title));
     card.appendChild(el('div', 'modal-body', html));
     const row = el('div', 'modal-buttons');
     for (const b of buttons) {
       const btn = el('button', b.primary ? 'btn primary' : 'btn', b.label);
-      btn.onclick = () => { this.closeModal(); b.onPick?.(); };
+      btn.onclick = () => { this._onDismiss = null; this.closeModal(); b.onPick?.(); };
       row.appendChild(btn);
     }
     card.appendChild(row);
@@ -132,11 +137,18 @@ export class HUD {
     this.elOverlay.appendChild(card);
     this.elOverlay.classList.add('show');
   }
-  closeModal() { this.elOverlay.classList.remove('show'); this.elOverlay.innerHTML = ''; }
+  closeModal() {
+    this.elOverlay.classList.remove('show');
+    this.elOverlay.innerHTML = '';
+    const fn = this._onDismiss;
+    this._onDismiss = null;
+    fn?.();
+  }
 
   // ---------------------------------------------------------------- frame
   render(state, paused) {
     const agg = aggregate(state);
+    this._state = state;
     this.elName.textContent = state.name;
     this.elStars.textContent = starLabel(starRating(state, agg));
     this.elStars.title = `${starRating(state, agg).toFixed(2)} stars`;
@@ -165,6 +177,7 @@ export class HUD {
     this.renderTasks(state);
     this.renderYou(state, agg);
     this.renderPanel(state, agg);
+    this.refreshRates(state, agg);
     this.renderInspector(state, agg);
     this.renderNews();
   }
@@ -223,20 +236,40 @@ export class HUD {
     return '';
   }
 
+  // Built once and then written field by field. Replacing the innerHTML nine
+  // times a second destroyed the AUTO button between mousedown and mouseup, so
+  // the browser never fired a click on it.
   renderYou(state, agg) {
+    if (!this._you) {
+      this.elYou.innerHTML = `
+        <div class="you-face">🧍</div>
+        <div class="you-main">
+          <div class="you-doing"></div>
+          <div class="you-bar-track"><i></i></div>
+        </div>
+        <div class="you-linen" title="Clean linen on your cart"></div>
+        <button id="you-auto"></button>`;
+      this._you = {
+        doing: $('.you-doing', this.elYou),
+        bar: $('.you-bar-track i', this.elYou),
+        linen: $('.you-linen', this.elYou),
+        auto: $('#you-auto', this.elYou),
+      };
+    }
     const you = state.you;
-    const job = you.job ? sortedTasks(state).find((t) => t.id === you.job.taskId) : null;
-    const doing = esc(job ? taskTitle(state, job) : (state.youAuto ? 'Looking for the next job' : 'Standing at the desk'));
+    const job = you.job ? state.tasks.find((t) => t.id === you.job.taskId) : null;
+    const doing = job ? taskTitle(state, job) : (state.youAuto ? 'Looking for the next job' : 'Standing at the desk');
     const prog = you.job && you.job.phase === 'work' && you.job.dur
       ? 1 - Math.max(0, you.job.timer) / you.job.dur : 0;
-    this.elYou.innerHTML = `
-      <div class="you-face">🧍</div>
-      <div class="you-main">
-        <div class="you-doing">${doing}</div>
-        <div class="you-bar-track"><i style="width:${pct(prog)}"></i></div>
-      </div>
-      <div class="you-linen" title="Clean linen on your cart">🧺 ${agg.instantLinen ? '∞' : `${you.linen}/${agg.linenMax}`}</div>
-      <button id="you-auto" class="${state.youAuto ? 'on' : ''}">${state.youAuto ? 'AUTO: ON' : 'AUTO: OFF'}</button>`;
+    if (this._you.doing.textContent !== doing) this._you.doing.textContent = doing;
+    this._you.bar.style.width = pct(prog);
+    const linen = `🧺 ${agg.instantLinen ? '∞' : `${you.linen}/${agg.linenMax}`}`;
+    if (this._you.linen.textContent !== linen) this._you.linen.textContent = linen;
+    const label = state.youAuto ? 'AUTO: ON' : 'AUTO: OFF';
+    if (this._you.auto.textContent !== label) {
+      this._you.auto.textContent = label;
+      this._you.auto.classList.toggle('on', state.youAuto);
+    }
   }
 
   renderNews() {
@@ -254,9 +287,10 @@ export class HUD {
     const sig = [
       this.tab, Math.round(state.cash), builtRooms(state).length, state.floors,
       Object.keys(state.amenities).length, state.staff.map((s) => s.id + s.level).join(),
-      Math.round(state.rateMult * 100), state.reviews.length, state.day,
-      this.selectedStaff,
+      state.reviews.length, state.day, this.selectedStaff,
     ].join('|');
+    // rateMult is deliberately absent: it changes while the slider is under the
+    // player's thumb, and re-rendering the panel would rip the input out mid-drag.
     if (sig === this._panelSig) return;
     this._panelSig = sig;
     const fn = {
@@ -266,6 +300,20 @@ export class HUD {
       book: () => this.panelBook(state, agg),
     }[this.tab] || (() => '');
     this.elPanel.innerHTML = fn();
+  }
+
+  // Updated in place every frame so the numbers track the slider without the
+  // slider itself being replaced.
+  refreshRates(state, agg) {
+    if (this.tab !== 'rates') return;
+    const pctEl = $('#rate-pct', this.elPanel);
+    if (!pctEl) return;
+    pctEl.textContent = `${Math.round(state.rateMult * 100)}%`;
+    $('#rate-tiers', this.elPanel).textContent = TIERS.slice(1)
+      .map((t) => `${t.name} ${money(t.rate * state.rateMult * agg.rate)}`).join(' · ');
+    $('#rate-demand', this.elPanel).innerHTML =
+      `Expect about <b>${demandPerDay(state, agg).toFixed(1)} arrivals a day</b> at this price with `
+      + `${starLabel(starRating(state, agg))}. Push it too high and the cars keep driving.`;
   }
 
   panelBuild(state, agg) {
@@ -378,11 +426,11 @@ export class HUD {
       <div class="rate-wrap">
         <input id="rate-slider" type="range" min="60" max="180" value="${Math.round(state.rateMult * 100)}" />
         <div class="rate-read">
-          <b>${Math.round(state.rateMult * 100)}%</b> of the going rate
-          <i>${TIERS.slice(1).map((t) => `${t.name} ${money(t.rate * state.rateMult * agg.rate)}`).join(' · ')}</i>
+          <b id="rate-pct">${Math.round(state.rateMult * 100)}%</b> of the going rate
+          <i id="rate-tiers">${TIERS.slice(1).map((t) => `${t.name} ${money(t.rate * state.rateMult * agg.rate)}`).join(' · ')}</i>
         </div>
       </div>
-      <div class="note">Expect about <b>${demand.toFixed(1)} arrivals a day</b> at this price with ${starLabel(starRating(state, agg))}. Push it too high and the cars keep driving.</div>
+      <div class="note" id="rate-demand">Expect about <b>${demand.toFixed(1)} arrivals a day</b> at this price with ${starLabel(starRating(state, agg))}. Push it too high and the cars keep driving.</div>
     </div>`;
 
     const ceil = repCeiling(state, agg);
@@ -463,7 +511,7 @@ export class HUD {
       this.elInspector.innerHTML = `<button class="insp-close">×</button>
         <div class="insp-h">EMPTY SHELL · FLOOR ${room.floor}</div>
         <div class="insp-sub">Plywood over the window, and a number waiting to be hung.</div>
-        <button class="btn primary wide" data-act="room" ${state.cash >= cost ? '' : 'disabled'}>OPEN THIS ROOM · ${money(cost)}</button>`;
+        <button class="btn primary wide" data-act="room:${room.id}" ${state.cash >= cost ? '' : 'disabled'}>OPEN THIS ROOM · ${money(cost)}</button>`;
       return;
     }
 

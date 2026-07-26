@@ -127,9 +127,10 @@ point the badge in the corner flips to **AUTOPILOT** and the hotel runs without 
 
 **And then leave.** The simulation is driven off the wall clock, not the render loop,
 so a background tab keeps trading at full fidelity while you watch something else.
-Close it entirely and the crew keeps the doors open: three hours' worth on a bare
-crew, ten with a **Night Auditor**, a full day with a **General Manager**. You come
-back to a *while you were out* report — nights sold, wages paid, what your standing
+Close it entirely and the crew keeps the doors open: two hours' worth on a bare
+crew, six with a **Night Auditor**, sixteen with a **General Manager** — and an hour
+of wall clock is seventeen in-game days, so that is a long night's trading. You come
+back to a *while you were out* report: nights sold, wages paid, what your standing
 did, and who turned around in the lot because nobody was on the desk.
 
 ### How to play
@@ -157,6 +158,7 @@ npm install                     # dev tooling only (playwright for screenshots)
 npm run smoke                   # both games: module, rig and simulation checks
 npm run balance                 # 60 in-game days of NO VACANCY, economy printed per day
 npm run leakcheck               # drives the real page and asserts nothing grows per rebuild
+npm run uicheck                 # the HUD bugs that only exist in a browser (slider, modals, clicks)
 node tools/shot.mjs "hotel/?fresh" lobby.png --wait 20000 --keys "Space@1500"
 node tools/shot.mjs "varsity/?gallery" gallery.png --wait 2500
 ```
