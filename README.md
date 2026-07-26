@@ -150,6 +150,7 @@ did, and who turned around in the lot because nobody was on the desk.
 | **drag** / **wheel** | orbit and zoom the hotel |
 | **click a room** | inspect it, upgrade it, or grab its job |
 | **click the 🛏 tag** | on a check-in line, to put that guest in a different room |
+| **click the linen room** | to go and top up your cart before you run dry |
 | **1× 2× 4×** | speed · **P** pause · **M** mute · **Esc** menu |
 
 Stars are the shop window — they decide how many cars pull off the road and how much
