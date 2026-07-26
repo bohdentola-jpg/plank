@@ -33,21 +33,56 @@ export const FLAT = {
 /** Where you wake up, and which way you are facing when you do. */
 export const SPAWN = { x: -0.95, y: 0, z: -6.55, yaw: 2.05 };
 
-// A flat plane pinned to one side of a wall, so a room can have its own paper
-// on a wall it shares with a room that has different taste.
-function lining(world, x0, z0, x1, z1, mat, facing) {
+// A skin pinned to one side of a wall, so a room can have its own paper on a
+// wall it shares with a room that has different taste. `holes` uses the same
+// { at, w, y0, y1 } shape as world.wall and must be given the same openings —
+// a lining without them papers straight over the doorway.
+function lining(world, x0, z0, x1, z1, mat, facing, holes = []) {
   const horiz = Math.abs(x1 - x0) > Math.abs(z1 - z0);
-  const w = horiz ? Math.abs(x1 - x0) : Math.abs(z1 - z0);
-  const geo = new THREE.PlaneGeometry(w, CEIL);
+  const len = horiz ? Math.abs(x1 - x0) : Math.abs(z1 - z0);
+  const sx = Math.min(x0, x1), sz = Math.min(z0, z1);
   const m = material(mat);
-  scalePlaneUVs(geo, w, CEIL, m.userData.tile);
-  const mesh = new THREE.Mesh(geo, m);
-  mesh.position.set((x0 + x1) / 2, CEIL / 2, (z0 + z1) / 2);
-  mesh.rotation.y = facing;
-  mesh.position.x += Math.sin(facing) * 0.065;
-  mesh.position.z += Math.cos(facing) * 0.065;
-  mesh.receiveShadow = true;
-  return world.add(mesh);
+
+  const parts = [];
+  let cursor = 0;
+  for (const h of [...holes].sort((a, b) => a.at - b.at)) {
+    if (h.at > cursor) parts.push({ a: cursor, b: h.at, y0: 0, y1: CEIL });
+    if (h.y1 < CEIL) parts.push({ a: h.at, b: h.at + h.w, y0: h.y1, y1: CEIL });
+    if (h.y0 > 0) parts.push({ a: h.at, b: h.at + h.w, y0: 0, y1: h.y0 });
+    cursor = h.at + h.w;
+  }
+  if (cursor < len) parts.push({ a: cursor, b: len, y0: 0, y1: CEIL });
+
+  const made = [];
+  for (const p of parts) {
+    const pl = p.b - p.a;
+    const ph = p.y1 - p.y0;
+    if (pl <= 0.002 || ph <= 0.002) continue;
+    const geo = new THREE.PlaneGeometry(pl, ph);
+    scalePlaneUVs(geo, pl, ph, m.userData.tile);
+    const mesh = new THREE.Mesh(geo, m);
+    mesh.position.set(
+      horiz ? sx + p.a + pl / 2 : x0,
+      p.y0 + ph / 2,
+      horiz ? z0 : sz + p.a + pl / 2
+    );
+    mesh.rotation.y = facing;
+    mesh.position.x += Math.sin(facing) * 0.065;
+    mesh.position.z += Math.cos(facing) * 0.065;
+    mesh.receiveShadow = true;
+    // a zero-thickness plane is invisible to a bounding-box test, so it says
+    // out loud what stretch of wall it covers and the smoke test reads it
+    mesh.userData.lining = {
+      horiz,
+      at0: horiz ? sx + p.a : sz + p.a,
+      at1: horiz ? sx + p.b : sz + p.b,
+      on: horiz ? z0 : x0,
+      y0: p.y0,
+      y1: p.y1,
+    };
+    made.push(world.add(mesh));
+  }
+  return made;
 }
 
 /**
@@ -115,14 +150,17 @@ export function buildFlat(dress = {}, lit = 0, outside = 'sodium') {
   w.solid(2.0, 3.4, -8.6, -5.4, 0, CEIL, 'wall');
   w.box(1.36, CEIL, 0.06, 'gloss', 2.72, CEIL / 2, -5.43, { solid: false });
 
-  // the bedroom and the bathroom got their own decorating
+  // the bedroom and the bathroom got their own decorating. The wall each of
+  // them shares with the hall has a door in it, so its lining does too.
   const B = FLAT.bedroom, T = FLAT.bathroom;
-  lining(w, B.x0, B.z0, B.x1, B.z0, 'wallpaperBed', 0);            // north wall, facing south
-  lining(w, B.x0, B.z1, B.x1, B.z1, 'wallpaperBed', Math.PI);      // hall wall, facing north
-  lining(w, B.x0, B.z0, B.x0, B.z1, 'wallpaperBed', Math.PI / 2);  // west
-  lining(w, B.x1, B.z0, B.x1, B.z1, 'wallpaperBed', -Math.PI / 2); // east
+  const BED_DOOR = [{ at: 1.0, w: 0.86, y0: 0, y1: 2.04 }];   // x -3.00 .. -2.14
+  const BATH_DOOR = [{ at: 1.0, w: 0.80, y0: 0, y1: 2.04 }];  // x  0.60 ..  1.40
+  lining(w, B.x0, B.z0, B.x1, B.z0, 'wallpaperBed', 0);                    // north
+  lining(w, B.x0, B.z1, B.x1, B.z1, 'wallpaperBed', Math.PI, BED_DOOR);    // the hall
+  lining(w, B.x0, B.z0, B.x0, B.z1, 'wallpaperBed', Math.PI / 2);          // west
+  lining(w, B.x1, B.z0, B.x1, B.z1, 'wallpaperBed', -Math.PI / 2);         // east
   lining(w, T.x0, T.z0, T.x1, T.z0, 'tileBath', 0);
-  lining(w, T.x0, T.z1, T.x1, T.z1, 'tileBath', Math.PI);
+  lining(w, T.x0, T.z1, T.x1, T.z1, 'tileBath', Math.PI, BATH_DOOR);
   lining(w, T.x0, T.z0, T.x0, T.z1, 'tileBath', Math.PI / 2);
   lining(w, T.x1, T.z0, T.x1, T.z1, 'tileBath', -Math.PI / 2);
 

@@ -756,6 +756,9 @@ class Game {
         break;
       case 'monitors':
         this.paintMonitors();
+        // the grid comes up to a rehearsal level, which is the first time the
+        // set is lit well enough to find anything on the floor
+        p.rigUp?.(0.26);
         break;
       case 'val':
         this.audio.audience('applause', 0.8);
@@ -1185,12 +1188,12 @@ class Game {
     this.lens.render(dt, {
       mode: cutting ? 'cam' : 'eye',
       warm: this.warm,
-      grain: 0.05 + this.engagement / 900,
+      grain: this.galleryClean ? 0 : 0.05 + this.engagement / 900,
       tear: cutting ? 0.35 + this.dayIndex * 0.09 : 0,
       flash: this.flash,
       fade: this.fade,
       sick: this.sick,
-      vign: cutting ? 0.95 : 0.82,
+      vign: this.galleryClean ? 0.15 : (cutting ? 0.95 : 0.82),
       holdFps: cutting && store.settings.hold ? HOLD_FPS[this.dayIndex + 1] : 0,
     });
   }
@@ -1203,4 +1206,8 @@ window.FOCUSGROUP = game;
 // A turntable of the week's art, for the screenshot harness.
 if (qs.has('gallery')) {
   import('./gallery.js').then((m) => m.galleryMode(game)).catch(() => {});
+}
+// And every model on a grid under one flat light, for checking them.
+if (qs.has('props')) {
+  import('./propgallery.js').then((m) => m.propsMode(game)).catch((e) => console.error(e));
 }

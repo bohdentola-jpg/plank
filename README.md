@@ -156,6 +156,7 @@ npm run walk:backrooms -- --all --auditonly   # every floor: can you walk to the
 npm run smoke:melee      # frame data + move drill + CPU-vs-CPU matches
 node tools/shot-backrooms.mjs poolrooms --frames 3     # drive NOCLIP in Chromium
 node tools/shot-focusgroup.mjs --cut smoke   # sit on one of Focus Group's cameras
+node tools/shot-focusgroup.mjs --props       # every Focus Group model on a grid
 node tools/shot.mjs "/rimcity/?quick" shot.png --wait 9000   # screenshot QA
 ```
 

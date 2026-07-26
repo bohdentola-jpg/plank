@@ -7,7 +7,7 @@
 // them later.
 
 import * as THREE from 'three';
-import { material, simple, liveCanvas, valFace, valcoLogo, drawSnow } from './textures.js';
+import { material, simple, liveCanvas, valFace, valHeadMaterial, valcoLogo, drawSnow } from './textures.js';
 import { scaleBoxUVs } from './world.js';
 import { rng } from './util.js';
 
@@ -327,6 +327,17 @@ export function radiator(world, x, z, rotY = 0) {
     g.add(f);
   }
   g.add(tbox(0.72, 0.03, 0.10, m, 0, 0.735, 0));
+  // brackets and the pipes down into the floor — a radiator sits proud of the
+  // skirting, but it is not floating, and without these it looks it
+  [-0.30, 0.30].forEach((bx) => {
+    g.add(tbox(0.03, 0.16, 0.07, m, bx, 0.08, -0.02));
+    const pipe = cyl(0.011, 0.011, 0.17, CHROME, 8);
+    pipe.position.set(bx, 0.085, 0.02);
+    g.add(pipe);
+  });
+  const valve = cyl(0.019, 0.019, 0.05, simple(0xc8a24a, { rough: 0.35, metal: 0.7 }), 10);
+  valve.position.set(0.30, 0.185, 0.02);
+  g.add(valve);
   world.add(g);
   world.solidRot(x, z, 0.72, 0.12, 0, 0.76, rotY);
   return g;
@@ -525,7 +536,9 @@ export function mug(world, x, y, z, o = {}) {
   faceTex.colorSpace = THREE.SRGBColorSpace;
   const side = new THREE.MeshStandardMaterial({ map: faceTex, roughness: 0.35 });
   const plain = simple(o.colour ?? 0xe8e2d0, { rough: 0.35 });
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.038, 0.095, 18, 1, true), side);
+  // thetaStart puts u=0.5 — where valFace draws him — at +Z, i.e. facing out
+  const body = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.042, 0.038, 0.095, 20, 1, true, Math.PI, Math.PI * 2), side);
   body.position.y = 0.047;
   g.add(body);
   const bottom = cyl(0.038, 0.038, 0.008, plain, 18);
@@ -890,7 +903,7 @@ export function figurine(world, x, y, z, o = {}) {
   const body = cyl(0.026, 0.042, 0.07, simple(0x2a4a6a, { rough: 0.5 }), 12);
   body.position.y = 0.035;
   g.add(body);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.032, 16, 12), cream);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.032, 20, 14), valHeadMaterial());
   head.position.y = 0.098;
   g.add(head);
   const brim = cyl(0.040, 0.040, 0.005, dark, 16);
@@ -900,14 +913,7 @@ export function figurine(world, x, y, z, o = {}) {
   crown.position.y = 0.136;
   g.add(crown);
 
-  // the face is a decal on the front of the head
-  const ft = new THREE.CanvasTexture(valFace(128, { bg: '#efe2c4' }));
-  ft.colorSpace = THREE.SRGBColorSpace;
-  const decal = new THREE.Mesh(new THREE.PlaneGeometry(0.048, 0.048),
-    new THREE.MeshStandardMaterial({ map: ft, roughness: 0.4, transparent: true }));
-  decal.position.set(0, 0.098, 0.031);
-  g.add(decal);
-
+  // the face is printed round the head, same as the full-size one
   // arms out, welcoming
   [[-1, 0.4], [1, 0.4]].forEach(([sx, tilt]) => {
     const a = cyl(0.008, 0.008, 0.05, simple(0x2a4a6a, { rough: 0.5 }), 6);
@@ -1299,46 +1305,72 @@ export function valMascot(world, x, z, o = {}) {
   const cream = simple(0xefe2c4, { rough: 0.5 });
   const dark = simple(0x161216, { rough: 0.5 });
 
-  g.add(tbox(0.44, 0.66, 0.28, suit, 0, 1.12, 0));                 // torso
-  g.add(tbox(0.30, 0.44, 0.24, dark, 0, 0.62, 0));                 // legs, together
-  [[-0.28, 1], [0.28, -1]].forEach(([ax, s]) => {
-    const arm = cyl(0.055, 0.05, 0.56, suit, 8);
-    arm.position.set(ax, 1.08, 0.02);
-    arm.rotation.z = s * 0.13;
+  // ---- feet on the floor, and legs that reach them
+  [-0.11, 0.11].forEach((fx) => {
+    const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.085, 0.27), dark);
+    shoe.position.set(fx, 0.043, 0.05);
+    g.add(shoe);
+    const leg = cyl(0.072, 0.082, 0.79, dark, 10);
+    leg.position.set(fx, 0.48, 0);
+    g.add(leg);
+  });
+
+  // ---- a pelvis, so the trousers are attached to something
+  const hips = new THREE.Mesh(new THREE.BoxGeometry(0.33, 0.17, 0.25), dark);
+  hips.position.y = 0.90;
+  g.add(hips);
+
+  // ---- torso, shoulders and a waistcoat button line
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.235, 0.212, 0.60, 14), suit);
+  torso.position.y = 1.24;
+  g.add(torso);
+  const shoulders = new THREE.Mesh(new THREE.SphereGeometry(0.235, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), suit);
+  shoulders.position.y = 1.53;
+  shoulders.scale.set(1, 0.55, 0.85);
+  g.add(shoulders);
+  const collar = cyl(0.09, 0.10, 0.06, cream, 12);
+  collar.position.y = 1.585;
+  g.add(collar);
+
+  // ---- arms, hanging, with the hands actually on the ends of them
+  [-1, 1].forEach((s2) => {
+    const arm = cyl(0.052, 0.048, 0.60, suit, 10);
+    arm.position.set(s2 * 0.262, 1.22, 0.015);
+    arm.rotation.z = s2 * -0.07;
     g.add(arm);
-    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.058, 10, 8), cream);
-    hand.position.set(ax + s * -0.07, 0.80, 0.02);
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.056, 10, 8), cream);
+    hand.position.set(s2 * 0.283, 0.915, 0.015);
     g.add(hand);
   });
-  [-0.10, 0.10].forEach((fx) => {
-    g.add(tbox(0.13, 0.07, 0.24, dark, fx, 0.035, 0.05));
-  });
 
+  // ---- the head. The face is printed round the sphere, not stuck on the
+  // front of it, so it still has a silhouette from the side.
   const head = new THREE.Group();
-  head.position.y = 1.62;
+  head.position.y = 1.735;
   g.add(head);
-  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.19, 20, 16), cream);
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.195, 24, 18), valHeadMaterial());
   head.add(skull);
-  const brim = cyl(0.245, 0.245, 0.018, dark, 20);
-  brim.position.y = 0.145;
-  head.add(brim);
-  const crown = cyl(0.145, 0.155, 0.135, dark, 18);
-  crown.position.y = 0.212;
-  head.add(crown);
-  const band = cyl(0.158, 0.158, 0.030, simple(0x7a231c, { rough: 0.6 }), 18);
-  band.position.y = 0.162;
-  head.add(band);
 
-  const ft = new THREE.CanvasTexture(valFace(256, { bg: '#efe2c4' }));
-  ft.colorSpace = THREE.SRGBColorSpace;
-  const faceMat = new THREE.MeshStandardMaterial({ map: ft, roughness: 0.46, transparent: true });
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(0.30, 0.30), faceMat);
-  face.position.set(0, 0.005, 0.186);
-  head.add(face);
+  // ---- and the bowler. A brim wider than the head, a crown that sits on top
+  // of the skull instead of inside it, and the band Valco has used since 1958.
+  const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.305, 0.305, 0.022, 24), dark);
+  brim.position.y = 0.098;
+  brim.scale.set(1, 1, 0.94);
+  head.add(brim);
+  const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.168, 0.181, 0.145, 22, 1, true), dark);
+  crown.position.y = 0.174;
+  head.add(crown);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.168, 22, 12, 0, Math.PI * 2, 0, Math.PI * 0.5), dark);
+  dome.position.y = 0.246;
+  dome.scale.set(1, 0.70, 1);
+  head.add(dome);
+  const band = cyl(0.184, 0.184, 0.038, simple(0x7a231c, { rough: 0.6 }), 22);
+  band.position.y = 0.126;
+  head.add(band);
 
   g.visible = false;
   world.add(g);
-  return { group: g, head, face };
+  return { group: g, head, face: skull };
 }
 
 /**
@@ -1396,6 +1428,14 @@ export function avatar(o = {}) {
   const hair = new THREE.Mesh(new THREE.BoxGeometry(0.205, 0.09, 0.215), simple(o.hair ?? 0x2c2018, { rough: 0.95 }));
   hair.position.y = 0.10;
   head.add(hair);
+  // two dark chips for eyes. At the distance a security camera sees you from
+  // that is all a face is anyway.
+  const eyeMat = simple(0x241c18, { rough: 0.8 });
+  [-0.042, 0.042].forEach((ex) => {
+    const e = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.016, 0.008), eyeMat);
+    e.position.set(ex, 0.018, 0.102);
+    head.add(e);
+  });
   g.add(head);
 
   g.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });

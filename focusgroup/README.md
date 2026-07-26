@@ -122,10 +122,14 @@ node tools/shot-focusgroup.mjs --day 4           # a tour of the flat
 node tools/shot-focusgroup.mjs --set studio      # the soundstage
 node tools/shot-focusgroup.mjs --cut smoke       # sit on a hidden camera
 node tools/shot-focusgroup.mjs --ad              # the cold open, frame by frame
+node tools/shot-focusgroup.mjs --props           # every model on a grid, row by row
 ```
 
 URL modes: `?day=1..6` drops straight into that morning, `?quick` is `?day=1`,
-`?gallery&set=flat|basement|studio&day=N` is a turntable with the HUD off.
+`?gallery&set=flat|basement|studio&day=N` is a turntable with the HUD off, and
+`?props` puts every model on a grid under one flat light — `&row=N` for one row
+head-on, `&only=valMascot` for a close-up. A model that is wrong is only wrong
+from one angle in one room, so there is a page that shows all of them at once.
 
 *Valco Home Products is not a real company. Participation is voluntary where
 required by law.*

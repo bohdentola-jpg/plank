@@ -6,6 +6,7 @@
 //   node tools/shot-focusgroup.mjs --set basement
 //   node tools/shot-focusgroup.mjs --cut kettle          # sit on a hidden camera
 //   node tools/shot-focusgroup.mjs --ad                  # the cold open, frame by frame
+//   node tools/shot-focusgroup.mjs --props               # every model on a grid
 // Exits non-zero on any page error.
 
 import { createServer } from 'node:http';
@@ -52,6 +53,8 @@ const TOURS = {
     ['kitchen', 1.5, -2.3, 3.05, 0.0],
     ['counter', 2.0, 0.0, 3.05, -0.1],
     ['bathroom', 0.8, -6.4, 3.14, -0.05],
+    ['bedroom-door', -2.00, -7.00, 2.80, 0.02],
+    ['bathroom-door', 0.90, -7.60, 3.19, 0.02],
   ],
   basement: [
     ['car', -0.9, 0.0, -1.57, 0.0],
@@ -80,6 +83,39 @@ page.on('console', (m) => {
   if (m.type() === 'error') errors.push(`[console] ${m.text()}`);
   else if (!quiet && m.type() === 'warning') console.log('[warn]', m.text());
 });
+
+// ------------------------------------------------------------------ the models
+if (flag('props')) {
+  const rows = parseInt(opt('rows', '9'), 10);
+  await page.goto(`http://127.0.0.1:${port}/focusgroup/?props&row=0`);
+  await page.waitForTimeout(1500);
+  await page.keyboard.press('Space');
+  await page.waitForTimeout(3500);
+  await page.screenshot({ path: join(root, 'qa/focusgroup-props-all.png') });
+  // and a close-up of everything with detail worth checking
+  const CLOSE = ['valMascot', 'avatar', 'coffeeMaker', 'clockRadio', 'figurine',
+    'cabinetMirror', 'television', 'studioCamera', 'servicesDoor', 'extractor',
+    'window7 (shut)', 'basin', 'lensBead'];
+  for (const name of CLOSE) {
+    const q = encodeURIComponent(name);
+    await page.goto(`http://127.0.0.1:${port}/focusgroup/?props&only=${q}&dist=2.4&y=1.35&h=1.05`);
+    await page.waitForTimeout(1100);
+    await page.keyboard.press('Space');
+    await page.waitForTimeout(2200);
+    await page.screenshot({ path: join(root, `qa/focusgroup-prop-${name.replace(/[^a-z0-9]/gi, '')}.png`) });
+  }
+  for (let r = 0; r < rows; r++) {
+    await page.goto(`http://127.0.0.1:${port}/focusgroup/?props&row=${r}&dist=10.6&y=2.8&h=0.9`);
+    await page.waitForTimeout(1200);
+    await page.keyboard.press('Space');
+    await page.waitForTimeout(2600);
+    await page.screenshot({ path: join(root, `qa/focusgroup-props-row${r}.png`) });
+  }
+  console.log(errors.length ? `\n${errors.length} error(s)\n${errors.slice(0, 10).join('\n')}` : '\nno page errors');
+  await browser.close();
+  server.close();
+  process.exit(errors.length ? 1 : 0);
+}
 
 // ------------------------------------------------------------------ the ad
 if (flag('ad')) {

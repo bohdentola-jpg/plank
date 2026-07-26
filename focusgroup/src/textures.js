@@ -554,6 +554,73 @@ export function clearCaches() {
 // goes. He has been on every Valco package since 1958 and nobody has ever
 // asked to see the artwork he was drawn from.
 
+/**
+ * VAL's face wrapped for a sphere, rather than pasted on the front of one as a
+ * flat plane — a plane big enough to read overhangs the silhouette and turns
+ * the head into a white disc. Equirectangular: u = 0.25 is +Z on a three.js
+ * sphere, so that is where the face goes.
+ */
+export function valHeadTexture(w = 512, h = 256) {
+  return mk(w, (ctx, ww, hh) => {
+    ctx.fillStyle = '#f2e6c8';
+    ctx.fillRect(0, 0, ww, hh);
+    // painted resin is never quite even
+    const R0 = rng(58);
+    blotches(ctx, ww, hh, 14, '208,190,150', 12, 46, 0.16, R0);
+
+    const cx = ww * 0.25, cy = hh * 0.5;
+    const R = hh * 0.30;
+
+    ctx.fillStyle = 'rgba(214,110,92,0.5)';
+    [-1, 1].forEach((s) => {
+      ctx.beginPath();
+      ctx.ellipse(cx + s * R * 0.66, cy + R * 0.30, R * 0.26, R * 0.17, 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    [-1, 1].forEach((s) => {
+      const ex = cx + s * R * 0.44;
+      const ey = cy - R * 0.18;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.ellipse(ex, ey, R * 0.21, R * 0.25, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#1a1410';
+      ctx.lineWidth = R * 0.045;
+      ctx.stroke();
+      ctx.fillStyle = '#141014';
+      ctx.beginPath();
+      ctx.arc(ex + R * 0.02, ey + R * 0.03, R * 0.11, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(ex + R * 0.07, ey - R * 0.06, R * 0.038, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // and the smile, which goes further round than a smile goes
+    ctx.fillStyle = '#b03a30';
+    ctx.beginPath();
+    ctx.arc(cx, cy + R * 0.04, R * 0.66, 0.19 * Math.PI, 0.81 * Math.PI);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#1a1410';
+    ctx.lineWidth = R * 0.075;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(cx, cy + R * 0.04, R * 0.66, 0.17 * Math.PI, 0.83 * Math.PI);
+    ctx.stroke();
+  }, h);
+}
+
+/** A three.js head sphere with VAL printed on it, facing +Z. */
+export function valHeadMaterial() {
+  const tex = new THREE.CanvasTexture(valHeadTexture());
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.RepeatWrapping;
+  return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.5 });
+}
+
 export function valFace(size = 256, o = {}) {
   return mk(size, (ctx, s) => {
     ctx.fillStyle = o.bg || '#e8dcc0';

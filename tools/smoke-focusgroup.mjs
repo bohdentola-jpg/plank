@@ -264,6 +264,35 @@ await step('every lens has an angle and every angle has a lens', async () => {
   }
 });
 
+await step('no doorway has been papered over', async () => {
+  const day = story.dayByNumber(4);
+  const w = apartment.buildFlat({ ...day.dress, lenses: day.lenses }, day.light, 'sodium');
+  // the room-side wallpaper linings are geometry with no collider, so a hole
+  // missing from one seals a door you can still walk through — invisible to
+  // the reachability check and extremely visible to a player
+  const linings = [];
+  w.group.traverse((o) => { if (o.userData?.lining) linings.push(o.userData.lining); });
+  if (linings.length < 8) throw new Error(`only ${linings.length} wall linings were built`);
+
+  // horiz: the run is along x at a fixed z. Otherwise along z at a fixed x.
+  const DOORS = [
+    { name: 'the bedroom door', horiz: true, on: -5.40, a0: -3.00, a1: -2.14, y1: 2.04 },
+    { name: 'the bathroom door', horiz: true, on: -5.40, a0: 0.60, a1: 1.40, y1: 2.04 },
+  ];
+  for (const d of DOORS) {
+    for (const L of linings) {
+      if (L.horiz !== d.horiz) continue;
+      if (Math.abs(L.on - d.on) > 0.2) continue;
+      const overA = Math.min(L.at1, d.a1) - Math.max(L.at0, d.a0);
+      const overY = Math.min(L.y1, d.y1) - Math.max(L.y0, 0);
+      if (overA > 0.05 && overY > 0.05) {
+        throw new Error(`${d.name} is papered over: a lining covers `
+          + `${overA.toFixed(2)}m of the ${(d.a1 - d.a0).toFixed(2)}m opening`);
+      }
+    }
+  }
+});
+
 await step('the gift slots are all real places in the flat', async () => {
   const w = apartment.buildFlat({ gifts: false, lenses: [] }, 0, 'sodium');
   for (const s of apartment.GIFT_SLOTS) {
@@ -306,6 +335,98 @@ await step('the soundstage is built and the audience is in it', async () => {
   if (!w.props.val || w.props.val.group.visible) throw new Error('VAL should not be out yet');
   w.props.rigUp(1);
   w.props.rigUp(0);
+});
+
+await step('every model stands on the floor where it was put', async () => {
+  // Build each prop alone and check the three things that are always true and
+  // are always what goes wrong: it sits on y=0, it is where you asked for it,
+  // and the collider it registers is the shape you can actually see.
+  const at = { x: 4, z: -3 };
+  const CASES = [
+    ['sofa', (w) => props.sofa(w, at.x, at.z, 0), { h: 1.05 }],
+    ['sofa turned', (w) => props.sofa(w, at.x, at.z, Math.PI / 2), { h: 1.05 }],
+    ['coffeeTable', (w) => props.coffeeTable(w, at.x, at.z), { h: 0.6 }],
+    ['television', (w) => props.television(w, at.x, at.z, 0), { h: 1.3 }],
+    ['television turned', (w) => props.television(w, at.x, at.z, Math.PI / 2), { h: 1.3 }],
+    ['sideboard', (w) => props.sideboard(w, at.x, at.z, 0), { h: 0.9 }],
+    ['standardLamp', (w) => props.standardLamp(w, at.x, at.z), { h: 1.7, loose: true }],
+    ['radiator', (w) => props.radiator(w, at.x, at.z, 0), { h: 0.85 }],
+    ['counterRun', (w) => props.counterRun(w, at.x - 0.9, at.x + 0.9, at.z, { face: -1 }), { h: 0.95 }],
+    ['sink', (w) => props.sink(w, at.x, at.z), { h: 1.2, floats: 0.65, noCollider: true }],
+    ['fridge', (w) => props.fridge(w, at.x, at.z, -Math.PI / 2), { h: 1.5 }],
+    ['cooker', (w) => props.cooker(w, at.x, at.z), { h: 1.0 }],
+    ['coffeeMaker', (w) => props.coffeeMaker(w, at.x, at.z, Math.PI), { h: 1.3, floats: 0.80, noCollider: true }],
+    ['dinetteTable', (w) => props.dinetteTable(w, at.x, at.z), { h: 0.8 }],
+    ['chair', (w) => props.chair(w, at.x, at.z, 0), { h: 0.9 }],
+    ['chair turned', (w) => props.chair(w, at.x, at.z, Math.PI / 2), { h: 0.9 }],
+    ['bed', (w) => props.bed(w, at.x, at.z, 0), { h: 1.0 }],
+    ['bed turned', (w) => props.bed(w, at.x, at.z, Math.PI / 2), { h: 1.0 }],
+    ['bedsideTable', (w) => props.bedsideTable(w, at.x, at.z), { h: 0.6 }],
+    ['wardrobe', (w) => props.wardrobe(w, at.x, at.z, Math.PI / 2), { h: 2.0 }],
+    ['basin', (w) => props.basin(w, at.x, at.z), { h: 1.1 }],
+    ['bath', (w) => props.bath(w, at.x, at.z, Math.PI / 2), { h: 0.7 }],
+    ['toilet', (w) => props.toilet(w, at.x, at.z, 0), { h: 0.85 }],
+    ['parcel', (w) => props.parcel(w, at.x, at.z), { h: 0.45 }],
+    ['studioCamera', (w) => props.studioCamera(w, at.x, at.z, { rotY: Math.PI }), { h: 1.9 }],
+    ['servicesDoor', (w) => props.servicesDoor(w, at.x, at.z, 0), { h: 2.2 }],
+    ['valMascot', (w) => { const v = props.valMascot(w, at.x, at.z, {}); v.group.visible = true; }, { h: 2.1, noCollider: true }],
+  ];
+
+  const box = new THREE.Box3();
+  const tmp = new THREE.Box3();
+  for (const [name, build, o] of CASES) {
+    const w = new worldMod.World('t');
+    build(w);
+    w.group.updateMatrixWorld(true);
+
+    box.makeEmpty();
+    w.group.traverse((m) => {
+      if (!m.isMesh || !m.geometry) return;
+      tmp.setFromObject(m);
+      box.union(tmp);
+    });
+    if (box.isEmpty()) throw new Error(`${name} produced no geometry`);
+    for (const v of [box.min, box.max]) {
+      if (![v.x, v.y, v.z].every(Number.isFinite)) throw new Error(`${name} has a non-finite bound`);
+    }
+
+    // ---- feet on the floor
+    const floats = o.floats ?? 0;
+    if (box.min.y < floats - 0.03) {
+      throw new Error(`${name} sinks ${(floats - box.min.y).toFixed(3)}m through the floor`);
+    }
+    if (!o.floats && box.min.y > 0.08) {
+      throw new Error(`${name} hovers ${box.min.y.toFixed(3)}m above the floor`);
+    }
+    if (box.max.y > (o.h ?? 2.45)) {
+      throw new Error(`${name} is ${box.max.y.toFixed(2)}m tall, over its ${o.h}m budget`);
+    }
+
+    // ---- where you asked for it
+    const cx = (box.min.x + box.max.x) / 2, cz = (box.min.z + box.max.z) / 2;
+    const slack = o.loose ? 0.55 : 0.35;
+    if (Math.abs(cx - at.x) > slack || Math.abs(cz - at.z) > slack) {
+      throw new Error(`${name} is centred at (${cx.toFixed(2)}, ${cz.toFixed(2)}), not (${at.x}, ${at.z})`);
+    }
+
+    // ---- and the collider is the shape you can see
+    if (o.noCollider) continue;
+    if (!w.colliders.length) throw new Error(`${name} registered no collider`);
+    const c = w.colliders.reduce((a2, b2) => ({
+      x0: Math.min(a2.x0, b2.x0), x1: Math.max(a2.x1, b2.x1),
+      z0: Math.min(a2.z0, b2.z0), z1: Math.max(a2.z1, b2.z1),
+    }));
+    const overX = Math.min(c.x1, box.max.x) - Math.max(c.x0, box.min.x);
+    const overZ = Math.min(c.z1, box.max.z) - Math.max(c.z0, box.min.z);
+    const visX = box.max.x - box.min.x, visZ = box.max.z - box.min.z;
+    if (overX < visX * 0.45 || overZ < visZ * 0.45) {
+      throw new Error(`${name}: the collider (${(c.x1 - c.x0).toFixed(2)} x ${(c.z1 - c.z0).toFixed(2)}) `
+        + `does not cover the model (${visX.toFixed(2)} x ${visZ.toFixed(2)}) — a turn probably swapped the wrong axis`);
+    }
+    if (c.x1 - c.x0 > visX + 0.5 || c.z1 - c.z0 > visZ + 0.5) {
+      throw new Error(`${name}: the collider is much bigger than the model — you will bump into thin air`);
+    }
+  }
 });
 
 await step('the mascot, the avatar and the animator all hold together', async () => {

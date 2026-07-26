@@ -278,27 +278,27 @@ export function buildStudio(dress = {}) {
 
   // ---------------------------------------------------------------- things
   w.addInteract({
-    id: 'monitors', key: 'E', r: 3.0, cone: 0.5,
+    id: 'monitors', key: 'E', r: 4.2, cone: 0.35,
     pos: { x: 5.9, y: 1.55, z: -5.70 },
     label: 'LOOK AT THE MONITORS',
   });
   w.addInteract({
-    id: 'window', key: 'E', r: 2.0, cone: 0.4,
+    id: 'window', key: 'E', r: 2.6, cone: 0.35,
     pos: { x: -2.00, y: 1.45, z: 1.20 },
     label: 'CROSS TO THE WINDOW',
   });
   w.addInteract({
-    id: 'val', key: 'E', r: 2.6, cone: 0.4, enabled: false,
+    id: 'val', key: 'E', r: 3.4, cone: 0.3, enabled: false,
     pos: { x: 0.0, y: 1.5, z: 0.0 },
-    label: 'VAL',
+    label: 'LOOK AT HIM',
   });
   w.addInteract({
-    id: 'mark', key: 'E', r: 1.4, cone: -1, enabled: false,
+    id: 'mark', key: 'E', r: 1.7, cone: -1, enabled: false,
     pos: { x: -2.35, y: 1.45, z: -0.30 },
     label: 'HIT THE MARK',
   });
   w.addInteract({
-    id: 'line', key: 'E', r: 1.6, cone: -1, enabled: false,
+    id: 'line', key: 'E', r: 2.0, cone: -1, enabled: false,
     pos: { x: -2.35, y: 1.45, z: -0.30 },
     label: 'SAY THE LINE',
   });
