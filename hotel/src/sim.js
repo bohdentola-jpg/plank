@@ -555,21 +555,28 @@ function walkOut(state, g, ev) {
   ev('walkout', { guest: g });
 }
 
-function settleBill(state, agg, g, factor, ev) {
+// How much of a booking a guest has actually used. A normal check-out has used
+// all of it; a stay cut short by a save or a frozen tab has not.
+export function nightsSlept(state, g) {
+  const left = g.checkoutDay ? Math.max(0, g.checkoutDay - state.day) : g.nights - 1;
+  return clamp(g.nights - left, 1, g.nights);
+}
+
+function settleBill(state, agg, g, factor, ev, nights = g.nights) {
   const room = roomById(state, g.roomId);
   const rate = room ? billedRate(state, room, g, agg) : TIERS[1].rate;
-  const base = rate * g.nights;
-  const extras = agg.pernight * g.nights * Math.max(1, Math.round(g.party * 0.7));
+  const base = rate * nights;
+  const extras = agg.pernight * nights * Math.max(1, Math.round(g.party * 0.7));
   const tip = Math.round(base * g.tipRate * clamp((g.mood - 0.6) / 0.4, 0, 1.2));
   const total = Math.round((base + extras) * factor) + tip;
   state.cash += total;
   state.today.revenue += Math.round(base * factor);
   state.today.incidentals += Math.round(extras * factor);
   state.today.tips += tip;
-  state.today.nights += g.nights;
+  state.today.nights += nights;
   state.today.guests++;
   state.totals.earned += total;
-  state.totals.nights += g.nights;
+  state.totals.nights += nights;
   state.totals.guests++;
   g.bill = total;
   ev('pay', { guest: g, total, factor });
@@ -1080,7 +1087,9 @@ export function offlineCatchUp(state, realSeconds) {
   let preSettled = 0;
   for (const g of state.guests) {
     if (g.state === 'inroom' || g.state === 'checkout' || g.state === 'toroom' || g.state === 'tocheckout') {
-      settleBill(state, agg, g, cov.have.clerk ? 1 : 0.7, () => {});
+      // Only the nights they have slept, the same rule the save uses — otherwise
+      // a two-minute stall cashes out every booking in the building in full.
+      settleBill(state, agg, g, cov.have.clerk ? 1 : 0.7, () => {}, nightsSlept(state, g));
       preSettled += g.bill;
     }
   }
@@ -1150,10 +1159,14 @@ export function offlineCatchUp(state, realSeconds) {
     }
   }
 
-  const wholeDays = Math.floor(days);
-  state.day += wholeDays;
-  state.clock = (state.clock + (days - wholeDays) * 1440) % 1440;
-  state.totals.days += wholeDays;
+  // Advance the calendar off the total minutes: taking the whole days first and
+  // then modulo-ing the remainder silently swallowed any midnight the fractional
+  // part crossed, so short catch-ups could never roll the day over at all.
+  const totalMin = state.clock + days * 1440;
+  const daysPassed = Math.floor(totalMin / 1440);
+  state.day += daysPassed;
+  state.clock = totalMin % 1440;
+  state.totals.days += daysPassed;
   report.repTo = starRating(state, aggregate(state));
 
   if (!rooms) report.note = 'Nothing to sell.';
@@ -1179,10 +1192,7 @@ export function serialize(state) {
   for (const g of state.guests) {
     if (!['inroom', 'toroom', 'checkout', 'tocheckout'].includes(g.state)) continue;
     const room = g.roomId ? roomById(state, g.roomId) : null;
-    // Only the nights they have actually slept — paying the whole booking would
-    // let a player reload on a full hotel to collect three nights in one second.
-    const left = g.checkoutDay ? Math.max(0, g.checkoutDay - state.day) : g.nights - 1;
-    const used = clamp(g.nights - left, 1, g.nights);
+    const used = nightsSlept(state, g);
     escrow += (room ? billedRate(state, room, g, agg) : TIERS[1].rate) * used + agg.pernight * used;
     escrowNights += used;
   }

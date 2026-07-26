@@ -279,14 +279,23 @@ class App {
       this.awayReport(report);
       return;
     }
+    // A throttled background tab hands us a whole minute of missed time in one
+    // synchronous replay. Firing every event as it arrives would schedule sixty
+    // seconds of door chimes and cash registers at the same instant, so a long
+    // replay is tallied and reported once instead of played back.
+    const burst = real > 1.2;
+    const tally = burst ? { pay: 0, cash: 0, walkout: 0, arrive: 0, cleaned: 0, broke: 0 } : null;
+    const ev = burst
+      ? (kind, data) => this.tallyEvent(tally, kind, data)
+      : (kind, data) => this.onEvent(kind, data);
     let left = real * this.state.speed;
     let guard = 0;
-    const ev = (kind, data) => this.onEvent(kind, data);
     while (left > 0.0001 && guard++ < 5000) {
       const d = Math.min(0.1, left);
       stepSim(this.state, d, ev);
       left -= d;
     }
+    if (burst) this.flushTally(tally);
     // Tip checks scan the whole hotel; once a second is plenty.
     if (this.state.t - (this._tipsAt || 0) > 1) { this._tipsAt = this.state.t; this.checkTips(); }
   }
@@ -350,22 +359,45 @@ class App {
     }
   }
 
-  onDayEnd(report) {
+  // Replay bookkeeping. The day roll and the milestones still matter; sixty
+  // simultaneous sound effects do not.
+  tallyEvent(tally, kind, data) {
+    if (kind === 'day') { this.onDayEnd(data.report, true); return; }
+    if (kind === 'pay') { tally.pay++; tally.cash += data.total; return; }
+    if (kind === 'walkout') { tally.walkout++; return; }
+    if (kind === 'arrive') { tally.arrive++; return; }
+    if (kind === 'cleaned') { tally.cleaned++; return; }
+    if (kind === 'broke') { tally.broke++; }
+  }
+
+  flushTally(tally) {
+    if (tally.pay) {
+      sfx.cash();
+      this.hud.toast(`${tally.pay} checked out while this tab was idle — ${money(tally.cash)}`, 'money', '💵');
+    }
+    if (tally.walkout) this.hud.toast(`${tally.walkout} gave up waiting and drove on.`, 'bad', '🚪');
+    if (tally.broke) this.hud.toast(`${tally.broke} room${tally.broke > 1 ? 's' : ''} broke down.`, 'bad', '🔧');
+    if (!tally.pay && !tally.walkout && !tally.broke && tally.arrive) {
+      this.hud.toast(`${tally.arrive} arrived while you were away.`, 'info', '🚶');
+    }
+  }
+
+  onDayEnd(report, quiet = false) {
     const s = this.state;
     const net = report.revenue + report.incidentals + report.tips - report.wages - report.upkeep;
     logLine(s, `Day ${report.day} closed ${net >= 0 ? 'up' : 'down'} ${money(Math.abs(net))} on ${report.nights} night${report.nights === 1 ? '' : 's'}.`, net >= 0 ? 'good' : 'bad');
-    this.hud.toast(`DAY ${report.day} · ${net >= 0 ? '+' : ''}${money(net)} · ${report.nights} nights sold`, net >= 0 ? 'good' : 'bad', '📅');
+    if (!quiet) this.hud.toast(`DAY ${report.day} · ${net >= 0 ? '+' : ''}${money(net)} · ${report.nights} nights sold`, net >= 0 ? 'good' : 'bad', '📅');
 
     const stars = Math.floor(starRating(s));
     if (stars > (s.milestones.stars || 0)) {
       s.milestones.stars = stars;
-      if (stars >= 2) { sfx.fanfare(); this.hud.toast(`${starLabel(starRating(s))} — word is getting around.`, 'good', '★'); }
+      if (stars >= 2) { if (!quiet) sfx.fanfare(); this.hud.toast(`${starLabel(starRating(s))} — word is getting around.`, 'good', '★'); }
     }
     const rooms = builtRooms(s).length;
     for (const m of MILESTONES) {
       if (rooms >= m.rooms && !s.milestones[m.id] && m.rooms > 0) {
         s.milestones[m.id] = true;
-        sfx.fanfare();
+        if (!quiet) sfx.fanfare();
         this.hud.toast(m.text, 'good', '🏨');
       }
     }

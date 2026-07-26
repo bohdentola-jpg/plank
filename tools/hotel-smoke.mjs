@@ -400,6 +400,57 @@ await step('guests use the furniture and the front door', async () => {
   must(!solid.length, `path crosses the shopfront at ${JSON.stringify(solid[0])}`);
 });
 
+await step('a frozen tab does not cash out unfinished stays in full', async () => {
+  // Regression: offlineCatchUp settled mid-stay guests for their whole booking,
+  // so a two-minute stall paid every night in the building and freed the rooms.
+  const s = sim.newHotel();
+  s.cash = 30000;
+  s.youAuto = true;
+  for (const r of s.rooms) { r.built = true; r.state = 'empty'; }
+  sim.hire(s, 'clerk');
+  sim.hire(s, 'housekeeper');
+  let multi = [];
+  for (let i = 0; i < 40000; i++) {
+    sim.stepSim(s, 0.1, () => {});
+    multi = s.guests.filter((g) => g.state === 'inroom' && g.nights > 1 && g.checkoutDay > s.day);
+    if (multi.length) break;
+  }
+  must(multi.length, 'wanted a guest partway through a multi-night stay');
+  must(sim.nightsSlept(s, multi[0]) < multi[0].nights, 'a guest mid-stay has not slept every night');
+  const inHouse = s.guests.filter((x) => ['inroom', 'toroom', 'checkout', 'tocheckout'].includes(x.state));
+  const everyBookedNight = inHouse.reduce((n, x) => {
+    const room = x.roomId ? sim.roomById(s, x.roomId) : null;
+    return n + (room ? sim.roomRate(s, room) : 0) * x.nights;
+  }, 0);
+  const sleptNights = inHouse.reduce((n, x) => n + sim.nightsSlept(s, x), 0);
+  const bookedNights = inHouse.reduce((n, x) => n + x.nights, 0);
+  must(sleptNights < bookedNights, 'expected somebody to be partway through their stay');
+  const r = sim.offlineCatchUp(s, 120);
+  must(r.settled > 0, 'nobody was settled');
+  must(r.settled < everyBookedNight,
+    `settled ${r.settled} against ${everyBookedNight} of booked nights for ${inHouse.length} guests`);
+});
+
+await step('a catch-up rolls the day over when it crosses midnight', async () => {
+  // Regression: whole days were added first and the remainder modulo'd, which
+  // threw away any midnight the fractional part crossed.
+  const s = sim.newHotel();
+  s.cash = 60000;
+  for (const r of s.rooms) { r.built = true; r.state = 'empty'; }
+  for (const role of ['clerk', 'housekeeper', 'maintenance', 'bellhop']) sim.hire(s, role);
+  s.clock = 23 * 60;
+  const day0 = s.day;
+  sim.offlineCatchUp(s, data.DAY_SECONDS * 0.5);      // half a day, from 11pm
+  must(s.day === day0 + 1, `day did not roll: ${day0} -> ${s.day} at ${(s.clock / 60).toFixed(1)}h`);
+  must(s.clock >= 0 && s.clock < 1440, `clock out of range: ${s.clock}`);
+
+  const s2 = sim.newHotel();
+  s2.clock = 60;
+  const d2 = s2.day;
+  sim.offlineCatchUp(s2, data.DAY_SECONDS * 0.2);     // early morning, no midnight
+  must(s2.day === d2, `day rolled when it should not have: ${d2} -> ${s2.day}`);
+});
+
 await step('commands refuse what you cannot afford', async () => {
   const s = sim.newHotel();
   s.cash = 0;
