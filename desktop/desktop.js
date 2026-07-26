@@ -1,4 +1,4 @@
-// EB GAMES 95 — a small operating system for a shelf of six games.
+// EB GAMES 95 — a small operating system for a shelf of seven games.
 // Boot POST → teal desktop → double-click a cartridge. The Hi-Fi keeps
 // playing while you game in another tab, which is the whole point of tabs.
 
@@ -200,6 +200,24 @@ const ICONS = {
     '...wwwwwwwwwww..',
     '................',
   ], { w: '#f4f2ec', u: '#000080' }),
+  quahog: pixelIcon([
+    '................',
+    '.....bbbbbb.....',
+    '...bbssssssbb...',
+    '..bsssssssssssb.',
+    '..bsswwsswwsssb.',
+    '..bswwkwswwkwsb.',
+    '..bsswwsswwsssb.',
+    '..bssssrrssssbb.',
+    '...bssssssssbb..',
+    '....bbssssbb....',
+    '......wwww......',
+    '.....wwwwww.....',
+    '.....gg..gg.....',
+    '.kkkkkkkkkkkkkk.',
+    'kyykyykyykyykyyk',
+    'kkkkkkkkkkkkkkkk',
+  ], { b: '#8a5a2c', s: '#f6cfa0', w: '#f4f2ec', k: '#141418', r: '#8c3a3a', g: '#3d8b46', y: '#f0c93a' }),
 };
 
 // ------------------------------------------------------------------ app copy
@@ -263,6 +281,22 @@ const GAMES = {
       two on one keyboard, or plug in two pads.`,
     shots: ['docs/melee-title.png', 'docs/melee-field.png'],
     meta: ['platform fighter', '1–2 players', 'pads + keyboard', 'records auto-save'],
+  },
+  quahog: {
+    title: 'QUAHOG HIT & RUN',
+    tag: 'Six Griffins. One town. No supervision.',
+    path: 'quahog/',
+    desc: `A cel-shaded open world in Quahog, Rhode Island, built like the licensed
+      cartoon drivers of 2003: seven levels, one Griffin per level, story jobs that
+      unlock the next one, a bonus job and seven collectibles in each. Drive the whole
+      town — Spooner Street is a real dead end with the right houses in the right
+      order, the Drunken Clam is on its corner, and Al Harrington's has the wacky
+      waving inflatable arm-flailing tube men out front. Every silhouette is inked by
+      a screen-space edge pass, the cast moves around town on a 24-hour clock, and
+      eighteen cutaway gags are hidden on TV markers waiting to stop the game dead
+      for a joke.`,
+    shots: ['docs/quahog-street.png', 'docs/quahog-cutscene.png'],
+    meta: ['open-world action', '1 player', 'mouse + keyboard, pad', 'story auto-saves'],
   },
   noclip: {
     title: 'NOCLIP',
@@ -443,7 +477,7 @@ function aboutWindow() {
   body.className = 'about';
   body.innerHTML = `
     <h1>EB GAMES 95</h1>
-    <p>Six 3D games, one repo, zero asset files — every model, texture, animation,
+    <p>Seven 3D games, one repo, zero asset files — every model, texture, animation,
     and note of music is generated in code and runs straight in the browser.</p>
     <ul>
       <li><b>VARSITY 27</b> — high school football, careers and all</li>
@@ -451,6 +485,7 @@ function aboutWindow() {
       <li><b>RIM CITY</b> — 2-on-2 arcade basketball, ON FIRE included</li>
       <li><b>LOAM</b> — voxel survival with a generative score</li>
       <li><b>MASCOT MELEE 64</b> — twelve mascots, one trophy, no rules</li>
+      <li><b>QUAHOG HIT & RUN</b> — cel-shaded open world, seven levels of it</li>
       <li><b>NOCLIP</b> — twenty-three levels of the backrooms, on tape</li>
     </ul>
     <p>Plug in a PS5 or Xbox controller for the sports titles. Games open in their
@@ -638,6 +673,7 @@ const DESK_APPS = [
   { id: 'rimcity', label: 'RIM CITY' },
   { id: 'loam', label: 'LOAM' },
   { id: 'melee', label: 'MASCOT MELEE 64' },
+  { id: 'quahog', label: 'QUAHOG HIT & RUN' },
   { id: 'noclip', label: 'NOCLIP' },
   { id: 'hifi', label: 'EB Hi-Fi' },
   { id: 'about', label: 'About' },
@@ -690,6 +726,7 @@ function buildStartMenu() {
   mk(ICONS.rimcity, 'RIM CITY', () => openWin('rimcity'));
   mk(ICONS.loam, 'LOAM', () => openWin('loam'));
   mk(ICONS.melee, 'MASCOT MELEE 64', () => openWin('melee'));
+  mk(ICONS.quahog, 'QUAHOG HIT & RUN', () => openWin('quahog'));
   mk(ICONS.noclip, 'NOCLIP (horror)', () => openWin('noclip'));
   items.insertAdjacentHTML('beforeend', '<div class="sm-sep"></div>');
   mk(ICONS.hifi, 'EB Hi-Fi (music)', () => openWin('hifi'));
@@ -757,6 +794,7 @@ function boot() {
     '  RIM CITY .............................. OK',
     '  LOAM .................................. OK',
     '  MASCOT MELEE 64 ....................... OK',
+    '  QUAHOG HIT & RUN ...................... OK',
     '  NOCLIP ......................... [SEE NOTE]',
     'SOUND : EB-FM SYNTHESIS .................. OK',
     'NOTE  : NOCLIP TAPE IS NOT A CARTRIDGE.',
@@ -797,7 +835,8 @@ makeWindow('biginning', "BIG INNING '27", ICONS.biginning, gameWindow('biginning
 makeWindow('rimcity', 'RIM CITY', ICONS.rimcity, gameWindow('rimcity'), { x: 200, y: 70 });
 makeWindow('loam', 'LOAM', ICONS.loam, gameWindow('loam'), { x: 260, y: 110 });
 makeWindow('melee', 'MASCOT MELEE 64', ICONS.melee, gameWindow('melee'), { x: 290, y: 130 });
-makeWindow('noclip', 'NOCLIP', ICONS.noclip, gameWindow('noclip'), { x: 320, y: 150 });
+makeWindow('quahog', 'QUAHOG HIT & RUN', ICONS.quahog, gameWindow('quahog'), { x: 320, y: 150 });
+makeWindow('noclip', 'NOCLIP', ICONS.noclip, gameWindow('noclip'), { x: 350, y: 170 });
 makeWindow('hifi', 'EB Hi-Fi', ICONS.hifi, hifiWindow(), { x: 460, y: 90 });
 makeWindow('about', 'About EB GAMES 95', ICONS.about, aboutWindow(), { x: 380, y: 150 });
 

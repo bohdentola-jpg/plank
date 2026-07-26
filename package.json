@@ -1,12 +1,12 @@
 {
   "name": "eb-games-shelf",
   "version": "2.0.0",
-  "description": "EB GAMES SHELF \u2014 VARSITY 27 (football), BIG INNING '27 (baseball), RIM CITY (basketball), LOAM (voxels), MASCOT MELEE 64 (platform fighter), NOCLIP (backrooms horror). Six 3D browser games, zero asset files, one Windows-95 desktop to launch them.",
+  "description": "EB GAMES SHELF — VARSITY 27 (football), BIG INNING '27 (baseball), RIM CITY (basketball), LOAM (voxels), MASCOT MELEE 64 (platform fighter), NOCLIP (backrooms horror), QUAHOG HIT & RUN (open world). Seven 3D browser games, zero asset files, one Windows-95 desktop to launch them.",
   "type": "module",
   "scripts": {
     "start": "python3 serve.py",
     "shot": "node tools/shot.mjs",
-    "smoke": "node tools/smoke.mjs && node tools/smoke-baseball.mjs && node tools/smoke-rimcity.mjs && node tools/smoke-loam.mjs && node tools/melee-sim.mjs 6 && node tools/smoke-backrooms.mjs",
+    "smoke": "node tools/smoke.mjs && node tools/smoke-baseball.mjs && node tools/smoke-rimcity.mjs && node tools/smoke-loam.mjs && node tools/melee-sim.mjs 6 && node tools/smoke-backrooms.mjs && node tools/smoke-quahog.mjs",
     "smoke:varsity": "node tools/smoke.mjs",
     "smoke:baseball": "node tools/smoke-baseball.mjs",
     "smoke:rimcity": "node tools/smoke-rimcity.mjs",
@@ -19,7 +19,9 @@
     "walk:backrooms": "node tools/walk-backrooms.mjs",
     "hunt:backrooms": "node tools/hunt-backrooms.mjs",
     "build:noclip-online": "node tools/build-noclip-online.mjs",
-    "net:noclip": "node tools/net-noclip.mjs"
+    "net:noclip": "node tools/net-noclip.mjs",
+    "smoke:quahog": "node tools/smoke-quahog.mjs",
+    "play:quahog": "node tools/play-quahog.mjs"
   },
   "dependencies": {
     "three": "^0.160.0"

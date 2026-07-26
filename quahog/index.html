@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>QUAHOG HIT &amp; RUN — Family Guy</title>
+<link rel="stylesheet" href="styles.css" />
+<script type="importmap">
+{ "imports": { "three": "../vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============================ BOOT ============================ -->
+  <div id="sting"><canvas id="sting-art" width="640" height="240"></canvas></div>
+  <div id="boot">
+    <div class="boot-inner">
+      <canvas id="boot-art" width="560" height="240"></canvas>
+      <div class="boot-press">PRESS START</div>
+      <div class="boot-sub">A FAMILY GUY OPEN WORLD · QUAHOG, RHODE ISLAND</div>
+    </div>
+  </div>
+
+  <!-- ============================ TITLE ============================ -->
+  <section class="screen" id="scr-title">
+    <div id="title-3d"></div>
+    <div class="title-overlay">
+      <canvas id="title-logo" width="820" height="320"></canvas>
+      <div class="title-menu">
+        <button id="title-continue" class="menu-btn">CONTINUE</button>
+        <button id="title-new" class="menu-btn">NEW GAME</button>
+        <button id="title-levels" class="menu-btn">LEVEL SELECT</button>
+        <button id="title-free" class="menu-btn">FREE ROAM</button>
+        <button id="title-help" class="menu-btn">HOW TO PLAY</button>
+      </div>
+      <div class="title-foot">
+        <span class="title-build">QUAHOG HIT &amp; RUN · BUILD 2</span>
+        <a class="shelf-link" href="../index.html" title="Back to the EB GAMES library">◀ EB GAMES</a>
+      </div>
+      <div id="title-levelcard"></div>
+    </div>
+  </section>
+
+  <!-- ======================= CHARACTER SELECT ======================= -->
+  <section class="screen" id="scr-select">
+    <header class="ribbon"><span class="step">WHO ARE YOU TODAY?</span> THE GRIFFINS</header>
+    <div class="select-body">
+      <div id="select-3d"></div>
+      <div id="select-panel">
+        <div id="select-cards"></div>
+        <div id="select-info"></div>
+        <button id="select-go" class="cta">GET OUT THERE ▸</button>
+        <button id="select-back" class="cta ghost">◂ BACK</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ WORLD ============================ -->
+  <section class="screen" id="scr-world">
+    <div id="world-holder"></div>
+
+    <div id="hud">
+      <div id="hud-tl">
+        <canvas id="hud-face" width="120" height="120"></canvas>
+        <div id="hud-stats">
+          <div id="hud-name">PETER</div>
+          <div id="hud-coins">🪙 0</div>
+          <div id="hud-stars"></div>
+          <div id="hud-health"><i></i></div>
+        </div>
+      </div>
+
+      <div id="hud-tr">
+        <div id="hud-clock">8:00 AM</div>
+        <div id="hud-day">MONDAY</div>
+        <div id="hud-where">SPOONER STREET</div>
+      </div>
+
+      <div id="hud-objective">
+        <div class="ob-title"></div>
+        <div class="ob-line"></div>
+        <div class="ob-timer"></div>
+      </div>
+
+      <div id="hud-mini">
+        <canvas id="minimap" width="230" height="230"></canvas>
+        <div id="mini-compass">N</div>
+      </div>
+
+      <div id="hud-speedo"><span id="speedo-num">0</span><small>MPH</small></div>
+      <div id="hud-prompt"></div>
+      <div id="hud-toast"></div>
+      <div id="hud-subtitle"></div>
+      <div id="hud-damage"></div>
+    </div>
+
+    <!-- cinematic layer -->
+    <div id="cine">
+      <div class="cine-bar top"></div>
+      <div class="cine-bar bottom"></div>
+      <div id="cine-caption"><b></b><span></span></div>
+      <div id="cine-title"></div>
+      <div class="cine-skip">SPACE — SKIP</div>
+    </div>
+    <div id="gag-flash"></div>
+
+    <!-- map -->
+    <div id="map-overlay" class="big-overlay">
+      <div class="map-card">
+        <h2>QUAHOG</h2>
+        <canvas id="bigmap" width="760" height="760"></canvas>
+        <div id="map-legend"></div>
+        <button class="cta ghost" id="map-close">CLOSE (M)</button>
+      </div>
+    </div>
+
+    <!-- pause -->
+    <div id="pause" class="big-overlay">
+      <div class="pause-card">
+        <h2>PAUSED</h2>
+        <div id="pause-stats"></div>
+        <button id="pause-resume" class="menu-btn">RESUME</button>
+        <button id="pause-switch" class="menu-btn">SWITCH GRIFFIN</button>
+        <button id="pause-jobs" class="menu-btn">JOB BOARD</button>
+        <button id="pause-exit" class="menu-btn">QUIT TO TITLE</button>
+        <div class="pause-keys"></div>
+      </div>
+    </div>
+
+    <!-- generic modal (job board, shops, results) -->
+    <div id="modal" class="big-overlay"><div class="m-card"></div></div>
+  </section>
+
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

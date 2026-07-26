@@ -1,6 +1,6 @@
 # EB GAMES 95 🖥
 
-Six 3D games. One repo. Zero asset files — every model, texture, animation,
+Seven 3D games. One repo. Zero asset files — every model, texture, animation,
 and note of music is generated in code, and it all runs straight in the
 browser. No install, no build step.
 
@@ -19,8 +19,32 @@ Spotify link) — the desktop keeps the music going while you play.
 | ⛏ **[LOAM](loam/README.md)** | Voxel survival & building grown from any seed word, scored by a generative composer | `/loam/` |
 | 🏆 **[MASCOT MELEE 64](melee/README.md)** | Twelve mascots, one trophy — a chunky 64-era platform fighter with a GAUNTLET ladder | `/melee/` |
 | 📼 **[NOCLIP](backrooms/README.md)** | Found-footage backrooms horror: ten floors a run, one thing hunting each of them, a stall in the lift | `/backrooms/` |
+| 🚗 **[QUAHOG HIT & RUN](quahog/README.md)** | Cel-shaded open world: seven levels, one Griffin each, cutaway gags on every other corner | `/quahog/` |
 
 ## The new one
+
+**QUAHOG HIT & RUN** is a cel-shaded open world built like the licensed cartoon
+drivers of 2003. Seven levels, one Griffin per level, story jobs that unlock the
+next one, a bonus job and seven collectibles in each — and a town you can drive
+end to end in between.
+
+Pawtucket Patriot ULTRA turns up in Quahog, everybody who drinks it starts
+clucking, and the trail runs through the docks, the Channel 5 newsroom, a
+Pewterschmidt bank account and a very large chicken. Every level opens and closes
+with an in-engine cutscene — letterbox, cut close-ups, lip flaps, voice blips —
+and **eighteen cutaway gags** are hidden on TV markers around town, waiting to
+stop the game dead for a joke.
+
+The town is not a grid: Main Street bends, an avenue cuts the south-east
+diagonally, the shore road follows the water, and Spooner Street is a real dead
+end with the right houses in the right order. Al Harrington's has the wacky
+waving inflatable arm-flailing tube men out front. The whole cast moves around
+on a 24-hour clock, so where anybody is depends on what time it is.
+
+| | |
+| --- | --- |
+| ![Downtown Quahog](docs/quahog-street.png) | ![Spooner Street](docs/quahog-spooner.png) |
+| ![A cutscene](docs/quahog-cutscene.png) | ![Quahog at night](docs/quahog-night.png) |
 
 **NOCLIP** is a first-person horror game shot entirely through a camcorder — the
 whole screen is VHS, tracking bands and all, with `REC` and a timecode along the top.
@@ -74,7 +98,7 @@ preferences.
 
 ## The desktop
 
-Boots through a straight-faced fake BIOS (which now finds six cartridges and one
+Boots through a straight-faced fake BIOS (which now finds seven cartridges and one
 tape that was already in the drive), then it's 1995: teal wallpaper, beveled
 windows you can drag, a Start menu, a taskbar clock, and an optional CRT scanline
 mode. Each game's window has the pitch, two screenshots, and a big PLAY button.
@@ -87,6 +111,8 @@ tracks). Games open in new tabs, so the tunes never stop.
 ```bash
 npm install              # playwright, for screenshots and browser smoke tests
 npm run smoke            # every game's headless harness, back to back
+npm run smoke:quahog     # Quahog's town, cast, vehicles and whole campaign
+npm run play:quahog      # Quahog playtest in Chromium: drives every system
 npm run smoke:backrooms  # builds all 23 NOCLIP floors and checks every one
 npm run play:backrooms -- --all        # plays the loop on every NOCLIP floor
 npm run walk:backrooms -- --all --auditonly   # every floor: can you walk to the lift?
