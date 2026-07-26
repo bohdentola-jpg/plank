@@ -165,8 +165,30 @@ export class World {
       this.lotLamps.push({ bulb, light });
     }
 
+    // A few parked cars so the lot is never empty. These belong to the lot, not
+    // to the building, so they are built once — putting them in buildOutside
+    // stacked five more of them on top of each other on every rebuild.
     this.cars = new THREE.Group();
     this.static.add(this.cars);
+    const rand = mulberry32(1337);
+    const carColors = ['#8d3b3b', '#2f4f7a', '#d8d3c6', '#3d5a45', '#6a6a70'];
+    for (let i = 0; i < 5; i++) {
+      const c = new THREE.Group();
+      const body = box(2.0, 0.7, 4.4, mat(carColors[i % carColors.length]), 3);
+      body.position.y = 0.62;
+      c.add(body);
+      const cabin = box(1.8, 0.62, 2.1, mat('#2f3338'), 1);
+      cabin.position.set(0, 1.22, -0.2);
+      c.add(cabin);
+      for (const [wx, wz] of [[-0.95, 1.5], [0.95, 1.5], [-0.95, -1.5], [0.95, -1.5]]) {
+        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.22, 10), mat('#1e2024'));
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(wx, 0.34, wz);
+        c.add(wheel);
+      }
+      c.position.set(-16 + i * 4.6 + rand() * 0.6, 0, 13 + rand() * 1.2);
+      this.cars.add(c);
+    }
   }
 
   updateSky(h) {
@@ -786,27 +808,6 @@ export class World {
       roof.position.set(-nav.HALF_W - 8.5, 3.6, -2.4);
       g.add(roof);
     }
-    // A few parked cars so the lot is never empty.
-    const rand = mulberry32(1337);
-    const carColors = ['#8d3b3b', '#2f4f7a', '#d8d3c6', '#3d5a45', '#6a6a70'];
-    for (let i = 0; i < 5; i++) {
-      const c = new THREE.Group();
-      const bodyMat = mat(carColors[i % carColors.length]);
-      const body = box(2.0, 0.7, 4.4, bodyMat, 3);
-      body.position.y = 0.62;
-      c.add(body);
-      const cabin = box(1.8, 0.62, 2.1, mat('#2f3338'), 1);
-      cabin.position.set(0, 1.22, -0.2);
-      c.add(cabin);
-      for (const [wx, wz] of [[-0.95, 1.5], [0.95, 1.5], [-0.95, -1.5], [0.95, -1.5]]) {
-        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.22, 10), mat('#1e2024'));
-        wheel.rotation.z = Math.PI / 2;
-        wheel.position.set(wx, 0.34, wz);
-        c.add(wheel);
-      }
-      c.position.set(-16 + i * 4.6 + rand() * 0.6, 0, 13 + rand() * 1.2);
-      this.cars.add(c);
-    }
   }
 
   markerTexture(kind) {
@@ -1111,7 +1112,17 @@ export class World {
   }
 
   dispose() {
+    if (this.building) disposeTree(this.building);
+    if (this.static) disposeTree(this.static);
+    if (this.sky) { this.sky.geometry.dispose(); disposeMaterial(this.sky.material); }
+    for (const [, rig] of this.people) disposePerson(rig);
+    this.people.clear();
+    for (const k of Object.keys(this._markerCache || {})) this._markerCache[k].dispose();
+    this._markerCache = {};
+    this.pickables = [];
+    this.roomVis.clear();
     this.renderer.dispose();
+    this.renderer.forceContextLoss?.();
     this.renderer.domElement.remove();
   }
 }
@@ -1177,11 +1188,21 @@ function potted(x, y, z) {
   return g;
 }
 
+// Every rebuild makes a fresh set of canvas textures — wallpaper, carpet, art
+// and a door plate per room — so disposing the material without its maps leaks
+// a hundred-odd GPU textures every time you buy something.
+const MAP_KEYS = ['map', 'lightMap', 'aoMap', 'emissiveMap', 'bumpMap', 'normalMap', 'specularMap', 'alphaMap', 'envMap'];
+function disposeMaterial(m) {
+  if (!m) return;
+  for (const k of MAP_KEYS) if (m[k] && m[k].dispose) m[k].dispose();
+  m.dispose();
+}
 function disposeTree(root) {
   root.traverse((o) => {
     if (o.geometry) o.geometry.dispose();
+    if (o.isSprite && o.material) { o.material.dispose(); return; }  // marker maps are cached and shared
     const m = o.material;
-    if (Array.isArray(m)) m.forEach((x) => x.dispose());
-    else if (m) m.dispose();
+    if (Array.isArray(m)) m.forEach(disposeMaterial);
+    else disposeMaterial(m);
   });
 }

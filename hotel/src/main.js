@@ -205,6 +205,8 @@ class App {
 
   // ---------------------------------------------------------------- start
   start(state, saved) {
+    if (this.started) return;      // a double-click on TAKE THE KEYS must not run this twice
+    this.started = true;
     if (!state) state = newHotel(this.setup);
     if (this.titleRAF) cancelAnimationFrame(this.titleRAF);
     this.titleWorld?.dispose();
@@ -284,7 +286,8 @@ class App {
       stepSim(this.state, d, ev);
       left -= d;
     }
-    this.checkTips();
+    // Tip checks scan the whole hotel; once a second is plenty.
+    if (this.state.t - (this._tipsAt || 0) > 1) { this._tipsAt = this.state.t; this.checkTips(); }
   }
 
   renderLoop() {
@@ -311,10 +314,17 @@ class App {
         if (s.tasks.length < 3) this.hud.toast(`${data.guest.name}: “${pick(ARRIVAL_QUIPS)}”`, 'info', '🚶');
         break;
       case 'checkin': sfx.keycard(); break;
-      case 'pay':
+      case 'pay': {
+        // At a full hotel on 4x this fires every couple of seconds; the till in
+        // the top bar is the real feedback, so keep the toast occasional.
         sfx.cash();
-        this.hud.toast(`${data.guest.name} settles up — ${money(data.total)}`, 'money', '💵');
+        const now = performance.now();
+        if (now - (this._payToastAt || 0) > 2500) {
+          this._payToastAt = now;
+          this.hud.toast(`${data.guest.name} settles up — ${money(data.total)}`, 'money', '💵');
+        }
         break;
+      }
       case 'walkout':
         sfx.nope();
         this.hud.toast(`${data.guest.name} walked out: “${pick(WALKOUT_QUIPS)}”`, 'bad', '🚪');

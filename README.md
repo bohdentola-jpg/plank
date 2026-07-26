@@ -156,6 +156,7 @@ Everything auto-saves; **CONTINUE** picks up where you left off.
 npm install                     # dev tooling only (playwright for screenshots)
 npm run smoke                   # both games: module, rig and simulation checks
 npm run balance                 # 60 in-game days of NO VACANCY, economy printed per day
+npm run leakcheck               # drives the real page and asserts nothing grows per rebuild
 node tools/shot.mjs "hotel/?fresh" lobby.png --wait 20000 --keys "Space@1500"
 node tools/shot.mjs "varsity/?gallery" gallery.png --wait 2500
 ```
@@ -166,7 +167,8 @@ argument is a page path plus an optional query (`--keys`, `--click`, `--series` 
 
 QA URL modes — **varsity:** `?quick` jumps straight into a game, `?gallery` shows
 every animation clip on a grid of rigs. **hotel:** `?fresh` ignores the save,
-`?dev` starts you rich.
+`?dev` starts you rich, `?showcase` boots a grown four-floor hotel with a full
+crew, `?hq` pins render quality so screenshots keep their shadows.
 
 ### Layout
 
