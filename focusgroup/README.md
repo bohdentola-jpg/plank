@@ -71,7 +71,18 @@ Saturday by an announcer who is being friendly about it.
    lift has a button you have never pressed.
 6. **SUNDAY** — you do not wake up in your bed.
 
-Three endings. One of them you can only reach by having found all twelve.
+## Three endings
+
+Sunday's last line of script is *SUBJECT says the line*, and you can say it or
+not. Both are endings.
+
+The third is not on the script. **Find all twelve lenses** across the week and a
+thirteenth camera appears on the far side of the seats on the soundstage — small,
+easy to miss, and turned the wrong way round. Walk round the audience block
+(either end works), get within a few metres, look straight at it and press **Q**.
+That is the whole route; nothing else gates it. All twelve exist by Friday, and
+what you have found is remembered from morning to morning, so a lens you missed
+on Tuesday is still there on Thursday.
 
 ## Controls
 
@@ -118,6 +129,7 @@ No asset files, like the rest of the shelf.
 node tools/smoke-focusgroup.mjs                  # no browser; content + geometry checks
 node tools/play-focusgroup.mjs --shots           # plays all six mornings headless
 node tools/play-focusgroup.mjs --decline         # …and refuses the line
+node tools/play-focusgroup.mjs --last           # …and finds the thirteenth camera
 node tools/shot-focusgroup.mjs --day 4           # a tour of the flat
 node tools/shot-focusgroup.mjs --set studio      # the soundstage
 node tools/shot-focusgroup.mjs --cut smoke       # sit on a hidden camera

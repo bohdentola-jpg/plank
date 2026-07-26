@@ -228,6 +228,9 @@ export function renderJournal(host, noticed, lenses) {
   });
   const tail = document.createElement('p');
   tail.className = 'j-none';
-  tail.textContent = `${found.length} of 12. Knowing where they are has not moved any of them.`;
+  const ofTwelve = found.filter((id) => id !== 'last').length;
+  tail.textContent = found.includes('last')
+    ? `${ofTwelve} of 12, and one that was not on the list.`
+    : `${ofTwelve} of 12. Knowing where they are has not moved any of them.`;
   host.appendChild(tail);
 }

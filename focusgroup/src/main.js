@@ -150,8 +150,9 @@ class Game {
     const rec = document.getElementById('title-record');
     if (rec) {
       const seen = store.endings.length;
+      const twelve = [...this.noticed].filter((id) => id !== 'last').length;
       rec.textContent = seen
-        ? `${this.noticed.size}/12 lenses found · ${seen}/3 endings on file`
+        ? `${twelve}/12 lenses found · ${seen}/3 endings on file`
         : 'no file on you yet';
     }
   }
@@ -430,6 +431,17 @@ class Game {
         ['val', 'val'], ['mark', 'mark'], ['line', 'line']]) {
         const it = w.interactById(iid);
         if (it) it.step = step;
+      }
+      // The thirteenth camera is only there for somebody who found the other
+      // twelve. It is not on the script and nobody mentions it.
+      const last = w.interactById('lens:last');
+      if (last && this.noticed.size >= Object.keys(LENSES).length) {
+        last.enabled = true;
+        setTimeout(() => {
+          if (this.state === 'play') {
+            this.hud.toast('YOU FOUND ALL TWELVE. THERE IS A THIRTEENTH.', 5, 'good');
+          }
+        }, 9000);
       }
       return;
     }
@@ -1001,8 +1013,10 @@ class Game {
     scr.querySelector('.end-h').textContent = end.head;
     scr.querySelector('.end-p').textContent = end.body.replace(/\s+/g, ' ').trim();
     scr.querySelector('.end-kick').textContent = end.kicker;
+    // the thirteenth was never on the list of twelve
+    const twelve = [...this.noticed].filter((id) => id !== 'last').length;
     scr.querySelector('.end-stats').innerHTML = `
-      <div>LENSES FOUND<b>${this.noticed.size} / 12</b></div>
+      <div>LENSES FOUND<b>${twelve} / 12${this.noticed.has('last') ? ' + 1' : ''}</b></div>
       <div>ENGAGEMENT<b>${Math.round(this.engagement)}%</b></div>
       <div>FRAMES OF YOU<b>${this.director.frames.length}</b></div>
       <div>ENDINGS ON FILE<b>${store.endings.length} / 3</b></div>`;

@@ -3,6 +3,7 @@
 // beats fire, the sets swap, and both main endings are reachable.
 //   node tools/play-focusgroup.mjs            # say the line
 //   node tools/play-focusgroup.mjs --decline  # do not
+//   node tools/play-focusgroup.mjs --last     # find all twelve, take the third ending
 //   node tools/play-focusgroup.mjs --shots    # also drop frames into qa/
 // Exits non-zero on any page error or if the week stalls.
 
@@ -30,6 +31,7 @@ await mkdir(join(root, 'qa'), { recursive: true });
 const args = process.argv.slice(2);
 const decline = args.includes('--decline');
 const wantShots = args.includes('--shots');
+const wantLast = args.includes('--last');
 
 const errors = [];
 const browser = await chromium.launch({
@@ -100,12 +102,15 @@ const snap = () => page.evaluate(() => {
   };
 });
 
-// notice every lens we can reach, so the third ending is on the table
-const noticeAll = () => page.evaluate(() => {
+// notice every lens we can reach, so the third ending is on the table. The
+// thirteenth camera ends the game the moment you look at it, so it is only
+// touched when that is the ending we are after.
+const noticeAll = (includeLast) => page.evaluate((takeLast) => {
   const g = window.FOCUSGROUP;
   let n = 0;
   for (const it of [...g.world.interacts]) {
     if (it.key !== 'Q' || !it.enabled) continue;
+    if (it.lens === 'last' && !takeLast) continue;
     g.player.pos.x = it.pos.x;
     g.player.pos.z = it.pos.z + 0.5;
     g.player.yaw = Math.atan2(-(it.pos.x - g.player.pos.x), -(it.pos.z - g.player.pos.z));
@@ -114,15 +119,17 @@ const noticeAll = () => page.evaluate(() => {
     n++;
   }
   return n;
-});
+}, includeLast);
 
 const log = [];
 let guard = 0;
 let lastDay = 0;
 let lastSet = '';
+let answered = false;
 while (guard++ < 260) {
   const s = await snap();
   if (s.state === 'ending') break;
+  if (await page.evaluate(() => window.FOCUSGROUP.screen === 'end')) break;
 
   if (s.state === 'play') {
     if (s.day !== lastDay) {
@@ -131,7 +138,7 @@ while (guard++ < 260) {
       log.push(`day ${s.day} (${s.set}) — ${s.left.join(', ')}`);
       if (wantShots) await page.screenshot({ path: join(root, `qa/focusgroup-play-day${s.day}.png`) });
     }
-    await noticeAll();
+    await noticeAll(wantLast && s.day === 6);
     if (s.set !== lastSet) { lastSet = s.set; tally.clear(); }
     const did = await doOne();
     if (!did) {
@@ -148,12 +155,17 @@ while (guard++ < 260) {
     await page.waitForTimeout(900);
   }
 
-  // the line, when they ask for it
-  const choice = await page.$('#ch-say');
-  if (choice) {
-    if (wantShots) await page.screenshot({ path: join(root, 'qa/focusgroup-play-line.png') });
-    await page.click(decline ? '#ch-no' : '#ch-say');
-    await page.waitForTimeout(1500);
+  // the line, when they ask for it. The overlay is only hidden afterwards, not
+  // emptied, so the buttons stay in the DOM — ask whether they are visible, and
+  // only ever answer once.
+  if (!answered) {
+    const choice = await page.$('#ch-say');
+    if (choice && await choice.isVisible()) {
+      if (wantShots) await page.screenshot({ path: join(root, 'qa/focusgroup-play-line.png') });
+      await page.click(decline ? '#ch-no' : '#ch-say');
+      answered = true;
+      await page.waitForTimeout(1500);
+    }
   }
 }
 
@@ -181,6 +193,9 @@ console.log(log.join('\n'));
 console.log(JSON.stringify(final, null, 1));
 if (final.screen !== 'end') errors.push(`[fail] the week stalled on '${final.screen}' after ${guard} turns`);
 if (lastDay < 6) errors.push(`[fail] only reached day ${lastDay}`);
+const wanted = wantLast ? 'CAM 00' : (decline ? 'SUBJECT DECLINED' : 'TAKE ONE. PRINT IT.');
+if (final.head !== wanted) errors.push(`[fail] wanted the '${wanted}' ending, got '${final.head}'`);
+if (wantLast && final.noticed < 13) errors.push(`[fail] only ${final.noticed} lenses; the thirteenth was never reachable`);
 
 console.log(errors.length ? `\n${errors.length} error(s)\n${errors.slice(0, 10).join('\n')}` : '\nplayed the whole week, no page errors');
 await browser.close();
