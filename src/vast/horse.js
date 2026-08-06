@@ -136,9 +136,9 @@ export class Horse {
         }
         this._comingT = 0;
       }
-      if (d > 5.5) {
+      if (d > 2.9) {
         wantHeading = Math.atan2(px - this.pos.x, pz - this.pos.z);
-        targetSpeed = d > 30 ? GALLOP : TROT;
+        targetSpeed = d > 30 ? GALLOP : d > 8 ? TROT : 1.6;
         if (this._avoidT > 0) wantHeading += this._avoidSign * this._avoidAng; // detouring
       } else { this.state = 'grazing'; this._comingT = 0; }
     } else {

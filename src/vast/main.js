@@ -462,7 +462,7 @@ function frame(now) {
     }
     if (inp.interact) {
       if (player.riding) doDismount();
-      else if (horse.distTo(a.x, a.z) < 3.6 && horse.state !== 'coming') doMount();
+      else if (horse.distTo(a.x, a.z) < 4.4 && horse.state !== 'coming') doMount();
       else poiMgr.interact();
     }
   }
@@ -555,7 +555,7 @@ function frame(now) {
     // interaction prompt
     let prompt = null;
     if (player.riding) prompt = 'E — dismount';
-    else if (horse.state === 'grazing' && horse.distTo(a.x, a.z) < 3.6) prompt = 'E — mount up';
+    else if (horse.state === 'grazing' && horse.distTo(a.x, a.z) < 4.4) prompt = 'E — mount up';
     else if (poiMgr.prompt) prompt = `E — ${poiMgr.prompt.label}`;
     else if (player.swimming && player.stamina < 0.3) prompt = 'find the shore — you are tiring';
     if (prompt !== promptCache) { hud.setPrompt(prompt); promptCache = prompt; }
