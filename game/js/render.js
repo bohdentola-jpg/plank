@@ -50,7 +50,8 @@ export class View {
     this.blitScene.add(this.blitQuad);
 
     // camera rig state (third person orbit)
-    this.cam = { yaw: 0, pitch: 0.28, dist: 9.5, target: new THREE.Vector3(), shake: 0 };
+    this.cam = { yaw: 0, pitch: 0.3, dist: 9.5, target: new THREE.Vector3(), shake: 0 };
+    this.camDist = 9.5;
     this.resize();
   }
 
@@ -94,23 +95,21 @@ export class View {
     const cp = Math.cos(c.pitch), sp = Math.sin(c.pitch);
     let dist = wantDist;
 
-    // keep the camera above the ground
-    const tryPos = new THREE.Vector3();
-    for (let i = 0; i < 6; i++) {
-      tryPos.set(
-        c.target.x - Math.sin(c.yaw) * cp * dist,
-        c.target.y + sp * dist + 1.2,
-        c.target.z - Math.cos(c.yaw) * cp * dist,
-      );
-      if (!world) break;
-      const gh = world.heightAt(tryPos.x, tryPos.z);
-      if (tryPos.y > gh + 1.1) break;
-      dist *= 0.78;
-    }
+    // Keep the distance and let the camera ride up over the ground. Squeezing it
+    // in towards the player instead would put it inside their head whenever they
+    // look up from flat ground.
+    const tryPos = new THREE.Vector3(
+      c.target.x - Math.sin(c.yaw) * cp * dist,
+      c.target.y + sp * dist + 1.2,
+      c.target.z - Math.cos(c.yaw) * cp * dist,
+    );
     if (world) {
       const gh = world.heightAt(tryPos.x, tryPos.z);
-      tryPos.y = Math.max(tryPos.y, gh + 1.1);
+      // sample along the way too, so a hill between you and the camera lifts it
+      const mid = world.heightAt((tryPos.x + c.target.x) / 2, (tryPos.z + c.target.z) / 2);
+      tryPos.y = Math.max(tryPos.y, gh + 1.5, mid + 1.2);
     }
+    this.camDist = tryPos.distanceTo(c.target);
     if (c.shake > 0) {
       c.shake -= dt;
       const a = Math.min(0.4, c.shake) * 0.9;

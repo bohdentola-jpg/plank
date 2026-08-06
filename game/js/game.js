@@ -497,7 +497,7 @@ export class GameSession {
       if (locked || this.dragLook) {
         const s = 0.0022;
         this.view.cam.yaw -= (e.movementX || 0) * s;
-        this.view.cam.pitch = clamp(this.view.cam.pitch + (e.movementY || 0) * s, -0.55, 1.15);
+        this.view.cam.pitch = clamp(this.view.cam.pitch + (e.movementY || 0) * s, -0.38, 1.15);
       }
       this.lastMouse = { x: e.clientX, y: e.clientY };
     };
@@ -1158,6 +1158,8 @@ export class GameSession {
     // camera + animation
     const target = new THREE.Vector3(this.me.x, this.me.y + 2.1, this.me.z);
     this.view.updateCamera(target, dt, this.world, {});
+    // if the camera had to squeeze in close, don't stare at your own back
+    if (!this.me.dead) this.me.rig.root.visible = this.view.camDist > 3.9;
     this.updateAim();
     this.drawUI(dt);
     this.view.render();

@@ -90,6 +90,11 @@ const shot = async (name) => {
   console.log('  ' + name.padEnd(22) + ' biome=' + info.biome.padEnd(8) + ' y=' + String(info.y).padStart(4) + ' chunks=' + info.chunks);
 };
 
+await page.evaluate(() => {
+  const s = window.__game.session;
+  s.view.cam.pitch = 0.3; s.view.cam.yaw = 0.35; s.view.cam.dist = 11;
+});
+await page.waitForTimeout(600);
 await shot('t01-void-plaza');
 await teleport(0, -260, 0.2, 0.25, 12);   await shot('t02-meadow-north');
 await teleport(0, -620, 0.1, 0.25, 12);   await shot('t03-forest-deep');

@@ -154,7 +154,7 @@ export class StickmanRig {
 
     // arms: walking swing, or aiming, or holding a box, or paddle
     const armSwing = -sw * 0.7;
-    let lx = armSwing, rx = -armSwing, lz = 0.06, rz = -0.06, ly = 0, ry = 0;
+    let lx = armSwing, rx = -armSwing, lz = 0.17, rz = -0.17, ly = 0, ry = 0;
     let lLow = -0.25 * B.walk, rLow = -0.25 * B.walk;
 
     if (st.holding === 'box') {
