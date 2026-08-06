@@ -122,11 +122,25 @@ export class Horse {
       }
     } else if (this.state === 'coming') {
       const d = Math.hypot(px - this.pos.x, pz - this.pos.z);
+      // failsafe: a horse blocked too long finds its own way off-screen
+      this._comingT = (this._comingT || 0) + dt;
+      if (this._comingT > 20 && d > 25) {
+        for (let tries = 0; tries < 12; tries++) {
+          const a = Math.random() * Math.PI * 2;
+          const nx2 = px + Math.sin(a) * (24 + Math.random() * 14);
+          const nz2 = pz + Math.cos(a) * (24 + Math.random() * 14);
+          if (this.world.heightAt(nx2, nz2) > SEA_LEVEL + 0.6 && this.world.slopeAt(nx2, nz2) < 0.8) {
+            this.pos.set(nx2, this.world.heightAt(nx2, nz2), nz2);
+            break;
+          }
+        }
+        this._comingT = 0;
+      }
       if (d > 5.5) {
         wantHeading = Math.atan2(px - this.pos.x, pz - this.pos.z);
         targetSpeed = d > 30 ? GALLOP : TROT;
-        if (this._avoidT > 0) wantHeading += this._avoidSign * 1.25; // detouring
-      } else this.state = 'grazing';
+        if (this._avoidT > 0) wantHeading += this._avoidSign * this._avoidAng; // detouring
+      } else { this.state = 'grazing'; this._comingT = 0; }
     } else {
       // grazing: the occasional idle shuffle
       if (Math.random() < dt * 0.06) {
@@ -148,13 +162,20 @@ export class Horse {
       const nh = this.world.heightAt(nx, nz);
       if (nh > SEA_LEVEL - 0.9 && this.world.slopeAt(nx, nz) < 1.1) {
         this.pos.x = nx; this.pos.z = nz;
-        if (this._avoidT > 0) this._avoidT -= dt;
+        if (this._avoidT > 0) {
+          this._avoidT -= dt;
+          if (this._avoidT <= 0) this._balk = 0; // detour paid off
+        }
       } else if (this.state === 'ridden') {
         this.speed *= 0.6; // balk at deep water / cliff walls; the rider steers
       } else {
-        // pick a side and detour around the obstacle instead of grinding on it
+        // detour around the obstacle: keep one side, push further off-axis
+        // with every consecutive balk until we're walking along (or away
+        // from) the wall instead of grinding into it
         if (!(this._avoidT > 0)) this._avoidSign = Math.random() < 0.5 ? 1 : -1;
-        this._avoidT = 0.9;
+        this._balk = Math.min(8, (this._balk || 0) + 1);
+        this._avoidAng = 1.1 + this._balk * 0.28;
+        this._avoidT = 1.2;
         this.speed *= 0.9;
       }
     }
