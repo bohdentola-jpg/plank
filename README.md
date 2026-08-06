@@ -1,3 +1,17 @@
+# This repo holds two games
+
+| | run it |
+| --- | --- |
+| **VARSITY 27** 🏈 — the high school football game (this page) | `python3 serve.py` · Windows: `play.bat` |
+| **game** 📦 — a multiplayer stickman space in the style of snaptic, with a map editor and its own scripting language | `npm run game` · Windows: `play-game.bat` · [readme](game/README.md) |
+
+They share nothing but the repo. **game** lives entirely in [`game/`](game/) and
+can be exported as its own standalone website with `npm run game:export`
+(drag `dist/game-site` onto [netlify drop](https://app.netlify.com/drop)) —
+see [game/README.md](game/README.md).
+
+---
+
 # VARSITY 27 🏈
 
 *Sunday has Madden. Saturday has NCAA. Friday is yours.*

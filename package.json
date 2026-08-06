@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "start": "python3 serve.py",
+    "game": "python3 serve.py --dir game",
+    "game:test": "node game/tests/boxscript.test.mjs",
+    "game:export": "node tools/export-game.mjs",
     "shot": "node tools/shot.mjs",
     "smoke": "node tools/smoke.mjs"
   },
@@ -12,6 +15,7 @@
     "three": "^0.160.0"
   },
   "devDependencies": {
+    "peer": "^1.0.2",
     "playwright": "1.56.1"
   }
 }

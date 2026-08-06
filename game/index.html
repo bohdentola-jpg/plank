@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>game</title>
+<meta name="description" content="a little multiplayer stickman space. throw boxes, blast friends, play ping pong, build maps, script them.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect x='2' y='4' width='12' height='10' fill='%23c9a06b'/><rect x='7' y='5' width='2' height='8' fill='%23ddd0ae'/><rect x='2' y='4' width='12' height='1' fill='%23a87f4f'/></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="in-menu">
+
+<canvas id="world"></canvas>
+<canvas id="overlay"></canvas>
+<div id="bs-ui"></div>
+
+<div id="chatbar" style="display:none">
+  <input id="chatinput" maxlength="120" placeholder="say something…" autocomplete="off">
+</div>
+<pre id="err-panel" style="display:none"></pre>
+
+<!-- main menu -->
+<div id="menu" class="screen">
+  <canvas class="title-canvas"></canvas>
+  <div class="menu-buttons">
+    <button id="btn-join" class="menu-btn">join lobby</button>
+    <button id="btn-private" class="menu-btn">private</button>
+    <button id="btn-create" class="menu-btn">create map</button>
+  </div>
+  <div class="name-row">
+    <label for="name">name</label>
+    <input id="name" maxlength="16" placeholder="guest" autocomplete="off">
+  </div>
+  <div class="menu-foot">a fan-made tribute to the world of snaptic · boxes may pop</div>
+</div>
+
+<!-- private lobby menu -->
+<div id="private" class="screen" style="display:none">
+  <canvas class="title-canvas"></canvas>
+  <div class="panel">
+    <div class="panel-h">make a lobby</div>
+    <div class="panel-row">
+      <select id="priv-map"></select>
+      <button id="btn-priv-make" class="menu-mini">open lobby</button>
+    </div>
+    <div class="panel-hint">you'll get a 4-letter code to give friends</div>
+  </div>
+  <div class="panel">
+    <div class="panel-h">join with code</div>
+    <div class="panel-row">
+      <input id="priv-code" maxlength="6" placeholder="ABCD" autocomplete="off">
+      <button id="btn-priv-join" class="menu-mini">join</button>
+    </div>
+  </div>
+  <button id="btn-priv-back" class="menu-btn small">← back</button>
+</div>
+
+<!-- my maps -->
+<div id="mapslist" class="screen" style="display:none">
+  <canvas class="title-canvas"></canvas>
+  <div class="panel wide">
+    <div class="panel-h">my maps</div>
+    <div id="maps-items"></div>
+    <div class="panel-row" style="margin-top:14px">
+      <button id="btn-maps-new" class="menu-mini">+ new map</button>
+    </div>
+    <div class="panel-row">
+      <input id="maps-import-code" placeholder="paste a map code (GM1.…)" autocomplete="off">
+      <button id="btn-maps-import" class="menu-mini">import</button>
+    </div>
+  </div>
+  <button id="btn-maps-back" class="menu-btn small">← back</button>
+</div>
+
+<!-- connecting -->
+<div id="connect" class="screen" style="display:none">
+  <canvas class="title-canvas"></canvas>
+  <div id="connect-status" class="connect-status">looking for players…</div>
+  <div class="spinner"><span></span><span></span><span></span></div>
+  <button id="btn-connect-cancel" class="menu-btn small">cancel</button>
+</div>
+
+<div id="editor-root" style="display:none"></div>
+
+<script src="vendor/peerjs.min.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

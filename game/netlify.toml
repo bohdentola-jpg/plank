@@ -1,0 +1,10 @@
+# Netlify config for "game".
+# If you deploy the repo from git, set the site's base directory to "game".
+# If you drag-and-drop the exported folder/zip, this file just comes along.
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
