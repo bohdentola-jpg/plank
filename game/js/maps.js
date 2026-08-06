@@ -73,6 +73,7 @@ export function loadMaps() {
     const obj = JSON.parse(raw);
     const out = {};
     for (const [id, m] of Object.entries(obj)) {
+      if (!/^[a-zA-Z0-9_-]{1,24}$/.test(id)) continue; // no __proto__ keys
       const v = validateMap(m);
       if (v) out[id] = v;
     }

@@ -53,7 +53,15 @@ That writes `dist/game-site/` and `dist/game-site.zip` — drag either onto
 
 ```bash
 npm run game:test     # boxscript language test suite (plain node, no deps)
+npm run game:e2e      # browser tests (needs `npm install` for playwright):
+                      #  - menu/editor/play smoke tour with screenshots
+                      #  - boxscript bindings driven in a real session
+                      #  - two-browser multiplayer over a local peerjs-server
+                      #    (join by code, chat, boxes, blaster pop, pong,
+                      #     host migration)
 ```
+
+Screenshots land in `qa/shots/`.
 
 ## how it's put together
 

@@ -173,6 +173,8 @@ export function validateMap(m) {
   if (m.models && typeof m.models === 'object') {
     for (const [name, mm] of Object.entries(m.models)) {
       if (!mm || typeof mm !== 'object') continue;
+      // block JSON-borne prototype tampering and keep names editor-legal
+      if (!/^[a-z0-9_]{1,24}$/.test(name)) continue;
       const w = clamp(Math.floor(+mm.w || 16), 1, 64);
       const h = clamp(Math.floor(+mm.h || 16), 1, 64);
       let d = typeof mm.d === 'string' ? mm.d : '';

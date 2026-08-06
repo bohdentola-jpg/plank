@@ -377,11 +377,10 @@ export class GameSession {
       }
     }
     if (!p.holding) {
-      // nearest loose box
+      // nearest loose physical thing (boxes, custom physical models…)
       let best = null, bestD = 26;
       for (const ent of this.ents) {
         if (ent.gone || !ent.physical || ent.heldBy || !ent.visible) continue;
-        if (!['box', 'bigbox'].includes(ent.model) && !ent.synced) continue;
         const d = dist(ent.x, ent.y, p.x, p.y);
         if (d < bestD) { best = ent; bestD = d; }
       }
@@ -389,7 +388,8 @@ export class GameSession {
         p.holding = { kind: 'box', id: best.id };
         best.heldBy = p.id;
         playSound('pickup');
-        this.act({ kind: 'pickup', id: best.id });
+        // scripted objects are per-player copies — only synced ones go to the host
+        if (best.synced) this.act({ kind: 'pickup', id: best.id });
         return;
       }
       // blaster stand
@@ -413,7 +413,7 @@ export class GameSession {
     if (p.holding.kind === 'box') {
       const ent = this.entById(p.holding.id);
       if (ent) { ent.heldBy = null; ent.vx = p.vx; ent.vy = -40; }
-      this.act({ kind: 'throw', id: p.holding.id, vx: p.vx, vy: -40 });
+      if (ent && ent.synced) this.act({ kind: 'throw', id: ent.id, vx: p.vx, vy: -40 });
     } else if (p.holding.kind === 'blaster') {
       this.act({ kind: 'dropblaster' });
     }
@@ -440,7 +440,7 @@ export class GameSession {
       }
       p.holding = null;
       playSound('thud');
-      this.act({ kind: 'throw', id: ent ? ent.id : null, vx, vy });
+      if (ent && ent.synced) this.act({ kind: 'throw', id: ent.id, vx, vy });
       return;
     }
     if (p.holding && p.holding.kind === 'blaster') {
@@ -617,16 +617,21 @@ export class GameSession {
       }
       case 'snap': if (this.lobby && !this.lobby.isHost) this.applySnap(msg); break;
       case 'chat': {
-        const p = this.players.get(msg.id);
-        if (p) { addBubble(p, msg.text); playSound('pip'); }
-        if (this.lobby && this.lobby.isHost) this.lobby.broadcast(msg, msg.id);
+        // the host stamps the true sender — clients can't speak as someone else
+        const senderId = (this.lobby && this.lobby.isHost) ? from : msg.id;
+        const p = this.players.get(senderId);
+        if (p) { addBubble(p, String(msg.text || '').slice(0, 120)); playSound('pip'); }
+        if (this.lobby && this.lobby.isHost) {
+          this.lobby.broadcast({ t: 'chat', id: senderId, text: String(msg.text || '').slice(0, 120) }, senderId);
+        }
         break;
       }
       case 'act': if (this.lobby && this.lobby.isHost) this.applyAct(from, msg.a); break;
       case 'ev': if (msg.kind === 'pop') this.applyPop(msg); break;
       case 'bs': {
-        this.pendingMsgs.push(msg.msg);
-        if (this.lobby && this.lobby.isHost) this.lobby.broadcast(msg, from);
+        const m = String(msg.msg || '').slice(0, 64);
+        this.pendingMsgs.push(m);
+        if (this.lobby && this.lobby.isHost) this.lobby.broadcast({ t: 'bs', msg: m }, from);
         break;
       }
     }
@@ -993,6 +998,7 @@ export class GameSession {
             ent.scriptInst.trigger('hit');
           }
         }
+        if (ent.hitBolts.size > 400) ent.hitBolts.clear(); // ids only matter for ~1.4s
       }
       ent.scriptInst.update(this.time);
     }

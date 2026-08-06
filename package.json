@@ -7,6 +7,7 @@
     "start": "python3 serve.py",
     "game": "python3 serve.py --dir game",
     "game:test": "node game/tests/boxscript.test.mjs",
+    "game:e2e": "node game/tests/e2e/smoke.mjs && node game/tests/e2e/boxscript-bindings.mjs && node game/tests/e2e/multiplayer.mjs",
     "game:export": "node tools/export-game.mjs",
     "shot": "node tools/shot.mjs",
     "smoke": "node tools/smoke.mjs"
