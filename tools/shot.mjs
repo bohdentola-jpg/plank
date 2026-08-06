@@ -3,6 +3,7 @@
 //   node tools/shot.mjs "?gallery" gallery.png --wait 2500
 //   node tools/shot.mjs "?quick" game.png --wait 6000 --keys "Space@4000"
 //   node tools/shot.mjs "" title.png --eval "..." --series 3@1500
+//   node tools/shot.mjs "vast.html?quick" vast.png --wait 8000   (other pages)
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
@@ -44,7 +45,8 @@ const page = await browser.newPage({ viewport: { width, height } });
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log(`[page ${m.type()}]`, m.text()); });
 page.on('pageerror', (e) => console.log('[pageerror]', e.message));
 
-await page.goto(`http://127.0.0.1:${port}/index.html${query}`);
+const target = query === '' || query.startsWith('?') ? `index.html${query}` : query;
+await page.goto(`http://127.0.0.1:${port}/${target}`);
 
 if (keys) {
   for (const spec of keys.split(',')) {

@@ -2,6 +2,9 @@
 
 *Sunday has Madden. Saturday has NCAA. Friday is yours.*
 
+> **Also in the cabinet:** [THE VAST](#the-vast-) — an endless open-world
+> exploration game. Open **`vast.html`** from the same server. Details below.
+
 The high school chapter of the football-game trinity, in the browser — full 3D, no
 install, no build step. Boots with a cinematic flyover of America's football towns
 and an original synthesized score.
@@ -113,3 +116,57 @@ node tools/shot.mjs "?gallery" g.png --wait 2500    # screenshot the anim galler
 
 QA URL modes: `?quick` jumps straight into a game, `?gallery` shows every animation
 clip on a grid of rigs (`&clips=run,sprint&camr=8&camy=2&ang=0.6` to frame shots).
+
+---
+
+# THE VAST 🏔
+
+*The world does not end. Go and see.*
+
+An open-world exploration game in the same cabinet — same vendored Three.js,
+same no-install philosophy, a completely different world every seed. Start the
+server as above and open **http://localhost:8000/vast.html**.
+
+**An endless world.** Terrain streams in around you forever — continents,
+coasts, rolling plains, deep forests, deserts, savannas, fens, tundra, and
+snow-capped ranges, all generated from one seed with no size limit. A full
+day/night cycle, weather fronts that roll in from clear to storm (with
+lightning), deer that bolt, birds overhead, fireflies after dark.
+
+**A land that keeps a journal.** Every region has a procedurally-written name
+announced as you cross into it. Scattered through the cells of the world:
+shrines to awaken, ruins and standing stones hiding relics, villages with
+villagers, watchtowers that mark rumors on your map, camps where you can rest
+until dawn. Walk close and it's yours — banner, chime, journal entry.
+
+**Getting around.** Sprint, swim, and jump on stamina; whistle (**H**) and a
+horse gallops in from beyond the fog. Awakened shrines become fast-travel
+points on the world map (**M**), which reveals itself as you explore.
+Everything autosaves to the browser; `CONTINUE` puts you back on the exact
+hillside at the exact hour you left.
+
+| Key | Does |
+| --- | --- |
+| **WASD** + mouse | move / look (wheel zooms) |
+| **SHIFT** | sprint |
+| **SPACE** | jump |
+| **E** | interact — shrines, camps, towers, mount/dismount |
+| **H** | whistle for the horse |
+| **M** | world map (click an awakened ✦ to travel) |
+| **TAB / J** | journal |
+| **X** / **ESC** | sound / pause |
+| 🎮 | gamepad: sticks move/look, ✕ jump, □ interact, ◯ whistle, △ map, R2 sprint |
+
+Under the hood it follows the house rules — everything generated in code, no
+art assets: value-noise terrain with domain warping and ridged mountain
+ranges, chunk streaming with skirt LOD and a far-tile horizon, instanced
+low-poly flora per biome, analytic-normal lighting so chunk seams never show,
+synthesized WebAudio (wind, rain, thunder that arrives late, crickets,
+birdsong, a generative pad that changes scale at dusk), and quality that
+auto-scales to hold frame rate.
+
+QA URL modes: `vast.html?quick` skips the title, `&seed=N` pins the world,
+`&time=0.5` sets the hour, `&fast` runs 90-second days, `&nosave` leaves no
+trace. Dev: `npm run smoke:vast` for node checks,
+`node tools/shot.mjs "vast.html?quick&seed=7" vast.png --wait 9000` for
+screenshots.

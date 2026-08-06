@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>THE VAST — an endless world</title>
+<link rel="stylesheet" href="src/vast/vast.css" />
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="vast-app">
+  <div id="vast-holder"></div>
+
+  <!-- loading veil -->
+  <div id="vast-loading">
+    <div class="load-title">THE VAST</div>
+    <div class="load-sub">walking into the world…</div>
+  </div>
+
+  <!-- title -->
+  <div id="vast-title" class="hidden">
+    <div class="title-grad"></div>
+    <div class="title-card">
+      <canvas id="vast-logo"></canvas>
+      <div id="vast-menu"></div>
+      <div id="vast-build"></div>
+      <div class="title-keys">
+        WASD move · mouse look · SHIFT sprint · SPACE jump · E interact · H whistle horse<br/>
+        M map · TAB journal · X sound · ESC pause &nbsp;·&nbsp; 🎮 gamepad supported
+      </div>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div id="vast-hud" class="hidden">
+    <canvas id="vast-compass" width="520" height="64"></canvas>
+    <canvas id="vast-minimap" width="168" height="168"></canvas>
+    <canvas id="vast-dial" width="150" height="64"></canvas>
+    <div id="vast-banner"><div class="main"></div><div class="sub"></div></div>
+    <div id="vast-prompt"></div>
+    <div id="vast-toast"></div>
+    <div id="vast-stamina"><div class="fill"></div></div>
+  </div>
+
+  <!-- overlays -->
+  <div id="vast-journal" class="big-overlay">
+    <div class="panel">
+      <h2>THE JOURNAL</h2>
+      <div class="j-body"></div>
+      <div class="overlay-hint">TAB to close</div>
+    </div>
+  </div>
+
+  <div id="vast-map" class="big-overlay">
+    <div class="panel wide">
+      <div class="map-region"></div>
+      <canvas></canvas>
+      <div class="map-hint"></div>
+    </div>
+  </div>
+
+  <div id="vast-help" class="big-overlay">
+    <div class="panel">
+      <h2>HOW TO WANDER</h2>
+      <div class="help-grid">
+        <b>WASD</b><span>move (camera-relative)</span>
+        <b>MOUSE</b><span>look · wheel zooms</span>
+        <b>SHIFT</b><span>sprint (watch the stamina)</span>
+        <b>SPACE</b><span>jump</span>
+        <b>E</b><span>interact — shrines, camps, towers, your horse</span>
+        <b>H</b><span>whistle for the horse</span>
+        <b>M</b><span>world map — click an awakened shrine to travel</span>
+        <b>TAB / J</b><span>journal</span>
+        <b>X</b><span>sound on/off</span>
+        <b>ESC</b><span>pause</span>
+        <b>🎮 PAD</b><span>sticks move/look · ✕ jump · □ interact · ◯ whistle · △ map · R2 sprint</span>
+      </div>
+      <div class="overlay-hint">walk toward anything that looks deliberate — the land keeps a journal of its own</div>
+    </div>
+  </div>
+
+  <div id="vast-pause" class="big-overlay">
+    <div class="panel narrow">
+      <h2>A MOMENT'S REST</h2>
+      <button id="vast-resume" class="vast-btn">KEEP WANDERING</button>
+      <button id="vast-quit" class="vast-btn">SAVE &amp; RETURN TO TITLE</button>
+      <div class="overlay-hint">your journey autosaves as you go</div>
+    </div>
+  </div>
+
+  <div id="vast-fade"></div>
+  <div id="vast-vignette"></div>
+</div>
+<script type="module" src="src/vast/main.js"></script>
+</body>
+</html>
