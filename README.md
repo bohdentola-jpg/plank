@@ -3,7 +3,7 @@
 | | run it |
 | --- | --- |
 | **VARSITY 27** 🏈 — the high school football game (this page) | `python3 serve.py` · Windows: `play.bat` |
-| **game** 📦 — a multiplayer stickman space in the style of snaptic, with a map editor and its own scripting language | `npm run game` · Windows: `play-game.bat` · [readme](game/README.md) |
+| **game** 📦 — a 3D multiplayer stickman world in the style of snaptic: an open world of biomes, an in-game voxel modeller, and its own scripting language | `npm run game` · Windows: `play-game.bat` · [readme](game/README.md) |
 
 They share nothing but the repo. **game** lives entirely in [`game/`](game/) and
 can be exported as its own standalone website with `npm run game:export`

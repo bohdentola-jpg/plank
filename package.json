@@ -1,13 +1,13 @@
 {
   "name": "friday-night-gridiron",
   "version": "1.0.0",
-  "description": "Friday Night Gridiron '04 — build your high school, build your team, play under the lights. A 2000s high school football 3D game.",
+  "description": "Friday Night Gridiron '04 \u2014 build your high school, build your team, play under the lights. A 2000s high school football 3D game.",
   "type": "module",
   "scripts": {
     "start": "python3 serve.py",
     "game": "python3 serve.py --dir game",
-    "game:test": "node game/tests/boxscript.test.mjs",
-    "game:e2e": "node game/tests/e2e/smoke.mjs && node game/tests/e2e/boxscript-bindings.mjs && node game/tests/e2e/multiplayer.mjs",
+    "game:test": "node game/tests/boxscript.test.mjs && node game/tests/geometry.test.mjs",
+    "game:e2e": "node game/tests/e2e/smoke3d.mjs && node game/tests/e2e/tour3d.mjs && node game/tests/e2e/mp3d.mjs",
     "game:export": "node tools/export-game.mjs",
     "shot": "node tools/shot.mjs",
     "smoke": "node tools/smoke.mjs"

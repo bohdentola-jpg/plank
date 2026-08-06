@@ -21,7 +21,7 @@ const distDir = path.join(root, 'dist');
 const outDir = path.join(distDir, 'game-site');
 const zipPath = path.join(distDir, 'game-site.zip');
 
-const SKIP = new Set(['tests', '.DS_Store']);
+const SKIP = new Set(["tests", ".DS_Store"]);
 
 async function collect(dir, rel = '') {
   const out = [];

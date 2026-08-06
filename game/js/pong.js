@@ -1,64 +1,78 @@
-// pong.js — the ping pong table. Host-simulated; clients render from snapshots.
+// pong.js — the ping pong table, in 3D.
 //
-// Stand at either end of the table and press E to pick up a paddle. Click to
-// swing. First to 5. If nobody takes the other side, a cardboard box with a
-// paddle fills in (the box-bot).
+// Walk to either end and press E to pick up a paddle. Aim with the mouse and
+// click to swing: where you're looking is where it goes. First to 5. If nobody
+// takes the other end, a cardboard box wanders over and plays you.
+//
+// The host simulates the ball; everyone else renders the snapshots.
 
-import { rand } from './util.js';
+import { clamp, rand } from './util.js';
 
-const BALL_GRAV = 460;
+const BALL_GRAV = 15;
 const WIN_SCORE = 5;
-const BOT_DELAY = 2.0;
+const BOT_DELAY = 2.4;
+const REACH = 3.2;
 
 export class Pong {
-  constructor(tableEnt, map, groundY) {
-    const w = 88 * (tableEnt.scale || 100) / 100;
-    const h = 26 * (tableEnt.scale || 100) / 100;
-    this.rect = { x0: tableEnt.x - w / 2, x1: tableEnt.x + w / 2 };
-    this.surfaceY = tableEnt.y - h / 2 + 6;    // top of the table slab
+  constructor(tableEnt) {
     this.tableId = tableEnt.id;
-    this.groundY = groundY != null ? groundY : tableEnt.y + h / 2 + 8;
-    this.sides = { L: null, R: null };          // playerId | 'bot' | null
+    const s = tableEnt.size;
+    this.cx = tableEnt.x;
+    this.cz = tableEnt.z;
+    this.baseY = tableEnt.y;
+    this.halfLen = s.x / 2;                 // table runs along x
+    this.halfWid = s.z / 2;
+    this.surfaceY = tableEnt.y + s.y * 0.72;   // top of the slab
+    this.sides = { L: null, R: null };
     this.score = { L: 0, R: 0 };
-    this.ball = null;                            // {x,y,vx,vy}
+    this.ball = null;
     this.serveSide = 'L';
     this.serveT = 0;
     this.msg = null;
     this.msgT = 0;
     this.botT = 0;
-    this.botSwingCooldown = 0;
-    this.over = false;
+    this.botCool = 0;
+    this.lastHit = null;
   }
 
-  stationX(side) { return side === 'L' ? this.rect.x0 - 14 : this.rect.x1 + 14; }
-  paddleY() { return this.surfaceY - 10; }
+  // where a player stands to play a side
+  station(side) {
+    const dx = side === 'L' ? -(this.halfLen + 2.2) : (this.halfLen + 2.2);
+    return { x: this.cx + dx, z: this.cz };
+  }
 
-  sideOf(playerId) {
-    if (this.sides.L === playerId) return 'L';
-    if (this.sides.R === playerId) return 'R';
+  paddleY() { return this.surfaceY + 0.9; }
+  sideOf(id) { return this.sides.L === id ? 'L' : this.sides.R === id ? 'R' : null; }
+  humanCount() { return ['L', 'R'].filter(s => this.sides[s] && this.sides[s] !== 'bot').length; }
+
+  nearStation(x, z) {
+    for (const side of ['L', 'R']) {
+      const st = this.station(side);
+      if (Math.hypot(x - st.x, z - st.z) < 3.4) return side;
+    }
     return null;
   }
 
-  occupied() { return (this.sides.L && this.sides.L !== 'bot') || (this.sides.R && this.sides.R !== 'bot'); }
-
-  // player wants in — picks the nearer free side. returns side or null.
-  join(playerId, px) {
-    if (this.sideOf(playerId)) return this.sideOf(playerId);
-    const pref = px < (this.rect.x0 + this.rect.x1) / 2 ? 'L' : 'R';
-    const other = pref === 'L' ? 'R' : 'L';
-    for (const s of [pref, other]) {
-      if (!this.sides[s] || this.sides[s] === 'bot') {
-        this.sides[s] = playerId;
+  join(id, x, z) {
+    const existing = this.sideOf(id);
+    if (existing) return existing;
+    const want = this.nearStation(x, z) || (x < this.cx ? 'L' : 'R');
+    const other = want === 'L' ? 'R' : 'L';
+    for (const side of [want, other]) {
+      if (!this.sides[side] || this.sides[side] === 'bot') {
+        this.sides[side] = id;
         this.startIfReady();
-        return s;
+        return side;
       }
     }
     return null;
   }
 
-  leave(playerId) {
-    for (const s of ['L', 'R']) if (this.sides[s] === playerId) this.sides[s] = null;
-    if (!this.occupied()) this.reset();
+  leave(id) {
+    let left = false;
+    for (const side of ['L', 'R']) if (this.sides[side] === id) { this.sides[side] = null; left = true; }
+    if (left && this.humanCount() === 0) this.reset();
+    return left;
   }
 
   reset() {
@@ -66,132 +80,173 @@ export class Pong {
     this.score = { L: 0, R: 0 };
     this.ball = null;
     this.msg = null;
-    this.over = false;
+    this.msgT = 0;
+    this.serveT = 0;
     this.botT = 0;
+    this.lastHit = null;
   }
 
   startIfReady() {
-    if (this.over) { this.score = { L: 0, R: 0 }; this.over = false; }
-    if (this.sides.L && this.sides.R && !this.ball && !this.serveT) {
-      this.serveT = 1.0;
-      this.setMsg('serve!', 1.0);
+    if (this.sides.L && this.sides.R && !this.ball && this.serveT <= 0) {
+      this.serveT = 1.2;
+      this.setMsg('serve', 1.2);
     }
   }
 
-  setMsg(m, t = 1.5) { this.msg = m; this.msgT = t; }
+  setMsg(m, t = 1.6) { this.msg = m; this.msgT = t; }
 
-  // host: player swung (clicked). Returns true if the ball was struck.
-  swing(playerId) {
-    const side = this.sideOf(playerId);
+  // A player swung. dir = the unit vector they're aiming (from the camera).
+  swing(id, dir) {
+    const side = this.sideOf(id);
     if (!side || !this.ball) return false;
-    return this.strike(side, playerId === 'bot' ? 0.9 : 1);
+    return this.hit(side, dir, 1);
   }
 
-  strike(side, quality) {
+  hit(side, dir, quality) {
     const b = this.ball;
-    const px = this.stationX(side) + (side === 'L' ? 6 : -6);
+    if (!b) return false;
+    const st = this.station(side);
     const py = this.paddleY();
-    const dir = side === 'L' ? 1 : -1;
-    if (Math.abs(b.x - px) > 20 || Math.abs(b.y - py) > 18) return false;
-    if (dir > 0 && b.vx > 60) return false;   // ball already flying away
-    if (dir < 0 && b.vx < -60) return false;
-    b.vx = dir * rand(105, 150) * quality;
-    b.vy = -rand(120, 165);
+    if (Math.hypot(b.x - st.x, b.z - st.z) > REACH) return false;
+    if (Math.abs(b.y - py) > 2.2) return false;
+    const away = side === 'L' ? 1 : -1;
+    if (Math.sign(b.vx) === away && Math.abs(b.vx) > 2) return false;   // already leaving
+    if (this.lastHit === side) return false;                            // no double hits
+
+    // aim: mostly down the table, steered by where they're looking
+    const power = rand(11, 14) * quality;
+    let ax = away, az = 0;
+    if (dir) {
+      const len = Math.hypot(dir.x, dir.z) || 1;
+      ax = away * Math.max(0.55, Math.abs(dir.x / len));
+      az = clamp(dir.z / len, -0.75, 0.75);
+    }
+    const n = Math.hypot(ax, az) || 1;
+    b.vx = (ax / n) * power;
+    b.vz = (az / n) * power * 0.7;
+    b.vy = rand(5.2, 7);
+    this.lastHit = side;
     return true;
   }
 
-  // host simulation step
-  step(dt, hasHumanNear) {
+  // host step. players = Map(id → player) so the bot can watch a real target.
+  step(dt) {
     if (this.msgT > 0) { this.msgT -= dt; if (this.msgT <= 0) this.msg = null; }
-    this.botSwingCooldown -= dt;
+    this.botCool -= dt;
 
-    // box-bot fills an empty side when a human waits on the other
     const humanL = this.sides.L && this.sides.L !== 'bot';
     const humanR = this.sides.R && this.sides.R !== 'bot';
+    if (!humanL && !humanR) { if (this.sides.L || this.sides.R) this.reset(); return; }
+
+    // the box-bot fills an empty end
     if ((humanL && !this.sides.R) || (humanR && !this.sides.L)) {
       this.botT += dt;
       if (this.botT > BOT_DELAY) {
         this.sides[humanL ? 'R' : 'L'] = 'bot';
-        this.setMsg('box-bot joins', 1.2);
+        this.setMsg('a box wants to play', 1.8);
+        this.botT = 0;
         this.startIfReady();
       }
     } else this.botT = 0;
-    if (!humanL && !humanR) { if (this.sides.L === 'bot' || this.sides.R === 'bot') this.reset(); return; }
 
-    // serving
     if (this.serveT > 0) {
       this.serveT -= dt;
-      if (this.serveT <= 0 && this.sides.L && this.sides.R) {
-        const sx = this.stationX(this.serveSide) + (this.serveSide === 'L' ? 8 : -8);
-        this.ball = { x: sx, y: this.paddleY() - 4, vx: (this.serveSide === 'L' ? 1 : -1) * rand(110, 130), vy: -rand(130, 150) };
+      if (this.serveT <= 0) {
+        this.serveT = 0;                       // never leave a negative countdown behind
+        if (this.sides.L && this.sides.R) {
+          const st = this.station(this.serveSide);
+          this.ball = {
+            x: st.x + (this.serveSide === 'L' ? 1.2 : -1.2),
+            y: this.paddleY() + 0.4,
+            z: st.z,
+            vx: (this.serveSide === 'L' ? 1 : -1) * rand(10, 12),
+            vy: rand(5, 6.4),
+            vz: rand(-1.2, 1.2),
+          };
+          this.lastHit = this.serveSide;
+        }
       }
     }
 
     const b = this.ball;
     if (!b) return;
 
-    b.vy += BALL_GRAV * dt;
+    b.vy -= BALL_GRAV * dt;
     b.x += b.vx * dt;
     b.y += b.vy * dt;
+    b.z += b.vz * dt;
 
     // table bounce
-    if (b.vy > 0 && b.y >= this.surfaceY - 1 && b.y <= this.surfaceY + 6 &&
-        b.x >= this.rect.x0 && b.x <= this.rect.x1) {
-      b.y = this.surfaceY - 1;
-      b.vy = -Math.abs(b.vy) * 0.92;
-      if (Math.abs(b.vy) < 60) b.vy = -160; // keep the rally alive
+    const onTable = Math.abs(b.x - this.cx) <= this.halfLen && Math.abs(b.z - this.cz) <= this.halfWid;
+    if (b.vy < 0 && onTable && b.y <= this.surfaceY + 0.1 && b.y > this.surfaceY - 0.9) {
+      b.y = this.surfaceY + 0.1;
+      b.vy = Math.abs(b.vy) * 0.86;
+      if (b.vy < 3) b.vy = 4.4;               // keep rallies alive
     }
-    // net
-    const netX = (this.rect.x0 + this.rect.x1) / 2;
-    if (Math.abs(b.x - netX) < 2 && b.y > this.surfaceY - 7 && b.y < this.surfaceY) {
-      b.vx = -b.vx * 0.25;
+    // the net
+    if (Math.abs(b.x - this.cx) < 0.2 && b.y < this.surfaceY + 0.95 && b.y > this.surfaceY) {
+      b.vx = -b.vx * 0.3;
       b.x += b.vx * dt * 2;
+      this.lastHit = null;
     }
-    // bot play
-    for (const s of ['L', 'R']) {
-      if (this.sides[s] === 'bot' && this.botSwingCooldown <= 0) {
-        const toward = s === 'L' ? b.vx < 0 : b.vx > 0;
-        if (toward && this.strike(s, rand(0.88, 1.02))) this.botSwingCooldown = 0.5;
+
+    // the bot plays its end
+    for (const side of ['L', 'R']) {
+      if (this.sides[side] !== 'bot' || this.botCool > 0) continue;
+      const coming = side === 'L' ? b.vx < 0 : b.vx > 0;
+      if (!coming) continue;
+      const st = this.station(side);
+      if (Math.hypot(b.x - st.x, b.z - st.z) < REACH * 0.85) {
+        const aim = { x: side === 'L' ? 1 : -1, z: clamp(rand(-0.5, 0.5), -0.6, 0.6) };
+        if (this.hit(side, aim, rand(0.86, 1.02))) this.botCool = 0.45;
       }
     }
-    // floor → point
-    if (b.y > this.groundY - 3) {
-      const winner = b.x < netX ? 'R' : 'L';
+
+    // point over: hit the floor or flew away
+    const floor = this.baseY - 0.2;
+    if (b.y < floor || Math.abs(b.x - this.cx) > this.halfLen + 26 || Math.abs(b.z - this.cz) > this.halfWid + 22) {
+      const winner = b.x < this.cx ? 'R' : 'L';
       this.score[winner]++;
       this.ball = null;
+      this.lastHit = null;
       if (this.score[winner] >= WIN_SCORE) {
-        this.setMsg((winner === 'L' ? 'left' : 'right') + ' wins!', 3);
-        this.over = true;
+        this.setMsg((winner === 'L' ? 'left' : 'right') + ' wins ' + this.score.L + '-' + this.score.R, 3.4);
         this.score = { L: 0, R: 0 };
         this.serveSide = winner;
-        this.serveT = 3.2;
-        this.over = false;
+        this.serveT = 3.6;
       } else {
-        this.setMsg(this.score.L + ' - ' + this.score.R, 1.2);
+        this.setMsg('point', 1.1);
         this.serveSide = winner;
-        this.serveT = 1.6;
+        this.serveT = 1.8;
       }
-    }
-    // ball escapes sideways far → reset the point
-    if (b && (b.x < this.rect.x0 - 220 || b.x > this.rect.x1 + 220)) {
-      this.ball = null;
-      this.serveT = 1.2;
     }
   }
 
   snapshot() {
     return {
-      sides: this.sides, score: this.score, ball: this.ball,
-      msg: this.msg, serveSide: this.serveSide,
+      s: this.sides, sc: this.score,
+      b: this.ball ? [
+        Math.round(this.ball.x * 100) / 100,
+        Math.round(this.ball.y * 100) / 100,
+        Math.round(this.ball.z * 100) / 100,
+      ] : null,
+      m: this.msg, ss: this.serveSide,
     };
   }
 
   applySnapshot(s) {
-    if (!s) return;
-    this.sides = s.sides || { L: null, R: null };
-    this.score = s.score || { L: 0, R: 0 };
-    this.ball = s.ball || null;
-    this.msg = s.msg || null;
-    this.serveSide = s.serveSide || 'L';
+    if (!s || typeof s !== 'object') return;
+    const sides = s.s && typeof s.s === 'object' ? s.s : {};
+    this.sides = {
+      L: typeof sides.L === 'string' ? sides.L : null,
+      R: typeof sides.R === 'string' ? sides.R : null,
+    };
+    const sc = s.sc && typeof s.sc === 'object' ? s.sc : {};
+    this.score = { L: +sc.L || 0, R: +sc.R || 0 };
+    if (Array.isArray(s.b) && s.b.length >= 3) {
+      this.ball = { x: +s.b[0] || 0, y: +s.b[1] || 0, z: +s.b[2] || 0, vx: 0, vy: 0, vz: 0 };
+    } else this.ball = null;
+    this.msg = typeof s.m === 'string' ? s.m.slice(0, 40) : null;
+    this.serveSide = s.ss === 'R' ? 'R' : 'L';
   }
 }

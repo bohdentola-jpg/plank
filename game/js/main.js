@@ -1,21 +1,31 @@
-// main.js — boot, menus, and the glue between lobby / session / editor.
+// main.js — the menu, and the wiring between lobby, session and editor.
 
-import { drawTitle, titleWidth, uid, playSound } from './util.js';
+import { uid, playSound, unlockAudio, PALETTE_HEX } from './util.js';
 import { joinOrHostPublic, hostPrivate, joinPrivate, soloLobby } from './net.js';
 import { GameSession } from './game.js';
 import { Editor } from './editor.js';
-import { Renderer } from './render.js';
-import { mainMap, sampleMap, loadMaps, saveMap, deleteMap, codeToMap, mapToCode } from './maps.js';
 import { emptyMap } from './world.js';
+import { mainMap, sampleMap, loadMaps, saveMap, deleteMap, codeToMap, mapToCode } from './maps.js';
 
 const $ = (id) => document.getElementById(id);
 
-const renderer = new Renderer($('world'), $('overlay'));
 const dom = {
+  canvas: $('view'),
+  bubbles: $('bubbles'),
+  bsUI: $('bs-ui'),
+  writes: $('writes'),
+  hud: $('hud'),
+  foot: $('foot'),
+  pongHud: $('ponghud'),
+  veil: $('veil'),
+  crosshair: $('crosshair'),
   chatBar: $('chatbar'),
   chatInput: $('chatinput'),
-  bsUI: $('bs-ui'),
   errPanel: $('err-panel'),
+  pause: $('pause'),
+  pauseInfo: $('pause-info'),
+  pauseResume: $('pause-resume'),
+  pauseLeave: $('pause-leave'),
 };
 
 let session = null;
@@ -25,20 +35,40 @@ let editor = null;
 const SCREENS = ['menu', 'private', 'mapslist', 'connect'];
 function show(name) {
   for (const s of SCREENS) $(s).style.display = s === name ? 'flex' : 'none';
-  document.body.classList.toggle('in-menu', SCREENS.includes(name));
+  const inMenu = SCREENS.includes(name);
+  document.body.classList.toggle('in-menu', inMenu);
 }
-function showNone() { show('__none__'); }
+function showWorld() { show('__none__'); }
 
-// -------------------------------------------------------------- title
+// -------------------------------------------------------------- the title
+// "game", drawn as pixels so the name looks like the game does.
+const TITLE = {
+  g: ['011110', '110011', '110011', '110011', '011111', '000011', '110011', '011110'],
+  a: ['000000', '011110', '000011', '011111', '110011', '110011', '011111', '000000'],
+  m: ['000000', '111110', '110101', '110101', '110101', '110101', '110101', '000000'],
+  e: ['000000', '011110', '110011', '111111', '110000', '110011', '011110', '000000'],
+};
 function paintTitle() {
   for (const cv of document.querySelectorAll('.title-canvas')) {
-    const scale = 7;
-    const w = titleWidth('game', scale);
-    cv.width = w + scale * 2;
-    cv.height = scale * 11;
+    const s = +(cv.dataset.scale || 8);
+    const rows = 8, cols = 6, gap = 1;
+    cv.width = (cols + gap) * 4 * s;
+    cv.height = rows * s;
+    cv.style.width = cv.width + 'px';
+    cv.style.height = cv.height + 'px';
     const c = cv.getContext('2d');
     c.imageSmoothingEnabled = false;
-    drawTitle(c, 'game', scale, scale * 6, scale, '#8b8b8b');
+    c.fillStyle = '#8b8b8b';
+    let ox = 0;
+    for (const ch of 'game') {
+      const g = TITLE[ch];
+      for (let r = 0; r < g.length; r++) {
+        for (let q = 0; q < g[r].length; q++) {
+          if (g[r][q] === '1') c.fillRect((ox + q) * s, r * s, s, s);
+        }
+      }
+      ox += cols + gap;
+    }
   }
 }
 
@@ -49,104 +79,100 @@ nameInput.addEventListener('input', () => {
   localStorage.setItem('game.name', nameInput.value.trim().slice(0, 16));
 });
 function myName() {
-  return (nameInput.value || '').trim().slice(0, 16) || ('guest ' + Math.floor(Math.random() * 900 + 100));
+  const n = (nameInput.value || '').trim().slice(0, 16);
+  return n || 'guest ' + Math.floor(Math.random() * 900 + 100);
 }
 
 // -------------------------------------------------------------- sessions
 function connectStatus(text) { $('connect-status').textContent = text; }
 
-function startSession(lobby, map, snap, opts = {}) {
-  showNone();
+function startSession(lobby, map, opts = {}) {
+  showWorld();
+  unlockAudio();
   session = new GameSession({
-    renderer, dom, lobby, map, snap,
+    dom, lobby, map,
     myName: myName(),
     testMode: !!opts.testMode,
     onExit: () => {
       session = null;
-      dom.errPanel.style.display = 'none';
       if (opts.onExit) opts.onExit();
       else show('menu');
     },
   });
+  // click once to grab the mouse
+  session.toast(lobby && lobby.code ? 'lobby code ' + lobby.code : 'click to look around');
 }
 
 async function joinPublicFlow() {
   show('connect');
   connectStatus('looking for players…');
+  let lobby;
   try {
-    const lobby = await joinOrHostPublic(myName(), connectStatus);
-    const map = lobby.welcome && lobby.welcome.map ? lobby.welcome.map : null;
-    const snap = lobby.welcome ? lobby.welcome.snap : null;
-    startSession(lobby, map, snap);
+    lobby = await joinOrHostPublic(myName(), connectStatus);
   } catch (e) {
     console.error(e);
-    startSession(soloLobby(myName(), 'something went wrong — playing solo'), null, null);
+    lobby = soloLobby(myName(), 'something went wrong — playing solo');
   }
+  const w = lobby.welcome;
+  startSession(lobby, w && w.map ? w.map : null);
 }
 
 async function hostPrivateFlow(map, opts = {}) {
   show('connect');
   connectStatus('opening a private lobby…');
+  let lobby;
   try {
-    const lobby = await hostPrivate(myName(), connectStatus);
-    startSession(lobby, map, null, opts);
-    if (lobby.code) session.toast('lobby code: ' + lobby.code + ' — friends join with it');
+    lobby = await hostPrivate(myName(), connectStatus);
   } catch (e) {
     console.error(e);
-    startSession(soloLobby(myName(), 'something went wrong — playing solo'), map, null, opts);
+    lobby = soloLobby(myName(), 'something went wrong — playing solo');
   }
+  startSession(lobby, map, opts);
 }
 
 async function joinPrivateFlow(code) {
   show('connect');
   try {
     const lobby = await joinPrivate(code, myName(), connectStatus);
-    const map = lobby.welcome && lobby.welcome.map ? lobby.welcome.map : null;
-    const snap = lobby.welcome ? lobby.welcome.snap : null;
-    startSession(lobby, map, snap);
+    const w = lobby.welcome;
+    startSession(lobby, w && w.map ? w.map : null);
   } catch (err) {
     connectStatus((err && err.text) || 'could not join');
-    setTimeout(() => show('private'), 1600);
+    setTimeout(() => show('private'), 1800);
   }
 }
 
 // -------------------------------------------------------------- editor
 function openEditor(map, mapId) {
-  showNone();
+  showWorld();
   $('editor-root').style.display = 'block';
   editor = new Editor({
-    renderer,
+    dom,
     root: $('editor-root'),
     map, mapId,
     onExit: () => { editor = null; show('menu'); },
     onTest: (m, id) => {
       editor = null;
-      $('editor-root').style.display = 'none';
-      $('editor-root').innerHTML = '';
-      startSession(null, m, null, {
+      startSession(soloLobby(myName()), m, {
         testMode: true,
         onExit: () => openEditor(m, id),
       });
     },
     onHost: (m, id) => {
       editor = null;
-      $('editor-root').style.display = 'none';
-      $('editor-root').innerHTML = '';
       hostPrivateFlow(m, { onExit: () => openEditor(m, id) });
     },
   });
 }
 
-// -------------------------------------------------------------- maps list
+// -------------------------------------------------------------- my maps
 function refreshMapsList() {
   const list = $('maps-items');
   list.innerHTML = '';
-  const maps = loadMaps();
+  let maps = loadMaps();
   if (!Object.keys(maps).length) {
-    // seed with the sample so the list never feels empty
-    const id = uid();
-    saveMap(id, sampleMap());
-    return refreshMapsList();
+    saveMap(uid(), sampleMap());
+    maps = loadMaps();
   }
   for (const [id, m] of Object.entries(maps)) {
     const row = document.createElement('div');
@@ -154,21 +180,29 @@ function refreshMapsList() {
     const name = document.createElement('span');
     name.className = 'map-name';
     name.textContent = m.name;
-    const edit = mkBtn('edit', () => openEditor(m, id));
-    const play = mkBtn('play', () => startSession(soloLobby(myName()), m, null, { onExit: () => { show('mapslist'); refreshMapsList(); } }));
-    const host = mkBtn('host', () => hostPrivateFlow(m));
-    const share = mkBtn('share', async () => {
-      const code = mapToCode(m);
-      try { await navigator.clipboard.writeText(code); share.textContent = 'copied!'; }
-      catch (e) { prompt('copy this map code:', code); }
-      setTimeout(() => { share.textContent = 'share'; }, 1200);
-    });
+    const meta = document.createElement('span');
+    meta.className = 'map-meta';
+    meta.textContent = m.objects.length + ' objects · ' + Object.keys(m.models).length + ' models' +
+      (m.terrain === false ? ' · void' : ' · world');
+    row.append(name, meta,
+      mkBtn('build', () => openEditor(m, id)),
+      mkBtn('play', () => startSession(soloLobby(myName()), m, {
+        onExit: () => { show('mapslist'); refreshMapsList(); },
+      })),
+      mkBtn('host', () => hostPrivateFlow(m)),
+      mkBtn('share', async (b) => {
+        const code = mapToCode(m);
+        try { await navigator.clipboard.writeText(code); b.textContent = 'copied'; }
+        catch (e) { prompt('map code:', code); }
+        setTimeout(() => { b.textContent = 'share'; }, 1400);
+      }),
+    );
     const del = mkBtn('delete', () => {
       if (confirm('delete "' + m.name + '"?')) { deleteMap(id); refreshMapsList(); }
     });
     del.classList.add('danger');
-    row.append(name, edit, play, host, share, del);
-    list.appendChild(row);
+    row.append(del);
+    list.append(row);
   }
 }
 
@@ -176,72 +210,76 @@ function mkBtn(label, fn) {
   const b = document.createElement('button');
   b.className = 'menu-mini';
   b.textContent = label;
-  b.addEventListener('click', fn);
+  b.addEventListener('click', () => fn(b));
   return b;
 }
 
 // -------------------------------------------------------------- wiring
-$('btn-join').addEventListener('click', () => { playSound('pip'); joinPublicFlow(); });
-$('btn-private').addEventListener('click', () => { playSound('pip'); show('private'); });
-$('btn-create').addEventListener('click', () => { playSound('pip'); refreshMapsList(); show('mapslist'); });
-
-$('btn-priv-back').addEventListener('click', () => show('menu'));
-$('btn-priv-make').addEventListener('click', () => {
-  const sel = $('priv-map');
-  const maps = loadMaps();
-  const map = sel.value === '__main__' ? null : maps[sel.value];
-  hostPrivateFlow(map || null);
-});
-$('btn-priv-join').addEventListener('click', () => {
-  const code = $('priv-code').value.trim().toUpperCase();
-  if (code.length >= 3) joinPrivateFlow(code);
-});
-$('priv-code').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') $('btn-priv-join').click();
-  e.stopPropagation();
-});
-
-$('btn-maps-back').addEventListener('click', () => show('menu'));
-$('btn-maps-new').addEventListener('click', () => {
-  const m = emptyMap('my map');
-  openEditor(m, uid());
-});
-$('btn-maps-import').addEventListener('click', () => {
-  const code = $('maps-import-code').value;
-  const m = codeToMap(code);
-  if (!m) { $('maps-import-code').value = ''; $('maps-import-code').placeholder = "that code didn't work…"; return; }
-  const id = uid();
-  saveMap(id, m);
-  $('maps-import-code').value = '';
-  refreshMapsList();
-});
-$('btn-connect-cancel').addEventListener('click', () => location.reload());
-
-// populate private map choices whenever the private screen opens
-$('btn-private').addEventListener('click', () => {
+$('btn-join').onclick = () => { playSound('pip'); joinPublicFlow(); };
+$('btn-private').onclick = () => {
+  playSound('pip');
   const sel = $('priv-map');
   sel.innerHTML = '';
   const optMain = document.createElement('option');
   optMain.value = '__main__';
-  optMain.textContent = 'main map';
-  sel.appendChild(optMain);
+  optMain.textContent = 'the main world';
+  sel.append(optMain);
   for (const [id, m] of Object.entries(loadMaps())) {
     const o = document.createElement('option');
     o.value = id;
     o.textContent = m.name;
-    sel.appendChild(o);
+    sel.append(o);
   }
+  show('private');
+};
+$('btn-create').onclick = () => { playSound('pip'); refreshMapsList(); show('mapslist'); };
+
+$('btn-priv-back').onclick = () => show('menu');
+$('btn-priv-make').onclick = () => {
+  const sel = $('priv-map');
+  const maps = loadMaps();
+  hostPrivateFlow(sel.value === '__main__' ? null : (maps[sel.value] || null));
+};
+$('btn-priv-join').onclick = () => {
+  const code = $('priv-code').value.trim().toUpperCase();
+  if (code.length >= 3) joinPrivateFlow(code);
+};
+$('priv-code').addEventListener('keydown', (e) => {
+  e.stopPropagation();
+  if (e.key === 'Enter') $('btn-priv-join').click();
 });
+
+$('btn-maps-back').onclick = () => show('menu');
+$('btn-maps-new').onclick = () => {
+  const m = emptyMap('my map');
+  openEditor(m, uid());
+};
+$('btn-maps-void').onclick = () => {
+  const m = emptyMap('my void');
+  m.terrain = false;
+  openEditor(m, uid());
+};
+$('btn-maps-import').onclick = () => {
+  const input = $('maps-import-code');
+  const m = codeToMap(input.value);
+  if (!m) {
+    input.value = '';
+    input.placeholder = "that code didn't work — paste the whole thing";
+    return;
+  }
+  saveMap(uid(), m);
+  input.value = '';
+  input.placeholder = 'paste a map code (GM3.…)';
+  refreshMapsList();
+};
+$('btn-connect-cancel').onclick = () => location.reload();
 
 paintTitle();
 show('menu');
 
-// QA hook (harmless in production): lets automated tests peek at state
-window.__game = { get session() { return session; }, get editor() { return editor; } };
-
-// warn about leaving mid-game
-window.addEventListener('beforeunload', (e) => {
-  if (session && session.lobby && !session.lobby.offline && session.players.size > 1) {
-    e.preventDefault();
-  }
-});
+// QA hook — harmless in production, lets the tests look at live state
+window.__game = {
+  get session() { return session; },
+  get editor() { return editor; },
+  mainMap, sampleMap,
+};

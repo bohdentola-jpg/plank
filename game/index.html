@@ -4,24 +4,43 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>game</title>
-<meta name="description" content="a little multiplayer stickman space. throw boxes, blast friends, play ping pong, build maps, script them.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect x='2' y='4' width='12' height='10' fill='%23c9a06b'/><rect x='7' y='5' width='2' height='8' fill='%23ddd0ae'/><rect x='2' y='4' width='12' height='1' fill='%23a87f4f'/></svg>">
+<meta name="description" content="a 3D multiplayer stickman world. throw boxes, blast friends, play ping pong, wander the biomes, build your own maps and script them.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect x='2' y='4' width='12' height='10' fill='%23c9a06b'/><rect x='7' y='4' width='2' height='10' fill='%23ddd0ae'/><rect x='2' y='4' width='12' height='1' fill='%23a87f4f'/></svg>">
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="in-menu">
 
-<canvas id="world"></canvas>
-<canvas id="overlay"></canvas>
+<canvas id="view"></canvas>
+
+<!-- in-world overlays -->
+<div id="bubbles"></div>
+<div id="writes"></div>
 <div id="bs-ui"></div>
+<div id="crosshair"></div>
+<pre id="hud"></pre>
+<pre id="foot"></pre>
+<pre id="ponghud"></pre>
+<div id="veil"></div>
+<pre id="err-panel"></pre>
 
-<div id="chatbar" style="display:none">
-  <input id="chatinput" maxlength="120" placeholder="say something…" autocomplete="off">
+<div id="chatbar">
+  <input id="chatinput" maxlength="140" placeholder="say something…" autocomplete="off">
 </div>
-<pre id="err-panel" style="display:none"></pre>
 
-<!-- main menu -->
+<!-- pause -->
+<div id="pause">
+  <div class="pause-card">
+    <div class="pause-title">paused</div>
+    <div id="pause-info"></div>
+    <button id="pause-resume" class="menu-btn small">resume</button>
+    <button id="pause-leave" class="menu-btn small">leave</button>
+    <div class="pause-keys">wasd move · shift run · space jump · e grab · q drop<br>click throw or blast · t chat · wheel zoom · f pixels</div>
+  </div>
+</div>
+
+<!-- menu -->
 <div id="menu" class="screen">
-  <canvas class="title-canvas"></canvas>
+  <canvas class="title-canvas" data-scale="9"></canvas>
   <div class="menu-buttons">
     <button id="btn-join" class="menu-btn">join lobby</button>
     <button id="btn-private" class="menu-btn">private</button>
@@ -34,19 +53,19 @@
   <div class="menu-foot">a fan-made tribute to the world of snaptic · boxes may pop</div>
 </div>
 
-<!-- private lobby menu -->
-<div id="private" class="screen" style="display:none">
-  <canvas class="title-canvas"></canvas>
+<!-- private -->
+<div id="private" class="screen">
+  <canvas class="title-canvas" data-scale="6"></canvas>
   <div class="panel">
-    <div class="panel-h">make a lobby</div>
+    <div class="panel-h">open a lobby</div>
     <div class="panel-row">
       <select id="priv-map"></select>
-      <button id="btn-priv-make" class="menu-mini">open lobby</button>
+      <button id="btn-priv-make" class="menu-mini">open</button>
     </div>
-    <div class="panel-hint">you'll get a 4-letter code to give friends</div>
+    <div class="panel-hint">you get a 4-letter code to hand out</div>
   </div>
   <div class="panel">
-    <div class="panel-h">join with code</div>
+    <div class="panel-h">join with a code</div>
     <div class="panel-row">
       <input id="priv-code" maxlength="6" placeholder="ABCD" autocomplete="off">
       <button id="btn-priv-join" class="menu-mini">join</button>
@@ -56,16 +75,17 @@
 </div>
 
 <!-- my maps -->
-<div id="mapslist" class="screen" style="display:none">
-  <canvas class="title-canvas"></canvas>
+<div id="mapslist" class="screen">
+  <canvas class="title-canvas" data-scale="6"></canvas>
   <div class="panel wide">
     <div class="panel-h">my maps</div>
     <div id="maps-items"></div>
     <div class="panel-row" style="margin-top:14px">
-      <button id="btn-maps-new" class="menu-mini">+ new map</button>
+      <button id="btn-maps-new" class="menu-mini">+ new world</button>
+      <button id="btn-maps-void" class="menu-mini">+ new empty void</button>
     </div>
     <div class="panel-row">
-      <input id="maps-import-code" placeholder="paste a map code (GM1.…)" autocomplete="off">
+      <input id="maps-import-code" placeholder="paste a map code (GM3.…)" autocomplete="off">
       <button id="btn-maps-import" class="menu-mini">import</button>
     </div>
   </div>
@@ -73,14 +93,14 @@
 </div>
 
 <!-- connecting -->
-<div id="connect" class="screen" style="display:none">
-  <canvas class="title-canvas"></canvas>
+<div id="connect" class="screen">
+  <canvas class="title-canvas" data-scale="6"></canvas>
   <div id="connect-status" class="connect-status">looking for players…</div>
   <div class="spinner"><span></span><span></span><span></span></div>
   <button id="btn-connect-cancel" class="menu-btn small">cancel</button>
 </div>
 
-<div id="editor-root" style="display:none"></div>
+<div id="editor-root"></div>
 
 <script src="vendor/peerjs.min.js"></script>
 <script type="module" src="js/main.js"></script>

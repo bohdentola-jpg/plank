@@ -1,11 +1,11 @@
-// chat.js — the chat input + iMessage-style bubbles over heads.
-// Your own messages render in the blue apple bubble; everyone else's in gray.
+// chat.js — the chat bar and the speech bubbles that float over heads.
+//
+// Bubbles are real DOM, positioned each frame from the 3D projection: yours in
+// the blue apple bubble, everyone else's in the gray one. DOM means the text
+// stays crisp while the world behind it stays pixelated.
 
-import { PAL, wrapText } from './util.js';
-
-const BUBBLE_LIFE = 7;      // seconds a bubble hangs around
-const BUBBLE_FADE = 0.6;
-const FONT = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif';
+const BUBBLE_LIFE = 7;
+const MAX_STACK = 3;
 
 export class Chat {
   constructor(barEl, inputEl, onSend) {
@@ -16,19 +16,14 @@ export class Chat {
     this.handler = (e) => {
       e.stopPropagation();
       if (e.key === 'Enter') {
-        const text = inputEl.value.trim().slice(0, 120);
+        const text = this.input.value.trim().slice(0, 140);
         if (text) this.onSend(text);
         this.close();
       } else if (e.key === 'Escape') {
         this.close();
       }
     };
-    inputEl.addEventListener('keydown', this.handler);
-  }
-
-  destroy() {
-    this.input.removeEventListener('keydown', this.handler);
-    this.close();
+    this.input.addEventListener('keydown', this.handler);
   }
 
   openBar() {
@@ -44,75 +39,97 @@ export class Chat {
     this.bar.style.display = 'none';
     this.input.blur();
   }
-}
 
-// add a message to an actor's bubble stack (players and scripted objects both)
-export function addBubble(actor, text, life = BUBBLE_LIFE) {
-  if (!actor.bubbles) actor.bubbles = [];
-  actor.bubbles.push({ text: String(text).slice(0, 200), t: 0, life });
-  while (actor.bubbles.length > 3) actor.bubbles.shift();
-}
-
-export function updateBubbles(actor, dt) {
-  if (!actor.bubbles) return;
-  for (const b of actor.bubbles) b.t += dt;
-  actor.bubbles = actor.bubbles.filter(b => b.t < b.life);
-}
-
-// Draw an actor's bubbles on the hi-res overlay.
-// headScreen = {x, y} screen position of the point the tail should aim at.
-export function drawBubbles(o, actor, headScreen, mine) {
-  if (!actor.bubbles || !actor.bubbles.length) return;
-  o.font = FONT;
-  o.textBaseline = 'top';
-  const maxW = 190;
-  let bottom = headScreen.y - 10;
-  for (let i = actor.bubbles.length - 1; i >= 0; i--) {
-    const b = actor.bubbles[i];
-    const alpha = b.t > b.life - BUBBLE_FADE ? Math.max(0, (b.life - b.t) / BUBBLE_FADE) : 1;
-    const lines = wrapText(o, b.text, maxW);
-    const lineH = 15;
-    const w = Math.min(maxW, Math.max(...lines.map(l => o.measureText(l).width))) + 18;
-    const h = lines.length * lineH + 10;
-    const x = headScreen.x - w / 2;
-    const y = bottom - h - (i === actor.bubbles.length - 1 ? 7 : 3);
-
-    o.globalAlpha = alpha;
-    o.fillStyle = mine ? PAL.imBlue : PAL.imGray;
-    roundRect(o, x, y, w, h, 10);
-    o.fill();
-    // tail on the newest bubble only
-    if (i === actor.bubbles.length - 1) {
-      o.beginPath();
-      o.moveTo(headScreen.x - 5, y + h - 1);
-      o.lineTo(headScreen.x, y + h + 6);
-      o.lineTo(headScreen.x + 6, y + h - 1);
-      o.closePath();
-      o.fill();
-    }
-    o.fillStyle = mine ? '#ffffff' : '#111111';
-    lines.forEach((l, li) => o.fillText(l, x + 9, y + 5 + li * lineH));
-    o.globalAlpha = 1;
-    bottom = y;
+  destroy() {
+    this.input.removeEventListener('keydown', this.handler);
+    this.close();
   }
 }
 
-export function drawNameTag(o, name, headScreen, mine) {
-  if (!name) return;
-  o.font = '10px ui-monospace, Menlo, Consolas, monospace';
-  o.textBaseline = 'bottom';
-  o.textAlign = 'center';
-  o.fillStyle = mine ? 'rgba(90,90,90,0.85)' : 'rgba(140,140,140,0.85)';
-  o.fillText(name, headScreen.x, headScreen.y - 2);
-  o.textAlign = 'left';
+// ---------------------------------------------------------------- bubbles
+export function addBubble(actor, text, life = BUBBLE_LIFE) {
+  if (!actor.bubbles) actor.bubbles = [];
+  actor.bubbles.push({ text: String(text).slice(0, 200), t: 0, life, el: null });
+  while (actor.bubbles.length > MAX_STACK) {
+    const old = actor.bubbles.shift();
+    if (old.el) old.el.remove();
+  }
 }
 
-function roundRect(o, x, y, w, h, r) {
-  o.beginPath();
-  o.moveTo(x + r, y);
-  o.arcTo(x + w, y, x + w, y + h, r);
-  o.arcTo(x + w, y + h, x, y + h, r);
-  o.arcTo(x, y + h, x, y, r);
-  o.arcTo(x, y, x + w, y, r);
-  o.closePath();
+export function updateBubbles(actor, dt) {
+  if (!actor.bubbles || !actor.bubbles.length) return;
+  for (const b of actor.bubbles) b.t += dt;
+  const dead = actor.bubbles.filter(b => b.t >= b.life);
+  for (const b of dead) if (b.el) b.el.remove();
+  if (dead.length) actor.bubbles = actor.bubbles.filter(b => b.t < b.life);
+}
+
+export function clearBubbles(actor) {
+  if (!actor.bubbles) return;
+  for (const b of actor.bubbles) if (b.el) b.el.remove();
+  actor.bubbles = [];
+}
+
+// The bubble layer owns the DOM nodes; call layout() once a frame.
+export class BubbleLayer {
+  constructor(root) {
+    this.root = root;
+    this.tags = new Map();     // actor → name tag element
+  }
+
+  // actors: [{actor, screen:{x,y,visible,depth}, mine, name}]
+  layout(items) {
+    for (const it of items) {
+      const { actor, screen, mine, name } = it;
+      // name tag
+      if (name) {
+        let tag = this.tags.get(actor);
+        if (!tag) {
+          tag = document.createElement('div');
+          tag.className = 'nametag';
+          this.root.appendChild(tag);
+          this.tags.set(actor, tag);
+        }
+        if (tag.textContent !== name) tag.textContent = name;
+        if (screen.visible) {
+          tag.style.display = 'block';
+          tag.style.transform = `translate(-50%,-100%) translate(${screen.x.toFixed(1)}px,${(screen.y - 4).toFixed(1)}px)`;
+        } else tag.style.display = 'none';
+      } else {
+        const tag = this.tags.get(actor);
+        if (tag) { tag.remove(); this.tags.delete(actor); }
+      }
+
+      if (!actor.bubbles || !actor.bubbles.length) continue;
+      let stackY = screen.y - (name ? 20 : 6);
+      for (let i = actor.bubbles.length - 1; i >= 0; i--) {
+        const b = actor.bubbles[i];
+        if (!b.el) {
+          b.el = document.createElement('div');
+          b.el.className = 'bubble ' + (mine ? 'mine' : 'theirs');
+          b.el.textContent = b.text;
+          if (i === actor.bubbles.length - 1) b.el.classList.add('tail');
+          this.root.appendChild(b.el);
+        }
+        if (!screen.visible) { b.el.style.display = 'none'; continue; }
+        b.el.style.display = 'block';
+        const fade = b.life - b.t;
+        b.el.style.opacity = fade < 0.6 ? String(Math.max(0, fade / 0.6)) : '1';
+        b.el.style.transform = `translate(-50%,-100%) translate(${screen.x.toFixed(1)}px,${stackY.toFixed(1)}px)`;
+        stackY -= (b.el.offsetHeight || 26) + 4;
+      }
+    }
+  }
+
+  forget(actor) {
+    const tag = this.tags.get(actor);
+    if (tag) { tag.remove(); this.tags.delete(actor); }
+    clearBubbles(actor);
+  }
+
+  clear() {
+    for (const [, tag] of this.tags) tag.remove();
+    this.tags.clear();
+    this.root.innerHTML = '';
+  }
 }
