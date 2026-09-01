@@ -67,6 +67,7 @@ export class WorldMap {
     this.cx = px; this.cz = pz;
     this.overlay.classList.add('show');
     this._resize();
+    this._cache = null; // re-sample: exploration has grown since last open
     this._dirty = true;
   }
 
@@ -101,26 +102,52 @@ export class WorldMap {
     }
   }
 
+  // The terrain layer is expensive (a world sample per 5px block), so it's
+  // rendered into an oversized offscreen cache and BLITTED during pans;
+  // only zooming or panning past the cache's margin re-samples.
+  _terrainCache() {
+    const W = this.canvas.width, H = this.canvas.height, s = this.scale;
+    const cw = Math.ceil(W * 1.5), ch = Math.ceil(H * 1.5);
+    const cache = this._cache;
+    const maxOffX = ((cw - W) / 2 - 10) * s, maxOffZ = ((ch - H) / 2 - 10) * s;
+    if (cache && cache.scale === s &&
+        Math.abs(this.cx - cache.cx) < maxOffX && Math.abs(this.cz - cache.cz) < maxOffZ) {
+      return cache;
+    }
+    const canvas = cache && cache.w === cw && cache.h === ch ? cache.canvas : document.createElement('canvas');
+    canvas.width = cw; canvas.height = ch;
+    const g = canvas.getContext('2d');
+    g.fillStyle = '#151a20';
+    g.fillRect(0, 0, cw, ch);
+    const B = 5;
+    for (let py = 0; py < ch; py += B) {
+      for (let px2 = 0; px2 < cw; px2 += B) {
+        const wx = this.cx + (px2 - cw / 2) * s;
+        const wz = this.cz + (py - ch / 2) * s;
+        if (!this.state.explored.has(exploreKey(wx, wz))) continue;
+        const h = this.world.heightAt(wx, wz);
+        const col = this.world.colorAt(wx, wz, h, 0.25);
+        g.fillStyle = `rgb(${col[0] * 255 | 0},${col[1] * 255 | 0},${col[2] * 255 | 0})`;
+        g.fillRect(px2, py, B, B);
+      }
+    }
+    this._cache = { canvas, cx: this.cx, cz: this.cz, scale: s, w: cw, h: ch };
+    return this._cache;
+  }
+
   _render() {
     const c = this.ctx, W = this.canvas.width, H = this.canvas.height;
     const s = this.scale;
     c.fillStyle = '#151a20';
     c.fillRect(0, 0, W, H);
 
-    // terrain, drawn in 5px blocks where explored
-    const B = 5;
+    const cache = this._terrainCache();
+    c.drawImage(
+      cache.canvas,
+      W / 2 - cache.w / 2 + (cache.cx - this.cx) / s,
+      H / 2 - cache.h / 2 + (cache.cz - this.cz) / s
+    );
     const half = { x: (W / 2) * s, z: (H / 2) * s };
-    for (let py = 0; py < H; py += B) {
-      for (let px2 = 0; px2 < W; px2 += B) {
-        const wx = this.cx + (px2 - W / 2) * s;
-        const wz = this.cz + (py - H / 2) * s;
-        if (!this.state.explored.has(exploreKey(wx, wz))) continue;
-        const h = this.world.heightAt(wx, wz);
-        const col = this.world.colorAt(wx, wz, h, 0.25);
-        c.fillStyle = `rgb(${col[0] * 255 | 0},${col[1] * 255 | 0},${col[2] * 255 | 0})`;
-        c.fillRect(px2, py, B, B);
-      }
-    }
 
     // grid whisper
     c.strokeStyle = 'rgba(240,230,200,0.05)';

@@ -44,10 +44,9 @@ function buildShrine(rng, lit) {
   beam.position.y = 66;
   beam.visible = !!lit;
   g.add(beam);
-  const glow = new THREE.PointLight(0x7fd4ff, lit ? 1.4 : 0.0, 26);
-  glow.position.y = 3;
-  g.add(glow);
-  return { group: g, parts: { crystal, beam, glow } };
+  // real PointLights come from the manager's fixed pool (constant light
+  // count = no shader recompiles); structures only declare what they want
+  return { group: g, parts: { crystal, beam, lightAt: [0, 3, 0], lightColor: 0x7fd4ff } };
 }
 
 function buildRuin(rng) {
@@ -100,10 +99,7 @@ function buildCamp(rng) {
   );
   flame.position.y = 0.7;
   g.add(flame);
-  const fire = new THREE.PointLight(0xff8a3c, 1.6, 22);
-  fire.position.y = 1.2;
-  g.add(fire);
-  return { group: g, parts: { flame, fire } };
+  return { group: g, parts: { flame, lightAt: [0, 1.2, 0], lightColor: 0xff8a3c } };
 }
 
 function buildStones(rng) {
@@ -198,10 +194,7 @@ function buildVillage(rng) {
     new THREE.MeshBasicMaterial({ color: 0xffc86e }));
   lampGlow.position.set(2.6, 2.9, 2.6);
   g.add(lampGlow);
-  const lamp = new THREE.PointLight(0xffb45e, 0, 20);
-  lamp.position.set(2.6, 3, 2.6);
-  g.add(lamp);
-  return { group: g, parts: { lamp, lampGlow, homes } };
+  return { group: g, parts: { lampGlow, homes, lightAt: [2.6, 3, 2.6], lightColor: 0xffb45e } };
 }
 
 function buildObelisk(rng) {
@@ -221,13 +214,11 @@ function buildObelisk(rng) {
 }
 
 function buildRelic() {
-  const relic = new THREE.Mesh(
+  // bright emissive is enough — a PointLight here would churn the light count
+  return new THREE.Mesh(
     new THREE.IcosahedronGeometry(0.36, 0),
     new THREE.MeshLambertMaterial({ color: 0xffd870, emissive: 0xcc8f1a, emissiveIntensity: 1.5 })
   );
-  const halo = new THREE.PointLight(0xffce5e, 0.9, 10);
-  relic.add(halo);
-  return relic;
 }
 
 // simple villager: body + head + hat, wanders near home
@@ -262,6 +253,16 @@ export class POIManager {
     this.prompt = null;      // current interactable {kind, poi, dist}
     this.onDiscover = null; this.onRelic = null; this.onShrine = null;
     this.onRest = null; this.onSurvey = null;
+    // Fixed pool of PointLights, assigned each frame to the nearest glowing
+    // POIs. The scene's light COUNT never changes, so streaming a campfire in
+    // never forces the renderer to recompile every lit shader.
+    this.lightPool = [];
+    for (let i = 0; i < 6; i++) {
+      const L = new THREE.PointLight(0xffffff, 0, 26);
+      scene.add(L);
+      this.lightPool.push(L);
+    }
+    this._lightWants = [];
   }
 
   _build(poi) {
@@ -323,6 +324,7 @@ export class POIManager {
 
     // per-frame rules on active POIs
     this.prompt = null;
+    this._lightWants.length = 0;
     let bestD = 7;
     for (const rec of this.active.values()) {
       const poi = rec.poi;
@@ -362,20 +364,32 @@ export class POIManager {
         rec.relic.rotation.y = t * 1.4;
       }
       const P = rec.parts;
+      let wantI = 0;
       if (P.crystal) {
         P.crystal.position.y = 2.6 + Math.sin(t * 1.3) * 0.18;
         P.crystal.rotation.y = t * 0.8;
         if (this.state.litShrines.has(poi.id)) {
           P.crystal.material.emissiveIntensity = 1.4 + Math.sin(t * 3) * 0.3;
-          P.glow.intensity = 1.3 + Math.sin(t * 2.2) * 0.25;
+          wantI = 1.3 + Math.sin(t * 2.2) * 0.25;
         }
       }
       if (P.flame) {
         P.flame.scale.set(1 + Math.sin(t * 9) * 0.12, 1 + Math.sin(t * 13) * 0.22, 1);
-        P.fire.intensity = 1.5 + Math.sin(t * 11) * 0.4 + Math.sin(t * 23) * 0.2;
+        wantI = 1.5 + Math.sin(t * 11) * 0.4 + Math.sin(t * 23) * 0.2;
       }
-      if (P.lamp) P.lamp.intensity = isNight ? 1.3 : 0;
+      if (P.lampGlow) wantI = isNight ? 1.3 : 0;
       if (P.tip) P.tip.rotation.y = t * 0.5;
+      if (P.lightAt && wantI > 0.02) {
+        // offset is in the group's rotated frame
+        const ry = rec.group.rotation.y;
+        const [ox, oy, oz] = P.lightAt;
+        this._lightWants.push({
+          x: poi.x + ox * Math.cos(ry) + oz * Math.sin(ry),
+          y: rec.group.position.y + oy,
+          z: poi.z - ox * Math.sin(ry) + oz * Math.cos(ry),
+          color: P.lightColor, intensity: wantI, d,
+        });
+      }
 
       // villagers shuffle about (and turn in at night)
       for (const vr of rec.villagers) {
@@ -401,6 +415,19 @@ export class POIManager {
         }
       }
     }
+
+    // hand the pool lights to the nearest glowing POIs
+    this._lightWants.sort((a2, b2) => a2.d - b2.d);
+    for (let i = 0; i < this.lightPool.length; i++) {
+      const L = this.lightPool[i], w = this._lightWants[i];
+      if (w) {
+        L.position.set(w.x, w.y, w.z);
+        L.color.setHex(w.color);
+        L.intensity = w.intensity;
+      } else {
+        L.intensity = 0;
+      }
+    }
   }
 
   interact() {
@@ -411,7 +438,6 @@ export class POIManager {
       const rec = this.active.get(p.poi.id);
       if (rec) {
         rec.parts.beam.visible = true;
-        rec.parts.glow.intensity = 1.4;
         rec.parts.crystal.material.emissiveIntensity = 1.6;
       }
       if (this.onShrine) this.onShrine(p.poi);
@@ -437,5 +463,7 @@ export class POIManager {
       });
     }
     this.active.clear();
+    for (const L of this.lightPool) this.scene.remove(L);
+    this.lightPool.length = 0;
   }
 }

@@ -32,6 +32,11 @@ const urlSeed = params.has('seed') ? ((parseInt(params.get('seed'), 10) >>> 0) |
 const save0 = params.has('new') || params.has('quick') ? null : loadGame();
 const save = save0 && (urlSeed === null || save0.seed === urlSeed) ? save0 : null;
 const seed = urlSeed ?? (save ? save.seed : (Math.random() * 0xffffffff) >>> 0);
+// ?new is a one-shot: strip it so a refresh RESUMES this journey instead of
+// silently rolling another new world over the autosave
+if (params.has('new') && history.replaceState) {
+  history.replaceState(null, '', location.pathname + (urlSeed !== null ? `?seed=${seed}` : ''));
+}
 
 const el = (id) => document.getElementById(id);
 const holder = el('vast-holder');

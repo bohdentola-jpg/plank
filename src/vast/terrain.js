@@ -144,11 +144,17 @@ export class Terrain {
     }
     this.buildQueue.sort((a, b) => a[0] - b[0]);
 
+    // Build until the budget would be EXCEEDED by another build (predicted
+    // from a rolling average), not merely reached — the first chunk is always
+    // built so streaming can't starve.
     const t0 = performance.now();
     let built = 0;
     for (const [d2, cx, cz] of this.buildQueue) {
-      if (built > 0 && performance.now() - t0 > budgetMs) break;
+      if (built > 0 && performance.now() - t0 + (this._buildCost || 2) > budgetMs) break;
+      const s0 = performance.now();
       const mesh = this._buildMesh(cx * CHUNK, cz * CHUNK, CHUNK, this.res);
+      const cost = performance.now() - s0;
+      this._buildCost = this._buildCost === undefined ? cost : this._buildCost * 0.8 + cost * 0.2;
       this.scene.add(mesh);
       const rec = { mesh, flora: null, cx, cz };
       this.chunks.set(cx + ',' + cz, rec);
