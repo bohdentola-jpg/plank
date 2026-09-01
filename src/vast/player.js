@@ -142,9 +142,10 @@ export class Player {
     let speedCap = this.swimming ? SWIM : wantSprint && canSprint ? SPRINT : (Math.abs(inp.moveX) + Math.abs(inp.moveZ)) > 0.6 ? RUN : WALK;
     if (this.staggerT > 0) { speedCap *= 0.35; this.staggerT -= dt; }
     if (this.stamina <= 0.01 && this.swimming) speedCap = 1.4;
+    // camera faces (sin yaw, cos yaw); screen-right is forward × up = (-cos yaw, sin yaw)
     const sin = Math.sin(this.camYaw), cos = Math.cos(this.camYaw);
-    const dx = (inp.moveX * cos - inp.moveZ * sin);
-    const dz = (-inp.moveX * sin - inp.moveZ * cos);
+    const dx = (-inp.moveX * cos - inp.moveZ * sin);
+    const dz = (inp.moveX * sin - inp.moveZ * cos);
     const mag = Math.hypot(dx, dz);
     const tx = mag > 0.01 ? (dx / Math.max(1, mag)) * speedCap * Math.min(1, mag) : 0;
     const tz = mag > 0.01 ? (dz / Math.max(1, mag)) * speedCap * Math.min(1, mag) : 0;
@@ -249,8 +250,8 @@ export class Player {
     const bx = anchor.x - Math.sin(this.camYaw) * cp * this.camDist;
     const bz = anchor.z - Math.cos(this.camYaw) * cp * this.camDist;
     let by = ty + sp * this.camDist;
-    // keep the boom out of the hillside (sample a few points along it)
-    for (let f = 0.35; f <= 1; f += 0.22) {
+    // keep the boom out of the hillside (sample points along it, incl. f=1: the camera itself)
+    for (let f = 0.35; f <= 1.001; f += 0.1625) {
       const sx = anchor.x + (bx - anchor.x) * f;
       const sz = anchor.z + (bz - anchor.z) * f;
       const g = this.world.heightAt(sx, sz) + 0.5;

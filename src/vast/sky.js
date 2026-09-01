@@ -171,7 +171,7 @@ export class Sky {
 
     const sky = keyLerp(dayT, 1).clone();
     const fogC = keyLerp(dayT, 2).clone();
-    const sunC = keyLerp(dayT, 3);
+    const sunC = keyLerp(dayT, 3).clone(); // clone: keyLerp returns a shared scratch Color
     let sunI = keyLerp(dayT, 4) * dim;
     let hemiI = keyLerp(dayT, 5) * (1 - 0.4 * w.cloudiness);
 

@@ -159,25 +159,30 @@ export class Hud {
 
   // ---- minimap ---------------------------------------------------------------
   updateMinimap(dt, world, px, pz, camYaw, pois, state) {
-    this._miniT -= dt;
     const S = this.mini.width;
     const SPAN = 460; // meters across
-    if (this._miniT <= 0) {
-      this._miniT = 0.7;
-      const N = 46;
-      const img = this.mctx.createImageData(N, N);
-      for (let iy = 0; iy < N; iy++) {
-        for (let ix = 0; ix < N; ix++) {
-          const wx = px + (ix / N - 0.5) * SPAN;
-          const wz = pz + (iy / N - 0.5) * SPAN;
-          const h = world.heightAt(wx, wz);
-          const col = world.colorAt(wx, wz, h, 0.2);
-          const o = (iy * N + ix) * 4;
-          img.data[o] = col[0] * 255; img.data[o + 1] = col[1] * 255; img.data[o + 2] = col[2] * 255;
-          img.data[o + 3] = 255;
-        }
+    const N = 46;
+    // Sample the terrain a few rows per frame instead of all 46 at once —
+    // the finished image commits every ~9 frames, which the eye can't tell
+    // apart from a live map, and the per-frame cost stays flat.
+    if (!this._miniBuild) {
+      this._miniBuild = { img: this.mctx.createImageData(N, N), row: 0, cx: px, cz: pz };
+    }
+    const b = this._miniBuild;
+    for (let step = 0; step < 5 && b.row < N; step++, b.row++) {
+      for (let ix = 0; ix < N; ix++) {
+        const wx = b.cx + (ix / N - 0.5) * SPAN;
+        const wz = b.cz + (b.row / N - 0.5) * SPAN;
+        const h = world.heightAt(wx, wz);
+        const col = world.colorAt(wx, wz, h, 0.2);
+        const o = (b.row * N + ix) * 4;
+        b.img.data[o] = col[0] * 255; b.img.data[o + 1] = col[1] * 255; b.img.data[o + 2] = col[2] * 255;
+        b.img.data[o + 3] = 255;
       }
-      this._miniImg = img;
+    }
+    if (b.row >= N) {
+      this._miniImg = b.img;
+      this._miniBuild = null;
     }
     const c = this.mctx;
     c.clearRect(0, 0, S, S);

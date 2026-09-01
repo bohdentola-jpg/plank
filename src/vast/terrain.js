@@ -127,7 +127,7 @@ export class Terrain {
   }
 
   // ---- streaming ------------------------------------------------------------
-  update(px, pz, budgetMs = 6) {
+  update(px, pz, budgetMs = 6, dt = 0.016) {
     const pcx = Math.floor(px / CHUNK), pcz = Math.floor(pz / CHUNK);
     const R = this.radius;
 
@@ -167,7 +167,7 @@ export class Terrain {
     }
 
     this._updateFarTiles(px, pz);
-    this._updateWater(px, pz);
+    this._updateWater(px, pz, dt);
   }
 
   _syncFlora(rec, d2) {

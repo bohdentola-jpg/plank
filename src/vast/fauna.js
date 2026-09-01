@@ -218,12 +218,14 @@ export class Fauna {
     this.ffMat.opacity += (ffTarget - this.ffMat.opacity) * Math.min(1, dt * 1.5);
     if (this.ffMat.opacity > 0.02) {
       const pos = this.ffGeo.attributes.position;
+      this._ffTick = (this._ffTick || 0) + 1;
       for (let i = 0; i < this.ffData.length; i++) {
         const d = this.ffData[i];
         const x = px + d.ox + Math.sin(this.time * 0.4 + d.ph) * 4;
         const z = pz + d.oz + Math.cos(this.time * 0.33 + d.ph * 1.3) * 4;
-        const gy = this.world.heightAt(x, z);
-        pos.setXYZ(i, x, Math.max(gy, 0) + 0.7 + Math.sin(this.time * 0.9 + d.ph * 2) * 0.8, z);
+        // terrain sampling staggered — each firefly re-grounds every 3rd frame
+        if (d.gy === undefined || i % 3 === this._ffTick % 3) d.gy = this.world.heightAt(x, z);
+        pos.setXYZ(i, x, Math.max(d.gy, 0) + 0.7 + Math.sin(this.time * 0.9 + d.ph * 2) * 0.8, z);
       }
       pos.needsUpdate = true;
       this.fireflies.visible = true;

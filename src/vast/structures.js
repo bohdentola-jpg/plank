@@ -338,6 +338,8 @@ export class POIManager {
       if (rec.relic && d < 3.2 && !this.state.relics.has(poi.id)) {
         this.state.relics.add(poi.id);
         rec.group.remove(rec.relic);
+        rec.relic.geometry.dispose();
+        rec.relic.material.dispose();
         rec.relic = null;
         if (this.onRelic) this.onRelic(poi);
       }

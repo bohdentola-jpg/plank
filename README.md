@@ -127,6 +127,8 @@ An open-world exploration game in the same cabinet — same vendored Three.js,
 same no-install philosophy, a completely different world every seed. Start the
 server as above and open **http://localhost:8000/vast.html**.
 
+![THE VAST title](docs/vast-title.png)
+
 **An endless world.** Terrain streams in around you forever — continents,
 coasts, rolling plains, deep forests, deserts, savannas, fens, tundra, and
 snow-capped ranges, all generated from one seed with no size limit. A full
@@ -144,6 +146,11 @@ horse gallops in from beyond the fog. Awakened shrines become fast-travel
 points on the world map (**M**), which reveals itself as you explore.
 Everything autosaves to the browser; `CONTINUE` puts you back on the exact
 hillside at the exact hour you left.
+
+| | |
+| --- | --- |
+| ![Awakening a shrine](docs/vast-shrine.png) | ![Camp at night](docs/vast-night.png) |
+| ![The world map](docs/vast-map.png) | ![The high snows](docs/vast-snow.png) |
 
 | Key | Does |
 | --- | --- |

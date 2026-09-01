@@ -70,8 +70,10 @@ export class Horse {
 
   whistle(px, pz, camYaw) {
     if (this.state === 'ridden') return false;
-    // a horse left far behind finds its own way — it just appears nearby
-    if (this.state === 'away' || this.distTo(px, pz) > 120) {
+    // a horse left far behind (or somehow stuck in deep water) finds its
+    // own way — it just appears nearby
+    if (this.state === 'away' || this.distTo(px, pz) > 120 ||
+        this.world.heightAt(this.pos.x, this.pos.z) < SEA_LEVEL - 0.9) {
       // trot in from just past the fog of the player's back
       const a = camYaw + Math.PI + (Math.random() - 0.5) * 1.2;
       let x = px + Math.sin(a) * 38, z = pz + Math.cos(a) * 38;
@@ -112,9 +114,10 @@ export class Horse {
     let targetSpeed = 0, wantHeading = this.heading;
 
     if (this.state === 'ridden') {
+      // same camera basis as player.js: screen-right = (-cos yaw, sin yaw)
       const sin = Math.sin(camYaw), cos = Math.cos(camYaw);
-      const dx = inp.moveX * cos - inp.moveZ * sin;
-      const dz = -inp.moveX * sin - inp.moveZ * cos;
+      const dx = -inp.moveX * cos - inp.moveZ * sin;
+      const dz = inp.moveX * sin - inp.moveZ * cos;
       const mag = Math.hypot(dx, dz);
       if (mag > 0.05) {
         wantHeading = Math.atan2(dx, dz);

@@ -34,6 +34,20 @@ export function loadGame() {
     if (!raw) return null;
     const d = JSON.parse(raw);
     if (!d || d.v !== 1 || typeof d.seed !== 'number') return null;
+    // a corrupt save must never crash the boot — validate the parts the
+    // boot path dereferences and default the rest
+    if (!Array.isArray(d.pos) || d.pos.length !== 3 || !d.pos.every(Number.isFinite)) return null;
+    for (const k of ['discovered', 'litShrines', 'relics', 'rumors', 'explored']) {
+      if (!Array.isArray(d[k])) d[k] = [];
+    }
+    if (!Number.isFinite(d.dayT) || d.dayT < 0 || d.dayT >= 1) d.dayT = 0.32;
+    if (!Number.isFinite(d.day) || d.day < 1) d.day = 1;
+    if (!Number.isFinite(d.camYaw)) d.camYaw = 0;
+    if (!Number.isFinite(d.stamina)) d.stamina = 1;
+    if (!d.stats || typeof d.stats !== 'object') d.stats = { dist: 0, playTime: 0 };
+    if (!d.horse || typeof d.horse !== 'object' || !Number.isFinite(d.horse.x)) {
+      d.horse = { state: 'away', x: 0, z: 0 };
+    }
     return d;
   } catch {
     return null;

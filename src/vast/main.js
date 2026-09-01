@@ -22,15 +22,16 @@ import { clamp } from './noise.js';
 const BUILD = 1;
 const params = new URLSearchParams(location.search);
 const DAY_SECONDS = params.has('fast') ? 90 : 720;
-const NOSAVE = params.has('nosave');
+// ?quick is a QA mode — never let it overwrite a real journey's save
+const NOSAVE = params.has('nosave') || params.has('quick');
 
 // ---------------------------------------------------------------------------
-// boot decisions: which seed, fresh or continue
-const save = params.has('new') || params.has('quick') ? null : loadGame();
-let seed;
-if (params.has('seed')) seed = (parseInt(params.get('seed'), 10) >>> 0) || 7;
-else if (save) seed = save.seed;
-else seed = (Math.random() * 0xffffffff) >>> 0;
+// boot decisions: which seed, fresh or continue. A ?seed= that differs from
+// the save's seed is a different world — never mix the two.
+const urlSeed = params.has('seed') ? ((parseInt(params.get('seed'), 10) >>> 0) || 7) : null;
+const save0 = params.has('new') || params.has('quick') ? null : loadGame();
+const save = save0 && (urlSeed === null || save0.seed === urlSeed) ? save0 : null;
+const seed = urlSeed ?? (save ? save.seed : (Math.random() * 0xffffffff) >>> 0);
 
 const el = (id) => document.getElementById(id);
 const holder = el('vast-holder');
@@ -250,8 +251,11 @@ worldMap.onTravel = (poi) => {
   worldMap.hide();
   mode = 'play';
   fade(() => {
-    player.teleport(poi.x + 4, poi.z + 4);
+    // dismount FIRST — doDismount places the player beside the horse, and
+    // while riding player.pos mirrors horse.pos every frame, so a teleport
+    // before dismounting would be silently overwritten
     if (player.riding) doDismount();
+    player.teleport(poi.x + 4, poi.z + 4);
     hud.toast(`You arrive at ${poi.name}.`);
     doSave();
   });
@@ -267,6 +271,7 @@ sky.onThunder = (delay) => sfx.thunder(delay);
 function doMount() {
   horse.mount();
   player.riding = horse;
+  player.swimming = false; // riding skips the swim check; don't latch the muffle/vignette
   horse.saddle.add(player.root);
   player.root.position.set(0, 0.1, 0);
   player.root.rotation.y = Math.PI / 2;
@@ -321,10 +326,12 @@ function toggleOverlay(which) {
   if (mode === which) {
     closeOverlays();
     mode = 'play';
+    input.requestLock(); // the toggling keypress counts as user activation
     return;
   }
   closeOverlays();
   mode = which;
+  input.releaseLock(); // overlays need the real cursor (map drag/click, etc.)
   if (which === 'map') worldMap.show(anchor().x, anchor().z);
   if (which === 'journal') {
     hud.renderJournal({ state, stats, seed, day, knownPois: knownPois() });
@@ -333,7 +340,6 @@ function toggleOverlay(which) {
   if (which === 'help') el('vast-help').classList.add('show');
   if (which === 'pause') {
     el('vast-pause').classList.add('show');
-    input.releaseLock();
     doSave();
   }
 }
@@ -432,27 +438,32 @@ function frame(now) {
     return;
   }
 
-  // ---- global toggles ----
-  if (inp.mute) { sfx.setMuted(!sfx.muted); hud.toast(sfx.muted ? 'sound off' : 'sound on'); }
-  if (inp.map) { sfx.ensure(); toggleOverlay('map'); }
-  if (inp.journal) { sfx.ensure(); toggleOverlay('journal'); }
-  if (inp.help) toggleOverlay('help');
-  if (inp.pause) {
-    if (mode === 'play') toggleOverlay('pause');
-    else if (mode !== 'rest') { closeOverlays(); mode = 'play'; }
+  // ---- global toggles (never during the rest-until-dawn fade) ----
+  if (mode !== 'rest') {
+    if (inp.mute) { sfx.setMuted(!sfx.muted); hud.toast(sfx.muted ? 'sound off' : 'sound on'); }
+    if (inp.map) { sfx.ensure(); toggleOverlay('map'); }
+    if (inp.journal) { sfx.ensure(); toggleOverlay('journal'); }
+    if (inp.help) toggleOverlay('help');
+    if (inp.pause) {
+      if (mode === 'play') toggleOverlay('pause');
+      else { closeOverlays(); mode = 'play'; input.requestLock(); }
+    }
   }
+  // browsers exit pointer lock on ESC without delivering the keydown —
+  // treat that as "open the pause menu" like any pointer-lock game
+  if (frame._wasLocked && !input.locked && mode === 'play' && fadeT <= 0) toggleOverlay('pause');
+  frame._wasLocked = input.locked;
 
   const frozen = mode !== 'play';
 
   // ---- time ----
   if (!frozen || mode === 'map' || mode === 'journal') {
-    const prev = dayT;
     dayT += dt / DAY_SECONDS;
     if (dayT >= 1) { dayT -= 1; day++; hud.toast(`Day ${day}`); }
   }
 
-  // ---- actions ----
-  if (!frozen) {
+  // ---- actions (not while an overlay or a fade owns the moment) ----
+  if (!frozen && fadeT <= 0) {
     if (inp.whistle) {
       sfx.ensure();
       if (horse.whistle(a.x, a.z, player.camYaw)) {
@@ -468,14 +479,16 @@ function frame(now) {
   }
 
   // ---- world sim ----
-  player.update(dt, inp, frozen);
+  // overlays freeze the body AND the camera (mouse belongs to the overlay)
+  const camInp = frozen ? { ...inp, lookDX: 0, lookDY: 0, wheel: 0 } : inp;
+  player.update(dt, camInp, frozen);
   horse.update(dt, frozen ? { moveX: 0, moveZ: 0, sprint: false } : inp, player.camYaw, a.x, a.z);
   if (player.riding) {
     player.pos.copy(horse.pos);
     // deep water throws the rider
     if (world.heightAt(horse.pos.x, horse.pos.z) < SEA_LEVEL - 1.2) doDismount();
   }
-  terrain.update(a.x, a.z, 6);
+  terrain.update(a.x, a.z, 6, dt);
   poiMgr.update(a.x, a.z, dt, sky.isNight);
   fauna.update(dt, a.x, a.z, sky.isNight, camera.position.y);
   sky.update(dt, dayT, a.x, a.y, a.z);
@@ -514,7 +527,7 @@ function frame(now) {
 
   // ---- stats + autosave ----
   stats.playTime += dt;
-  const hv = player.riding ? horse.speed : Math.hypot(player.vel.x, player.vel.z);
+  const hv = frozen ? 0 : player.riding ? horse.speed : Math.hypot(player.vel.x, player.vel.z);
   stats.dist += hv * dt;
   autosaveT -= dt;
   if (autosaveT <= 0) { autosaveT = 25; doSave(); }
