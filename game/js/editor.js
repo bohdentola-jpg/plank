@@ -895,10 +895,14 @@ export class Editor {
       if (this.map.objects.length >= MAX_OBJECTS) { this.flash('this map is full (' + MAX_OBJECTS + ' objects)'); return; }
       this.pushUndo();
       const p = this.snap(pick.point);
+      const info = modelInfo(this.map, this.currentModel);
       const spec = {
         id: uid(), model: this.currentModel,
         x: p.x, y: p.y, z: p.z,
-        yaw: 0, scale: 100, solid: null, physical: null, color: null, script: null,
+        yaw: 0, scale: 100, solid: null, physical: null, color: null,
+        // doors arrive knowing how to open; cabinets arrive with a whole game —
+        // the script box shows the code, ready to be bent
+        script: info.defaultScript || null,
       };
       this.map.objects.push(spec);
       const ent = this.addEnt(spec);

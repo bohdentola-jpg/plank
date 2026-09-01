@@ -6,8 +6,8 @@
   "scripts": {
     "start": "python3 serve.py",
     "game": "python3 serve.py --dir game",
-    "game:test": "node game/tests/boxscript.test.mjs && node game/tests/geometry.test.mjs",
-    "game:e2e": "node game/tests/e2e/smoke3d.mjs && node game/tests/e2e/tour3d.mjs && node game/tests/e2e/mp3d.mjs",
+    "game:test": "node game/tests/boxscript.test.mjs && node game/tests/geometry.test.mjs && node game/tests/arcade.test.mjs",
+    "game:e2e": "node game/tests/e2e/smoke3d.mjs && node game/tests/e2e/tour3d.mjs && node game/tests/e2e/arcade3d.mjs && node game/tests/e2e/mp3d.mjs",
     "game:export": "node tools/export-game.mjs",
     "shot": "node tools/shot.mjs",
     "smoke": "node tools/smoke.mjs"

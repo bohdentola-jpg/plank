@@ -7,7 +7,7 @@
 // read better at this resolution and cost nothing.
 
 import * as THREE from '../vendor/three.module.js';
-import { clamp, lerp, COLORS, angleDelta } from './util.js';
+import { clamp, lerp, COLORS, angleDelta, shade } from './util.js';
 
 export const PIXEL_LEVELS = [2, 3, 4, 6];      // device px per rendered px
 
@@ -212,17 +212,31 @@ export function flatMat(color) {
   return m;
 }
 
-// a cardboard box mesh: tan cube with a tape seam
+// a cardboard box: tan cube, tape seam, darker base, and two flaps that never
+// quite closed — the box every snaptic short is secretly about
 export function cardboardBox(size = 1.4) {
   const g = new THREE.Group();
-  const body = new THREE.Mesh(boxGeo(size, size, size), flatMat(COLORS.cardboard));
+  const card = COLORS.cardboard;
+  const body = new THREE.Mesh(boxGeo(size, size * 0.96, size), flatMat(card));
+  body.position.y = -size * 0.02;
   g.add(body);
-  const t = size * 0.16;
-  const tape1 = new THREE.Mesh(boxGeo(t, size * 1.004, size * 1.004), flatMat(COLORS.tape));
-  g.add(tape1);
-  const tape2 = new THREE.Mesh(boxGeo(size * 1.004, size * 1.004, t), flatMat(COLORS.tape));
-  tape2.rotation.y = Math.PI / 2;
-  g.add(tape2);
+  const base = new THREE.Mesh(boxGeo(size * 1.02, size * 0.14, size * 1.02), flatMat(shade(card, -30)));
+  base.position.y = -size * 0.43;
+  g.add(base);
+  const t = size * 0.15;
+  const tape = new THREE.Mesh(boxGeo(t, size * 0.98, size * 1.01), flatMat(COLORS.tape));
+  tape.position.y = -size * 0.02;
+  g.add(tape);
+  // flaps: two lids ajar on the closed pair of sides
+  const flapGeo = boxGeo(size * 0.46, size * 0.05, size * 0.96);
+  const flapL = new THREE.Mesh(flapGeo, flatMat(shade(card, 14)));
+  flapL.position.set(-size * 0.28, size * 0.5, 0);
+  flapL.rotation.z = 0.22;
+  g.add(flapL);
+  const flapR = new THREE.Mesh(flapGeo, flatMat(shade(card, 8)));
+  flapR.position.set(size * 0.28, size * 0.5, 0);
+  flapR.rotation.z = -0.16;
+  g.add(flapR);
   g.userData.size = size;
   return g;
 }

@@ -195,7 +195,7 @@ function mix(a, b, t) {
 // Scatter is deterministic per chunk: same seed, same trees, for everyone.
 const PROP_KINDS = {
   meadow: [['flower', 10], ['rock', 2], ['tree', 1.2], ['grasstuft', 8]],
-  forest: [['tree', 9], ['pine', 2], ['rock', 2], ['grasstuft', 3], ['flower', 1]],
+  forest: [['tree', 9], ['pine', 2], ['rock', 2], ['grasstuft', 3], ['flower', 1], ['mushroom', 1.5]],
   desert: [['cactus', 3], ['rock', 3], ['deadbush', 2]],
   snow: [['pine', 5], ['snowrock', 3], ['iceshard', 2]],
   volcano: [['obsidian', 3], ['rock', 2], ['vent', 1]],
@@ -276,6 +276,12 @@ function propBoxes(kind, r1, r2) {
     case 'iceshard': {
       const s = 1.4 + r1 * 2.6;
       push(0, s * 0.55, 0, 0.7, s, 0.7, COLORS.ice);
+      break;
+    }
+    case 'mushroom': {
+      push(0, 0.35, 0, 0.22, 0.7, 0.22, 0xe0d8c8);
+      push(0, 0.75, 0, 0.85, 0.35, 0.85, 0xc4685c);
+      push(0, 0.95, 0, 0.55, 0.14, 0.55, 0xd88a80);
       break;
     }
     case 'deadbush': {

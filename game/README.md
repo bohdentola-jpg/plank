@@ -1,7 +1,7 @@
 # game
 
 A 3D multiplayer world in the style of [snaptic](https://www.youtube.com/@snaptic.3d):
-a gray blocky stickman, chunky pixels, and an empty white space to mess about in
+a gray blocky figure, chunky pixels, and an empty white space to mess about in
 with whoever else is online.
 
 - **join lobby** — drop into a public lobby with whoever's there.
@@ -13,8 +13,9 @@ with whoever else is online.
 ## the world
 
 You spawn in **the void** — the flat blank white circle with cardboard boxes,
-two blaster stands and a ping pong table. Walk out of it in any direction and
-the world grows a landscape:
+crates, benches, lamps, a trampoline, two blaster stands, a ping pong table,
+a door to nowhere, and an arcade corner with three playable machines. Walk out
+of it in any direction and the world grows a landscape:
 
 | | |
 | --- | --- |
@@ -31,7 +32,10 @@ walks the same ground without a byte of terrain crossing the network.
 bubble, everyone else's in gray), pick up and throw cardboard boxes, grab a
 blaster and pop your friends into a burst of cardboard, play ping pong at the
 table (a cardboard box shuffles over and plays you if nobody takes the other
-end), climb the volcano, fall in the lava.
+end), bounce off the trampoline, play **SNAKE, PONG and BRICKS** on the arcade
+cabinets in the plaza's arcade corner, climb the volcano, fall in the lava.
+Anything you can do something with shows a little prompt when you're close —
+walk up and press `e`.
 
 **Controls:** `wasd` move · `shift` run · `space` jump · `e` grab (box, blaster,
 paddle) · `q` drop · click = throw / blast / swing · `t` chat · wheel zoom ·
@@ -43,6 +47,12 @@ click-drag if your browser won't allow it.
 **create map → new world** opens the editor: fly with `wasd`, right-drag to
 look, click the ground to place, `2` to select and drag, `r` to turn, and the
 inspector on the right sets size, tint, solidity and the script.
+
+Every placeable model got a real shape: ajar-flapped cardboard boxes, barrels,
+cones, fences, arches, lamps that glow, benches, signs, flags, doors that ship
+with a working open/close script, trampolines that bounce, and **arcade
+cabinets** — place one and its screen is yours to program (it arrives with
+BRICKS already installed; see [arcade screens](docs/boxscript.md#arcade-screens)).
 
 **make a model** opens the modeller — a 3D cage you fill in voxel by voxel.
 Click a face to add a block, shift-click to carve one away, pick colours from
@@ -105,6 +115,7 @@ npm run game:test     # language + geometry/physics/world suites (plain node)
 npm run game:e2e      # browser tests (needs npm install for playwright):
                       #   smoke3d  — menu, world, editor, modeller, test-play
                       #   tour3d   — every biome, pong, blaster, boxes, dying
+                      #   arcade3d — prompts, cabinets, SNAKE on the overlay
                       #   mp3d     — two browsers over a local peerjs-server
 ```
 
@@ -121,7 +132,10 @@ nearest-neighbour filtering, which is where the pixels come from.
 | `js/boxscript.js` | the language: lexer → parser → coroutine interpreter, budgeted so a runaway loop can't freeze a frame |
 | `js/terrain.js` | the open world: seeded noise, biomes, chunk streaming, props |
 | `js/voxel.js` | the model format and its mesher (visible faces only, one draw call per model) |
-| `js/rig.js` | the stickman and its animation, plus the cardboard death burst |
+| `js/rig.js` | the blocky avatar and its animation, plus the cardboard death burst |
+| `js/models.js` | every placeable model, built from boxes |
+| `js/screen.js` | the arcade screen: a small retained-sprite canvas that lives on the cabinet and in the play overlay |
+| `js/arcadegames.js` | SNAKE, PONG and BRICKS — plain boxscript, shipped in the cabinets |
 | `js/render.js` | scene, camera, and the pixelation pass |
 | `js/net.js` | matchmaking, host relay, migration |
 | `js/game.js` | a running session |

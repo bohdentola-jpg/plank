@@ -10,6 +10,31 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SHOTS = path.join(ROOT, '..', 'qa', 'shots');
 await fs.mkdir(SHOTS, { recursive: true });
+// This environment's compositor never consumes frames, so every WebGL present
+// leaks until the cgroup OOM-kills the browser: throttle the actual GL present
+// to ~1/s while the sim keeps full speed. renderReal stays for the grabs.
+const tame = (pg) => pg.evaluate(() => {
+  const view = window.__game.session.view;
+  if (view.renderReal) return;
+  view.renderReal = view.render.bind(view);
+  let last = 0;
+  view.render = () => {
+    const t = performance.now();
+    if (t - last > 950) { last = t; view.renderReal(); }
+  };
+});
+const grab = async (pg, name) => {
+  try {
+    const data = await pg.evaluate(() => {
+      const g = window.__game.session;
+      g.render(1 / 60);
+      (g.view.renderReal || g.view.render.bind(g.view))();
+      return g.view.renderer.domElement.toDataURL('image/png');
+    });
+    await fs.writeFile(path.join(SHOTS, name + '.png'), Buffer.from(data.split(',')[1], 'base64'));
+  } catch (e) { /* the picture is a bonus, not a check */ }
+};
+
 const MIME = { '.html':'text/html','.js':'text/javascript','.css':'text/css' };
 const server = http.createServer(async (req,res)=>{ try{ let p=new URL(req.url,'http://x').pathname; if(p==='/')p='/index.html';
   res.writeHead(200,{'content-type':MIME[path.extname(p)]||'application/octet-stream'});
@@ -45,6 +70,7 @@ const B = await player('bob');
 await A.click('#btn-private');
 await A.click('#btn-priv-make');
 await A.waitForFunction(() => window.__game.session && window.__game.session.lobby, null, { timeout: 25000 });
+await tame(A);
 const code = await A.evaluate(() => window.__game.session.lobby.code);
 check('host got a 4-letter code', typeof code === 'string' && code.length === 4, String(code));
 
@@ -53,6 +79,7 @@ await B.click('#btn-private');
 await B.fill('#priv-code', code);
 await B.click('#btn-priv-join');
 await B.waitForFunction(() => window.__game.session && window.__game.session.lobby && !window.__game.session.lobby.isHost, null, { timeout: 25000 });
+await tame(B);
 await settle([A, B], 2500);
 
 const counts = await Promise.all([A, B].map(p => p.evaluate(() => window.__game.session.players.size)));
@@ -148,7 +175,7 @@ check('a blaster bolt pops the other player', popped);
 await settle([A, B], 600);
 const guestKnows = await B.evaluate(() => window.__game.session.me.dead || window.__game.session.bursts.length > 0);
 check('the guest is told they popped', guestKnows);
-await A.screenshot({ path: path.join(SHOTS, 'mp-pop.png') });
+await grab(A, 'mp-pop');
 
 // a client cannot forge a death for the host
 const forged = await B.evaluate(async (hostId) => {
@@ -185,7 +212,7 @@ const ball = await A.evaluate(async () => {
 check('the ball is served', ball);
 const ballOnGuest = await B.evaluate(() => !!window.__game.session.pong.ball);
 check('the guest sees the same ball', ballOnGuest);
-await A.screenshot({ path: path.join(SHOTS, 'mp-pong.png') });
+await grab(A, 'mp-pong');
 
 // host migration
 await A.close();

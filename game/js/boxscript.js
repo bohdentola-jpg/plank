@@ -99,8 +99,9 @@ const KEYWORDS = new Set([
   'distance', 'touching', 'count', 'time', 'shared', 'key', 'mouse', 'biome', 'height',
   'index', 'contains', 'uppercase', 'lowercase', 'join', 'times', 'seconds', 'second',
   'move', 'turn', 'face', 'goto', 'say', 'write', 'unwrite', 'button', 'show', 'hide', 'solid',
+  'screen', 'stamp', 'unstamp', 'print',
   'physical', 'color', 'grow', 'spawn', 'vanish', 'push', 'teleport', 'sound', 'broadcast',
-  'wait', 'freeze', 'unfreeze', 'shake', 'spin', 'glow', 'light', 'lives', 'pressed', 'down',
+  'wait', 'freeze', 'unfreeze', 'shake', 'spin', 'glow', 'light', 'pressed', 'down',
   'up', 'left', 'right', 'forward', 'back', 'backward', 'everyone', 'size', 'me', 'near',
 ]);
 
@@ -219,12 +220,19 @@ class Parser {
         const k = this.next();
         if (k.t === 'str' || k.t === 'word') param = String(k.v);
         else this.err('"when button" needs the label in quotes', k);
+      } else if (kind === 'screen') {
+        const k = this.next();
+        const which = k.t === 'word' ? k.v : null;
+        if (!['start', 'stop', 'tick'].includes(which)) {
+          this.err('"when screen" knows: when screen start, when screen stop, when screen tick', k);
+        }
+        return this.finishEvent('screen' + (which || 'start'), null, tok, '"when screen"');
       } else if (kind === 'player') {
         if (!this.eatWord('near')) this.err('did you mean "when player near 10"?');
         param = this.parseExpr();
         return this.finishEvent('near', param, tok, 'when player near');
       } else {
-        this.err(`I don't know the event "when ${kind}". try: start, tick, touched, clicked, hit, key, message, button, player near`, kt);
+        this.err(`I don't know the event "when ${kind}". try: start, tick, touched, clicked, hit, key, message, button, player near, screen start/tick/stop`, kt);
         this.skipLine();
         return null;
       }
@@ -592,6 +600,76 @@ class Parser {
         this.expectEnd('forever');
         return { op: 'forever', body, line };
       }
+      case 'clear': {
+        this.next();
+        if (!this.eatWord('screen')) this.err('"clear" works like: clear screen black');
+        let color = null;
+        const t = this.peek();
+        if (t.t === 'word' || t.t === 'str') { this.next(); color = String(t.v).toLowerCase(); }
+        return done({ op: 'clearscreen', color });
+      }
+      case 'stamp': {
+        this.next();
+        let id = null, idExpr = null;
+        const t = this.peek();
+        if (t.t === 'word' && this.peek(1).t === 'word' && this.peek(1).v === 'at') {
+          this.next();
+          id = String(t.v);
+        } else if (t.t === 'str' && this.peek(1).t === 'word' && this.peek(1).v === 'at') {
+          this.next();
+          id = String(t.v);
+        } else {
+          idExpr = this.parseExpr();   // dynamic ids: stamp "s" + i at …
+        }
+        if (!this.eatWord('at')) this.err('"stamp" needs "at": stamp paddle at 10, 60 size 12, 3');
+        const x = this.parseExpr();
+        this.eatSym(',');
+        const y = this.parseExpr();
+        let w = { e: 'num', v: 4 }, hh = { e: 'num', v: 4 }, color = null;
+        for (let g = 0; g < 3; g++) {
+          if (this.eatWord('size')) {
+            w = this.parseExpr();
+            if (this.eatSym(',')) hh = this.parseExpr();
+            else hh = w;
+            continue;
+          }
+          if (this.eatWord('color')) { color = this.parseExpr(); continue; }
+          break;
+        }
+        return done({ op: 'stamp', id, idExpr, x, y, w, h: hh, color });
+      }
+      case 'print': {
+        this.next();
+        const t = this.next();
+        let id = null;
+        if (t.t === 'word' || t.t === 'str') id = String(t.v);
+        else this.err('"print" needs a name: print score "0" at 4, 2', t);
+        const text = this.parseExpr();
+        if (!this.eatWord('at')) this.err('"print" needs "at": print score "0" at 4, 2');
+        const x = this.parseExpr();
+        this.eatSym(',');
+        const y = this.parseExpr();
+        let size = null, color = null;
+        for (let g = 0; g < 3; g++) {
+          if (this.eatWord('size')) { size = this.parseExpr(); continue; }
+          if (this.eatWord('color')) { color = this.parseExpr(); continue; }
+          break;
+        }
+        return done({ op: 'sprint', id: id || 'p', text, x, y, size, color });
+      }
+      case 'unstamp': {
+        this.next();
+        const t = this.peek();
+        if (t.t === 'word' && (this.peek(1).t === 'nl' || this.peek(1).t === 'eof')) {
+          this.next();
+          return done({ op: 'unstamp', id: String(t.v) });
+        }
+        if (t.t === 'nl' || t.t === 'eof') {
+          this.err('"unstamp" needs the stamp name (or "all")', t);
+          return done({ op: 'unstamp', id: 'all' });
+        }
+        return done({ op: 'unstamp', idExpr: this.parseExpr() });
+      }
       case 'end': case 'else': {
         this.next();
         this.err(`stray "${w}" — it doesn't close anything here`, tok);
@@ -746,6 +824,13 @@ class Parser {
     if (w === 'nothing') { this.next(); return { e: 'str', v: '' }; }
     if (w === 'time') { this.next(); return { e: 'time' }; }
     if (w === 'biome') { this.next(); return { e: 'biome' }; }
+    if (w === 'screen') {
+      this.next();
+      if (this.eatWord('on')) return { e: 'screenon' };
+      if (this.eatWord('width')) return { e: 'num', v: 100 };
+      if (this.eatWord('height')) return { e: 'num', v: 75 };
+      return { e: 'screenon' };
+    }
     if (w === 'list') {
       this.next();
       const items = [];
@@ -987,6 +1072,7 @@ export class ScriptInstance {
     for (const ev of this.prog.events) {
       if (ev.kind === 'every') this.timers.push({ ev, next: null, period: null });
       else if (ev.kind === 'tick') this.tickHandlers.push({ ev, fiber: null });
+      else if (ev.kind === 'screentick') this.tickHandlers.push({ ev, fiber: null, gated: true });
       else if (ev.kind === 'near') this.nearHandlers.push({ ev, inside: false });
     }
   }
@@ -1032,6 +1118,8 @@ export class ScriptInstance {
       }
     }
     for (const th of this.tickHandlers) {
+      // screen ticks only run while the local player is at the controls
+      if (th.gated && !(this.host.screenOn && this.host.screenOn())) continue;
       if (!th.fiber || th.fiber.done) th.fiber = this.spawnFiber(th.ev.body);
     }
     for (const nh of this.nearHandlers) {
@@ -1355,6 +1443,28 @@ function* execStmt(s, ctx) {
       }
       return null;
     }
+    case 'clearscreen': { if (H.screenClear) H.screenClear(s.color); return null; }
+    case 'stamp': {
+      const id = s.id != null ? s.id : display(yield* evalExpr(s.idExpr, ctx));
+      const x = num(yield* evalExpr(s.x, ctx)), y = num(yield* evalExpr(s.y, ctx));
+      const w = num(yield* evalExpr(s.w, ctx)), hh = num(yield* evalExpr(s.h, ctx));
+      const color = s.color ? display(yield* evalExpr(s.color, ctx)) : null;
+      if (H.screenStamp) H.screenStamp(id, x, y, w, hh, color);
+      return null;
+    }
+    case 'sprint': {
+      const text = display(yield* evalExpr(s.text, ctx));
+      const x = num(yield* evalExpr(s.x, ctx)), y = num(yield* evalExpr(s.y, ctx));
+      const size = s.size ? num(yield* evalExpr(s.size, ctx)) : 3;
+      const color = s.color ? display(yield* evalExpr(s.color, ctx)) : null;
+      if (H.screenPrint) H.screenPrint(s.id, text, x, y, size, color);
+      return null;
+    }
+    case 'unstamp': {
+      const id = s.id != null ? s.id : display(yield* evalExpr(s.idExpr, ctx));
+      if (H.screenUnstamp) H.screenUnstamp(id);
+      return null;
+    }
     case 'sound': { if (H.sound) H.sound(s.name); return null; }
     case 'broadcast': { if (H.broadcast) H.broadcast(s.msg, s.everyone); return null; }
     case 'wait': {
@@ -1502,6 +1612,7 @@ export function* evalExpr(x, ctx) {
     case 'mouse': return H.mouse ? num(H.mouse(x.p)) : 0;
     case 'time': return H.time ? H.time() : inst.now;
     case 'biome': return H.biome ? H.biome() : 'void';
+    case 'screenon': return H.screenOn ? !!H.screenOn() : false;
     case 'height': {
       const a = num(yield* evalExpr(x.x, ctx));
       const b = num(yield* evalExpr(x.z, ctx));

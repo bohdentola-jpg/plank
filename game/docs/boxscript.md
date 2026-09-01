@@ -58,6 +58,9 @@ middle, `at 50, 90` is bottom middle.
 | `when button "play"` | that screen button is clicked |
 | `when player near 10` | each time they come within 10 |
 | `every 2 seconds` | on a timer, forever |
+| `when screen start` | someone steps up to my arcade screen (E) |
+| `when screen tick` | every frame while they play |
+| `when screen stop` | they step away |
 
 `t`, `enter`, `tab` and `escape` belong to the game (chat and menus), so scripts
 can't listen for them — the editor will tell you.
@@ -249,6 +252,55 @@ when message doorsopen
   hide
 end
 ```
+
+## arcade screens
+
+An **arcade cabinet** carries a 2D screen its script can draw on. Place one in
+the editor and it arrives with a whole game (BRICKS) already in its script box;
+the main map's SNAKE, PONG and BRICKS machines are ordinary scripts too, so
+open them, copy them, bend them. The screen is **100 wide, 75 tall**, origin
+top-left.
+
+```
+when screen start        # someone stepped up (E)
+  clear screen "black"
+  set px to 44
+end
+
+when screen tick         # every frame while they play
+  if key left down then
+    change px by -1.5
+  end
+  stamp paddle at px, 68 size 12, 2 color "white"
+  print score points at 2, 2 size 3
+end
+
+when screen stop         # they walked away
+  unstamp all
+end
+```
+
+The drawing commands:
+
+| command | what it does |
+| --- | --- |
+| `clear screen "black"` | wipe to a colour (optional — defaults to black) |
+| `stamp NAME at x, y size w, h color "red"` | draw a named rectangle |
+| `print NAME expr at x, y size 3 color "white"` | the same, for pixel text |
+| `unstamp NAME` / `unstamp all` | take it back off |
+| `screen on` | truthy while somebody is playing |
+| `screen width` / `screen height` | 100 and 75 |
+
+`stamp` is retained: stamp the same name again and the rectangle *moves*
+instead of duplicating, so a game loop just re-stamps what changed. Names can
+be computed — `stamp "s" + i at …` — which is how the snake's body works.
+Key events and `key … down` work while playing; gate tick handlers with
+`when screen tick` (it only runs while someone is at the controls) and
+anything else with `if screen on then`. Colors are quoted here ("red",
+"yellow") because they're values, not the `color red` statement.
+
+While nobody plays, the cabinet shows a dimmed attract screen with a blinking
+"press e to play" — that part is free.
 
 ## things to build
 

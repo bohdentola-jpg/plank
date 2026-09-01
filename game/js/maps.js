@@ -1,6 +1,7 @@
 // maps.js — the main map, the samples, and local storage.
 
 import { emptyMap, validateMap, mapToCode, codeToMap, MAX_OBJECTS, safeSet } from './world.js';
+import { SNAKE_GAME, PONG_GAME, BRICKS_GAME } from './arcadegames.js';
 import { emptyVoxels, setVox } from './voxel.js';
 import { PALETTE_KEYS, uid } from './util.js';
 
@@ -74,6 +75,32 @@ export function mainMap() {
     const a = (i / 6) * Math.PI * 2;
     put('lamp', Math.cos(a) * 44, Math.sin(a) * 44);
   }
+
+  // ---- the arcade corner: three cabinets, three games, all boxscript
+  put('arcade', -36, -34, { id: 'arc1', yaw: 135, script: SNAKE_GAME });
+  put('arcade', -40, -28, { id: 'arc2', yaw: 112, script: PONG_GAME });
+  put('arcade', -42, -21, { id: 'arc3', yaw: 90, script: BRICKS_GAME });
+  put('lamp', -33, -27);
+  put('bench', -30, -31, { yaw: -45 });
+  put('sign', -27, -37, {
+    id: 'arcsign', yaw: 135,
+    script: 'when player near 10\n  say "the arcade. every machine is a script — copy one into your own map and bend it." for 5 seconds\nend',
+  });
+
+  // ---- odds and ends that make the void feel lived-in
+  put('trampoline', 26, -32, { id: 'tramp' });
+  put('crates', -12, 22);
+  put('bench', 14, 14, { yaw: 160 });
+  put('bench', 26, 2, { yaw: -80 });
+  put('cone', 8, -18);
+  put('cone', 10.5, -19);
+  put('cone', 9, -16, { yaw: 30 });
+  put('barrel', -22, -12);
+  put('flag', 0, 3, { id: 'spawnflag' });
+  put('fence', 40, 22, { yaw: 45 });
+  put('fence', 43, 25.4, { yaw: 45 });
+  // a door to nowhere, standing open-minded in the void
+  put('door', -6, 34, { id: 'nowhere', yaw: 20 });
 
   m.objects = O;
   return validateMap(m);

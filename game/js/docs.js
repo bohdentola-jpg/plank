@@ -66,6 +66,17 @@ teleport player to 0, 0
 freeze player   shake 0.5
 write "score" at 50, 10 size 4 as hud
 button "play" at 50, 60</pre>
+<b>arcade screens</b>
+<pre>when screen start
+when screen tick
+when screen stop
+clear screen "black"
+stamp ball at 50, 40 size 3, 3 color "yellow"
+stamp "s" + i at x, y size 5, 5
+print score points at 2, 2 size 3
+unstamp ball   unstamp all
+if screen on then … end
+# the screen is 100 x 75</pre>
 <b>control</b>
 <pre>if a > b then … else … end
 repeat 10 times … end
@@ -165,6 +176,27 @@ when something should happen for <i>everyone</i>, send it over the wire:</p>
   solid off
   hide
 end</pre>
+
+<h4>arcade screens</h4>
+<p>an <b>arcade cabinet</b> carries a 2D screen, and its script draws on it.
+place one and it arrives with a whole game (BRICKS) already in its script box —
+the main map's SNAKE, PONG and BRICKS machines are just scripts too, so copy
+and bend them. the screen is <b>100 wide, 75 tall</b>, origin top-left.</p>
+<pre>when screen start   # someone stepped up (E)
+  clear screen "black"
+end
+when screen tick    # every frame while they play
+  if key left down then
+    change px by -1.5
+  end
+  stamp paddle at px, 68 size 12, 2 color "white"
+end</pre>
+<p><code>stamp</code> draws a named rectangle — stamp the same name again and it
+moves instead of duplicating. <code>print</code> is the same for pixel text.
+names can be computed: <code>stamp "s" + i at …</code>. key events and
+<code>key … down</code> work while playing; gate handlers with
+<code>if screen on then</code> so the attract screen stays quiet. colors are
+quoted here ("red", "yellow") because they're values.</p>
 
 <h4>the world</h4>
 <p><code>biome</code> tells you what you're standing in — <code>void</code>,

@@ -21,10 +21,11 @@ import {
   createEntity, refreshSize, entAABB, aabbOverlap, pointInAABB, bodyAABB,
   stepBody, collectSolids, validateMap, distXZ, dist3,
 } from './world.js';
-import { modelInfo, buildModelMesh, tintMesh } from './models.js';
+import { modelInfo, buildModelMesh, tintMesh, findScreenSurface } from './models.js';
 import { World, TerrainStreamer, BIOMES } from './terrain.js';
 import { View, makeShadow, boxGeo, flatMat, cardboardBox } from './render.js';
-import { StickmanRig, BoxBurst, makeBolt } from './rig.js';
+import { StickmanRig, BoxBurst, makeBolt, tintForName } from './rig.js';
+import { Screen } from './screen.js';
 import { compile, ScriptInstance } from './boxscript.js';
 import { Chat, BubbleLayer, addBubble, updateBubbles, clearBubbles } from './chat.js';
 import { Pong } from './pong.js';
@@ -91,6 +92,7 @@ export class GameSession {
     this.hintT = 16;
     this.deadBolts = [];
     this.writeEls = new Map();
+    this.playingEnt = null;
     this.raycaster = new THREE.Raycaster();
     this.bubbles = new BubbleLayer(this.dom.bubbles);
 
@@ -142,7 +144,7 @@ export class GameSession {
   addEntity(spec, spawned) {
     const ent = createEntity(this.map, spec);
     const info = modelInfo(this.map, ent.model);
-    ent.script = spec.script || (info.custom && info.custom.script) || null;
+    ent.script = spec.script || (info.custom && info.custom.script) || info.defaultScript || null;
     ent.synced = ent.physical && !ent.script;
     ent.spawned = !!spawned;
     // a placed object with no y sits on the ground
@@ -155,6 +157,14 @@ export class GameSession {
     if (ent.color) tintMesh(ent.mesh, colorOf(ent.color));
     this.syncMesh(ent);
     this.view.scene.add(ent.mesh);
+    if (info.screen) {
+      ent.screen = new Screen();
+      const surf = findScreenSurface(ent.mesh);
+      if (surf) surf.material = new THREE.MeshBasicMaterial({ map: ent.screen.texture });
+    }
+    // lamps glow with an unlit head instead of casting a real light: a ring of
+    // point lights multiplies every shader permutation and crawls on weak GPUs
+    ent.bouncy = info.bouncy || 0;
     if (info.size.y > 0.9 && ent.model !== 'flower') {
       ent.shadow = makeShadow(Math.max(0.5, ent.size.x * 0.6));
       this.view.scene.add(ent.shadow);
@@ -167,6 +177,8 @@ export class GameSession {
   }
 
   removeEntity(ent) {
+    if (this.playingEnt === ent) this.leaveArcade();
+    if (ent.screen) { ent.screen.dispose(); ent.screen = null; }
     if (ent.scriptInst) { ent.scriptInst.destroy(); ent.scriptInst = null; }
     if (ent.mesh) {
       this.view.scene.remove(ent.mesh);
@@ -195,7 +207,8 @@ export class GameSession {
   }
 
   makePlayer(id, name, remote) {
-    const rig = new StickmanRig({ color: remote ? COLORS.gray : COLORS.darkgray });
+    const base = tintForName(name);
+    const rig = new StickmanRig({ color: remote ? base : shadeTint(base) });
     this.view.scene.add(rig.root);
     const sp = this.map.spawn;
     return {
@@ -333,6 +346,11 @@ export class GameSession {
         S.me.vx = S.me.vy = S.me.vz = 0;
       },
       sound: (name) => playSound(name),
+      screenClear: (color) => { if (ent.screen) ent.screen.clear(color); else S.scriptError(ent, 0, 'only arcade cabinets have a screen'); },
+      screenStamp: (id, x, y, w, hh, color) => { if (ent.screen) ent.screen.stamp(id, x, y, w, hh, color); else S.scriptError(ent, 0, 'only arcade cabinets have a screen'); },
+      screenPrint: (id, text, x, y, size, color) => { if (ent.screen) ent.screen.print(id, text, x, y, size, color); else S.scriptError(ent, 0, 'only arcade cabinets have a screen'); },
+      screenUnstamp: (id) => { if (ent.screen) ent.screen.unstamp(id); },
+      screenOn: () => S.playingEnt === ent,
       broadcast: (msg, everyone) => S.broadcastBS(msg, everyone),
       freeze: (v) => { S.me.frozen = !!v; },
       shake: (amt) => S.view.shake(clamp(amt, 0, 3)),
@@ -601,24 +619,29 @@ export class GameSession {
   }
 
   // ---------------------------------------------------------- actions
-  interact() {
+  // What would E do right now? One answer feeds both the on-screen prompt and
+  // the key itself, so the hint and the action can never disagree.
+  findInteraction() {
     const p = this.me;
-    if (p.dead || p.frozen) return;
+    if (p.dead || p.frozen) return null;
+    if (this.playingEnt) return { kind: 'leavearcade', label: 'E — step away' };
+    if (p.pongSide) return { kind: 'pongleave', label: 'E — put the paddle down' };
 
-    if (p.pongSide) { this.act({ k: 'pongleave' }); p.pongSide = null; return; }
-
-    // the pong table wins over everything else nearby
+    // an arcade cabinet, when you're at its front
+    for (const ent of this.ents) {
+      if (ent.gone || !ent.screen || !ent.visible) continue;
+      if (distXZ(ent.x, ent.z, p.x, p.z) < 3.8 && Math.abs(ent.y - p.y) < 4) {
+        return { kind: 'arcade', ent, label: 'E — play' };
+      }
+    }
+    // the pong table
     if (this.pong) {
       const side = this.pong.nearStation(p.x, p.z);
       if (side != null && Math.abs(p.y - this.pong.baseY) < 6) {
-        if (p.holding && p.holding.kind === 'box') this.dropHeld();
-        p.holding = null;
-        this.act({ k: 'pongjoin' });
-        return;
+        return { kind: 'pongjoin', label: 'E — play ping pong' };
       }
     }
-
-    if (p.holding) return;
+    if (p.holding) return null;
 
     // nearest liftable thing
     let best = null, bestD = 3.4;
@@ -628,31 +651,91 @@ export class GameSession {
       if (d < bestD) { best = ent; bestD = d; }
     }
     if (best) {
-      p.holding = { kind: 'box', id: best.id };
-      best.heldBy = p.id;
-      playSound('pickup');
-      if (best.synced) this.act({ k: 'pickup', id: best.id });
-      return;
+      const label = best.model === 'box' || best.model === 'bigbox' ? 'E — pick up the box' : 'E — pick up';
+      return { kind: 'pickup', ent: best, label };
     }
-
     // a blaster stand
     for (const [standId, st] of this.stands) {
       const ent = this.entById(standId);
       if (!ent || !st.armed) continue;
       if (distXZ(ent.x, ent.z, p.x, p.z) < 3.6 && Math.abs(ent.y - p.y) < 5) {
-        p.holding = { kind: 'blaster' };
-        st.armed = false;
-        playSound('pickup');
-        this.act({ k: 'grabblaster', id: standId });
-        return;
+        return { kind: 'blaster', ent, label: 'E — take the blaster' };
       }
     }
-
-    // clicked-object fallback: E also pokes a scripted object you're standing in
+    // a scripted thing you're standing in
     for (const ent of this.ents) {
-      if (!ent.scriptInst || ent.gone || !ent.visible) continue;
-      if (aabbOverlap(entAABB(ent), bodyAABB(p), 0.6)) { ent.scriptInst.trigger('clicked'); return; }
+      if (!ent.scriptInst || ent.gone || !ent.visible || ent.screen) continue;
+      if (aabbOverlap(entAABB(ent), bodyAABB(p), 0.6)) {
+        return { kind: 'poke', ent, label: null };   // works, but no prompt noise
+      }
     }
+    return null;
+  }
+
+  interact() {
+    const p = this.me;
+    const it = this.findInteraction();
+    if (!it) return;
+    switch (it.kind) {
+      case 'leavearcade': this.leaveArcade(); break;
+      case 'pongleave': this.act({ k: 'pongleave' }); p.pongSide = null; break;
+      case 'arcade': {
+        if (p.holding && p.holding.kind === 'box') this.dropHeld();
+        p.holding = null;
+        this.joinArcade(it.ent);
+        break;
+      }
+      case 'pongjoin': {
+        if (p.holding && p.holding.kind === 'box') this.dropHeld();
+        p.holding = null;
+        this.act({ k: 'pongjoin' });
+        break;
+      }
+      case 'pickup': {
+        const best = it.ent;
+        p.holding = { kind: 'box', id: best.id };
+        best.heldBy = p.id;
+        playSound('pickup');
+        if (best.synced) this.act({ k: 'pickup', id: best.id });
+        break;
+      }
+      case 'blaster': {
+        const st = this.stands.get(it.ent.id);
+        p.holding = { kind: 'blaster' };
+        if (st) st.armed = false;
+        playSound('pickup');
+        this.act({ k: 'grabblaster', id: it.ent.id });
+        break;
+      }
+      case 'poke': it.ent.scriptInst.trigger('clicked'); break;
+    }
+  }
+
+  // ---------------------------------------------------------- the arcade
+  joinArcade(ent) {
+    if (this.playingEnt || !ent.screen) return;
+    this.playingEnt = ent;
+    this.me.arcade = true;
+    ent.screen.active = true;
+    ent.screen.dirty = true;
+    this.dom.screenHolder.appendChild(ent.screen.canvas);
+    this.dom.screenOverlay.style.display = 'flex';
+    playSound('pip');
+    if (ent.scriptInst) ent.scriptInst.trigger('screenstart');
+  }
+
+  leaveArcade() {
+    const ent = this.playingEnt;
+    if (!ent) return;
+    this.playingEnt = null;
+    this.me.arcade = false;
+    if (ent.screen) {
+      ent.screen.active = false;
+      ent.screen.dirty = true;
+      if (ent.screen.canvas.parentElement) ent.screen.canvas.remove();
+    }
+    this.dom.screenOverlay.style.display = 'none';
+    if (ent.scriptInst) ent.scriptInst.trigger('screenstop');
   }
 
   dropHeld() {
@@ -859,6 +942,7 @@ export class GameSession {
       p.deadT = RESPAWN_T;
       this.deaths++;
       this.releaseHeld(p);
+      this.leaveArcade();
       if (p.pongSide) { this.act({ k: 'pongleave' }); p.pongSide = null; }
     }
   }
@@ -996,6 +1080,7 @@ export class GameSession {
     p.dead = !!s.dd;
     p.onGround = !!s.g;
     p.pongSide = s.ps === 'L' || s.ps === 'R' ? s.ps : null;
+    p.arcade = !!s.ac;
     if (s.sw) p.rig.swingPaddle();
     if (s.h == null) p.holding = null;
     else if (s.h === 'g') p.holding = { kind: 'blaster' };
@@ -1011,6 +1096,7 @@ export class GameSession {
       a: r2(p.yaw), p: r2(p.pitch), sp: Math.round(p.speed),
       dd: p.dead ? 1 : 0, g: p.onGround ? 1 : 0,
       ps: p.pongSide, sw: p.rig.swing > 0.15 ? 1 : 0,
+      ac: this.playingEnt ? 1 : 0,
       h: p.holding ? (p.holding.kind === 'blaster' ? 'g' : p.holding.id) : null,
     };
   }
@@ -1021,7 +1107,7 @@ export class GameSession {
       players[id] = {
         x: r2(p.x), y: r2(p.y), z: r2(p.z), a: r2(p.yaw), p: r2(p.pitch),
         sp: Math.round(p.speed), dd: p.dead ? 1 : 0, g: p.onGround ? 1 : 0,
-        ps: p.pongSide, sw: 0,
+        ps: p.pongSide, sw: 0, ac: p.arcade ? 1 : 0,
         h: p.holding ? (p.holding.kind === 'blaster' ? 'g' : p.holding.id) : null,
         nm: p.name,
       };
@@ -1155,6 +1241,14 @@ export class GameSession {
     this.view.setBiomeLook(look.fog, look.accent === COLORS.lava ? 0xffe6d8 : 0xffffff);
     this.view.setFogRange(this.flatVoid ? 260 : 150, this.flatVoid ? 460 : 330);
 
+    // arcade screens repaint when something changed (or to blink their invite)
+    for (const ent of this.ents) {
+      if (!ent.screen || ent.gone) continue;
+      if (ent === this.playingEnt || distXZ(ent.x, ent.z, this.me.x, this.me.z) < 80) {
+        ent.screen.draw(dt);
+      }
+    }
+
     // camera + animation
     const target = new THREE.Vector3(this.me.x, this.me.y + 2.1, this.me.z);
     this.view.updateCamera(target, dt, this.world, {});
@@ -1175,6 +1269,21 @@ export class GameSession {
         this.respawn();
         p.rig.root.visible = true;
       }
+      return;
+    }
+
+    if (this.playingEnt) {
+      // stand at the cabinet's controls; every key belongs to the game now
+      const ent = this.playingEnt;
+      const fy = ent.yaw * DEG;
+      p.x = ent.x + Math.sin(fy) * (ent.size.z / 2 + 1.1);
+      p.z = ent.z + Math.cos(fy) * (ent.size.z / 2 + 1.1);
+      p.y = this.world.heightAt(p.x, p.z);
+      p.vx = p.vy = p.vz = 0;
+      p.speed = 0;
+      p.onGround = true;
+      p.yaw = Math.atan2(ent.x - p.x, ent.z - p.z);
+      this.poseSelf(dt);
       return;
     }
 
@@ -1230,6 +1339,22 @@ export class GameSession {
     p.speed = Math.hypot(p.vx, p.vz);
     if (p.justLanded) playSound('land');
 
+    // trampolines: land on one and up you go
+    if (p.onGround) {
+      const feet = bodyAABB(p);
+      for (const ent of this.ents) {
+        if (!ent.bouncy || ent.gone || !ent.visible) continue;
+        const bb = entAABB(ent);
+        if (feet.x0 < bb.x1 && feet.x1 > bb.x0 && feet.z0 < bb.z1 && feet.z1 > bb.z0 &&
+            Math.abs(p.y - bb.y1) < 0.6) {
+          p.vy = ent.bouncy;
+          p.onGround = false;
+          playSound('boop');
+          break;
+        }
+      }
+    }
+
     // footsteps
     this.stepT = (this.stepT || 0) + p.speed * dt;
     if (p.onGround && this.stepT > 1.9) { this.stepT = 0; playSound('step'); }
@@ -1252,7 +1377,7 @@ export class GameSession {
     p.rig.update(dt, {
       speed: p.speed, onGround: p.onGround,
       holding: p.holding ? p.holding.kind : null,
-      pong: !!p.pongSide, frozen: p.frozen,
+      pong: !!p.pongSide, arcade: !!this.playingEnt, frozen: p.frozen,
       aimPitch: p.holding && p.holding.kind === 'blaster' ? this.view.cam.pitch * 0.8 : 0,
       groundY: this.world.heightAt(p.x, p.z),
     });
@@ -1408,7 +1533,7 @@ export class GameSession {
       p.rig.update(dt, {
         speed: p.speed, onGround: p.onGround,
         holding: p.holding ? p.holding.kind : null,
-        pong: !!p.pongSide, aimPitch: p.pitch * 0.8,
+        pong: !!p.pongSide, arcade: !!p.arcade, aimPitch: p.pitch * 0.8,
         groundY: this.world.heightAt(p.x, p.z),
       });
       updateBubbles(p, dt);
@@ -1545,6 +1670,11 @@ export class GameSession {
       if (!wanted.has(key)) { el.remove(); this.writeEls.delete(key); }
     }
 
+    // what E would do, floating under the crosshair
+    const it = this.findInteraction();
+    const promptText = it && it.label ? it.label : '';
+    if (this.dom.prompt.textContent !== promptText) this.dom.prompt.textContent = promptText;
+
     // hint + toasts
     const foot = this.dom.foot;
     let footText = '';
@@ -1613,6 +1743,7 @@ export class GameSession {
   // ---------------------------------------------------------- teardown
   exit() {
     if (!this.running) return;
+    this.leaveArcade();
     this.running = false;
     cancelAnimationFrame(this.raf);
     clearInterval(this.netTimer);
@@ -1638,6 +1769,8 @@ export class GameSession {
     this.dom.hud.textContent = '';
     this.dom.foot.textContent = '';
     this.dom.pongHud.style.display = 'none';
+    this.dom.prompt.textContent = '';
+    this.dom.screenOverlay.style.display = 'none';
     if (this.dom.errPanel) this.dom.errPanel.style.display = 'none';
     this.onExit();
   }
@@ -1658,6 +1791,13 @@ class FlatGround {
     this.scene.remove(this.mesh);
     this.mesh.geometry.dispose();
   }
+}
+
+function shadeTint(hex) {
+  const r = Math.max(0, ((hex >> 16) & 255) - 22);
+  const g = Math.max(0, ((hex >> 8) & 255) - 22);
+  const b = Math.max(0, (hex & 255) - 22);
+  return (r << 16) | (g << 8) | b;
 }
 
 const r2 = (v) => Math.round((+v || 0) * 100) / 100;
