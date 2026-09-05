@@ -2,3 +2,4 @@ node_modules/
 qa/
 *.log
 .DS_Store
+.claude/worktrees/
