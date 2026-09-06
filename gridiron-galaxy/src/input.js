@@ -50,7 +50,7 @@ class InputSystem {
     window.addEventListener('mouseup', (e) => { if (e.button === 0) this.mouse.down = false; if (e.button === 2) this.mouse.rightDown = false; });
     window.addEventListener('wheel', (e) => { this.mouse.wheel += Math.sign(e.deltaY); }, { passive: true });
     window.addEventListener('contextmenu', (e) => e.preventDefault());
-    window.addEventListener('gamepadconnected', (e) => { this.padConnected = true; this.padName = e.gamepad.id; this._fire('padconnected', e.gamepad.id); });
+    window.addEventListener('gamepadconnected', (e) => { const id = e.gamepad ? e.gamepad.id : 'gamepad'; this.padConnected = true; this.padName = id; this._fire('padconnected', id); });
     window.addEventListener('gamepaddisconnected', () => { this.padConnected = false; this._fire('paddisconnected'); });
   }
   on(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }

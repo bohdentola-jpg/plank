@@ -64,9 +64,12 @@ export class Dialog {
   }
   _advance() {
     if (!this.blocking || this.box.style.display === 'none') return;
-    input.block(160); input.mouse.clicked = false; // the press that advanced the dialog must not leak into the screen underneath
-    if (this.typing) { this.shown = this.text.length; this.txtEl.textContent = this.text; this.typing = false; this._finishLine(); return; }
-    audio.sfx('confirm'); const r = this.resolve; this.resolve = null; this.active = false;
-    if (r) r(this.line.choices ? this.choiceIdx : true);
+    if (this.typing) { this.shown = this.text.length; this.txtEl.textContent = this.text; this.typing = false; this._finishLine(); input.block(120); input.mouse.clicked = false; return; }
+    if (!this.resolve) return; // nothing left to dismiss: let the screen underneath handle the press
+    audio.sfx('confirm'); const r = this.resolve; this.resolve = null; this.active = false; this.blocking = false;
+    input.block(160); input.mouse.clicked = false;
+    const choice = this.line.choices ? this.choiceIdx : true;
+    if (!this.line.keep) this.hide();
+    r(choice);
   }
 }
