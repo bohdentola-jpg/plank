@@ -23,7 +23,7 @@ class App {
     this.ui = qs('#ui'); this.hud = qs('#hud'); this.dialogEl = qs('#dialog'); this.toastEl = qs('#toast'); this.fadeEl = qs('#fade');
     this.c2d = qs('#c2d'); this.ctx2d = this.c2d.getContext('2d');
     this.space = new SpaceScene(this);
-    this.screen = null; this.screenName = ''; this.is2D = false;
+    this.screen = null; this.screenName = ''; this.is2D = false; this.dialogs = new Set();
     this.applyQuality(); this.resize();
     window.addEventListener('resize', () => this.resize());
     input.on((type, data) => { if (type === 'padconnected') this.toast(`Controller connected: ${String(data).split('(')[0].trim() || 'gamepad'}`); if (type === 'paddisconnected') this.toast('Controller disconnected'); });
@@ -72,7 +72,7 @@ class App {
     this.frames++; this.fpsT += dt; if (this.fpsT > 1) { this.fps = this.frames / this.fpsT; this.frames = 0; this.fpsT = 0; }
     input.poll(dt);
     try {
-      if (this.screen) { if (this.screen.update) this.screen.update(dt); if (this.screen.render) this.screen.render(); }
+      if (this.screen) { if (this.screen.update) this.screen.update(dt); for (const d of this.dialogs) d.update(dt); if (this.screen.render) this.screen.render(); }
     } catch (e) { console.error(e); this._errCount = (this._errCount || 0) + 1; if (this._errCount > 60) { this._errCount = 0; this.toast('Something glitched. Returning to the hub.'); this.go('hub'); } }
     input.endFrame();
     if (!this._booted) { this._booted = true; const b = qs('#boot'); if (b) { b.classList.add('gone'); setTimeout(() => b.remove(), 700); } }

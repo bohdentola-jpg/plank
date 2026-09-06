@@ -72,7 +72,7 @@ export class DistrictScreen {
     const w = this.app.vw, h = this.app.vh; this.w = w; this.h = h; const hy = h * 0.58; this.hy = hy;
     const sh = this.planet.shops;
     this.spots = [
-      { id: 'eat', x: w * 0.14, y: h * 0.87, w: Math.min(220, w * 0.17), h: h * 0.19, name: sh.eat.name, keeper: sh.eat.keeper, desc: 'Food buffs for your next game. Fuel up before the big one.' },
+      { id: 'eat', x: w * 0.165, y: h * 0.87, w: Math.min(220, w * 0.17), h: h * 0.19, name: sh.eat.name, keeper: sh.eat.keeper, desc: 'Food buffs for your next game. Fuel up before the big one.' },
       { id: 'gear', x: w * 0.36, y: h * 0.9, w: Math.min(230, w * 0.18), h: h * 0.2, name: sh.gear.name, keeper: sh.gear.keeper, desc: 'Permanent gear upgrades for the whole squad.' },
       { id: 'stadium', x: w * 0.5, y: hy - h * 0.02, w: Math.min(480, w * 0.37), h: h * 0.2, name: this.planet.stadium.name, keeper: `${this.planet.team.name}`, desc: `Take on the ${this.planet.team.name}. ${this.planet.stadium.size} stadium, ${this.planet.stadium.surface.type} surface${this.planet.stadium.quirks.length ? ' · ' + this.planet.stadium.quirks.join(', ') : ''}.` },
       { id: 'plays', x: w * 0.64, y: h * 0.9, w: Math.min(230, w * 0.18), h: h * 0.2, name: sh.plays.name, keeper: sh.plays.keeper, desc: 'Five planet-exclusive plays, plus your whole playbook.' },

@@ -94,11 +94,13 @@ class InputSystem {
     if (this.padDown.has(PAD_BUTTONS.up) || sy < -0.6) dir = 'up'; else if (this.padDown.has(PAD_BUTTONS.down) || sy > 0.6) dir = 'down';
     else if (this.padDown.has(PAD_BUTTONS.left) || sx < -0.6) dir = 'left'; else if (this.padDown.has(PAD_BUTTONS.right) || sx > 0.6) dir = 'right';
     if (!dir && !pad) { for (const d of ['up', 'down', 'left', 'right']) if (KEYS[d].some(k => this.keys.has(k))) { dir = d; break; } }
+    // a tap that went down and up between two frames still counts as one navigation step
+    let tap = null; if (!dir) for (const d of ['up', 'down', 'left', 'right']) if (KEYS[d].some(k => this.keyEdge.has(k)) || this.padEdge.has(PAD_BUTTONS[d])) { tap = d; break; }
     this.navEdge = null;
     if (dir) {
       if (this.repeat.dir !== dir) { this.repeat.dir = dir; this.repeat.t = 0; this.navEdge = dir; }
       else { this.repeat.t += dt; if (this.repeat.t > 0.38) { this.repeat.t -= 0.12; this.navEdge = dir; } }
-    } else this.repeat.dir = null;
+    } else { this.repeat.dir = null; if (tap) this.navEdge = tap; }
     // d-pad / arrow-key only navigation (lets the left stick do something else, e.g. fly)
     let ddir = null;
     if (this.padDown.has(PAD_BUTTONS.up) || this.keys.has('ArrowUp')) ddir = 'up'; else if (this.padDown.has(PAD_BUTTONS.down) || this.keys.has('ArrowDown')) ddir = 'down';
@@ -107,7 +109,7 @@ class InputSystem {
     if (ddir) {
       if (this.repeatD.dir !== ddir) { this.repeatD.dir = ddir; this.repeatD.t = 0; this.navEdgeDpad = ddir; }
       else { this.repeatD.t += dt; if (this.repeatD.t > 0.38) { this.repeatD.t -= 0.12; this.navEdgeDpad = ddir; } }
-    } else this.repeatD.dir = null;
+    } else { this.repeatD.dir = null; const dt2 = ['up', 'down', 'left', 'right'].find(d => this.keyEdge.has('Arrow' + d[0].toUpperCase() + d.slice(1)) || this.padEdge.has(PAD_BUTTONS[d])); if (dt2) this.navEdgeDpad = dt2; }
     for (const a of Object.keys(PAD_BUTTONS)) { if (this.down(a)) this.holdTime[a] = (this.holdTime[a] || 0) + dt; else this.holdTime[a] = 0; }
   }
   // Called at END of frame

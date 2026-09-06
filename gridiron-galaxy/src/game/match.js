@@ -38,7 +38,7 @@ export class GameScreen {
     const userPlays = P.userPlays || userPlaybook(app.save); const cpuPlays = [...BASE_PLAYS, ...getPlanetPlays(this.planet)];
     const simMode = this.mode === 'practice' ? 'practice' : (P.simMode || 'game');
     this.sim = new Sim({ home: this.home, away: this.away, userSide: 'home', auto: this.auto, settings: app.save.settings, quirks: this.planet.stadium.quirks, userPlays, cpuPlays, mode: simMode, onEvent: (t, d) => this.onEvent(t, d), hooks: P.hooks || {}, start: P.start });
-    if (this.mode === 'practice') { this.sim.practiceSpot = this.sim.ownYard('home', P.spot || 25); this.sim.newSeries(this.sim.practiceSpot); this.sim.noDefense = !!P.noDefense; }
+    if (simMode === 'practice') { this.sim.practiceSpot = this.sim.ownYard('home', P.spot || 25); this.sim.newSeries(this.sim.practiceSpot); this.sim.noDefense = !!P.noDefense; }
     this.chars = [];
     for (const side of ['home', 'away']) { const team = side === 'home' ? this.home : this.away; this.sim.roster[side].forEach((ent) => { const c = new Character({ species: team.species, team, num: ent.p.num, id: ent.p.id, skinIndex: ent.p.skin, hair: ent.p.hair, hairColor: ent.p.hairColor, gloves: ent.p.role !== 'QB' }); this.scene.add(c.group); ent.char = c; this.chars.push(c); }); }
     this.ball3d = buildBall(); this.scene.add(this.ball3d); this.ballHolder = null; this.ballSpin = 0;
@@ -47,7 +47,7 @@ export class GameScreen {
     this.paused = false; this.finalShown = false; this.throwHold = null; this.callPending = false; this.msgT = 0;
     audio.music(this.planet.isFinal ? 'tense' : 'game', this.planet.index + 3);
     this.benchLayout();
-    if (P.qa) window.__match = this;
+    window.__match = this;
     if (P.onEnter) P.onEnter(this);
   }
   benchLayout() {
@@ -135,8 +135,8 @@ export class GameScreen {
       case 'final': if (!this.finalShown) this.showFinal(); break;
     }
     if (s.phase !== 'kickmeter') this.hud.hideMeter();
-    const steps = this.timeScale > 1 ? Math.round(this.timeScale) : 1;
-    for (let i = 0; i < steps; i++) { if (s.phase === 'playcall' && !this.callPending && this.auto) this.handlePlaycall(); s.update(dt); }
+    let acc = Math.min(dt, 0.1) * this.timeScale; const H = 1 / 60;
+    while (acc > 1e-6) { const h = Math.min(acc, H); if (s.phase === 'playcall' && !this.callPending && this.auto) this.handlePlaycall(); s.update(h); acc -= h; }
     if (s.phase !== 'playcall' && s.phase !== 'pat' && this.playcall.isOpen) this.playcall.close();
     this.syncVisuals(dt); this.camera.update(dt, s); this.hud.update(dt); this.stadium.update(dt);
     if (this.P.onFrame) this.P.onFrame(this, dt);

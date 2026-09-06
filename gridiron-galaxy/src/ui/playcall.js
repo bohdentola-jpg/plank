@@ -47,7 +47,7 @@ export class PlayCallUI {
   constructor(app, sim) { this.app = app; this.sim = sim; this.isOpen = false; this.tabIdx = 0; this.cardIdx = 0; this.lastTab = {}; }
   open(kind, plays, onPick, opts = {}) {
     this.kind = kind; this.plays = plays; this.onPick = onPick; this.isOpen = true; this.opts = opts;
-    if (kind === 'offense') { this.cats = CATEGORIES.filter(c => plays.some(p => p.cat === c.id) && !(opts.filterCats && !opts.filterCats.includes(c.id))); this.tabIdx = Math.min(this.tabIdx, this.cats.length - 1); }
+    if (kind === 'offense') { const ok = (p) => !opts.filterPlays || opts.filterPlays(p); this.cats = CATEGORIES.filter(c => plays.some(p => p.cat === c.id && ok(p)) && !(opts.filterCats && !opts.filterCats.includes(c.id))); if (!this.cats.length) this.cats = CATEGORIES.filter(c => plays.some(p => p.cat === c.id)); this.tabIdx = Math.min(this.tabIdx, this.cats.length - 1); if (opts.filterPlays) this.tabIdx = Math.max(0, this.cats.findIndex(c => plays.some(p => p.cat === c.id && ok(p)))); }
     else this.cats = [{ id: 'def', name: 'Defense', color: '#ff6b7a' }];
     this.root = el('div', { class: 'playcall' }); this.app.ui.appendChild(this.root);
     this.sit = el('div', { class: 'pc-situation' }); this.app.ui.appendChild(this.sit);

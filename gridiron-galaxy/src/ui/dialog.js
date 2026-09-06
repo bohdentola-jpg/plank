@@ -17,8 +17,9 @@ export function portraitCanvas(spec, size = 160) {
 export function kidSpec(id) { const k = KIDS.find(x => x.id === id) || KIDS[0]; const { SPECIES } = { SPECIES: null }; return { species: 'kid', skinIndex: k.skin, hair: k.hair, hairColor: k.hairColor, colors: ['#ff7a1a', '#1c2b5a'], name: k.nick }; }
 
 export class Dialog {
-  constructor(app, variant = '') {
-    this.app = app; this.root = app.dialogEl; this.active = false; this.typing = false; this.text = ''; this.shown = 0; this.speed = 48; this.resolve = null; this.choiceIdx = 0;
+  constructor(app, variant = '', selfDriven = false) {
+    this.app = app; this.root = app.dialogEl;
+    if (selfDriven) { app.dialogs.add(this); } this.active = false; this.typing = false; this.text = ''; this.shown = 0; this.speed = 48; this.resolve = null; this.choiceIdx = 0;
     this.box = el('div', { class: 'dlg ' + variant }, el('div', { class: 'box' }, el('div', { class: 'name' }), el('div', { class: 'txt' }), el('div', { class: 'more', html: '▼' }), el('div', { class: 'choices' })));
     this.box.style.display = 'none'; this.root.appendChild(this.box);
     this.nameEl = this.box.querySelector('.name'); this.txtEl = this.box.querySelector('.txt'); this.moreEl = this.box.querySelector('.more'); this.choicesEl = this.box.querySelector('.choices'); this.portraitEl = null;
@@ -39,6 +40,7 @@ export class Dialog {
     this.tick = 0; input.block(120);
   }
   hide() { this.box.style.display = 'none'; this.active = false; this.typing = false; if (this.portraitEl) { this.portraitEl.remove(); this.portraitEl = null; } }
+  destroy() { this.hide(); this.dead = true; this.app.dialogs.delete(this); this.box.remove(); }
   get isTyping() { return this.typing && this.box.style.display !== 'none'; }
   update(dt) {
     if (this.box.style.display === 'none') return;
@@ -62,6 +64,7 @@ export class Dialog {
   }
   _advance() {
     if (!this.blocking || this.box.style.display === 'none') return;
+    input.block(160); input.mouse.clicked = false; // the press that advanced the dialog must not leak into the screen underneath
     if (this.typing) { this.shown = this.text.length; this.txtEl.textContent = this.text; this.typing = false; this._finishLine(); return; }
     audio.sfx('confirm'); const r = this.resolve; this.resolve = null; this.active = false;
     if (r) r(this.line.choices ? this.choiceIdx : true);

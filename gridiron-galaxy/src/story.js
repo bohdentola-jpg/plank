@@ -63,9 +63,9 @@ export class StoryController {
     return true;
   }
   async pregame(match, p) {
-    match.frozen = true; const d = new Dialog(this.app); const cap = p.team.captain;
+    match.frozen = true; const d = new Dialog(this.app, '', true); const cap = p.team.captain;
     await d.sequence([{ who: cap, text: p.isFinal ? 'Your ball is in our trophy case. Come and get it, specimens.' : `${p.team.perk.name}! ${p.team.perk.desc} Good luck, Earthlings.`, alt: true, portrait: { species: p.team.species, colors: p.team.colors, skinIndex: 1 } }, { who: 'Dex', text: p.isFinal ? 'Everything we learned. Every planet. One game.' : 'Comets on three. One, two, three, COMETS!', portrait: kidSpec('dex') }]);
-    d.hide(); match.frozen = false; this.app.save.pantryActive = this.app.save.pantryActive; 
+    d.destroy(); match.frozen = false;
   }
   afterMatch(p, res) {
     const st = this.st, app = this.app; app.save.pantryActive = []; 
@@ -106,7 +106,7 @@ export class StoryController {
     match.ballOverride.set(0, -50, 0); ufo.userData.beam.visible = false; ufo.userData.glow.intensity = 0; audio.sfx('warp');
     await animate(1.5, (k) => { ufo.position.y = lerp(12, 90, k * k); ufo.position.x += k * 1.2; ufo.position.z += camDir * k * 0.8; ufo.rotation.z = -k * 0.7; match.camera.override.look.set(ufo.position.x, ufo.position.y, ufo.position.z); });
     match.scene.remove(ufo); match.camera.override = null;
-    const d = new Dialog(app); await d.sequence(ABDUCTION.map(l => lineFor(l.who, l.text))); d.hide();
+    const d = new Dialog(app, '', true); await d.sequence(ABDUCTION.map(l => lineFor(l.who, l.text))); d.destroy();
     this.st.introDone = true; this.st.planet = 1; app.persist();
     await app.fadeOut(700); app.go('cutscene', { id: 'launch' });
   }
@@ -137,7 +137,7 @@ class CutsceneScreen {
     this.chars[0].holdBall(buildBall());
     this.camPos.set(-14, 5, L - 14); this.camLook.set(0, 1.2, L); this.orbit = true;
     audio.music('story', 5); await wait(600); this.caption('MAPLE STREET, EARTH', 'Saturday. 4:02 PM. Undefeated.');
-    await this.dialog.sequence(INTRO.map(l => lineFor(l.who, l.text)));
+    await this.dialog.sequence(INTRO.map(l => lineFor(l.who, l.text))); this.dialog.hide();
     await app.fadeOut(600); app.go('game', app.story.tutorialParams());
   }
   async launch() {
@@ -147,7 +147,7 @@ class CutsceneScreen {
     ids.forEach((id, i) => this.kid(id, i < 5 ? home : away, gx + 8 + (i % 5) * 2.2, gz + 12 + Math.floor(i / 5) * 2.5, 'idle', Math.PI));
     this.camPos.set(gx + 4, 6, gz + 30); this.camLook.set(gx, 5, gz);
     audio.music('story', 6); await wait(500); this.caption("KEVIN'S GARAGE", 'GOOBER field office (unofficial)');
-    await this.dialog.sequence(LAUNCH.map(l => lineFor(l.who, l.text)));
+    await this.dialog.sequence(LAUNCH.map(l => lineFor(l.who, l.text))); this.dialog.hide();
     // kids run into the garage, rocket lifts
     for (const c of this.chars) c.setState('run');
     await animate(1.6, (k) => { this.chars.forEach((c, i) => { c.group.position.z = lerp(gz + 12 + Math.floor(i / 5) * 2.5, gz + 3, easeInOut(k)); c.group.position.x = lerp(gx + 8 + (i % 5) * 2.2, gx + (i % 5 - 2) * 1.2, easeInOut(k)); c.update(1 / 60, 6); }); });
@@ -184,7 +184,7 @@ class CutsceneScreen {
     const ball = buildBall(); const zippy = this.chars[2]; zippy.holdBall(ball);
     this.camPos.set(-12, 5, L - 16); this.camLook.set(0, 1.2, L); this.orbit = true;
     audio.music('victory', 9); await wait(600); this.caption('MAPLE STREET, EARTH', 'Several light-years later.');
-    await this.dialog.sequence(ENDING.map(l => lineFor(l.who, l.text)));
+    await this.dialog.sequence(ENDING.map(l => lineFor(l.who, l.text))); this.dialog.hide();
     this.orbit = false; zippy.setState('carry'); const z0 = zippy.group.position.z;
     await animate(2.2, (k) => { zippy.group.position.z = z0 + k * 14; zippy.update(1 / 60, 7); this.camLook.set(zippy.group.position.x, 1.2, zippy.group.position.z); this.camPos.set(zippy.group.position.x - 8, 5, zippy.group.position.z - 10); });
     // the fumble
@@ -198,7 +198,7 @@ class CutsceneScreen {
     ball.visible = false; ufo.userData.beam.visible = false; audio.sfx('warp');
     await animate(1.4, (k) => { ufo.position.y = lerp(12, 90, k * k); ufo.position.x += k; ufo.rotation.z = -k * 0.7; this.camLook.copy(ufo.position); });
     this.scene.remove(ufo);
-    await this.dialog.sequence(ENDING2.map(l => lineFor(l.who, l.text)));
+    await this.dialog.sequence(ENDING2.map(l => lineFor(l.who, l.text))); this.dialog.hide();
     this.st = app.save.story; this.st.complete = true; app.persist();
     await app.fadeOut(800); this.mode = 'space'; app.space.mode = 'menu'; app.space.cam.pos.set(-24, 9, 36); app.space.aimCam(0, 0, 0); app.space.setTarget(null); app.fadeIn(800);
     audio.music('space', 12);
@@ -227,5 +227,7 @@ class CutsceneScreen {
   exit() { this.dialog.hide(); if (this.mode === 'space') this.app.space.mode = 'menu'; }
 }
 class StoryScreen { constructor(app) { this.app = app; } enter() { (this.app.story || new StoryController(this.app)).start(); } }
+class TutorialScreen { constructor(app, params) { this.app = app; this.P = params || {}; } enter() { const st = this.app.story || new StoryController(this.app); const P = st.tutorialParams(); if (this.P.step) st.tutStep = +this.P.step; this.app.go('game', P); } }
+registerScreen('tutorial', TutorialScreen);
 registerScreen('cutscene', CutsceneScreen); registerScreen('story', StoryScreen);
 export function installStory(app) { return app.story || new StoryController(app); }

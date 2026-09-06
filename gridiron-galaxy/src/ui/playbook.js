@@ -22,7 +22,7 @@ export class PlaybookScreen {
     panel.appendChild(el('div', { class: 'pc-tabs' }, ...['PLAYBOOK', 'THE COMETS', 'THE ROCKET'].map((t, i) => el('div', { class: 'pc-tab' + (i === this.tab ? ' on' : ''), style: { '--tc': ['#7fb3ff', '#ff7a1a', '#7fe3a6'][i] }, text: t, onclick: () => { this.tab = i; this.refresh(); } }))));
     if (this.tab === 0) {
       const cat = (c) => CATEGORIES.find(x => x.id === c); const p = this.plays[this.nav.index];
-      const row = el('div', { class: 'pc-cards', style: { flexWrap: 'wrap', gap: '10px', maxHeight: '46vh', overflow: 'hidden', justifyContent: 'center' } });
+      const row = el('div', { class: 'pc-cards', style: { flexWrap: 'wrap', gap: '10px', maxHeight: '48vh', overflow: 'hidden', justifyContent: 'center', paddingTop: '18px' } });
       const start = Math.max(0, Math.min(Math.floor(this.nav.index / 5) * 5 - 5, this.plays.length - 15)); const base = Math.max(0, start);
       this.plays.slice(base, base + 15).forEach((pl, k) => { const i = base + k; const cv = document.createElement('canvas'); drawPlayArt(cv, pl, { w: 160, h: 100 }); row.appendChild(el('div', { class: 'pcard' + (i === this.nav.index ? ' sel' : ''), style: { width: '170px', padding: '6px' }, onmouseenter: () => { if (this.nav.index !== i) { this.nav.index = i; this.refresh(); } } }, cv, el('div', { class: 'nm', text: pl.name, style: { fontSize: '13px' } }), el('div', { class: 'ds', text: `${cat(pl.cat) ? cat(pl.cat).name : pl.cat}${pl.planet ? ' · ' + pl.planet : ''}`, style: { minHeight: '14px' } }))); });
       panel.appendChild(row);
