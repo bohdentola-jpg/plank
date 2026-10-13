@@ -58,6 +58,7 @@ export class PlayCallUI {
     const s = this.sim; const cards = this.visible(); this.cardIdx = Math.min(this.cardIdx, Math.max(0, cards.length - 1));
     this.root.innerHTML = '';
     const title = el('div', { class: 'pc-title', text: this.kind === 'offense' ? 'CALL YOUR PLAY' : 'CALL YOUR DEFENSE' }); this.root.appendChild(title);
+    if (s.rules && s.rules.text && s.rules.text.length) this.root.appendChild(el('div', { class: 'pc-rules', text: 'HOUSE RULES · ' + s.rules.text.join(' · ') }));
     if (this.kind === 'offense') {
       const tabs = el('div', { class: 'pc-tabs' });
       this.cats.forEach((c, i) => tabs.appendChild(el('div', { class: 'pc-tab' + (i === this.tabIdx ? ' on' : ''), style: { '--tc': c.color }, text: c.name, onclick: () => { this.tabIdx = i; this.cardIdx = 0; audio.sfx('blip'); this.render(); } })));

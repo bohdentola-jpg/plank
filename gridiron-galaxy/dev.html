@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Gridiron Galaxy: The Long Bomb</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--STYLES--><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<canvas id="gl"></canvas>
+<canvas id="c2d"></canvas>
+<div id="labels"></div>
+<div id="hud"></div>
+<div id="ui"></div>
+<div id="dialog"></div>
+<div id="toast"></div>
+<div id="fade"></div>
+<div id="boot"><div class="bootlogo">GRIDIRON<br>GALAXY</div><div class="bootsub">warming up the rocket…</div><div class="booterr" hidden></div></div>
+<script>
+// Boot guard: if anything stops the game from starting, say so on screen instead of hanging silently.
+(function () {
+  var shown = false;
+  function fail(msg) { if (shown) return; shown = true; var e = document.querySelector('#boot .booterr'); var s = document.querySelector('#boot .bootsub'); if (s) s.textContent = 'The rocket did not start.'; if (e) { e.hidden = false; e.innerHTML = msg; } }
+  window.__bootFail = fail;
+  window.addEventListener('error', function (ev) { if (window.app && window.app.screen) return; fail('<b>Startup error:</b> ' + (ev.message || 'unknown') + (ev.filename ? '<br><small>' + ev.filename.split('/').pop() + ':' + ev.lineno + '</small>' : '') + '<br><br>Try a current Chrome or Edge. If it keeps happening, send this message to the developer.'); });
+  window.addEventListener('unhandledrejection', function (ev) { if (window.app && window.app.screen) return; var r = ev.reason; fail('<b>Startup error:</b> ' + ((r && r.message) || r) + '<br><br>Try a current Chrome or Edge.'); });
+  setTimeout(function () { if (window.app) return; fail(location.protocol === 'file:' ? '<b>The game script did not load.</b><br>This browser blocks script modules opened straight from a file.<br>Open <b>index.html</b> (the one-file build) instead, or run <b>play.bat</b> / <b>serve.py</b> and open the address it prints.' : '<b>Still loading…</b> If this stays here, the game script could not be loaded. Press F12 and check the Console tab for the reason.'); }, 12000);
+})();
+</script>
+<!--SCRIPT--><script type="module" src="src/main.js"></script>
+</body>
+</html>

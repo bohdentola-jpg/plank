@@ -1,6 +1,7 @@
 // Stadiums: field, stands with an instanced crowd, lights, dome, scoreboard, and planet-themed surroundings.
 import * as THREE from '../../vendor/three.module.js';
 import { fieldTexture, skyTexture, planetTexture, FIELD, canvas, gradientMap } from './textures.js';
+import { HAZARD_LOOK } from '../game/rules.js';
 import { toonMat } from './character.js';
 import { buildRocket } from './space.js';
 import { makeRng, hashStr, shade, mix, rgba, hsl, clamp } from '../util.js';
@@ -96,13 +97,36 @@ function windowsTexture(rnd, color) {
 
 export class Stadium {
   constructor(planet, homeTeam, awayTeam, opts = {}) {
-    this.planet = planet; this.spec = planet.stadium; this.theme = planet.theme; this.home = homeTeam; this.away = awayTeam; this.opts = opts;
+    this.planet = planet; this.spec = planet.stadium; this.theme = planet.theme; this.home = homeTeam; this.away = awayTeam; this.opts = opts; this.rules = opts.rules || { hazards: [] };
     this.rnd = makeRng(hashStr(planet.id + ':stadium'));
     this.scene = new THREE.Scene(); this.group = new THREE.Group(); this.scene.add(this.group);
-    this.time = 0; this.excite = 0; this.size = SIZES[this.spec.size] || SIZES.medium;
-    this._lights(); this._sky(); this._ground(); this._field(); this._goalposts(); this._stands(); this._towers(); this._scoreboard(); this._environment(); this._particles();
+    this.time = 0; this.excite = 0; this.size = SIZES[this.spec.size] || SIZES.medium; this.bursts = []; this.storm = 0; this.stormTarget = 0; this.wind = { x: 0, z: 0 };
+    this._lights(); this._sky(); this._ground(); this._field(); this._goalposts(); this._stands(); this._towers(); this._scoreboard(); this._environment(); this._particles(); this._hazards();
     if (this.spec.dome) this._dome();
+    if (this.rules.groove) { this.grooveOverlay = M(new THREE.PlaneGeometry(FIELD.W, FIELD.L), new THREE.MeshBasicMaterial({ color: '#ff2bd6', transparent: true, opacity: 0, depthWrite: false }), 0, 0.03, FIELD.L / 2); this.grooveOverlay.rotation.x = -Math.PI / 2; this.group.add(this.grooveOverlay); }
   }
+  _hazards() {
+    this.hazardMeshes = [];
+    for (const h of this.rules.hazards || []) {
+      const look = HAZARD_LOOK[h.type] || HAZARD_LOOK.holes; const g = new THREE.Group(); g.position.set(h.x, 0.02, h.z); this.group.add(g);
+      const ring = M(new THREE.RingGeometry(h.r * 0.9, h.r * 1.08, 28), new THREE.MeshBasicMaterial({ color: look.ring, side: THREE.DoubleSide, depthWrite: false })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.012; g.add(ring);
+      const discMat = h.type === 'ice' ? new THREE.MeshStandardMaterial({ color: look.color, roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.85 }) : h.type === 'grease' ? new THREE.MeshStandardMaterial({ color: look.color, roughness: 0.15, metalness: 0.4 }) : new THREE.MeshToonMaterial({ color: look.color, gradientMap: gradientMap(), emissive: look.glow || '#000000', emissiveIntensity: look.glow ? 0.7 : 0 });
+      const disc = M(new THREE.CircleGeometry(h.r * 0.92, 28), discMat); disc.rotation.x = -Math.PI / 2; disc.position.y = 0.01; disc.receiveShadow = true; g.add(disc);
+      if (h.type === 'lava') { const l = new THREE.PointLight('#ff6a1f', 1.2, h.r * 5); l.position.y = 1; g.add(l); g.userData.light = l; }
+      if (h.type === 'steam') { for (let i = 0; i < 3; i++) { const a = i / 3 * 6.28; g.add(M(cyl(0.18, 0.24, 0.35, 8), toonMat('#3a3a44'), Math.cos(a) * h.r * 0.5, 0.17, Math.sin(a) * h.r * 0.5)); } }
+      if (h.type === 'holes') { const inner = M(new THREE.CircleGeometry(h.r * 0.6, 20), new THREE.MeshBasicMaterial({ color: '#120c02' })); inner.rotation.x = -Math.PI / 2; inner.position.y = 0.014; g.add(inner); }
+      if (h.type === 'junk') { const t = M(new THREE.TorusGeometry(h.r * 0.5, h.r * 0.22, 8, 16), toonMat('#1a1a1a'), 0, 0.2, 0); t.rotation.x = Math.PI / 2; g.add(t); g.add(M(box(0.7, 0.4, 0.5), toonMat(this.rnd.pick(['#a0632b', '#7d7f86', '#e8c25a'])), h.r * 0.5, 0.2, -h.r * 0.3)); }
+      g.userData.h = h; g.userData.disc = disc; this.hazardMeshes.push(g);
+    }
+    if (this.rules.fog) { const horizon = this.theme.sky[1]; this.scene.fog = new THREE.FogExp2(mix(horizon, '#ffffff', 0.3), 0.022); }
+  }
+  burst(x, z, color, n = 14, up = 6) {
+    const g = new THREE.Group(); g.position.set(x, 0.2, z); this.scene.add(g); const parts = [];
+    for (let i = 0; i < n; i++) { const m = M(sph(0.1 + Math.random() * 0.1, 6, 5), new THREE.MeshBasicMaterial({ color })); m.castShadow = false; const a = Math.random() * 6.28, sp = 1 + Math.random() * 2.5; m.userData.v = new THREE.Vector3(Math.cos(a) * sp, up * (0.5 + Math.random()), Math.sin(a) * sp); g.add(m); parts.push(m); }
+    this.bursts.push({ g, parts, t: 0 });
+  }
+  erupt(h) { const look = HAZARD_LOOK[h.type] || {}; this.burst(h.x, h.z, h.type === 'steam' ? '#e8e8f0' : look.color || '#ffffff', h.type === 'steam' ? 22 : 16, h.type === 'steam' ? 9 : 7); }
+  setStorm(on) { this.stormTarget = on ? 1 : 0; }
   get night() { return !!this.spec.night; }
   _lights() {
     const t = this.theme; const night = this.night;
@@ -287,8 +311,13 @@ export class Stadium {
     this.particles = new THREE.Points(geo, mat); this.scene.add(this.particles); this.pCfg = cfg;
   }
   cheer(intensity = 1) { this.excite = Math.max(this.excite, intensity); }
-  update(dt) {
+  update(dt, sim) {
     this.time += dt; this.excite = Math.max(0, this.excite - dt * 0.5);
+    if (sim) { this.wind.x = sim.wind.x; this.wind.z = sim.wind.z; }
+    for (const g of this.hazardMeshes || []) { const h = g.userData.h; if (h.type === 'lava') { const k = 0.6 + 0.4 * Math.sin(this.time * 3 + h.phase) + (h.active ? 0.8 : 0); g.userData.disc.material.emissiveIntensity = k; if (g.userData.light) g.userData.light.intensity = 0.8 + k; } if (h.type === 'steam' && h.active && Math.random() < dt * 20) this.burst(h.x + (Math.random() - 0.5) * h.r, h.z + (Math.random() - 0.5) * h.r, '#e8e8f0', 2, 5); }
+    for (let i = this.bursts.length - 1; i >= 0; i--) { const b = this.bursts[i]; b.t += dt; for (const m of b.parts) { const v = m.userData.v; v.y -= 12 * dt; m.position.addScaledVector(v, dt); if (m.position.y < -0.2) m.position.y = -0.2; } if (b.t > 1.2) { this.scene.remove(b.g); this.bursts.splice(i, 1); } }
+    if (this.storm !== this.stormTarget) { this.storm += Math.sign(this.stormTarget - this.storm) * dt * 0.5; this.storm = Math.max(0, Math.min(1, this.storm)); if (this.rules.sandstorm) { if (!this.scene.fog || !this.scene.fog.isFogExp2) this.scene.fog = new THREE.FogExp2(this.theme.sky[1], 0.002); this.scene.fog.density = 0.002 + this.storm * 0.03; } }
+    if (this.grooveOverlay) { const on = sim && sim.groove > 0; this.grooveOverlay.material.opacity = on ? 0.12 + 0.1 * Math.sin(this.time * 8) : 0; this.grooveOverlay.material.color.setHSL((this.time * 0.3) % 1, 0.9, 0.6); }
     if (this.crowdBodies && (this._crowdFrame = (this._crowdFrame || 0) + 1) % 2 === 0) {
       const m = new THREE.Matrix4(); const ex = this.excite; const t = this.time;
       for (let k = 0; k < this.crowdN; k++) {
@@ -301,7 +330,7 @@ export class Stadium {
     if (this.particles) {
       const p = this.particles.geometry.attributes.position; const arr = p.array;
       for (let i = 0; i < this.pVel.length; i++) {
-        const v = this.pVel[i]; arr[i * 3] += v[0] * dt; arr[i * 3 + 1] += v[1] * dt; arr[i * 3 + 2] += v[2] * dt;
+        const v = this.pVel[i]; arr[i * 3] += (v[0] + this.wind.x * 1.5) * dt; arr[i * 3 + 1] += v[1] * dt; arr[i * 3 + 2] += (v[2] + this.wind.z * 1.5) * dt;
         if (arr[i * 3 + 1] < 0) arr[i * 3 + 1] = 45; if (arr[i * 3 + 1] > 46) arr[i * 3 + 1] = 0; if (arr[i * 3] > 60) arr[i * 3] = -60; if (arr[i * 3] < -60) arr[i * 3] = 60; if (arr[i * 3 + 2] > FIELD.L + 20) arr[i * 3 + 2] = -20; if (arr[i * 3 + 2] < -20) arr[i * 3 + 2] = FIELD.L + 20;
       }
       p.needsUpdate = true;

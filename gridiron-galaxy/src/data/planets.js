@@ -23,6 +23,7 @@ export const PLANETS = [
       practice: { name: 'The Cul-de-Sac' }, stadiumName: 'The Lot',
     },
     challenge: { type: 'passing', title: 'Trash Can Targets', desc: 'Complete 5 passes in 60 seconds.', reward: 150, n: 5, time: 60 },
+    rules: {}, style: { off: 'run', def: 'blitz' },
     part: null, words: ['Maple', 'Backyard', 'Sprinkler', 'Mailbox', 'Sidewalk'],
   },
   {
@@ -38,6 +39,7 @@ export const PLANETS = [
       practice: { name: 'Sea of Tranquility Practice Pit' }, stadiumName: 'Tranquility Dome',
     },
     challenge: { type: 'passing', title: 'Floaters', desc: 'Complete 6 passes in 60 seconds under low gravity.', reward: 200, n: 6, time: 60 },
+    rules: { lowgrav: true, bigJumps: true }, style: { off: 'deep', def: 'zone' },
     part: { name: 'Stage-2 Booster', desc: 'It goes faster. That\'s the whole thing.' }, words: ['Lunar', 'Crater', 'Orbit', 'Tide', 'Eclipse'],
   },
   {
@@ -53,6 +55,7 @@ export const PLANETS = [
       practice: { name: 'Valles Marineris Practice Trench' }, stadiumName: 'Red Rock Bowl',
     },
     challenge: { type: 'run', title: 'Dust Devil Dash', desc: 'Gain 30 yards in 3 running plays.', reward: 220, n: 3, yards: 30 },
+    rules: { dustdevils: true }, style: { off: 'run', def: 'man' },
     part: { name: 'Dust Filter', desc: 'Keeps Mars out of the rocket. Mostly.' }, words: ['Red', 'Rover', 'Dust', 'Olympus', 'Crater'],
   },
   {
@@ -68,6 +71,7 @@ export const PLANETS = [
       practice: { name: 'Thermal Practice Platform' }, stadiumName: 'Stratus Stadium',
     },
     challenge: { type: 'longbomb', title: 'Ride the Thermals', desc: 'Complete a pass of 25+ yards in the wind.', reward: 240, n: 1, yards: 25 },
+    rules: { wind: true, updraft: true }, style: { off: 'deep', def: 'zone' },
     part: { name: 'Heat Shield', desc: 'Rated for Venus. Rated for barbecue.' }, words: ['Cloud', 'Cumulus', 'Thermal', 'Sulfur', 'Zephyr'],
   },
   {
@@ -83,6 +87,7 @@ export const PLANETS = [
       practice: { name: 'Frozen Pond' }, stadiumName: 'The Icebox',
     },
     challenge: { type: 'kick', title: 'Ice Cold Kicks', desc: 'Make 3 field goals on the slick ice.', reward: 260, n: 3 },
+    rules: { slick: true, hazards: 'ice' }, style: { off: 'balanced', def: 'man' },
     part: { name: 'Cryo Coolant', desc: 'Stops the engine from melting. Or freezing. Both.' }, words: ['Frost', 'Glacier', 'Blizzard', 'Icicle', 'Tundra'],
   },
   {
@@ -98,6 +103,7 @@ export const PLANETS = [
       practice: { name: 'Ash Field' }, stadiumName: 'Caldera Coliseum',
     },
     challenge: { type: 'drill2min', title: 'Two-Minute Meltdown', desc: 'Score a touchdown in 2:00 from your own 10.', reward: 300, time: 120 },
+    rules: { hot: true, hazards: 'lava' }, style: { off: 'deep', def: 'blitz' },
     part: { name: 'Thermal Gasket', desc: 'Seals the hot bits away from the cold bits.' }, words: ['Magma', 'Ember', 'Inferno', 'Cinder', 'Volcano'],
   },
   {
@@ -113,6 +119,7 @@ export const PLANETS = [
       practice: { name: 'Spongy Meadow' }, stadiumName: 'The Cap',
     },
     challenge: { type: 'lateral', title: 'Spore Chain', desc: 'Score a touchdown on a play with at least one lateral.', reward: 320 },
+    rules: { bouncy: true, spores: true }, style: { off: 'short', def: 'zone' },
     part: { name: 'Spore Scrubber', desc: 'Removes fungus from the air vents. Adds a nice smell.' }, words: ['Spore', 'Shroom', 'Truffle', 'Mycelium', 'Cap'],
   },
   {
@@ -128,6 +135,7 @@ export const PLANETS = [
       practice: { name: 'Shallows Practice Reef' }, stadiumName: 'Bubble Dome Arena',
     },
     challenge: { type: 'stand', title: 'Hold the Reef', desc: 'Stop the Riptides from scoring on 4 downs from midfield.', reward: 320 },
+    rules: { dense: true }, style: { off: 'short', def: 'man' },
     part: { name: 'Ballast Pump', desc: 'For when the rocket is heavier than it should be. Like now.' }, words: ['Reef', 'Tide', 'Coral', 'Current', 'Kelp'],
   },
   {
@@ -143,6 +151,7 @@ export const PLANETS = [
       practice: { name: 'The Dune Bowl' }, stadiumName: 'The Sandbox',
     },
     challenge: { type: 'run', title: 'Sandstorm Surge', desc: 'Gain 40 yards in 4 running plays through the storm.', reward: 340, n: 4, yards: 40 },
+    rules: { sandstorm: true }, style: { off: 'run', def: 'man' },
     part: { name: 'Sand Bearings', desc: 'Ball bearings made of glass. Because sand.' }, words: ['Dune', 'Sand', 'Mirage', 'Oasis', 'Scorch'],
   },
   {
@@ -158,6 +167,7 @@ export const PLANETS = [
       practice: { name: 'Marshmallow Meadow' }, stadiumName: 'Lollipop Field',
     },
     challenge: { type: 'passing', title: 'Sugar High', desc: 'Complete 8 passes in 60 seconds.', reward: 350, n: 8, time: 60 },
+    rules: { sticky: true, sugarRush: true }, style: { off: 'balanced', def: 'blitz' },
     part: { name: 'Sugar Glass Window', desc: 'A new cockpit window. Do not lick.' }, words: ['Sugar', 'Candy', 'Gumdrop', 'Taffy', 'Lollipop'],
   },
   {
@@ -173,6 +183,7 @@ export const PLANETS = [
       practice: { name: 'Quartz Quarry' }, stadiumName: 'The Glasshouse',
     },
     challenge: { type: 'pick6', title: 'Shatter the Pass', desc: 'Intercept a pass and return it for a touchdown.', reward: 380 },
+    rules: { highgrav: true }, style: { off: 'mid', def: 'zone' },
     part: { name: 'Crystal Oscillator', desc: 'Keeps time in the nav system. Also very pretty.' }, words: ['Prism', 'Crystal', 'Facet', 'Quartz', 'Shard'],
   },
   {
@@ -188,6 +199,7 @@ export const PLANETS = [
       practice: { name: 'Rooftop Practice Grid' }, stadiumName: 'Mainframe Arena',
     },
     challenge: { type: 'trick', title: 'Exploit', desc: 'Score a touchdown using a Special play.', reward: 400 },
+    rules: { mindReader: true, glowball: true }, style: { off: 'trick', def: 'mixed' },
     part: { name: 'Nav Computer', desc: 'Stops the kids from steering by "vibes."' }, words: ['Neon', 'Byte', 'Circuit', 'Glitch', 'Hologram'],
   },
   {
@@ -203,6 +215,7 @@ export const PLANETS = [
       practice: { name: 'Tire Pile Practice Lot' }, stadiumName: 'The Compactor',
     },
     challenge: { type: 'stand', title: 'Junkyard Stand', desc: 'Keep the Dawgs out of the end zone on 4 downs.', reward: 400 },
+    rules: { hazards: 'junk' }, style: { off: 'run', def: 'blitz' },
     part: { name: 'Salvaged Thrusters', desc: 'Two thrusters from two different rockets. Close enough.' }, words: ['Scrap', 'Rust', 'Junk', 'Bolt', 'Crusher'],
   },
   {
@@ -218,6 +231,7 @@ export const PLANETS = [
       practice: { name: 'Pollen Practice Patch' }, stadiumName: 'The Hexagon',
     },
     challenge: { type: 'drill2min', title: 'Beat the Buzzer', desc: 'Score a touchdown in 1:30 against the swarm.', reward: 420, time: 90 },
+    rules: { sticky: true, swarm: true }, style: { off: 'short', def: 'blitz' },
     part: { name: 'Honeycomb Insulation', desc: 'Keeps the cabin warm. Smells like breakfast.' }, words: ['Honey', 'Hive', 'Buzz', 'Stinger', 'Swarm'],
   },
   {
@@ -233,6 +247,7 @@ export const PLANETS = [
       practice: { name: 'Foggy Hollow' }, stadiumName: 'Graveyard Grounds',
     },
     challenge: { type: 'puntreturn', title: 'Ghost Return', desc: 'Return a punt 25+ yards through the fog.', reward: 420, yards: 25 },
+    rules: { fog: true }, style: { off: 'trick', def: 'zone' },
     part: { name: 'Ectoplasm Battery', desc: 'Powered by spooky. Never runs out.' }, words: ['Phantom', 'Boo', 'Haunted', 'Spectral', 'Graveyard'],
   },
   {
@@ -248,6 +263,7 @@ export const PLANETS = [
       practice: { name: 'The Tar Pit' }, stadiumName: 'Fossil Field',
     },
     challenge: { type: 'run', title: 'Stampede Stopper', desc: 'Gain 50 yards in 4 running plays.', reward: 440, n: 4, yards: 50 },
+    rules: { stampede: true }, style: { off: 'run', def: 'man' },
     part: { name: 'Fossil Fuel Cell', desc: 'Made from real fossils. Sorry, fossils.' }, words: ['Thunder', 'Fossil', 'Jungle', 'Stampede', 'Raptor'],
   },
   {
@@ -263,6 +279,7 @@ export const PLANETS = [
       practice: { name: 'The Cracker Barrel' }, stadiumName: 'Swiss Stadium',
     },
     challenge: { type: 'redzone', title: 'Find the Hole', desc: 'Score from the 10-yard line in 2 plays or less.', reward: 460, n: 2 },
+    rules: { slick: true, hazards: 'holes' }, style: { off: 'short', def: 'zone' },
     part: { name: 'Cheese Wax Sealant', desc: 'Seals the hull. Attracts mice.' }, words: ['Cheddar', 'Swiss', 'Gouda', 'Wheel', 'Crumb'],
   },
   {
@@ -278,6 +295,7 @@ export const PLANETS = [
       practice: { name: 'The Plank' }, stadiumName: 'The Crow\'s Nest',
     },
     challenge: { type: 'pick6', title: 'Steal the Booty', desc: 'Intercept a pass and return it for a score.', reward: 480 },
+    rules: { wind: true }, style: { off: 'trick', def: 'man' },
     part: { name: 'Plundered Plasma Coil', desc: '"Found" on a derelict. Finders keepers.' }, words: ['Plunder', 'Cutlass', 'Booty', 'Kraken', 'Cannon'],
   },
   {
@@ -293,6 +311,7 @@ export const PLANETS = [
       practice: { name: 'The Parking Lot' }, stadiumName: 'The Jackpot Dome',
     },
     challenge: { type: 'trick', title: 'All In', desc: 'Score a touchdown with a Special play.', reward: 500 },
+    rules: { jackpot: true }, style: { off: 'trick', def: 'mixed' },
     part: { name: 'Lucky Dice Gyroscope', desc: 'Keeps the rocket steady. Sevens, baby.' }, words: ['Jackpot', 'Ace', 'Royal', 'Roulette', 'Wildcard'],
   },
   {
@@ -308,6 +327,7 @@ export const PLANETS = [
       practice: { name: 'The Compost Corner' }, stadiumName: 'The Greenhouse',
     },
     challenge: { type: 'passing', title: 'Pollinate', desc: 'Complete 9 passes in 60 seconds.', reward: 500, n: 9, time: 60 },
+    rules: { vines: true }, style: { off: 'mid', def: 'zone' },
     part: { name: 'Photosynthesis Panel', desc: 'Solar panel that is also a leaf. Very Verdantia.' }, words: ['Petal', 'Vine', 'Bloom', 'Thorn', 'Garden'],
   },
   {
@@ -323,6 +343,7 @@ export const PLANETS = [
       practice: { name: 'The Loading Dock' }, stadiumName: 'The Foundry',
     },
     challenge: { type: 'stand', title: 'Shift Change', desc: 'Stop the Cogs on 4 downs from midfield.', reward: 520 },
+    rules: { highgrav: true, hazards: 'steam' }, style: { off: 'run', def: 'man' },
     part: { name: 'Precision Gearbox', desc: 'Every gear meshes. Every rattle is gone.' }, words: ['Gear', 'Piston', 'Steam', 'Rivet', 'Forge'],
   },
   {
@@ -338,6 +359,7 @@ export const PLANETS = [
       practice: { name: 'The Gondola' }, stadiumName: 'Altitude Arena',
     },
     challenge: { type: 'longbomb', title: 'Into Thin Air', desc: 'Complete a pass of 35+ yards.', reward: 540, n: 1, yards: 35 },
+    rules: { lowgrav: true, wind: true, updraft: true }, style: { off: 'deep', def: 'zone' },
     part: { name: 'Helium Regulator', desc: 'Stops the rocket from squeaking.' }, words: ['Zephyr', 'Altitude', 'Balloon', 'Gust', 'Sky'],
   },
   {
@@ -353,6 +375,7 @@ export const PLANETS = [
       practice: { name: 'The Bath' }, stadiumName: 'Soap Bowl',
     },
     challenge: { type: 'lateral', title: 'Pop Chain', desc: 'Score a touchdown on a play with at least one lateral.', reward: 560 },
+    rules: { bouncy: true, bigJumps: true }, style: { off: 'short', def: 'zone' },
     part: { name: 'Iridescent Coating', desc: 'Rainbow paint job. Also deflects micro-meteors.' }, words: ['Bubble', 'Soap', 'Pop', 'Fizz', 'Shimmer'],
   },
   {
@@ -368,6 +391,7 @@ export const PLANETS = [
       practice: { name: 'The Roller Rink' }, stadiumName: 'Studio 54 Yards',
     },
     challenge: { type: 'redzone', title: 'Hustle', desc: 'Score from the 10 in 2 plays or less.', reward: 580, n: 2 },
+    rules: { groove: true }, style: { off: 'trick', def: 'man' },
     part: { name: 'Groove Stabilizer', desc: 'A gyroscope with a beat. The rocket bobs slightly now.' }, words: ['Funky', 'Disco', 'Groove', 'Boogie', 'Mirrorball'],
   },
   {
@@ -383,6 +407,7 @@ export const PLANETS = [
       practice: { name: 'The Courtyard' }, stadiumName: 'The Reading Room',
     },
     challenge: { type: 'pick6', title: 'Overdue', desc: 'Intercept a pass and return it for a score.', reward: 600 },
+    rules: { quiet: true, mindReader: true }, style: { off: 'mid', def: 'zone' },
     part: { name: 'Star Atlas', desc: 'The map to the deep galaxy. Late fee: 4,000 years.' }, words: ['Dewey', 'Folio', 'Chapter', 'Quiet', 'Index'],
   },
   {
@@ -398,6 +423,7 @@ export const PLANETS = [
       practice: { name: 'The Splash Zone' }, stadiumName: 'The Puddle',
     },
     challenge: { type: 'drill2min', title: 'Slime Time', desc: 'Score a TD in 1:30 on the slick goo.', reward: 620, time: 90 },
+    rules: { slick: true, bouncy: true }, style: { off: 'short', def: 'man' },
     part: { name: 'Goo Lubricant', desc: 'Silences every squeak in the rocket. Adds squelches.' }, words: ['Goo', 'Slime', 'Ooze', 'Squish', 'Drip'],
   },
   {
@@ -413,6 +439,7 @@ export const PLANETS = [
       practice: { name: 'The Back Alley' }, stadiumName: 'The Oven',
     },
     challenge: { type: 'run', title: 'Delivery Run', desc: 'Gain 50 yards in 4 running plays.', reward: 640, n: 4, yards: 50 },
+    rules: { sticky: true, hot: true, hazards: 'grease' }, style: { off: 'run', def: 'blitz' },
     part: { name: 'Pizza Oven Reactor', desc: 'Runs hot. Smells amazing. Cooks 3 pies per light-year.' }, words: ['Pepperoni', 'Crust', 'Slice', 'Deep Dish', 'Sauce'],
   },
   {
@@ -428,6 +455,7 @@ export const PLANETS = [
       practice: { name: 'Calibration Field' }, stadiumName: 'The Spindle',
     },
     challenge: { type: 'stand', title: 'Firewall', desc: 'Stop the Sentinels on 4 downs from midfield.', reward: 680 },
+    rules: {}, style: { off: 'balanced', def: 'mixed' },
     part: { name: 'Ring Drive Coupler', desc: 'Lets the rocket ride gravity wells like a slide.' }, words: ['Halo', 'Spindle', 'Sentinel', 'Orbital', 'Prime'],
   },
   {
@@ -443,6 +471,7 @@ export const PLANETS = [
       practice: { name: 'The Rim' }, stadiumName: 'The Accretion Disk',
     },
     challenge: { type: 'longbomb', title: 'Escape Velocity', desc: 'Complete a pass of 40+ yards.', reward: 720, n: 1, yards: 40 },
+    rules: { highgrav: true, wind: true, pullCenter: true }, style: { off: 'deep', def: 'blitz' },
     part: { name: 'Gravity Anchor', desc: 'Keeps the rocket from falling into anything. Anything.' }, words: ['Void', 'Warp', 'Singularity', 'Horizon', 'Gravity'],
   },
   {
@@ -458,6 +487,7 @@ export const PLANETS = [
       practice: { name: 'The Pendulum Pitch' }, stadiumName: 'The Clocktower Bowl',
     },
     challenge: { type: 'drill2min', title: 'Beat the Clock', desc: 'Score a TD in 1:00. One minute. Go.', reward: 760, time: 60 },
+    rules: { slowThrow: true }, style: { off: 'mid', def: 'zone' },
     part: { name: 'Chrono Synchronizer', desc: 'The final part. The rocket can go anywhere now. Anywhen, too.' }, words: ['Tick', 'Tock', 'Minute', 'Pendulum', 'Chime'],
   },
   {
@@ -473,13 +503,16 @@ export const PLANETS = [
       practice: { name: 'Containment Field B' }, stadiumName: 'Abduction Arena',
     },
     challenge: { type: 'trick', title: 'Close Encounter', desc: 'Score a touchdown with a Special play.', reward: 900 },
+    rules: { lowgrav: true, magnet: true }, style: { off: 'balanced', def: 'mixed' },
     part: null, words: ['Probe', 'Beam', 'Saucer', 'Abduct', 'Zorp'],
   },
 ];
 
 // derived fields
 const LAST = PLANETS.length - 1;
+const FIELD_OVERRIDE = { jurassica: [48, 90], mothership: [48, 100], earth: [34, 50] };
 PLANETS.forEach((p, i) => {
+  p.team.style = p.style; p.stadium.field = FIELD_OVERRIDE[p.id] || null;
   p.index = i;
   p.isHome = i === 0; p.isFinal = i === LAST;
   p.pos = i === 0 ? [0, 0, 0] : spiralPos(i, i === LAST ? 30 : 14);

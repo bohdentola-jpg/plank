@@ -3,6 +3,7 @@ import * as THREE from '../../vendor/three.module.js';
 import { getSpecies } from '../data/species.js';
 import { gradientMap, numberTexture, emblemTexture, canvas } from './textures.js';
 import { makeRng, hashStr, shade, clamp, lerp, damp, textOn, mix } from '../util.js';
+import { buildHelmet } from './helmet.js';
 
 const geoCache = new Map();
 const G = (key, make) => { if (!geoCache.has(key)) geoCache.set(key, make()); return geoCache.get(key); };
@@ -52,7 +53,9 @@ export class Character {
     this.joints = {};
     this.anim = { state: 'idle', t: 0, phase: this.rnd() * 6, speed: 0, celebrate: 0, blink: 0, lookX: 0, lookY: 0 };
     this.cur = {}; // smoothed joint targets
+    this.look = null; this.reach = null; this.backpedal = false; this._tmp = new THREE.Vector3();
     this._build();
+    this.bodyScale = this.sp.scale || 1; this.group.scale.setScalar(this.bodyScale);
   }
   _build() {
     const sp = this.sp, team = this.team, D = DIM; const [pri, sec] = team.colors;
@@ -201,23 +204,9 @@ export class Character {
     if (sp.features.includes('whiskers')) for (const s of [-1, 1]) for (let i = 0; i < 2; i++) { const w = M(cyl(0.005, 0.005, 0.28, 6), toonMat('#f4f4f4'), s * 0.14, my + 0.08 - i * 0.04, mz - 0.02); w.rotation.z = Math.PI / 2 + s * (0.15 + i * 0.15); headG.add(w); }
   }
   _buildHelmet(headG, hr, sx, sy, sz) {
-    const [pri, sec] = this.team.colors; const R = hr * 1.14; const helm = new THREE.Group(); helm.scale.set(sx, sy, sz); helm.position.y = 0.02; headG.add(helm); this.helmet = helm;
-    const hm = toonMat(pri);
-    const back = M(G(`hb${R}`, () => new THREE.SphereGeometry(R, 28, 18, Math.PI, Math.PI, 0, Math.PI * 0.86)), hm); helm.add(back); outline(back, R);
-    const front = M(G(`hf${R}`, () => new THREE.SphereGeometry(R, 28, 18, 0, Math.PI, 0, Math.PI * 0.36)), hm); helm.add(front); outline(front, R);
-    for (const s of [-1, 1]) { const jaw = M(G(`hj${R}`, () => new THREE.SphereGeometry(R, 14, 10, s < 0 ? -0.35 : Math.PI - 0.35, 0.7, Math.PI * 0.4, Math.PI * 0.45)), hm); helm.add(jaw); }
-    // stripe over the top
-    const stripe = M(torus(R * 1.005, 0.035, Math.PI, 24), toonMat(sec)); stripe.rotation.y = Math.PI / 2; stripe.rotation.z = 0; helm.add(stripe);
-    // facemask
-    const fm = toonMat(sec === '#ffffff' ? '#aaaaaa' : sec);
-    for (const y of [-0.1, -0.24]) { const bar = M(torus(R * 1.04, 0.02, Math.PI, 24), fm, 0, y, 0); bar.rotation.x = Math.PI / 2; bar.rotation.z = Math.PI; helm.add(bar); }
-    for (const x of [-0.16, 0, 0.16]) { const v = M(cyl(0.018, 0.018, 0.36, 8), fm, x, -0.12, Math.sqrt(Math.max(0.05, (R * 1.04) ** 2 - x * x))); helm.add(v); }
-    // side emblems
-    const em = new THREE.MeshBasicMaterial({ map: this.team._emblem || (this.team._emblem = emblemTexture(this.team)), transparent: true });
-    for (const s of [-1, 1]) { const d = shadowOff(M(plane(0.3, 0.3), em, s * (R + 0.005), 0.05, -0.02)); d.rotation.y = s * Math.PI / 2; helm.add(d); }
-    // hair poking out (kids)
+    const R = hr * 1.14; const helm = buildHelmet(R, this.team, { num: this.opts.num, visor: this.opts.visor, maskColor: this.opts.maskColor });
+    helm.scale.set(sx, sy, sz); helm.position.y = 0.02; headG.add(helm); this.helmet = helm;
     if (this.sp.features.includes('hair')) this._buildHair(headG, hr);
-    // ears through the helmet
     const ear = this.sp.features.find(f => f.startsWith('ears:')); if (ear) this._buildEars(headG, hr, ear.split(':')[1], R);
   }
   _buildHair(headG, hr) {
@@ -340,8 +329,24 @@ export class Character {
       case 'sad': set('lean', 0.35); set('shL', 0.2); set('shR', 0.2); set('szL', -0.1); set('szR', 0.1); set('elL', -0.1); set('elR', -0.1); set('kneeL', 0.2); set('kneeR', 0.2); set('thighL', -0.1); set('thighR', -0.1); set('headPitch', 0.5); break;
       case 'wave': idle(); set('shR', 0.2); set('szR', 2.6 + Math.sin(a.t * 8) * 0.3); set('elR', -0.6); break;
       case 'point': idle(); set('shR', -1.6); set('szR', 0.2); set('elR', -0.1); break;
+      case 'backpedal': { const tL = Math.sin(ph) * 0.45, tR = Math.sin(ph + Math.PI) * 0.45; set('thighL', tL - 0.15); set('thighR', tR - 0.15); set('kneeL', Math.max(0, Math.sin(ph + 0.6)) * 0.7 + 0.3); set('kneeR', Math.max(0, Math.sin(ph + Math.PI + 0.6)) * 0.7 + 0.3); set('hipsY', -0.06 + Math.abs(Math.sin(ph)) * 0.03); set('lean', 0.12); set('twist', 0); set('shL', -0.9); set('shR', -0.9); set('elL', -1.3); set('elR', -1.3); set('szL', -0.4); set('szR', 0.4); break; }
+      case 'catch_high': { stiff = 26; set('thighL', -0.45); set('thighR', -0.25); set('kneeL', 0.9); set('kneeR', 0.5); set('lean', -0.12); set('twist', 0); set('hipsY', 0); set('shL', -3.0); set('shR', -3.0); set('elL', -0.15); set('elR', -0.15); set('szL', -0.2); set('szR', 0.2); break; }
+      case 'catch_shoulder': { stiff = 24; if (speed > 0.5) runLegs(0.8, 1.0); else idle(); set('lean', -0.05); set('twist', 0.35); set('shL', -2.4); set('shR', -2.4); set('elL', -0.5); set('elR', -0.5); set('szL', -0.3); set('szR', 0.3); break; }
+      case 'catch_curl': { stiff = 24; if (speed > 0.5) runLegs(0.7, 0.9); else { set('thighL', -0.2); set('thighR', -0.2); set('kneeL', 0.4); set('kneeR', 0.4); set('hipsY', -0.05); } set('lean', 0.18); set('twist', 0); set('shL', -1.35); set('shR', -1.35); set('elL', -1.1); set('elR', -1.1); set('szL', -0.25); set('szR', 0.25); break; }
+      case 'catch_reach': { stiff = 26; if (speed > 0.5) runLegs(0.8, 1.0); else idle(); const side = (a.opts && a.opts.side) || 1; set('lean', 0.2); set('twist', side * -0.3); if (side > 0) { set('shR', -2.2); set('szR', 1.4); set('elR', -0.1); set('shL', -0.6); set('elL', -1.3); set('szL', -0.3); } else { set('shL', -2.2); set('szL', -1.4); set('elL', -0.1); set('shR', -0.6); set('elR', -1.3); set('szR', 0.3); } break; }
+      case 'catch_dive': { const t = a.t; stiff = 24; const k = clamp(t / 0.3, 0, 1); rootPitch = lerp(0.3, 1.3, k); rootY = lerp(0.1, 0.5, Math.sin(k * Math.PI)) + 0.15 * (1 - k); set('shL', -2.9); set('shR', -2.9); set('elL', -0.1); set('elR', -0.1); set('szL', -0.2); set('szR', 0.2); set('thighL', 0.35); set('thighR', 0.45); set('kneeL', 0.2); set('kneeR', 0.35); set('lean', 0.3); set('hipsY', 0); break; }
+      case 'tackle': { const t = a.t; stiff = 22; const k = clamp(t / 0.35, 0, 1); rootPitch = lerp(0.5, 1.4, k); rootY = lerp(0.3, 0.45, Math.sin(k * Math.PI)); set('shL', -2.3); set('shR', -2.3); set('elL', -1.1); set('elR', -1.1); set('szL', -0.5); set('szR', 0.5); set('thighL', 0.5); set('thighR', 0.3); set('kneeL', 0.3); set('kneeR', 0.6); set('lean', 0.4); set('hipsY', 0); break; }
       default: idle();
     }
+    // arm reach: when a ball is coming, the hands go to it (both arms, or one for a reaching catch)
+    if (this.reach && a.state.startsWith('catch_')) {
+      const torso = this.joints.torso; const p = this._tmp.set(this.reach.x, this.reach.y, this.reach.z); torso.worldToLocal(p);
+      const aim = (key, sh) => { const d = p.clone().sub(sh.position); const l = d.length() || 1; d.divideScalar(l); const zRot = Math.asin(clamp(d.x, -0.98, 0.98)); const xRot = Math.atan2(-d.z, -d.y); set('sh' + key, xRot); set('sz' + key, zRot); set('el' + key, -0.18); };
+      if (a.state === 'catch_reach') { const side = p.x >= 0 ? 'R' : 'L'; aim(side, this.joints['shoulder' + side]); } else { aim('L', this.joints.shoulderL); aim('R', this.joints.shoulderR); }
+    }
+    // head tracking: look at the ball or the quarterback
+    if (this.look) { const p = this._tmp.set(this.look.x, this.look.y, this.look.z); this.joints.neck.worldToLocal(p); const dh = Math.hypot(p.x, p.z) || 0.001; const yaw = clamp(Math.atan2(p.x, p.z), -1.25, 1.25); const pitch = clamp(-Math.atan2(p.y - 0.2, dh), -0.9, 0.55); a.lookX += (yaw - a.lookX) * Math.min(1, dt * 10); a.lookY += (pitch - a.lookY) * Math.min(1, dt * 10); }
+    else { a.lookX += (0 - a.lookX) * Math.min(1, dt * 6); a.lookY += (0 - a.lookY) * Math.min(1, dt * 6); }
     // smoothing
     const k = 1 - Math.exp(-stiff * dt);
     for (const key of ['thighL', 'thighR', 'kneeL', 'kneeR', 'shL', 'shR', 'elL', 'elR', 'szL', 'szR', 'lean', 'twist', 'hipsY', 'headPitch']) {

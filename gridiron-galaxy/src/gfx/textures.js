@@ -1,6 +1,8 @@
 // Everything painted onto canvases and handed to three.js: planets, fields, decals, skies, glows.
 import * as THREE from '../../vendor/three.module.js';
 import { makeRng, hashStr, shade, mix, hexToRgb, rgba, hsl, textOn } from '../util.js';
+import { FIELD } from '../field.js';
+export { FIELD };
 
 export function canvas(w, h) { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; return { cv, ctx: cv.getContext('2d') }; }
 function tex(cv, opts = {}) {
@@ -140,7 +142,6 @@ export function labelTexture(text, color = '#ffffff', bg = null, w = 512, h = 12
 
 // ---- the field ----
 // World: x across [-W/2, W/2], z along [0, L]. Texture covers field + apron.
-export const FIELD = { W: 30, L: 70, EZ: 10, APRON: 3 };
 export function fieldTexture(surface, homeTeam, awayTeam, opts = {}) {
   const PPY = 32; const { W, L, EZ, APRON } = FIELD;
   const tw = (W + APRON * 2) * PPY, th = (L + APRON * 2) * PPY;
@@ -183,11 +184,16 @@ export function fieldTexture(surface, homeTeam, awayTeam, opts = {}) {
   for (let z = EZ; z <= L - EZ; z += 5) line(z, z === EZ || z === L - EZ ? 8 : 4);
   ctx.lineWidth = 6; ctx.strokeRect(X(-W / 2), Z(0), W * PPY, L * PPY); // boundary
   // hash marks
-  ctx.lineWidth = 3; for (let z = EZ + 1; z < L - EZ; z++) { if (z % 5 === 0) continue; for (const hx of [-W / 2 + 0.6, -6, 6, W / 2 - 0.6]) { ctx.beginPath(); ctx.moveTo(X(hx - 0.5), Z(z)); ctx.lineTo(X(hx + 0.5), Z(z)); ctx.stroke(); } }
-  // numbers (10, 20, 20, 10 with 25 midfield)
+  ctx.lineWidth = 3; for (let z = EZ + 1; z < L - EZ; z++) { if (z % 5 === 0) continue; for (const hx of [-W / 2 + 0.6, -W * 0.17, W * 0.17, W / 2 - 0.6]) { ctx.beginPath(); ctx.moveTo(X(hx - 0.5), Z(z)); ctx.lineTo(X(hx + 0.5), Z(z)); ctx.stroke(); } }
+  // yard numbers every 10 yards from each goal line up to midfield
   ctx.font = `bold ${2.6 * PPY}px "Arial Black", Impact, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  const nums = [[EZ + 10, '10'], [EZ + 20, '20'], [L - EZ - 20, '20'], [L - EZ - 10, '10']];
-  for (const [z, s] of nums) for (const side of [-1, 1]) { ctx.save(); ctx.translate(X(side * 9.5), Z(z)); ctx.rotate(side > 0 ? -Math.PI / 2 : Math.PI / 2); ctx.lineWidth = 6; ctx.strokeStyle = shade(surface.base, -0.5); ctx.strokeText(s, 0, 0); ctx.fillStyle = surface.line; ctx.fillText(s, 0, 0); ctx.restore(); }
+  const len = L - 2 * EZ; const nums = [];
+  for (let y = 10; y < len / 2 - 0.5; y += 10) { nums.push([EZ + y, String(y)]); nums.push([L - EZ - y, String(y)]); }
+  if (len % 20 === 0) nums.push([L / 2, String(len / 2)]);
+  const numX = W / 2 - 5.5;
+  for (const [z, s] of nums) for (const side of [-1, 1]) { ctx.save(); ctx.translate(X(side * numX), Z(z)); ctx.rotate(side > 0 ? -Math.PI / 2 : Math.PI / 2); ctx.lineWidth = 6; ctx.strokeStyle = shade(surface.base, -0.5); ctx.strokeText(s, 0, 0); ctx.fillStyle = surface.line; ctx.fillText(s, 0, 0); ctx.restore(); }
+  // directional arrows beside the numbers, pointing at the nearer goal line
+  ctx.fillStyle = surface.line; for (const [z] of nums) { if (Math.abs(z - L / 2) < 0.5) continue; const toward = z < L / 2 ? -1 : 1; for (const side of [-1, 1]) { ctx.beginPath(); const ax = X(side * numX), az = Z(z + toward * 2.3); ctx.moveTo(ax, az + toward * -0.7 * PPY * -1); ctx.lineTo(ax - 0.35 * PPY, az - toward * 0.7 * PPY); ctx.lineTo(ax + 0.35 * PPY, az - toward * 0.7 * PPY); ctx.closePath(); ctx.fill(); } }
   // midfield emblem
   const mid = L / 2; ctx.save(); ctx.translate(X(0), Z(mid)); ctx.rotate(Math.PI / 2);
   const r = 4.2 * PPY; ctx.fillStyle = homeTeam.colors[1]; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill();

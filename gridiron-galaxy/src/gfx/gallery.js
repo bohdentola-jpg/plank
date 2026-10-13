@@ -36,7 +36,7 @@ class GalleryScreen {
     const st = this.states[this.stateIdx]; this.label.textContent = st.toUpperCase();
     const mv = input.moveVec(); this.orbit += mv.x * dt * 1.2; this.dist = Math.max(4, this.dist - mv.y * dt * 10);
     this.chars.forEach((c, i) => { const speed = ['run', 'carry', 'juke'].includes(st) ? 6 : 0; if (c.anim.state !== st) c.setState(st, { variant: i % 3, dir: 1 }); c.update(dt, speed); c.setFacing(this.params.face ? +this.params.face : 0.2 * Math.sin(this.t * 0.5 + i)); });
-    const cz = -(this.rows - 1) * 1.8; this.camera.position.set(Math.sin(this.orbit) * this.dist, 5 + this.dist * 0.35, cz + Math.cos(this.orbit) * this.dist); this.camera.lookAt(0, 1.2, cz);
+    const cz = -(this.rows - 1) * 1.8; this.camera.position.set(Math.sin(this.orbit) * this.dist, this.params.h !== undefined ? +this.params.h : 5 + this.dist * 0.35, cz + Math.cos(this.orbit) * this.dist); this.camera.lookAt(0, 1.2, cz);
   }
   render() { this.app.renderer.render(this.scene, this.camera); }
   resize(w, h) { this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); }

@@ -32,6 +32,6 @@ export function dashed(points, width, color, y = 0.06, dash = 0.9, gap = 0.6) {
   const last = points[points.length - 1], prev = points[points.length - 2]; g.add(ribbon([prev, last], 0.01, color, y, { arrow: true, opacity: 0 }).children[1] ? ribbon([prev, last], width, color, y, { arrow: true }).children[1] : new THREE.Group());
   return g;
 }
-export function fieldLine(z, color, width = 0.35, y = 0.05, halfW = 15.5) {
+export function fieldLine(z, color, width = 0.35, y = 0.05, halfW = 21.5) {
   return ribbon([[-halfW, z], [halfW, z]], width, color, y, { opacity: 0.75 });
 }

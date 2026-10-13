@@ -1,6 +1,7 @@
 // Playbook: routes, formations, 25 base plays, generated planet specials, and defensive calls.
 // Play space: LOS at z=0, downfield is +z, x negative = offense's left. Yards.
 import { makeRng, hashStr } from '../util.js';
+import { FIELD } from '../field.js';
 
 // Routes are authored for a player on the LEFT side; +dx means toward the middle of the field.
 // For a right-side player dx is mirrored. For players at x=0, +dx is to the right.
@@ -159,17 +160,36 @@ export function findPlay(id, planets) {
   return null;
 }
 
-// Defensive calls: assignments per role. Zones are [x, z] centers relative to the ball.
+// Defensive calls. Assignments per role: rush | man:ROLE | zone:NAME | spy. `tech` press/off sets the cushion in man.
 export const DEF_PLAYS = [
-  { id: 'man', name: 'Man Press', desc: 'Everyone locks on a receiver. The rusher goes.', cover: { R: 'rush', LB: 'man:RB', CB1: 'man:X', CB2: 'man:Z', S: 'zone:deepmid' } },
-  { id: 'zone', name: 'Zone Cover', desc: 'Flats and hook covered, safety over the top.', cover: { R: 'rush', LB: 'zone:hook', CB1: 'zone:flatL', CB2: 'zone:flatR', S: 'zone:deepmid' } },
-  { id: 'thirds', name: 'Deep Thirds', desc: 'Three deep. Nothing over your head.', cover: { R: 'rush', LB: 'zone:hook', CB1: 'zone:deepL', CB2: 'zone:deepR', S: 'zone:deepmid' } },
-  { id: 'blitz', name: 'Blitz', desc: 'Two rushers, man behind it. Risky.', cover: { R: 'rush', LB: 'rush', CB1: 'man:X', CB2: 'man:Z', S: 'man:RB' } },
-  { id: 'prevent', name: 'Prevent', desc: 'Everybody deep. Give up the short stuff.', cover: { R: 'spy', LB: 'zone:hook', CB1: 'zone:deepL', CB2: 'zone:deepR', S: 'zone:deepmid' }, deep: true },
+  { id: 'man', name: 'Man Press', desc: 'Corners jam at the line, safety over the top, rusher goes.', cover: { R: 'rush', LB: 'man:RB', CB1: 'man:X', CB2: 'man:Z', S: 'zone:deepmid' }, tech: 'press', tags: ['man', 'run', 'short'] },
+  { id: 'manoff', name: 'Man Off', desc: 'Man coverage with a cushion. Gives up the short stuff, not the deep ball.', cover: { R: 'rush', LB: 'man:RB', CB1: 'man:X', CB2: 'man:Z', S: 'zone:deepmid' }, tech: 'off', tags: ['man', 'deep'] },
+  { id: 'zoneunder', name: 'Zone Under', desc: 'Flats and hook covered, one safety deep.', cover: { R: 'rush', LB: 'zone:hook', CB1: 'zone:flatL', CB2: 'zone:flatR', S: 'zone:deepmid' }, tags: ['zone', 'short', 'mid'] },
+  { id: 'cover2', name: 'Cover 2', desc: 'Corners squat on the flats with two deep halves behind them.', cover: { R: 'rush', LB: 'zone:halfL', CB1: 'zone:flatL', CB2: 'zone:flatR', S: 'zone:halfR' }, tags: ['zone', 'deep', 'short'] },
+  { id: 'cover3', name: 'Cover 3', desc: 'Three deep thirds. Nothing over your head.', cover: { R: 'rush', LB: 'zone:hook', CB1: 'zone:deepL', CB2: 'zone:deepR', S: 'zone:deepmid' }, tags: ['zone', 'deep'] },
+  { id: 'blitz', name: 'Blitz', desc: 'Two rushers, everybody else in man. Boom or bust.', cover: { R: 'rush', LB: 'rush', CB1: 'man:X', CB2: 'man:Z', S: 'man:RB' }, tech: 'press', tags: ['blitz', 'run', 'short'] },
+  { id: 'cbblitz', name: 'Corner Blitz', desc: 'A corner comes screaming off the edge. The safety covers for him.', cover: { R: 'rush', CB2: 'rush', CB1: 'man:X', S: 'man:Z', LB: 'man:RB' }, tech: 'press', tags: ['blitz', 'run'] },
+  { id: 'firezone', name: 'Fire Zone', desc: 'The linebacker rushes, the lineman drops into the hook. Three deep.', cover: { LB: 'rush', R: 'zone:hook', CB1: 'zone:deepL', CB2: 'zone:deepR', S: 'zone:deepmid' }, tags: ['blitz', 'zone', 'deep'] },
+  { id: 'spy', name: 'QB Spy', desc: 'The linebacker shadows the quarterback. Man everywhere else.', cover: { R: 'rush', LB: 'spy', CB1: 'man:X', CB2: 'man:Z', S: 'zone:deepmid' }, tech: 'off', tags: ['man', 'scramble'] },
+  { id: 'prevent', name: 'Prevent', desc: 'Everybody deep. Give up the short stuff, never the touchdown.', cover: { R: 'spy', LB: 'zone:hookdeep', CB1: 'zone:deepL', CB2: 'zone:deepR', S: 'zone:deepest' }, tags: ['zone', 'prevent', 'deep'], deep: true },
 ];
-export const ZONES = {
-  hook: [0, 7], flatL: [-10, 4], flatR: [10, 4], deepL: [-8, 17], deepR: [8, 17], deepmid: [0, 19], curlL: [-7, 9], curlR: [7, 9],
-};
+// Zone landmarks in play space (x across, z downfield from the line), scaled to the field width.
+export function zoneLandmark(name, W = FIELD.W) {
+  const w2 = W / 2; const flatX = Math.max(6, w2 - 7), thirdX = w2 * 0.58, halfX = w2 * 0.5;
+  return ({ hook: [0, 7], hookL: [-6, 7], hookR: [6, 7], hookdeep: [0, 11], flatL: [-flatX, 4], flatR: [flatX, 4], curlL: [-8, 10], curlR: [8, 10], deepL: [-thirdX, 17], deepR: [thirdX, 17], deepmid: [0, 18], halfL: [-halfX, 16], halfR: [halfX, 16], deepest: [0, 25] })[name] || [0, 7];
+}
+export const ZONES = Object.fromEntries(['hook', 'hookL', 'hookR', 'hookdeep', 'flatL', 'flatR', 'curlL', 'curlR', 'deepL', 'deepR', 'deepmid', 'halfL', 'halfR', 'deepest'].map(n => [n, zoneLandmark(n, 34)]));
+// The call that best answers a known offensive play (used by mind-reading defenses).
+export function counterCall(offPlay) {
+  const pick = (ids) => DEF_PLAYS.find(p => p.id === ids[Math.floor(Math.random() * ids.length)]);
+  if (!offPlay) return pick(['man', 'zoneunder']);
+  if (offPlay.type === 'punt' || offPlay.type === 'fg') return pick(['blitz']);
+  if (offPlay.type === 'run') return pick(['blitz', 'man', 'cbblitz']);
+  if (offPlay.trick) return pick(['spy', 'cover3', 'manoff']);
+  if (offPlay.cat === 'deep') return pick(['cover3', 'manoff', 'prevent', 'cover2']);
+  if (offPlay.cat === 'mid') return pick(['cover2', 'zoneunder', 'man']);
+  return pick(['zoneunder', 'man', 'cover2']);
+}
 
 export const CATEGORIES = [
   { id: 'deep', name: 'Deep', color: '#ff6b7a' }, { id: 'mid', name: 'Mid', color: '#ffb347' }, { id: 'short', name: 'Short', color: '#7fe3a6' },
@@ -179,10 +199,10 @@ export const CATEGORIES = [
 // Resolve a play into absolute pre-snap positions & waypoint lists for each role.
 export function resolvePlay(play) {
   const f = FORMATIONS[play.formation];
-  const out = {};
+  const out = {}; const xs = FIELD.W / 34; // formations were drawn for a 34-yard-wide field; splits grow with the field
   const roles = ['QB', 'C', 'RB', 'X', 'Z'];
   for (const role of roles) {
-    const start = f[role];
+    const start = [f[role][0] * xs, f[role][1]];
     const routeId = play.routes[role];
     let route = routeId ? ROUTES[routeId] : null;
     if (!route && play.carrier === role) route = { pts: [] };

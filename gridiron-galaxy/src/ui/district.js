@@ -1,9 +1,10 @@
 // A planet's main district: painted 2.5D street of shops with hover previews, the stadium, the practice field, and the rocket.
 import { registerScreen } from '../main.js';
 import { PLANETS, PLANET_BY_ID } from '../data/planets.js';
-import { drawSky, drawSkyline, drawGround, drawParticles, drawBuilding, drawCreature, label, rr, drawIcon } from './art2d.js';
+import { drawSky, drawSkyline, drawGround, drawParticles, drawBuilding, drawCreature, label, rr, drawIcon, drawLandmark, landmarkFor } from './art2d.js';
 import { drawShopInterior } from './shop.js';
 import { Dialog } from './dialog.js';
+import { resolveRules } from '../game/rules.js';
 import { Menu } from './menu.js';
 import { input } from '../input.js';
 import { audio } from '../audio.js';
@@ -70,15 +71,24 @@ export class DistrictScreen {
   }
   layout() {
     const w = this.app.vw, h = this.app.vh; this.w = w; this.h = h; const hy = h * 0.58; this.hy = hy;
-    const sh = this.planet.shops;
+    const sh = this.planet.shops; const lm = landmarkFor(this.planet); this.landmark = lm;
+    // Four street layouts so districts don't all read the same; the stadium always anchors the plaza.
+    const v = this.planet.index % 4;
+    const X = [
+      { eat: 0.165, gear: 0.36, plays: 0.64, practice: 0.85, lm: 0.9, lmY: 0.63, stadium: 0.5 },
+      { eat: 0.84, gear: 0.64, plays: 0.36, practice: 0.15, lm: 0.07, lmY: 0.66, stadium: 0.5 },
+      { eat: 0.11, gear: 0.85, plays: 0.64, practice: 0.33, lm: 0.455, lmY: 0.8, stadium: 0.5 },
+      { eat: 0.34, gear: 0.15, plays: 0.86, practice: 0.62, lm: 0.48, lmY: 0.8, stadium: 0.5 },
+    ][v];
     this.spots = [
-      { id: 'eat', x: w * 0.165, y: h * 0.87, w: Math.min(220, w * 0.17), h: h * 0.19, name: sh.eat.name, keeper: sh.eat.keeper, desc: 'Food buffs for your next game. Fuel up before the big one.' },
-      { id: 'gear', x: w * 0.36, y: h * 0.9, w: Math.min(230, w * 0.18), h: h * 0.2, name: sh.gear.name, keeper: sh.gear.keeper, desc: 'Permanent gear upgrades for the whole squad.' },
-      { id: 'stadium', x: w * 0.5, y: hy - h * 0.02, w: Math.min(480, w * 0.37), h: h * 0.2, name: this.planet.stadium.name, keeper: `${this.planet.team.name}`, desc: `Take on the ${this.planet.team.name}. ${this.planet.stadium.size} stadium, ${this.planet.stadium.surface.type} surface${this.planet.stadium.quirks.length ? ' · ' + this.planet.stadium.quirks.join(', ') : ''}.` },
-      { id: 'plays', x: w * 0.64, y: h * 0.9, w: Math.min(230, w * 0.18), h: h * 0.2, name: sh.plays.name, keeper: sh.plays.keeper, desc: 'Five planet-exclusive plays, plus your whole playbook.' },
-      { id: 'practice', x: w * 0.85, y: h * 0.82, w: Math.min(260, w * 0.2), h: h * 0.1, name: sh.practice.name, keeper: 'Side quest', desc: `${this.planet.challenge.title}: ${this.planet.challenge.desc} Reward: ${this.planet.challenge.reward} coins. Or just practice here.` },
+      { id: 'eat', x: w * X.eat, y: h * 0.87, w: Math.min(220, w * 0.17), h: h * 0.19, name: sh.eat.name, keeper: sh.eat.keeper, desc: 'Food buffs for your next game. Fuel up before the big one.' },
+      { id: 'gear', x: w * X.gear, y: h * 0.9, w: Math.min(230, w * 0.18), h: h * 0.2, name: sh.gear.name, keeper: sh.gear.keeper, desc: 'Permanent gear upgrades for the whole squad.' },
+      { id: 'landmark', x: w * X.lm, y: h * X.lmY, w: Math.min(150, w * 0.12), h: h * 0.16, name: lm.name, keeper: 'Local landmark', desc: lm.desc, kind: lm.kind },
+      { id: 'stadium', x: w * X.stadium, y: hy - h * 0.02, w: Math.min(480, w * 0.37), h: h * 0.2, name: this.planet.stadium.name, keeper: `${this.planet.team.name}`, desc: `Take on the ${this.planet.team.name}. ${this.planet.stadium.size} stadium, ${this.planet.stadium.surface.type} surface.${(this.rulesText = this.rulesText || resolveRules(this.planet).text).length ? ' House rules: ' + this.rulesText.join('; ') + '.' : ''}` },
+      { id: 'plays', x: w * X.plays, y: h * 0.9, w: Math.min(230, w * 0.18), h: h * 0.2, name: sh.plays.name, keeper: sh.plays.keeper, desc: 'Five planet-exclusive plays, plus your whole playbook.' },
+      { id: 'practice', x: w * X.practice, y: h * 0.82, w: Math.min(260, w * 0.2), h: h * 0.1, name: sh.practice.name, keeper: 'Side quest', desc: `${this.planet.challenge.title}: ${this.planet.challenge.desc} Reward: ${this.planet.challenge.reward} coins. Or just practice here.` },
       { id: 'rocket', x: w * 0.95, y: h * 0.99, w: 90, h: h * 0.3, name: 'The Rocket', keeper: 'GOOBER Mk. I', desc: 'Blast off and fly to another planet.' },
-    ];
+    ].sort((a, b) => a.x - b.x);
     for (const s of this.spots) s.rect = { x: s.x - s.w / 2 - 10, y: s.y - s.h - (s.id === 'stadium' ? s.h * 0.9 : 60), w: s.w + 20, h: s.h + (s.id === 'stadium' ? s.h * 0.9 : 60) + 10 };
   }
   paint() {
@@ -92,6 +102,7 @@ export class DistrictScreen {
     const style = th.buildingStyle;
     for (const s of this.spots) {
       if (s.id === 'stadium') drawStadium2D(c, this.planet, s.x, s.y, s.w, s.h);
+      else if (s.id === 'landmark') { drawLandmark(c, s.kind, s.x, s.y, s.h, th.palette, this.planet.index, 0); label(c, s.name.toUpperCase(), s.x, s.y + 18, 12, '#fff', INK); }
       else if (s.id === 'practice') drawPractice2D(c, this.planet, s.x, s.y, s.w, s.h);
       else if (s.id === 'rocket') { c.fillStyle = '#8a919c'; c.beginPath(); c.ellipse(s.x, s.y - 6, 70, 18, 0, 0, 7); c.fill(); c.strokeStyle = INK; c.lineWidth = 3; c.stroke(); }
       else drawBuilding(c, style, s.x, s.y, s.w, s.h, th.palette, { seed: s.id.length + this.planet.index, sign: s.name, signColor: { eat: '#e63946', gear: '#4a6fd6', plays: '#2a9d8f' }[s.id], t: 0 });
@@ -121,6 +132,7 @@ export class DistrictScreen {
     const cv = document.createElement('canvas'); cv.width = 280; cv.height = 150; const c = cv.getContext('2d');
     if (['eat', 'gear', 'plays'].includes(s.id)) { drawShopInterior(c, 280, 150, s.id, this.planet, 0); drawCreature(c, this.planet.shops[s.id].species, { x: 210, y: 138, s: 0.42, skinIndex: 1, colors: this.planet.team.colors, accessory: { eat: 'apron', gear: 'gear', plays: 'coach' }[s.id] }); }
     else if (s.id === 'stadium') { drawSky(c, this.planet.theme, 280, 150, 0, 0.7); drawStadium2D(c, this.planet, 140, 140, 250, 110); }
+    else if (s.id === 'landmark') { drawSky(c, this.planet.theme, 280, 150, 0, 0.75); c.fillStyle = this.planet.theme.ground; c.fillRect(0, 112, 280, 40); drawLandmark(c, s.kind, 140, 128, 105, this.planet.theme.palette, this.planet.index, this.t || 0); }
     else if (s.id === 'practice') { drawSky(c, this.planet.theme, 280, 150, 0, 0.6); c.fillStyle = this.planet.theme.ground; c.fillRect(0, 90, 280, 60); drawPractice2D(c, this.planet, 140, 140, 220, 60); }
     else { c.fillStyle = '#05060f'; c.fillRect(0, 0, 280, 150); for (let i = 0; i < 60; i++) { c.fillStyle = '#fff'; c.fillRect(Math.random() * 280, Math.random() * 150, 2, 2); } drawRocket2D(c, 140, 150, 130, 0); }
     const panel = el('div', { class: 'panel' }, cv, el('h3', { text: s.name }), el('p', { text: s.desc }), el('div', { class: 'who', text: s.id === 'stadium' ? `Opponent: ${s.keeper} · rating ${this.planet.rating}${this.app.save.story.beaten.includes(this.planet.id) ? ' · DEFEATED' : ''}` : s.id === 'practice' ? (this.app.save.story.challengesDone && this.app.save.story.challengesDone.includes(this.planet.id) ? 'Side quest complete ✓' : 'Side quest available') : `Run by ${s.keeper}` }));
@@ -144,6 +156,7 @@ export class DistrictScreen {
     const back = { onEnd: () => app.go('district', { planet: id, focus: 'stadium' }), onQuit: () => app.go('district', { planet: id }), quitLabel: `Back to ${this.planet.district}` };
     if (app.story && app.story.intercept(this, s.id)) return;
     if (['eat', 'gear', 'plays'].includes(s.id)) { app.fadeOut(350).then(() => app.go('shop', { planet: id, kind: s.id })); return; }
+    if (s.id === 'landmark') { audio.sfx('blip'); this.dialog.say({ who: s.name, text: s.desc }); return; }
     if (s.id === 'stadium') { app.fadeOut(500).then(() => app.go('game', { planet: id, mode: 'exhibition', ...back })); return; }
     if (s.id === 'practice') { this.practiceMenu(); return; }
     if (s.id === 'rocket') { this.leave(); }

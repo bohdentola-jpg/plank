@@ -83,6 +83,17 @@ class AudioSys {
       case 'lateral': N({ dur: 0.18, vol: 0.15, f: 900, f2: 1800, q: 1.2 }); break;
       case 'crowd_gasp': N({ dur: 0.6, vol: 0.2, f: 1200, q: 1, a: 0.05 }); break;
       case 'goal': T({ f: 440, dur: 0.12, type: 'square', vol: 0.12 }); T({ f: 554, dur: 0.12, type: 'square', vol: 0.12, t: 0.12 }); T({ f: 659, dur: 0.4, type: 'square', vol: 0.12, t: 0.24 }); break;
+      case 'tip': N({ dur: 0.06, vol: 0.22, f: 1400, q: 1.2 }); T({ f: 520, f2: 380, dur: 0.08, type: 'triangle', vol: 0.14 }); break;
+      case 'bounce': T({ f: 160, f2: 90, dur: 0.09, type: 'sine', vol: 0.22 }); N({ dur: 0.05, vol: 0.1, f: 700, q: 1 }); break;
+      case 'wrap': T({ f: 120, f2: 70, dur: 0.2, type: 'sawtooth', vol: 0.12 }); N({ dur: 0.14, vol: 0.18, f: 500, q: 0.8, type: 'lowpass' }); break;
+      case 'erupt': N({ dur: 0.9, vol: 0.3, f: 200, f2: 900, q: 0.8, type: 'lowpass', a: 0.05 }); T({ f: 50, f2: 30, dur: 0.8, type: 'sine', vol: 0.3 }); break;
+      case 'burn': N({ dur: 0.25, vol: 0.2, f: 2500, q: 0.8 }); T({ f: 900, f2: 300, dur: 0.25, type: 'square', vol: 0.08 }); break;
+      case 'gust': N({ dur: 1.6, vol: 0.28, f: 300, f2: 1200, q: 0.5, a: 0.3 }); break;
+      case 'shush': N({ dur: 0.8, vol: 0.22, f: 3500, q: 0.7, a: 0.05 }); N({ dur: 0.5, vol: 0.14, f: 5000, q: 0.7, t: 0.3 }); break;
+      case 'jackpot': for (let i = 0; i < 8; i++) T({ f: 880 + i * 110, dur: 0.12, type: 'square', vol: 0.12, t: i * 0.07 }); T({ f: 1760, dur: 0.6, type: 'square', vol: 0.1, t: 0.6 }); break;
+      case 'slowmo': T({ f: 600, f2: 120, dur: 0.6, type: 'sawtooth', vol: 0.1 }); N({ dur: 0.5, vol: 0.12, f: 800, f2: 150, q: 1.5 }); break;
+      case 'jump': N({ dur: 0.08, vol: 0.12, f: 600, f2: 1800, q: 1 }); break;
+      case 'groove': [0, 0.15, 0.3].forEach((t, i) => T({ f: [392, 494, 587][i], dur: 0.25, type: 'square', vol: 0.12, t })); break;
     }
   }
 
@@ -138,3 +149,24 @@ class AudioSys {
   }
 }
 export const audio = new AudioSys();
+// Every planet gets its own track flavor, derived from its look.
+export function planetTrack(planet) {
+  const t = planet.theme || {}; const sk = t.skyline || '', gt = t.groundType || '';
+  const key = 'planet_' + planet.id; if (TRACKS[key]) return key;
+  let def;
+  if (sk === 'disco' || sk === 'casino') def = { bpm: 118, scale: 'dorian', pad: false, arp: true, bass: 'bounce', drums: 'rock', lead: true, wave: 'square', root: 45 };
+  else if (sk === 'books') def = { bpm: 68, scale: 'major', pad: true, arp: false, bass: 'slow', drums: 'none', lead: false, wave: 'triangle', root: 52 };
+  else if (sk === 'volcanoes' || sk === 'junk' || sk === 'factory') def = { bpm: 148, scale: 'minor', pad: false, arp: true, bass: 'drive', drums: 'rock', lead: true, wave: 'sawtooth', root: 40 };
+  else if (sk === 'candy' || sk === 'bubbles' || sk === 'balloons') def = { bpm: 128, scale: 'major', pad: true, arp: true, bass: 'bounce', drums: 'soft', lead: true, wave: 'square', root: 53 };
+  else if (sk === 'icebergs' || sk === 'crystals' || sk === 'domes') def = { bpm: 94, scale: 'major', pad: true, arp: true, bass: 'slow', drums: 'brush', lead: false, wave: 'sine', root: 55 };
+  else if (sk === 'void' || sk === 'ship' || sk === 'ring') def = { bpm: 72, scale: 'minor', pad: true, arp: true, bass: 'slow', drums: 'none', lead: false, wave: 'sine', root: 41 };
+  else if (sk === 'clocks') def = { bpm: 100, scale: 'dorian', pad: false, arp: true, bass: 'walk', drums: 'brush', lead: true, wave: 'triangle', root: 48 };
+  else if (sk === 'city') def = { bpm: 132, scale: 'minor', pad: true, arp: true, bass: 'drive', drums: 'rock', lead: true, wave: 'sawtooth', root: 43 };
+  else if (sk === 'jungle' || sk === 'flowers' || sk === 'mushrooms') def = { bpm: 110, scale: 'penta', pad: false, arp: true, bass: 'bounce', drums: 'rock', lead: true, wave: 'triangle', root: 48 };
+  else if (sk === 'coral' || sk === 'clouds') def = { bpm: 86, scale: 'major', pad: true, arp: true, bass: 'slow', drums: 'brush', lead: false, wave: 'sine', root: 50 };
+  else if (sk === 'ships' || sk === 'dunes' || sk === 'mesas') def = { bpm: 104, scale: 'blues', pad: false, arp: true, bass: 'walk', drums: 'soft', lead: true, wave: 'square', root: 45 };
+  else if (sk === 'mansions') def = { bpm: 90, scale: 'minor', pad: true, arp: true, bass: 'slow', drums: 'brush', lead: true, wave: 'triangle', root: 46 };
+  else if (sk === 'hive' || sk === 'cheese' || sk === 'pizza' || sk === 'goo') def = { bpm: 122, scale: 'major', pad: false, arp: true, bass: 'bounce', drums: 'soft', lead: true, wave: 'square', root: 50 };
+  else def = { bpm: 136, scale: 'minor', pad: false, arp: true, bass: 'drive', drums: 'rock', lead: true, wave: 'sawtooth', root: 43 };
+  TRACKS[key] = def; return key;
+}

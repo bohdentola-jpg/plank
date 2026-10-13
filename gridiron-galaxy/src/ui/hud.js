@@ -10,6 +10,9 @@ export class HUD {
     this.meter = el('div', { class: 'meter' }, el('i'), el('b')); this.meter.style.display = 'none'; this.meterLabel = el('div', { class: 'meter-label' }); this.meterLabel.style.display = 'none';
     this.stamina = el('div', { class: 'stamina' }, el('i')); this.stamina.style.display = 'none';
     this.iconLayer = el('div', { style: { position: 'fixed', inset: '0', pointerEvents: 'none' } });
+    this.wind = el('div', { class: 'windbox' }, el('span', { class: 'arrow', text: '➤' }), el('span', { class: 'wtxt', text: '' })); this.wind.style.display = 'none';
+    this.caption = el('div', { class: 'caption small' }); this.caption.style.display = 'none'; this.captionT = 0;
+    this.root.append(this.wind, this.caption);
     this.lateral = el('div', { class: 'recv-icon', style: { '--gc': '#e8e8ff', width: '34px', height: '34px', fontSize: '13px' } }, 'L1'); this.lateral.style.display = 'none';
     this.root.append(this.bug, this.down, this.hint, this.result, this.meter, this.meterLabel, this.stamina, this.iconLayer, this.lateral);
     this.lastBug = ''; this.lastDown = ''; this.lastHint = '';
@@ -31,11 +34,16 @@ export class HUD {
   }
   setHint(html) { if (html === this.lastHint) return; this.lastHint = html; this.hint.innerHTML = html; }
   showResult(text, cls = '', sub = '') { this.result.className = 'playresult ' + cls; this.result.innerHTML = `${text}${sub ? `<small>${sub}</small>` : ''}`; this.result.style.display = 'block'; this.resultT = 2.2; }
+  showCaption(text, ms = 2200) { this.caption.innerHTML = text; this.caption.style.display = 'block'; this.captionT = ms / 1000; }
   showMeter(val, label) { this.meter.style.display = 'block'; this.meterLabel.style.display = 'block'; this.meter.querySelector('i').style.width = `${val * 100}%`; this.meter.querySelector('b').style.left = `${val * 100}%`; this.meterLabel.textContent = label; }
   hideMeter() { this.meter.style.display = 'none'; this.meterLabel.style.display = 'none'; }
   update(dt) {
     const s = this.sim; this.refreshBug(); this.refreshDown();
     if (this.resultT > 0) { this.resultT -= dt; if (this.resultT <= 0) this.result.style.display = 'none'; }
+    if (this.captionT > 0) { this.captionT -= dt; if (this.captionT <= 0) this.caption.style.display = 'none'; }
+    // wind indicator (screen-relative: up is the way the user's team attacks)
+    const wx = s.wind.x, wz = s.wind.z, wm = Math.hypot(wx, wz);
+    if (wm > 0.8) { const camDir = s.dirOf(s.userSide); const ang = Math.atan2(-wx * camDir, wz * camDir); this.wind.style.display = 'flex'; this.wind.querySelector('.arrow').style.transform = `rotate(${(-ang * 180 / Math.PI)}deg)`; this.wind.querySelector('.wtxt').textContent = `${s.gustStrength ? 'GUST ' : 'WIND '}${Math.round(wm * 2)} mph`; this.wind.classList.toggle('gust', !!s.gustStrength); } else this.wind.style.display = 'none';
     // receiver icons
     const w = this.app.vw, h = this.app.vh; const c = s.ball.carrier; const userPassing = s.phase === 'live' && c && c.isUser && (c.state === 'qb' || c.state === 'carrier') && !s.forwardPassUsed && (c.z - s.los) * s.dir <= 0.3 && s.ball.state === 'held';
     const showIcons = (s.phase === 'presnap' && s.userOnOffense() && !s.auto) || userPassing;
@@ -50,7 +58,7 @@ export class HUD {
       d.classList.toggle('open', s.phase === 'live' && sep > 3.2); d.style.opacity = s.phase === 'live' && sep < 1.5 ? 0.55 : 1;
     });
     // lateral prompt
-    const lt = s.phase === 'live' && c && c.isUser && c.state === 'carrier' ? s.lateralTarget(c) : null;
+    const lt = s.phase === 'live' && c && c.isUser && c.state === 'carrier' && !s.forwardPassUsed === false ? s.lateralTarget(c) : (s.phase === 'live' && c && c.isUser && c.state === 'carrier' ? s.lateralTarget(c) : null);
     if (lt) { const p = this.cam.project(lt.x, 2.7, lt.z, w, h); this.lateral.style.display = p.visible ? 'flex' : 'none'; this.lateral.style.left = `${p.x}px`; this.lateral.style.top = `${p.y}px`; this.lateral.textContent = input.usingPad() ? 'L1' : 'F'; } else this.lateral.style.display = 'none';
     // stamina
     const u = s.userEnt; if (u && s.phase === 'live') { this.stamina.style.display = 'block'; this.stamina.firstChild.style.width = `${u.stamina * 100}%`; this.stamina.firstChild.style.background = u.stamina < 0.3 ? '#ff6b7a' : '#7fe3a6'; } else this.stamina.style.display = 'none';
@@ -63,7 +71,8 @@ export class HUD {
     else if (s.phase === 'live') {
       if (userPassing) hint = `<span class="gl">Throw:</span> ${g('square', input.usingPad() ? '' : '1')}${g('cross', input.usingPad() ? '' : '2')}${g('circle', input.usingPad() ? '' : '3')}${g('triangle', input.usingPad() ? '' : '4')} <span class="gl">tap = lob · hold = bullet</span>${g('r2', 'Sprint')}`;
       else if (c && c.isUser) hint = `${g('square', 'Juke')}${g('circle', 'Spin')}${g('cross', 'Dive')}${g('l1', 'Lateral')}${g('r2', 'Sprint')}`;
-      else if (u && !s.userOnOffense()) hint = `${g('cross', 'Dive tackle')}${g('square', 'Swat / jump')}${g('r1', 'Switch')}${g('r2', 'Sprint')}`;
+      else if (u && (u.state === 'track' || u.state === 'returner') && s.ball.state === 'air') hint = `${g('cross', 'Jump catch')}${g('square', 'Dive')} <span class="gl">stick to adjust · let go to auto-track</span>`;
+      else if (u && !s.userOnOffense()) hint = `${g('cross', 'Dive tackle')}${g('square', 'Jump / swat')}${g('r1', 'Switch')}${g('r2', 'Sprint')}`;
       else hint = s.ball.state === 'air' ? '<span class="gl">Ball in the air…</span>' : '';
     }
     else if (s.phase === 'playcall') hint = '';

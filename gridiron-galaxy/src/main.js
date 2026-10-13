@@ -16,7 +16,10 @@ export function registerScreen(name, cls) { SCREENS[name] = cls; }
 class App {
   constructor() {
     this.canvas = qs('#gl');
-    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, powerPreference: 'high-performance' });
+    const probe = document.createElement('canvas'); // a throwaway canvas, so three.js still gets a fresh antialiased context on the real one
+    if (!(probe.getContext('webgl2') || probe.getContext('webgl'))) { const msg = '<b>WebGL is not available in this browser.</b><br>Turn on hardware acceleration (Settings → System → "Use graphics acceleration"), update your graphics driver, or try a current Chrome or Edge.'; if (window.__bootFail) window.__bootFail(msg); throw new Error('WebGL unavailable'); }
+    try { this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, powerPreference: 'high-performance' }); }
+    catch (e) { if (window.__bootFail) window.__bootFail('<b>Could not start the 3D renderer.</b><br>' + (e && e.message ? e.message : e) + '<br>Turn on hardware acceleration in your browser, or try a current Chrome or Edge.'); throw e; }
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.save = loadSave(); audio.applySettings(this.save.settings);
@@ -72,7 +75,7 @@ class App {
     this.frames++; this.fpsT += dt; if (this.fpsT > 1) { this.fps = this.frames / this.fpsT; this.frames = 0; this.fpsT = 0; }
     input.poll(dt);
     try {
-      if (this.screen) { if (this.screen.update) this.screen.update(dt); for (const d of this.dialogs) d.update(dt); if (this.screen.render) this.screen.render(); }
+      if (this.screen) { if (this.screen.update) this.screen.update(dt); for (const d of this.dialogs) d.update(dt); if (this.screen.render && !(this.noRender && this.frames % 30)) this.screen.render(); }
     } catch (e) { console.error(e); this._errCount = (this._errCount || 0) + 1; if (this._errCount > 60) { this._errCount = 0; this.toast('Something glitched. Returning to the hub.'); this.go('hub'); } }
     input.endFrame();
     if (!this._booted) { this._booted = true; const b = qs('#boot'); if (b) { b.classList.add('gone'); setTimeout(() => b.remove(), 700); } }
@@ -81,7 +84,7 @@ class App {
 
 // optional modules register their screens when loaded
 const app = new App(); window.app = app;
-const qp = new URLSearchParams(location.search);
+const qp = new URLSearchParams(location.search); app.noRender = qp.get('norender') === '1'; // QA: skip most renders so headless sims run fast
 const extra = [import('./ui/district.js'), import('./ui/shop.js'), import('./game/match.js'), import('./story.js'), import('./challenges.js'), import('./ui/practice.js'), import('./ui/playbook.js'), import('./gfx/gallery.js')];
 Promise.allSettled(extra).then((res) => {
   res.forEach((r, i) => { if (r.status === 'rejected') console.warn('module unavailable', r.reason && r.reason.message); });

@@ -16,6 +16,8 @@ canvas#c2d { display: none; }
 #boot.gone { opacity: 0; pointer-events: none; }
 .bootlogo { font-size: 64px; font-weight: 900; letter-spacing: 4px; text-align: center; line-height: 1; color: var(--gold); text-shadow: 4px 4px 0 var(--navy), 8px 8px 0 rgba(0,0,0,.4); }
 .bootsub { margin-top: 18px; color: var(--sky); font-size: 18px; letter-spacing: 2px; }
+.booterr { margin-top: 26px; max-width: 640px; padding: 16px 22px; border: 3px solid var(--red); border-radius: 14px; background: var(--panel); color: var(--cream); font-size: 16px; line-height: 1.5; text-align: center; }
+.booterr b { color: var(--red); }
 
 /* ---- glyphs ---- */
 .gly { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; padding: 0 6px; border-radius: 999px; background: #0a0e24; border: 2px solid var(--gc, #fff); color: var(--gc, #fff); font-weight: 900; font-size: 15px; margin: 0 3px; vertical-align: middle; box-shadow: 0 2px 0 rgba(0,0,0,.5); }
@@ -158,6 +160,12 @@ canvas#c2d { display: none; }
 .meter i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, var(--red), var(--gold), var(--green)); }
 .meter b { position: absolute; top: -4px; bottom: -4px; width: 4px; background: #fff; }
 .meter-label { position: fixed; left: 50%; bottom: 152px; transform: translateX(-50%); font-weight: 900; letter-spacing: 2px; text-shadow: 0 2px 3px #000; }
+.windbox { position: fixed; right: 26px; top: 120px; display: flex; align-items: center; gap: 8px; background: var(--panel); border: 3px solid var(--sky); border-radius: 999px; padding: 6px 14px; font-weight: 900; font-size: 14px; letter-spacing: 1px; box-shadow: 4px 4px 0 rgba(0,0,0,.4); }
+.windbox .arrow { display: inline-block; font-size: 22px; color: var(--sky); transition: transform .3s; }
+.windbox.gust { border-color: var(--red); } .windbox.gust .arrow { color: var(--red); animation: pulse .5s infinite; }
+.caption.small { font-size: 30px; top: 22%; }
+.hazard-rules { position: fixed; left: 26px; top: 120px; max-width: 320px; font-size: 13px; line-height: 1.5; text-shadow: 0 2px 3px #000; }
+.hazard-rules b { color: var(--gold); }
 .stamina { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); width: 180px; height: 10px; border-radius: 99px; background: rgba(0,0,0,.5); border: 2px solid rgba(255,255,255,.7); overflow: hidden; }
 .stamina i { display: block; height: 100%; background: var(--green); }
 
@@ -206,3 +214,7 @@ canvas#c2d { display: none; }
 .credits { position: fixed; left: 0; right: 0; bottom: -100%; text-align: center; font-size: 22px; line-height: 1.8; text-shadow: 0 2px 4px #000; }
 .credits h1 { color: var(--gold); font-size: 60px; text-shadow: 4px 4px 0 var(--navy); }
 .credits h3 { color: var(--sky); margin-top: 40px; letter-spacing: 3px; }
+
+.pc-rules { font-size: 13px; color: #ffd23f; letter-spacing: 0.04em; margin: -4px 0 8px; opacity: 0.9; text-shadow: 0 2px 0 #000; }
+.hazard-rules { transition: opacity 1.2s ease; }
+.hazard-rules.fade { opacity: 0.35; }

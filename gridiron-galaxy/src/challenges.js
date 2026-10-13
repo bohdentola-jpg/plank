@@ -39,7 +39,7 @@ export function challengeParams(app, planet) {
   if (type === 'run') { P.hooks.filterCats = ['run']; P.hooks.filterPlays = (p) => p.cat === 'run'; }
   if (type === 'kick') { P.hooks.forcePlay = () => BASE_PLAYS.find(p => p.type === 'fg'); P.spot = 50 - (25 - 17); }
   if (type === 'drill2min') { P.simMode = 'game'; P.start = { clock: ch.time, quarter: 4, possession: 'home' }; P.spot = 10; }
-  if (type === 'stand') { P.simMode = 'practice'; P.start = { possession: 'away', los: 35 }; P.hooks.practicePossession = 'away'; }
+  if (type === 'stand') { P.simMode = 'practice'; P.start = { possession: 'away', losMid: true }; P.hooks.practicePossession = 'away'; }
   if (type === 'puntreturn') { P.start = { possession: 'away' }; P.hooks.practicePossession = 'away'; P.hooks.cpuForcePlay = (sim, pb) => pb.find(p => p.type === 'punt'); }
   if (type === 'lateral') { P.spot = 30; }
   if (type === 'pick6') { P.start = { possession: 'away' }; P.hooks.practicePossession = 'away'; P.hooks.cpuBias = 'pass'; }
@@ -47,7 +47,7 @@ export function challengeParams(app, planet) {
   if (type === 'trick') { P.spot = 20; P.hooks.filterCats = ['special', 'planet']; P.hooks.filterPlays = (p) => (p.cat === 'special' || p.cat === 'planet') && p.type !== 'punt' && p.type !== 'fg'; }
   P.onEnter = (m) => {
     const s = m.sim;
-    if (P.hooks.practicePossession) { s.practicePossession = P.hooks.practicePossession; s.possession = 'away'; s.newSeries(P.start && P.start.los !== undefined ? P.start.los : s.ownYard('away', 25)); s.practiceSpot = s.los; }
+    if (P.hooks.practicePossession) { s.practicePossession = P.hooks.practicePossession; s.possession = 'away'; s.newSeries(P.start && P.start.losMid ? s.F.L / 2 : P.start && P.start.los !== undefined ? P.start.los : s.ownYard('away', 25)); s.practiceSpot = s.los; }
     if (type === 'kick') { s.practiceSpot = s.targetGoalZ('home') - s.dir * 8; s.newSeries(s.practiceSpot); }
     if (type === 'redzone') { s.practiceSpot = s.targetGoalZ('home') - s.dir * 10; s.newSeries(s.practiceSpot); }
     if (type === 'lateral' || type === 'trick') { s.practiceSpot = s.targetGoalZ('home') - s.dir * (type === 'lateral' ? 30 : 30); s.newSeries(s.practiceSpot); }
@@ -62,7 +62,7 @@ export function challengeParams(app, planet) {
   };
   P.onEvent = (t, d, m) => {
     if (state.done) return; const s = m.sim;
-    if (t === 'catch' && d.team === 'home' && s.ball.forward !== false && type === 'passing' && s.forwardPassUsed) { state.count++; audio.sfx('coin'); if (state.count >= ch.n) finish(m, true); }
+    if (t === 'catch' && d.team === 'home' && type === 'passing' && s.forwardPassUsed && !s.ball.lateral) { state.count++; audio.sfx('coin'); if (state.count >= ch.n) finish(m, true); }
     if (t === 'puntcatch' && d.team === 'home') state.catchZ = d.z;
     if (t === 'interception' && d.team === 'home' && type === 'pick6') finish(m, true);
     if (t === 'touchdown') {
