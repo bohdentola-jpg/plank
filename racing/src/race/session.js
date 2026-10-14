@@ -343,6 +343,7 @@ export class RaceSession {
           break;
         case 'miniturbo':
           if (e.id === P.id) {
+            this.hudEvents.push({ type: 'miniturbo', level: e.level, t: this.time });
             try { sfx.miniTurbo(e.level); P.engine?.blowOff(); } catch { /* */ }
             this.camera.addShake(0.15 + 0.1 * e.level);
             input.rumble(0.3 + 0.15 * e.level, 0.6, 220);
@@ -368,7 +369,8 @@ export class RaceSession {
           input.rumble(0.15, 0.4, 90);
           break;
         case 'driftbonus':
-          if (this.type !== 'drift') this.message('DRIFT', '+ NITROUS', { slot: 'top', dur: 1.2, color: '#46e8ff' });
+          // (the drift meter tells the rest; say once that drifting pays nitrous)
+          if (this.type !== 'drift' && !this.driftTold) { this.driftTold = true; this.message('DRIFT', '+ NITROUS', { slot: 'top', dur: 1.4, color: '#46e8ff' }); }
           break;
         case 'shift':
           try { sfx.shift(); } catch { /* */ }
@@ -522,6 +524,7 @@ export class RaceSession {
     const k = clamp((v.speed - 22) / 42, 0, 1);
     this.fx = { radialBlur: k * 0.45 + (v.nitroOn ? 0.35 : v.boostT > 0 ? 0.25 : 0), blurCenter: [0.5, 0.56] };
     if (surfR > 0 && v.speed > 4) input.rumble(surfR * 0.25, surfR * 0.5, 60);
+    else if (v.driftState === 1) input.rumble(0.06 + 0.22 * Math.min(1, Math.abs(v.driftAngle)), 0.12 + 0.1 * v.driftLevel, 60);
   }
 
   updateAudio(dt) {

@@ -26,7 +26,7 @@ Xbox and other standard pads work too, and so do keyboard and mouse.
 |---|---|---|
 | Steer | Left stick | A / D or ← → |
 | Gas / Brake–reverse | R2 / L2 | W / S or ↑ ↓ |
-| Drift (hold) | L2 or □ + steer at speed | S or Space + A / D |
+| Drift | tap L2 (or □) while steering at speed | tap S (or Space) while steering |
 | Handbrake | □ | Space |
 | Nitrous | ✕ | Shift |
 | Shift up / down (manual) | R1 / L1 | E / Q |
@@ -100,15 +100,24 @@ Erase story save.
   Steering on the gas or coasting grips. The car corners at the limit, and
   pushed too hard it runs wide instead of swapping ends. A steering limiter
   means a full-lock stab on keys or the stick still corners at peak grip.
-- **Drifting, kart style:** brake (or pull the handbrake) while you turn at
-  speed and the car hops into a drift. The nose swings 20-30° into the turn
-  and the car carves a grippy arc that keeps its speed. Steer into the turn
-  to tighten the arc, or away from it to widen it. Hold the brake or
-  handbrake and the drift holds whatever the wheel does. The foot brake
-  scrubs speed as you go, and the handbrake doesn't. Let go (of the wheel
-  too) or steer the other way to straighten out. The longer the drift, the
-  bigger the mini-turbo you fire on the way out: blue sparks, then orange,
-  then purple. The chase camera swings to show where the car is going.
+- **Drifting:** tap the brake (or pull the handbrake) while you turn at
+  speed and the tail swings out. Then the stick drives it:
+  - Steer into the turn and the car hangs its tail out (up to about 45°)
+    and carves a tighter line. Keep steering into it and the drift holds for
+    as long as you like, with the gas holding your speed.
+  - Ease off the wheel and it swings back in line and grips again;
+    steering the other way straightens it quicker.
+  - Steer the other way and tap the brake again to swing the tail across
+    into a drift the other way, linking S-bends.
+  - The brake mid-drift scrubs speed and tightens the line, and the
+    handbrake tightens it more.
+
+  The car swings in on its springs and settles with real weight. Rear-drive
+  cars hang the biggest angles, four-wheel drives drift flatter and grippier,
+  and front-drives hang the least. A meter under the screen shows the angle
+  and the mini-turbo charging through blue, orange and purple; the deeper
+  and longer the drift, the bigger the boost when you straighten up. A
+  well-drifted lap is the fastest way round.
 - **Physics:** a 120 Hz tire model with load transfer, load-sensitive
   cornering stiffness, combined slip (a braking or driving tire has less left
   for cornering), ABS and brake balance, traction control and stability control

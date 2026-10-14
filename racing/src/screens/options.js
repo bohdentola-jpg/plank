@@ -16,7 +16,7 @@ const CONTROLS = [
   ['STEER', 'LEFT STICK', 'A / D  ← →'],
   ['GAS', 'R2', 'W  ↑'],
   ['BRAKE / REVERSE', 'L2', 'S  ↓'],
-  ['DRIFT (HOLD)', 'L2 / □ + STEER', 'S / SPACE + A D'],
+  ['DRIFT', 'TAP L2 / □ + STEER', 'TAP S / SPACE + A D'],
   ['HANDBRAKE', '□  SQUARE', 'SPACE'],
   ['NITROUS', '✕  CROSS', 'SHIFT'],
   ['SHIFT UP / DOWN', 'R1 / L1', 'E / Q'],
