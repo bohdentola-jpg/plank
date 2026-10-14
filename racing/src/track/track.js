@@ -300,7 +300,10 @@ export class Track {
       for (let k = N - 1; k >= 0; k--) {
         const i = k, j = this.idx(i + 1);
         if (!this.closed && i === N - 1) continue;
-        vmax[i] = Math.min(vmax[i], Math.sqrt(vmax[j] * vmax[j] + 2 * decel * this.step));
+        // downhill eats into braking, uphill helps
+        const grade = (this.Y[j] - this.Y[i]) / this.step;
+        const dec = Math.max(2.5, decel + 9.81 * grade);
+        vmax[i] = Math.min(vmax[i], Math.sqrt(vmax[j] * vmax[j] + 2 * dec * this.step));
       }
     }
     this.line = { off: offS, speed: vmax, curv: curvS };
