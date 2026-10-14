@@ -360,6 +360,6 @@ export const hit = {
 };
 
 /** "VCR OSD" text — boxy green-on-nothing, like a VHS deck overlay. */
-export function osd(ctx, str, x, y, size = 26, color = '#d8ffd8') {
-  vText(ctx, str, x, y, size, { color, weight: 0.2, skew: 0, spacing: 2, shadow: [2, 2, 'rgba(0,0,0,0.8)'], glow: 6, glowColor: 'rgba(160,255,160,0.5)' });
+export function osd(ctx, str, x, y, size = 26, color = '#d8ffd8', align = 'left') {
+  vText(ctx, str, x, y, size, { color, align, weight: 0.2, skew: 0, spacing: 2, shadow: [2, 2, 'rgba(0,0,0,0.8)'], glow: 6, glowColor: 'rgba(160,255,160,0.5)' });
 }

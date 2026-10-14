@@ -4,7 +4,7 @@
 // "channel change": static burst → swap (builds may take a few frames) → clear.
 import { Renderer } from './core/renderer.js';
 import { input } from './core/input.js';
-import { hit } from './core/ui.js';
+import { hit, osd } from './core/ui.js';
 import { audio } from './audio/audio.js';
 import { settings } from './core/settings.js';
 
@@ -102,6 +102,10 @@ function loop(now) {
   game.frame++;
 
   input.update(dt);
+  if (input.padEvent) {
+    const ds = /054c|dualsense|wireless controller/i.test(input.padId || '');
+    game.padToast = { t: 0, text: input.padEvent === 'lost' ? 'CONTROLLER DISCONNECTED' : ds ? 'DUALSENSE CONNECTED' : 'CONTROLLER CONNECTED' };
+  }
   if (input.pressed('any')) {
     audio.unlock();
     document.getElementById('room-hint')?.classList.add('gone');
@@ -122,6 +126,12 @@ function loop(now) {
   }
   hit.resolve();
   if (game.overlay) game.overlay(ctx, dt);
+  if (game.padToast) {
+    const pt = game.padToast;
+    pt.t += dt;
+    if (pt.t > 3.2) game.padToast = null;
+    else if (Math.floor(pt.t * 4) % 2 === 0 || pt.t > 0.8) osd(ctx, pt.text, 980, 60, 20, pt.text.includes('DIS') ? '#ffb0a0' : '#d8ffd8', 'right');
+  }
 
   const view = scr?.view ? scr.view() : null;
   r.render(view?.scene || null, view?.camera || null, dt, game.fx);
