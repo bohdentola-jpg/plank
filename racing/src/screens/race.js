@@ -16,7 +16,7 @@ import { fmtTime, ordinal } from '../core/util.js';
 import { audio } from '../audio/audio.js';
 import { music } from '../audio/music.js';
 
-const AI_NAMES = ['DEZ', 'MIKA', 'RAVEN', 'KAITO', 'VEX', 'NOVA', 'JUNO', 'BISHOP', 'TANK', 'SPOOK', 'LUCKY', 'ROSA', 'HALO', 'DRIFTER', 'ZERO', 'CASS'];
+const AI_NAMES = ['ACE', 'MIKA', 'RAVEN', 'RYU', 'JINX', 'NOVA', 'JUNO', 'BISHOP', 'BRICK', 'SPOOK', 'LUCKY', 'SKIDS', 'BLADE', 'DRIFTER', 'ONYX', 'CASS'];
 
 registerScreen('race', () => {
   let session = null;
@@ -29,16 +29,19 @@ registerScreen('race', () => {
   let results = null;
 
   const buildOpponents = (p, spec) => {
+    // a fresh crew of names each time (fixed once per params so RACE AGAIN keeps them)
+    if (!p._names) p._names = AI_NAMES.slice().sort(() => Math.random() - 0.5);
+    const names = p._names;
     if (p.opponents) {
       return p.opponents.map((o, k) => {
-        if (typeof o === 'string') return { spec: CAR_BY_ID[o], name: AI_NAMES[k % AI_NAMES.length], skill: 0.75 };
-        return { name: AI_NAMES[k % AI_NAMES.length], skill: 0.75, ...o };
+        if (typeof o === 'string') return { spec: CAR_BY_ID[o], name: names[k % names.length], skill: 0.75 };
+        return { name: names[k % names.length], skill: 0.75, ...o };
       });
     }
     // dev default: 5 rivals in the same class
     const pool = CARS.filter((c) => c.cls === spec.cls && c.id !== spec.id);
     const list = [];
-    for (let k = 0; k < 5; k++) list.push({ spec: pool[k % pool.length] || spec, name: AI_NAMES[k], skill: 0.62 + k * 0.07 });
+    for (let k = 0; k < 5; k++) list.push({ spec: pool[k % pool.length] || spec, name: names[k], skill: 0.62 + k * 0.07 });
     return list;
   };
 
@@ -153,7 +156,9 @@ registerScreen('race', () => {
         if (it?.id === 'quit') leave('quit');
         return;
       }
-      if (input.pressed('pause') && session.state !== 'done') {
+      // controller unplugged / battery died mid-race: pause, like a console would
+      const padLost = input.padEvent === 'lost' && (session.state === 'racing' || session.state === 'countdown');
+      if ((input.pressed('pause') || padLost) && session.state !== 'done') {
         pauseMenu = makePause();
         session.pause(true);
         uiSound('select');

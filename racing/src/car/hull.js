@@ -28,7 +28,7 @@ export function shapeOf(b) {
   const uF = b.fo;
   const uR = b.fo + b.wb;
   const wheelR = b.wheelR;
-  const archR = wheelR + (b.archGap ?? 0.045);
+  const archR = wheelR + (b.archGap ?? 0.035);
   const topF = monotone(b.top);
   const botF = monotone(b.bot);
   // the greenhouse starts and ends flush with the body's top line

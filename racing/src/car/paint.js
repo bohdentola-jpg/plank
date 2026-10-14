@@ -637,8 +637,10 @@ export function paintCabin(S, look, vs, res = 512) {
   }
 
   // glass areas (paths in px)
-  const sideTop = (right) => Y(right ? vi(28 - CIDX.sideEnd) : vi(CIDX.sideEnd));
-  const beltY = (right) => Y(right ? vi(27) : vi(1));
+  // the glass runs from the belt right up into the roof corner (thin roof rail)
+  const topIdx = CIDX.sideEnd + 2;
+  const sideTop = (right) => Y(right ? vi(28 - topIdx) : vi(topIdx));
+  const beltY = (right) => Y(right ? vi(28) : vi(0));
   const pillarIn = (right) => Y(right ? vi(28 - 7) : vi(7));
   const windshield = (c) => {
     c.beginPath();
