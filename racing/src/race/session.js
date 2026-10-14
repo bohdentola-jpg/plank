@@ -67,7 +67,8 @@ export class RaceSession {
     this.sim = new RaceSim(this.track, {
       type: this.type, laps: this.opts.laps || this.def.laps || 3, racers,
       auto: settings.get('transmission') !== 'manual',
-      assists: settings.get('assists') === 'on' ? 1 : 0.25,
+      // drift events run loose: stability control would smother every slide
+      assists: settings.get('assists') === 'on' && this.type !== 'drift' ? 1 : 0.25,
       rubber: this.opts.rubber ?? 1, playerGrid: this.opts.playerGrid || 'back', seed: this.def.id,
       traffic: this.opts.traffic ?? !!this.def.traffic,
       driftRivals: this.opts.driftRivals,

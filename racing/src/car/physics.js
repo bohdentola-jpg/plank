@@ -143,6 +143,8 @@ export class Vehicle {
     this.prevGroundH = y;
     this.groundN = [0, 1, 0];
     this.driftAngle = 0;
+    this.escCut = 0;      // stability-control power trim (0..1)
+    this.lastFyF = 0; this.lastFyR = 0;
     this.speed = 0;
     this.vF = 0; this.vL = 0;
   }
@@ -227,6 +229,8 @@ export class Vehicle {
     }
     let drivePedal = throttle, brakePedal = brake;
     if (this.gear === -1) { drivePedal = brake; brakePedal = throttle; }
+    // stability control trims the power while the tail is coming round
+    if (this.gear > 0 && this.escCut > 0) drivePedal *= 1 - this.escCut;
     this.throttle = drivePedal;
 
     // steering: speed-sensitive lock + rate limit + countersteer assist
@@ -359,13 +363,17 @@ export class Vehicle {
       // so the car keeps steering (and the tail stays put) under hard braking
       if (!hand) {
         if (reqF < 0 && sgn > 0) reqF = Math.max(reqF, -capF * 0.9);
-        if (reqR < 0 && sgn > 0) reqR = Math.max(reqR, -capR * 0.62);
+        if (reqR < 0 && sgn > 0) reqR = Math.max(reqR, -capR * 0.5);
       }
       // traction control (assist) trims wheelspin before it starts
       if (assists > 0 && this.gear > 0) {
         const tcl = 1.0 + (1 - assists) * 0.6;
-        if (Math.abs(reqF) > capF * tcl && reqF > 0) reqF = capF * tcl;
-        if (Math.abs(reqR) > capR * tcl && reqR > 0 && !hand) reqR = capR * tcl;
+        // keep what the tire is already using for cornering (last step's
+        // side force) out of what the throttle may take
+        const room = (fy, cap) => Math.sqrt(Math.max(0.1, 1 - Math.pow(Math.min(1, Math.abs(fy) / Math.max(1, cap)), 2) * assists));
+        const tcF = capF * tcl * room(this.lastFyF || 0, capF), tcR = capR * tcl * room(this.lastFyR || 0, capR);
+        if (reqF > tcF) reqF = tcF;
+        if (reqR > tcR && !hand) reqR = tcR;
       }
       // driven-wheel spin state
       const drivenCap = (P.split > 0 ? capF * P.split : 0) + (P.split < 1 ? capR * (1 - P.split) : 0);
@@ -385,13 +393,24 @@ export class Vehicle {
       FxR = clampLong(reqR, capR * (spinning && P.split < 1 ? 0.9 : 1));
 
       // lateral, limited by what's left of the friction circle
-      const latF = -muF * Wf * tireCurve(alphaF) * lowFade;
+      // cornering stiffness grows slower than load (a loaded tire needs more
+      // slip to make its grip): without this a nose-heavy car under braking
+      // has a front axle far stiffer than its rear and turns itself round
+      const kF = Math.pow(Math.max(0.3, Wf / (W * P.b / wb)), -0.35);
+      const kR = Math.pow(Math.max(0.3, Wr / (W * P.a / wb)), -0.35);
+      const latF = -muF * Wf * tireCurve(alphaF * kF) * lowFade;
       let rearGrip = hand ? 0.42 : 1;
       if (spinning && P.split < 1) rearGrip *= clamp(1 - this.wheelSpin * 0.045, 0.55, 1);
-      const latR = -muR * Wr * tireCurve(alphaR, 9.0, 1.4, -0.4) * lowFade * rearGrip;
-      const ellipse = (fxv, cap) => cap * Math.sqrt(Math.max(0.12, 1 - Math.pow(fxv / Math.max(1, cap), 2) * 0.8));
-      FyF = clamp(latF, -ellipse(FxF, capF), ellipse(FxF, capF));
-      FyR = clamp(latR, -ellipse(FxR, capR), ellipse(FxR, capR));
+      const latR = -muR * Wr * tireCurve(alphaR * kR, 9.0, 1.4, -0.4) * lowFade * rearGrip;
+      // combined slip: a tire that is braking or driving hard has less left
+      // for cornering — across its whole curve, not just at the peak (only
+      // capping the peak leaves a hard-braking front axle stiff enough to
+      // swap the car's ends from the smallest twitch)
+      const share = (fxv, cap) => Math.sqrt(Math.max(0.12, 1 - Math.pow(fxv / Math.max(1, cap), 2) * 0.95));
+      const sF = share(FxF, capF), sR = share(FxR, capR);
+      FyF = clamp(latF * sF, -capF * sF, capF * sF);
+      FyR = clamp(latR * sR, -capR * sR, capR * sR);
+      this.lastFyF = FyF; this.lastFyR = FyR;
 
       this.slipF = Math.abs(alphaF) * lowFade;
       this.slipR = Math.abs(alphaR) * lowFade;
@@ -425,6 +444,33 @@ export class Vehicle {
     if (!this.airborne) {
       const yawDamp = (0.18 + 0.5 * assists) * P.mass * Math.min(1, speed / 20);
       torque -= this.yawRate * yawDamp * (hand ? 0.15 : 1);
+      // stability control (assists): rein the yaw rate back toward what the
+      // driver's steering asks for when the car rotates past it — hardest on
+      // the brakes and on the power, never adding rotation (it can't make
+      // grip), and off while the handbrake is up so drifts still start
+      if (assists > 0 && speed > 8 && !hand) {
+        const vAbs = Math.abs(vF);
+        const cmd = -clamp(ctl.steer || 0, -1, 1) * lock;
+        // the most the car can turn: the grip left over after braking/driving
+        const gLat = Math.sqrt(Math.max(4, Math.pow(muS * G * 1.05, 2) - this.axF * this.axF));
+        const rMax = gLat / Math.max(5, vAbs);
+        const rDes = clamp(vF * cmd / (wb + 0.0022 * vAbs * vAbs), -rMax, rMax);
+        const err = this.yawRate - rDes;
+        let corr = 0, cut = 0;
+        if (Math.sign(err) === Math.sign(this.yawRate)) corr += err;
+        // body slip past ~7° with the tail swinging out: sliding, not turning
+        const beta = Math.atan2(vL, Math.max(1, vAbs));
+        const over = Math.abs(beta) - 0.12;
+        if (over > 0 && Math.sign(beta) === -Math.sign(this.yawRate)) corr += Math.sign(this.yawRate) * over * 1.5;
+        if (corr) {
+          const gain = assists * (0.6 + 4 * brakePedal + (P.split < 1 ? 1.5 : 0.4) * drivePedal) * P.inertia;
+          torque -= corr * gain * Math.min(1, (speed - 8) / 10);
+          cut = clamp((Math.abs(corr) - 0.05) * 2.5 * assists, 0, 0.85);
+        }
+        this.escCut += (cut - this.escCut) * Math.min(1, dt * (cut > this.escCut ? 20 : 4));
+      } else {
+        this.escCut = 0;
+      }
       // drift sustain: holding throttle in a slide keeps the angle
       if (Math.abs(this.slipR) > 0.12 && drivePedal > 0.5 && P.split < 0.7 && !hand) {
         torque += Math.sign(vL) * -0.0 * P.mass;
