@@ -1,5 +1,9 @@
 # VARSITY 27 🏈
 
+> **Also in this repo: MIDNIGHT FREQUENCY** — a 2000s-style street racer on a CRT TV
+> (quick race + build-your-car story mode, PS5 controller support). Double-click
+> **`race.bat`** (or run `python3 serve.py --open racing/`) — see [racing/README.md](racing/README.md).
+
 *Sunday has Madden. Saturday has NCAA. Friday is yours.*
 
 The high school chapter of the football-game trinity, in the browser — full 3D, no

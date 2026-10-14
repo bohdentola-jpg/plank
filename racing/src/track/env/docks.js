@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { stripMesh, glowMaterial } from '../build.js';
 import { buildCenterline, smoothArray } from '../path.js';
-import { concreteTexture, groundTexture, facadeTextures, toTex, glowTexture, streakTexture } from '../textures.js';
+import { concreteTexture, facadeTextures, toTex, glowTexture, streakTexture } from '../textures.js';
 import { GeoBuilder, skyline, instanced } from './common.js';
 import { makeRng, nextFrame, clamp } from '../../core/util.js';
 
@@ -548,6 +548,28 @@ function board(X, x, y, z, fx, fz, w, h, k) {
   X.G.steel.box(x, y - h / 2 - 0.05, z, w + 0.2, h + 0.1, 0.1, Math.atan2(-rz, rx));
 }
 
+/** Stacked tires (4 per tile, light so vertex colors can paint them). */
+function tireTexture() {
+  return cachedTex('tires', () => {
+    const c = cnv(64, 128);
+    const x = c.getContext('2d');
+    for (let k = 0; k < 4; k++) {
+      const y = k * 32;
+      const g = x.createLinearGradient(0, y, 0, y + 32);
+      g.addColorStop(0, '#2a2a2a');
+      g.addColorStop(0.15, '#9a9a96');
+      g.addColorStop(0.5, '#c8c8c2');
+      g.addColorStop(0.85, '#8a8a86');
+      g.addColorStop(1, '#202020');
+      x.fillStyle = g;
+      x.fillRect(0, y, 64, 32);
+      x.fillStyle = 'rgba(0,0,0,0.28)';
+      for (let q = 0; q < 64; q += 6) x.fillRect(q, y + 9, 2, 14);
+    }
+    return toTex(c);
+  });
+}
+
 /** Soft rubber strip for skid marks (alpha across u). */
 function skidTexture() {
   return cachedTex('skid', () => {
@@ -658,7 +680,7 @@ function meshOf(gb, mat, color = false) {
 
 /** Per-vertex light from lamps with a facing term (n·l), into a 'glow' attribute. */
 function bakeLit(meshes, lamps) {
-  const cell = 40;
+  const cell = 20;
   const grid = new Map();
   for (const L of lamps) {
     const r = L.radius;
@@ -961,9 +983,9 @@ function layout(def, track) {
 // accumulators), halos, refl (water streaks), wash (bake-only lamps), pool }.
 
 const CRANE_PAINT = [
-  [[0.56, 0.13, 0.09], [0.84, 0.82, 0.76]],
-  [[0.17, 0.33, 0.52], [0.82, 0.82, 0.8]],
-  [[0.62, 0.6, 0.55], [0.7, 0.16, 0.1]],
+  [[0.5, 0.12, 0.08], [0.72, 0.7, 0.65]],
+  [[0.15, 0.29, 0.46], [0.7, 0.7, 0.68]],
+  [[0.46, 0.45, 0.42], [0.62, 0.15, 0.1]],
 ];
 
 /**
@@ -1682,8 +1704,7 @@ function bayCity(X, spec) {
     farRefl.push({ x, z: fz - 4, color: rng() < 0.5 ? WARM : '#e8d8b8', i: 0.5 + rng() * 0.5, w: 5, len: 5 });
   }
   if (night) {
-    const h = haloField(world, far, 0.12);
-    void h;
+    haloField(world, far, 0.12);
     waterStreaks(world, farRefl, 0.12);
   }
 }
@@ -1702,7 +1723,7 @@ export async function build(world, def, track, progress) {
   const G = {
     cont: new GeoBuilder(), steel: new GeoBuilder(), pole: new GeoBuilder(), conc: new GeoBuilder(),
     shed: new GeoBuilder(), roof: new GeoBuilder(), hull: new GeoBuilder(), house: new GeoBuilder(),
-    tank: new GeoBuilder(), lamps: new GeoBuilder(), ballast: new GeoBuilder(), rails: new GeoBuilder(), sign: new GeoBuilder(), misc: new GeoBuilder(),
+    tank: new GeoBuilder(), lamps: new GeoBuilder(), ballast: new GeoBuilder(), rails: new GeoBuilder(), sign: new GeoBuilder(), misc: new GeoBuilder(), tire: new GeoBuilder(),
   };
   const X = {
     world, track, L, rng, G, halos: [], refl: [], wash: [],
@@ -1710,6 +1731,7 @@ export async function build(world, def, track, progress) {
     pool: (x, y, z, color, radius, intensity) => world.lamps.push({ x, y, z, color: new THREE.Color(color), radius, intensity }),
   };
   const lit = [];
+  const __t0 = performance.now(); const __m = (n) => console.log('[prof]', n, Math.round(performance.now() - __t0));
   const env = docksEnv(world.renderer);
   if (env) world.scene.environment = env;
 
@@ -1948,7 +1970,7 @@ export async function build(world, def, track, progress) {
   }
   progress(0.3, 'OPENING THE WAREHOUSES');
 
-  // ---- flood-light masts (sodium), every ~75 m on the landside
+  // ---- flood-light masts (sodium) every mastSpacing m, alternating sides, never on the water side
   {
     let side = 1;
     const gapM = D.mastSpacing ?? 60;
@@ -2012,14 +2034,16 @@ export async function build(world, def, track, progress) {
         L.claimCircle(x, z, 1);
         const col = band % 2 ? [0.78, 0.78, 0.74] : [0.6, 0.1, 0.07];
         band++;
-        const n = 4 + (band % 3 === 0 ? 1 : 0);
-        for (let k = 0; k < n; k++) {
-          // one 6-sided ring per tire, alternate shade + radius for the grooves
-          G.misc.setColor(...(k % 2 ? col : col.map((v) => v * 0.7)));
-          G.misc.cylinder(x, GROUND_Y + k * 0.26, z, k % 2 ? 0.56 : 0.53, 0.26, 6);
+        const n = 4 + (band % 3 === 0 ? 1 : 0), top = GROUND_Y + n * 0.26;
+        // one 6-sided cylinder per stack; the texture draws the individual tires
+        G.tire.setColor(...col);
+        for (let q = 0; q < 6; q++) {
+          const a0 = (q / 6) * Math.PI * 2 + band, a1 = ((q + 1) / 6) * Math.PI * 2 + band;
+          const A = new THREE.Vector3(x + Math.cos(a0) * 0.56, GROUND_Y, z + Math.sin(a0) * 0.56), B = new THREE.Vector3(x + Math.cos(a1) * 0.56, GROUND_Y, z + Math.sin(a1) * 0.56);
+          G.tire.quad(B, A, new THREE.Vector3(A.x, top, A.z), new THREE.Vector3(B.x, top, B.z), [q / 6, 0, (q + 1) / 6, n / 4]);
         }
-        G.misc.setColor(0.05, 0.05, 0.05);
-        G.misc.quad(new THREE.Vector3(x - 0.4, GROUND_Y + n * 0.26, z + 0.4), new THREE.Vector3(x + 0.4, GROUND_Y + n * 0.26, z + 0.4), new THREE.Vector3(x + 0.4, GROUND_Y + n * 0.26, z - 0.4), new THREE.Vector3(x - 0.4, GROUND_Y + n * 0.26, z - 0.4));
+        G.tire.setColor(0.05, 0.05, 0.05);
+        G.tire.quad(new THREE.Vector3(x - 0.4, top, z + 0.4), new THREE.Vector3(x + 0.4, top, z + 0.4), new THREE.Vector3(x + 0.4, top, z - 0.4), new THREE.Vector3(x - 0.4, top, z - 0.4), [0, 0.02, 0.1, 0.04]);
       }
       acc -= seg;
     }
@@ -2053,7 +2077,6 @@ export async function build(world, def, track, progress) {
   }
 
   // ---- containers: rows of stacks behind the barrier on 'stack' sides
-  let nCont = 0;
   {
     const ROWS = 4;
     const skin = () => { let t = rng() * SKIN_W.reduce((a, c) => a + c, 0); for (let k = 0; k < 8; k++) { t -= SKIN_W[k]; if (t <= 0) return k; } return 0; };
@@ -2094,7 +2117,6 @@ export async function build(world, def, track, progress) {
             const kk = 0.72 + rng() * 0.3;
             G.cont.setColor(kk, kk, kk * (0.95 + rng() * 0.08));
             containerBox(G.cont, st.x, GROUND_Y, st.z, ry, Math.floor(rng() * (9 - st.tiers)), st.len, faces, st.tiers);
-            nCont += st.tiers;
             return;
           }
           for (let t = 0; t < st.tiers; t++) {
@@ -2106,7 +2128,6 @@ export async function build(world, def, track, progress) {
             G.cont.setColor(kk * (0.97 + rng() * 0.06), kk, kk * (0.95 + rng() * 0.08));
             const off = t > 0 && rng() < 0.12 ? (rng() - 0.5) * 0.25 : 0;
             containerBox(G.cont, st.x + Math.sin(st.ang) * off, GROUND_Y + t * CH, st.z + Math.cos(st.ang) * off, ry + (rng() - 0.5) * 0.012, skin(), st.len, faces);
-            nCont++;
           }
         });
       }
@@ -2227,6 +2248,7 @@ export async function build(world, def, track, progress) {
   }
   progress(0.85, 'SWITCHING ON THE YARD');
 
+  __m('// ---- assemble merge');
   // ---- assemble merged meshes
   const tex = containerAtlas();
   const add = (gb, mat, color = false, bake = true) => {
@@ -2247,6 +2269,7 @@ export async function build(world, def, track, progress) {
   const dh = deckhouseTextures();
   add(G.house, glowMaterial(new THREE.MeshStandardMaterial({ map: dh.map, emissive: 0xffffff, emissiveMap: dh.emi, emissiveIntensity: night ? 1.6 : 0, roughness: 0.6 }), 1.3));
   add(G.misc, glowMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), 1.3), true);
+  add(G.tire, glowMaterial(new THREE.MeshStandardMaterial({ map: tireTexture(), vertexColors: true, roughness: 0.9 }), 1.3), true);
   add(G.sign, glowMaterial(new THREE.MeshStandardMaterial({ map: signAtlas(), roughness: 0.6 }), 1.5));
   add(G.tank, glowMaterial(new THREE.MeshStandardMaterial({ map: tankTexture(), color: 0xc8c4bc, roughness: 0.7, metalness: 0.2 }), 1.0));
   add(G.lamps, new THREE.MeshBasicMaterial({ vertexColors: true, color: night ? 0xffffff : 0x222222 }), true, false);
@@ -2260,9 +2283,10 @@ export async function build(world, def, track, progress) {
   }
   haloField(world, night ? X.halos : []);
   waterStreaks(world, night ? X.refl : []);
+  __m('bakeLit(lit,');
   bakeLit(lit, [...world.lamps, ...X.wash]);
+  __m("progress(1, 'DOCKS REA");
   progress(1, 'DOCKS READY');
-  void nCont; void HALIDE;
 }
 
 export default { terrain: false, build };

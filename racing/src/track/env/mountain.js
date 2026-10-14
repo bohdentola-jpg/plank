@@ -1515,7 +1515,7 @@ function lampPost(ctx, list) {
     g.setAttribute('position', new THREE.Float32BufferAttribute(halos, 3));
     const fogged = (ctx.def.fogD ?? 0) > 0.003;
     world.add(new THREE.Points(g, new THREE.PointsMaterial({
-      map: glowTexture(), color: new THREE.Color(color).multiplyScalar(fogged ? 0.32 : 0.75), size: fogged ? 11 : 6.5,
+      map: glowTexture(), color: new THREE.Color(color).multiplyScalar(fogged ? 0.3 : 0.75), size: fogged ? 8 : 6.5,
       sizeAttenuation: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: !fogged,
     })));
   }
@@ -1605,7 +1605,7 @@ function farRanges(ctx) {
   const fog = new THREE.Color(at.fog), hor = new THREE.Color(at.sky[2]), glow = new THREE.Color(at.glowHorizon);
   const sunAz = Math.atan2(world.sunDir.z, world.sunDir.x);
   const night = !at.sun || at.moon;
-  const snowC = new THREE.Color(night ? '#3c4862' : '#9a8a9c');
+  const snowC = new THREE.Color(night ? '#56648a' : '#f0b0aa'); // moonlit snow / alpenglow on the tips
   const yb = Math.min(...track.Y) - 160;
   const layers = [
     { R: 1750, f: 0.5, lo: 240, hi: 470, k: 0.0, freq: 3.1 },
@@ -1622,19 +1622,20 @@ function farRanges(ctx) {
       const ridge = noise.ridged(nx + li * 9, nz - li * 4, 4);
       const hgt = L.lo + (L.hi - L.lo) * clamp((ridge - 0.45) * 1.9, 0, 1.15) + noise.fbm(nx * 3, nz * 3, 2) * 50;
       const toward = Math.pow(Math.max(0, Math.cos(a - sunAz)), 3);
-      // hazy toward the foot, darker silhouette above; farther layers fade toward the horizon
-      // aerial perspective: each layer sits a little closer to the horizon sky than the fogged terrain
+      // aerial perspective: hazy foot, darker silhouette above, each layer a little closer to the horizon sky
       const haze = fog.clone().lerp(hor, 0.08 + L.k * 0.3).lerp(glow, toward * 0.2);
       const top = fog.clone().multiplyScalar(night ? 0.9 + li * 0.12 : 0.92).lerp(hor, L.k * 0.26).lerp(glow, toward * (0.05 + L.k * 0.2));
       const x = Math.cos(a) * L.R, z = Math.sin(a) * L.R;
-      const snowy = smoothstep(L.hi * 0.8, L.hi, hgt) * (li > 0 ? 0.22 : 0);
-      for (const [y, col] of [[yb, haze], [yb + hgt * 0.75, top], [yb + hgt, top.clone().lerp(snowC, snowy)]]) {
+      // only the tallest peaks of the farther layers carry snow, and only near the tip
+      const snowy = smoothstep(L.hi * 0.78, L.hi * 1.02, hgt) * [0, 0.35, 0.6][li];
+      const rows = [[yb, haze], [yb + hgt * 0.7, top], [yb + hgt * 0.9, top.clone().lerp(snowC, snowy * 0.2)], [yb + hgt, top.clone().lerp(snowC, snowy)]];
+      for (const [y, col] of rows) {
         p.push(x, y, z);
         c.push(col.r, col.g, col.b);
       }
       if (k < SEG) {
-        const o = k * 3;
-        idx.push(o, o + 3, o + 1, o + 1, o + 3, o + 4, o + 1, o + 4, o + 2, o + 2, o + 4, o + 5);
+        const o = k * 4;
+        for (let r = 0; r < 3; r++) idx.push(o + r, o + 4 + r, o + r + 1, o + r + 1, o + 4 + r, o + 5 + r);
       }
     }
     const g = new THREE.BufferGeometry();

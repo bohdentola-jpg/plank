@@ -683,12 +683,16 @@ function layoutRunoff(T, corners, L) {
     if (c.angle < 0.15) continue;
     const out = c.sign > 0 ? 1 : 0, inn = 1 - out;
     const big = clamp(c.angle / 1.1, 0.4, 1);
-    const run = 9 + 15 * Math.max(c.sev, c.fast * 0.9) * big;
+    // fast sweepers get room on both sides; only heavy stops get deep traps
+    // (keeps the outside within the inside + 5 m so sliding cars meet the tires)
+    const ins = 5.5 + 4.5 * c.fast;
+    let run = 9 + 15 * Math.max(c.sev, c.fast * 0.9) * big;
+    if (c.sev < 0.5) run = Math.min(run, ins + 5);
     const pre = (15 + 70 * c.sev) / st, post = (25 + 45 * c.fast) / st;
     span(c.i0 - pre * 0.7, c.i1 + post, (i) => { want[out][i] = Math.max(want[out][i], run); });
     if (run > 13) span(c.i0 - pre * 0.3, c.i1 + post * 0.7, (i) => { tire[out][i] = 1; });
     if (c.sev > 0.25 || c.fast > 0.3) span(c.i0 - pre * 0.2, c.i1 + post * 0.6, (i) => { grav[out][i] = 1; });
-    span(c.i0, c.i1, (i) => { cap[inn][i] = Math.min(cap[inn][i], 5.5); });
+    span(c.i0, c.i1, (i) => { cap[inn][i] = Math.min(cap[inn][i], ins); want[inn][i] = Math.max(want[inn][i], ins); });
     const n = c.i1 - c.i0, half = Math.max(9 / st, n * 0.3);
     span(c.apex - half, c.apex + half, (i) => { curb[inn][i] = 1; });
     span(c.apex + n * 0.1, c.i1 + 16 / st, (i) => { curb[out][i] = 1; });

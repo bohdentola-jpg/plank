@@ -22,7 +22,7 @@ const LOOKS = {
     top: '#8e7458', wash: '#e4d6ba', lot: '#8f877c', shoulder: '#b9ab96',
     hills: 12, hummock: 1.6, dunes: 8, duneAt: 0.1, duneLen: 105, outcrops: 26, outcropAt: 0.5, outcropF: 0.0024, terrace: 6.5, follow: 120,
     bands: ['#fff1e2', '#c99a83', '#fff4dc'],
-    veg: { creosote: 1900, bursage: 900, grass: 1400, saguaro: 400, ocotillo: 110, barrel: 140, yucca: 60, juniper: 0, rock: 650, boulder: 170 },
+    veg: { creosote: 3200, bursage: 1600, grass: 2400, saguaro: 400, ocotillo: 110, barrel: 140, yucca: 60, juniper: 0, rock: 650, boulder: 170 },
     forms: { mesa: [7, 520, 1700], butte: [10, 170, 900], spire: [6, 140, 700] },
     mtn: '#6f7896', ranges: [[2950, 110, 330, 0.42, 3, false], [2700, 50, 170, 0.62, 9, true]],
   },
@@ -32,7 +32,7 @@ const LOOKS = {
     top: '#87604a', wash: '#ecd2ae', lot: '#8a7a6c', shoulder: '#b08d72',
     hills: 14, hummock: 1.8, dunes: 3, duneAt: 0.5, duneLen: 90, outcrops: 32, outcropAt: 0.3, outcropF: 0.003, terrace: 7, follow: 110,
     bands: ['#fff0e4', '#c2846c', '#fff6e6'],
-    veg: { creosote: 900, bursage: 500, grass: 1100, saguaro: 0, ocotillo: 30, barrel: 50, yucca: 200, juniper: 340, rock: 650, boulder: 300 },
+    veg: { creosote: 1400, bursage: 900, grass: 1800, saguaro: 0, ocotillo: 30, barrel: 50, yucca: 200, juniper: 340, rock: 650, boulder: 300 },
     forms: { mesa: [6, 300, 1300], butte: [18, 70, 700], spire: [12, 55, 500] },
     mtn: '#4f3f6c', ranges: [[2950, 90, 260, 0.45, 5, true], [2650, 40, 150, 0.66, 13, true]],
   },
@@ -1153,7 +1153,7 @@ function placeForms(P) {
       const i = clamp(Math.round(s / T.step), 0, T.N - 1);
       const x = T.X[i] + T.LX[i] * side * d, z = T.Z[i] + T.LZ[i] * side * d;
       const r = kind === 'mesa' ? 110 + rng() * 200 : kind === 'butte' ? 26 + rng() * 50 : 8 + rng() * 14;
-      const ex = kind === 'mesa' ? 1.3 + rng() * 1.2 : 1 + rng() * 0.6;
+      const ex = kind === 'mesa' ? 1.3 + rng() * 1.2 : kind === 'spire' ? 1.5 + rng() * 1.1 : 1 + rng() * 0.6;
       const reach = r * ex * (kind === 'spire' ? 2.6 : 1.75);
       P.near(x, z, q);
       if (q.d < reach + fence + 12) continue;
@@ -1236,7 +1236,7 @@ function formations(world, P, mat) {
 /** Twiggy shrubs + dry grass as alpha-tested crossed quads (atlas: 4 cells of 256). */
 function shrubAtlas() {
   return cachedCanvas('shrubAtlas', () => {
-    const S = 512, c = cvs(S, S), x = c.getContext('2d');
+    const c = cvs(768, 512), x = c.getContext('2d');
     const rng = makeRng('shrubAtlas');
     const branch = (px, py, len, ang, w, depth, leaf) => {
       const ex = px + Math.cos(ang) * len, ey = py - Math.sin(ang) * len;
@@ -1247,18 +1247,31 @@ function shrubAtlas() {
       for (let k = 0; k < 2 + (rng() < 0.4 ? 1 : 0); k++) branch(ex, ey, len * (0.6 + rng() * 0.25), ang + (rng() - 0.5) * 1.1, w * 0.7, depth - 1, leaf);
       if (depth < 3) leaf(ex, ey);
     };
-    const cell = (k) => [(k % 2) * 256, Math.floor(k / 2) * 256];
-    // 0,1 creosote: open, olive, small leaves
+    const cell = (k) => [(k % 3) * 256, Math.floor(k / 3) * 256];
+    // 0,1 creosote: a vase of thin stems from one crown, sparse small olive leaves
     for (const k of [0, 1]) {
       const [ox, oy] = cell(k);
       x.save(); x.beginPath(); x.rect(ox, oy, 256, 256); x.clip();
-      for (let t = 0; t < 7; t++) {
-        branch(ox + 128 + (rng() - 0.5) * 30, oy + 252, 40 + rng() * 26, Math.PI / 2 + (rng() - 0.5) * 1.5, 4, 4, (lx, ly) => {
-          for (let q = 0; q < 5; q++) {
-            x.fillStyle = rng() < 0.6 ? '#5d6a32' : rng() < 0.5 ? '#7a8442' : '#47522a';
-            x.beginPath(); x.ellipse(lx + (rng() - 0.5) * 14, ly + (rng() - 0.5) * 12, 3 + rng() * 4, 2 + rng() * 3, rng() * 3, 0, Math.PI * 2); x.fill();
+      const stems = 12 + k * 4;
+      for (let t = 0; t < stems; t++) {
+        const a = Math.PI / 2 + (t / (stems - 1) - 0.5) * 1.9 + (rng() - 0.5) * 0.2, len = 120 + rng() * 110;
+        const bx = ox + 128 + (rng() - 0.5) * 16, by = oy + 254;
+        const bend = (rng() - 0.5) * 0.5;
+        const pts = [];
+        for (let q = 0; q <= 8; q++) {
+          const f = q / 8, aa = a + bend * f;
+          pts.push([bx + Math.cos(aa) * len * f, by - Math.sin(aa) * len * f]);
+        }
+        x.strokeStyle = '#5e4e3c'; x.lineWidth = 2.2;
+        x.beginPath(); pts.forEach(([px, py], q) => (q ? x.lineTo(px, py) : x.moveTo(px, py))); x.stroke();
+        for (let q = 3; q <= 8; q++) {
+          const [px, py] = pts[q];
+          if (rng() < 0.5) { x.lineWidth = 1; x.beginPath(); x.moveTo(px, py); x.lineTo(px + (rng() - 0.5) * 30, py - rng() * 22); x.stroke(); }
+          for (let m = 0; m < 4; m++) {
+            x.fillStyle = rng() < 0.45 ? '#66693f' : rng() < 0.5 ? '#7a7a4e' : '#535a33';
+            x.beginPath(); x.ellipse(px + (rng() - 0.5) * 22, py + (rng() - 0.5) * 18, 2.5 + rng() * 2.5, 1.6 + rng() * 1.4, rng() * 3, 0, Math.PI * 2); x.fill();
           }
-        });
+        }
       }
       x.restore();
     }
@@ -1288,17 +1301,33 @@ function shrubAtlas() {
         x.stroke();
       }
     }
+    // 4 juniper: twisted trunk, dense dark irregular crown
+    {
+      const [ox, oy] = cell(4);
+      x.strokeStyle = '#5a4434'; x.lineCap = 'round';
+      for (const [w, dx] of [[12, 0], [7, -18], [6, 20]]) {
+        x.lineWidth = w;
+        x.beginPath(); x.moveTo(ox + 128 + dx * 0.2, oy + 254); x.quadraticCurveTo(ox + 128 + dx, oy + 200, ox + 128 + dx * 1.6, oy + 150); x.stroke();
+      }
+      for (let t = 0; t < 260; t++) {
+        const a = rng() * Math.PI * 2, r = Math.sqrt(rng());
+        const px = ox + 128 + Math.cos(a) * r * 100, py = oy + 112 + Math.sin(a) * r * 82 - (1 - r) * 10;
+        x.fillStyle = rng() < 0.5 ? '#3b5230' : rng() < 0.5 ? '#4a6238' : '#2e4226';
+        x.beginPath(); x.ellipse(px, py, 6 + rng() * 9, 5 + rng() * 6, rng() * 3, 0, Math.PI * 2); x.fill();
+      }
+      for (let t = 0; t < 40; t++) { x.fillStyle = 'rgba(150,170,120,0.5)'; x.fillRect(ox + 40 + rng() * 176, oy + 40 + rng() * 120, 2, 2); }
+    }
     return c;
   });
 }
 
 function crossQuads(w, h, cellK, planes = 3) {
   const gb = new GeoBuilder();
-  const [u0, v0] = [(cellK % 2) * 0.5, 0.5 - Math.floor(cellK / 2) * 0.5];
+  const [u0, v0] = [(cellK % 3) / 3, 0.5 - Math.floor(cellK / 3) * 0.5];
   for (let k = 0; k < planes; k++) {
     const a = k / planes * Math.PI;
     const dx = Math.cos(a) * w / 2, dz = Math.sin(a) * w / 2;
-    gb.quad(new THREE.Vector3(-dx, 0, -dz), new THREE.Vector3(dx, 0, dz), new THREE.Vector3(dx, h, dz), new THREE.Vector3(-dx, h, -dz), [u0, v0, u0 + 0.5, v0 + 0.5]);
+    gb.quad(new THREE.Vector3(-dx, 0, -dz), new THREE.Vector3(dx, 0, dz), new THREE.Vector3(dx, h, dz), new THREE.Vector3(-dx, h, -dz), [u0, v0, u0 + 1 / 3, v0 + 0.5]);
   }
   const g = gb.build();
   // foliage lit like the ground it stands on
@@ -1395,18 +1424,6 @@ function vegGeometries() {
     }
     G.yucca = gb.build(true);
   }
-  {
-    // juniper: dark rounded crown on a twisted trunk
-    const gb = new GeoBuilder();
-    setColor(gb, '#5a4636');
-    tube(gb, [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.2, 0.8, 0.1), new THREE.Vector3(0.05, 1.5, -0.1)], [0.16, 0.12, 0.08], 5);
-    const m = new THREE.Matrix4();
-    [[0, 2.1, 0, 1.15], [0.6, 1.7, 0.3, 0.8], [-0.5, 1.8, -0.2, 0.85]].forEach(([x, y, z, r], k) => {
-      setColor(gb, k ? '#3c5232' : '#34492c');
-      gb.geometry(jitter(new THREE.IcosahedronGeometry(r, 0), 0.3, k + 7, 0.85), m.makeTranslation(x, y, z));
-    });
-    G.juniper = gb.build(true);
-  }
   G.rock = jitter(new THREE.DodecahedronGeometry(1, 0), 0.45, 2, 0.7);
   G.boulder = jitter(new THREE.DodecahedronGeometry(1, 0), 0.55, 5, 0.7);
   return G;
@@ -1487,7 +1504,7 @@ function vegetation(world, P) {
   if (counts.ocotillo) scatter(world, G.ocotillo, plantMat, place(counts.ocotillo, { ...near, dMin: 6, s: [0.8, 1.3] }), { name: 'ocotillo', maxDist: 750, cell: 900 });
   if (counts.barrel) scatter(world, G.barrel, plantMat, place(counts.barrel, { ...near, dMax: 120, s: [0.7, 1.4] }), { name: 'barrel', maxDist: 300, cell: 600 });
   if (counts.yucca) scatter(world, G.yucca, plantMat, place(counts.yucca, { ...near, s: [0.8, 1.5] }), { name: 'yucca', maxDist: 450, cell: 600 });
-  if (counts.juniper) scatter(world, G.juniper, plantMat, place(counts.juniper, { ...near, dMin: 8, s: [0.8, 1.7], minUp: 0.8, banks: 0.3 }), { shadow: true, name: 'juniper', maxDist: 900, cell: 700 });
+  if (counts.juniper) scatter(world, crossQuads(4.2, 4.4, 4), foliage, place(counts.juniper, { ...near, dMin: 8, s: [0.7, 1.5], minUp: 0.8, banks: 0.3 }), { name: 'juniper', maxDist: 1000, cell: 700 });
   if (counts.rock) scatter(world, G.rock, rockMat, place(counts.rock, { ...near, dMin: 2, s: [0.25, 0.8], sink: 0.35, minUp: 0.6, tilt: 0.8, wash: true }), { name: 'rocks', maxDist: 380, cell: 600 });
   if (counts.boulder) scatter(world, G.boulder, rockMat, place(counts.boulder, { ...near, dMin: 10, dMax: 420, s: [1.0, 2.6], sink: 0.45, minUp: 0.55, tilt: 0.6, clear: 6 }), { shadow: true, name: 'boulders', maxDist: 900, cell: 900 });
   void fence;

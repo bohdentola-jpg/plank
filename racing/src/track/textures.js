@@ -317,50 +317,222 @@ export function facadeTextures(style, seed) {
 /** Simple shopfront strip for ground floors: lit windows, awnings, signs. */
 export function shopfrontTextures(seed) {
   return cached(`shop|${seed}`, () => {
-    const W = 512, H = 128;
+    // one repeat = 10 m of street: two 5 m storefronts, 4.3 m tall
+    const W = 1024, H = 448, UW = 512;
     const c = canvas(W, H), e = canvas(W, H);
     const x = c.getContext('2d'), ex = e.getContext('2d');
     const rng = makeRng('shop' + seed);
-    x.fillStyle = '#2a2724';
+    const pick = (a) => a[Math.floor(rng() * a.length)];
+    x.fillStyle = '#26221f';
     x.fillRect(0, 0, W, H);
     ex.fillStyle = '#000';
     ex.fillRect(0, 0, W, H);
-    const units = 4;
-    const uw = W / units;
-    const signs = ['24H', 'BAR', 'RAMEN', 'PAWN', 'LIQUOR', 'DINER', 'TATTOO', 'ARCADE', 'PIZZA', 'MOTEL', 'KARAOKE', 'AUTO PARTS', 'VIDEO', 'NOODLES', 'CLUB', 'TIRES'];
-    const neon = ['#ff2a6a', '#2ae0ff', '#ffb02a', '#7aff4a', '#c84aff', '#ff5a2a'];
-    for (let u = 0; u < units; u++) {
-      const x0 = u * uw;
-      const lit = rng() < 0.7;
-      // window
-      x.fillStyle = lit ? '#8a6a44' : '#15181d';
-      x.fillRect(x0 + 10, 50, uw - 20, 66);
-      if (lit) {
-        ex.fillStyle = '#b8824a';
-        ex.globalAlpha = 0.35;
-        ex.fillRect(x0 + 10, 50, uw - 20, 66);
+    const neon = ['#ff2a6a', '#2ae0ff', '#ffb02a', '#7aff4a', '#c84aff', '#ff5a2a', '#ffffff'];
+    const TYPES = {
+      store: { light: '#fff6dc', glow: 0.75, back: '#d9d2bd', signs: ['24H MART', 'LIQUOR', 'DELI', 'PHARMACY', 'MINI MART'] },
+      diner: { light: '#ffcf8a', glow: 0.7, back: '#c98a5a', signs: ['DINER', 'PIZZA', 'NOODLES', 'RAMEN', 'TACOS', 'BURGERS'] },
+      laundry: { light: '#e8f4ff', glow: 0.8, back: '#dde6ea', signs: ['LAUNDROMAT', 'COIN LAUNDRY', 'WASH & FOLD'] },
+      bar: { light: '#ff7a5a', glow: 0.3, back: '#3a1f1c', signs: ['BAR', 'LOUNGE', 'KARAOKE', 'CLUB', 'TAVERN'] },
+      shutter: { light: null, signs: ['AUTO PARTS', 'TIRES', 'VIDEO', 'ARCADE', 'TATTOO', 'PHOTO'] },
+      pawn: { light: '#ffe08a', glow: 0.6, back: '#b8a06a', signs: ['PAWN', 'GOLD & PAWN', 'CHECKS CASHED'] },
+      dark: { light: null, signs: ['FOR LEASE', 'CLOSED', 'SHOES'] },
+    };
+    const kinds = ['store', 'diner', 'laundry', 'bar', 'shutter', 'pawn', 'dark', 'store', 'diner', 'bar'];
+    for (let u = 0; u < 2; u++) {
+      const x0 = u * UW;
+      const kind = pick(kinds);
+      const T = TYPES[kind];
+      // pilasters (stone) + kick plate
+      x.fillStyle = '#5a5249';
+      x.fillRect(x0, 0, 18, H); x.fillRect(x0 + UW - 18, 0, 18, H);
+      x.fillStyle = '#1a1816';
+      x.fillRect(x0, H - 22, UW, 22);
+      // window + door openings
+      const wy0 = 128, wy1 = H - 26;
+      const doorW = 112, doorX = u % 2 ? x0 + 30 : x0 + UW - 30 - doorW;
+      const winX0 = u % 2 ? doorX + doorW + 12 : x0 + 30, winX1 = u % 2 ? x0 + UW - 30 : doorX - 12;
+      const lit = !!T.light;
+      // interior
+      const interior = (ax, aw) => {
+        if (!lit) {
+          x.fillStyle = '#0c0e12';
+          x.fillRect(ax, wy0, aw, wy1 - wy0);
+          return;
+        }
+        x.fillStyle = T.back;
+        x.fillRect(ax, wy0, aw, wy1 - wy0);
+        // ceiling lights
+        x.fillStyle = '#ffffff';
+        for (let k = 0; k < 3; k++) x.fillRect(ax + 10 + k * (aw / 3), wy0 + 6, aw / 3 - 30, 6);
+        if (kind === 'store' || kind === 'pawn') {
+          for (let row = 0; row < 4; row++) {
+            const ry = wy0 + 50 + row * 52;
+            x.fillStyle = '#6a6458';
+            x.fillRect(ax + 6, ry + 34, aw - 12, 6);
+            for (let k = 0; k < aw / 14; k++) {
+              x.fillStyle = pick(['#c8322a', '#2a6ac8', '#e8c22a', '#3a9a4a', '#f2f2f2', '#d86a2a', '#7a3ac8']);
+              x.fillRect(ax + 8 + k * 14, ry + 8 + rng() * 8, 10, 26);
+            }
+          }
+          if (kind === 'pawn') { // security bars
+            x.fillStyle = '#2a2a2a';
+            for (let k = ax; k < ax + aw; k += 22) x.fillRect(k, wy0, 5, wy1 - wy0);
+          }
+        } else if (kind === 'diner') {
+          for (let k = 0; k < 3; k++) {
+            const bx = ax + 20 + k * (aw / 3);
+            x.fillStyle = '#a3241c';
+            x.fillRect(bx, wy1 - 120, aw / 3 - 40, 70);
+            x.fillStyle = '#e8e2d0';
+            x.fillRect(bx + 10, wy1 - 140, aw / 3 - 60, 14);
+            x.fillStyle = '#ffd890';
+            x.beginPath(); x.arc(bx + (aw / 3 - 40) / 2, wy0 + 60, 12, 0, Math.PI * 2); x.fill();
+          }
+          x.fillStyle = 'rgba(40,20,10,0.55)';
+          for (let k = 0; k < 2; k++) x.fillRect(ax + 30 + rng() * (aw - 80), wy1 - 190, 26, 70); // diners
+        } else if (kind === 'laundry') {
+          for (let k = 0; k < aw / 70; k++) {
+            const mx = ax + 10 + k * 70;
+            x.fillStyle = '#f4f6f8';
+            x.fillRect(mx, wy1 - 150, 60, 120);
+            x.fillStyle = '#20262c';
+            x.beginPath(); x.arc(mx + 30, wy1 - 95, 20, 0, Math.PI * 2); x.fill();
+            x.fillStyle = '#7ab0d8';
+            x.beginPath(); x.arc(mx + 30, wy1 - 95, 14, 0, Math.PI * 2); x.fill();
+          }
+        } else if (kind === 'bar') {
+          for (let k = 0; k < 3; k++) {
+            const col = pick(neon);
+            const bx = ax + 20 + rng() * (aw - 100), by = wy0 + 30 + rng() * 120;
+            x.strokeStyle = col; x.lineWidth = 4;
+            x.strokeRect(bx, by, 70, 40);
+            ex.strokeStyle = col; ex.lineWidth = 6; ex.shadowColor = col; ex.shadowBlur = 14;
+            ex.strokeRect(bx, by, 70, 40);
+            ex.shadowBlur = 0;
+          }
+          x.fillStyle = 'rgba(10,5,5,0.7)';
+          for (let k = 0; k < 3; k++) x.fillRect(ax + 20 + rng() * (aw - 60), wy1 - 170, 28, 80);
+        }
+        // interior glow into the emissive map
+        const g = ex.createLinearGradient(0, wy0, 0, wy1);
+        g.addColorStop(0, T.light);
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ex.globalAlpha = T.glow;
+        ex.fillStyle = g;
+        ex.fillRect(ax, wy0, aw, wy1 - wy0);
+        ex.globalAlpha = T.glow * 0.5;
+        ex.fillStyle = T.light;
+        ex.fillRect(ax, wy0, aw, wy1 - wy0);
         ex.globalAlpha = 1;
-        x.fillStyle = 'rgba(40,20,10,0.4)';
-        for (let k = 0; k < 3; k++) x.fillRect(x0 + 16 + rng() * (uw - 50), 70 + rng() * 30, 14, 30);
+      };
+      if (kind === 'shutter') {
+        // corrugated roll-down gate over everything
+        for (let yy = wy0 - 4; yy < wy1; yy += 8) {
+          x.fillStyle = (yy / 8) % 2 ? '#7a7c80' : '#8e9095';
+          x.fillRect(x0 + 26, yy, UW - 52, 8);
+        }
+        x.fillStyle = '#4a4c50';
+        x.fillRect(x0 + 26, wy0 - 14, UW - 52, 12);
+        // graffiti
+        x.save();
+        x.translate(x0 + 60 + rng() * 200, wy0 + 150 + rng() * 100);
+        x.rotate((rng() - 0.5) * 0.3);
+        x.font = 'italic 900 64px Arial Black, Arial';
+        x.lineWidth = 6;
+        x.strokeStyle = '#111';
+        const tag = pick(['KZ', 'SLAB', 'DUB', 'RYZ', 'NITRO', '88']);
+        x.strokeText(tag, 0, 0);
+        x.fillStyle = pick(['#ff3d6e', '#46e8ff', '#e8f048', '#9a5bff']);
+        x.fillText(tag, 0, 0);
+        x.restore();
+      } else {
+        interior(winX0, winX1 - winX0);
+        interior(doorX, doorW);
+        // mullions + frames
+        x.fillStyle = '#16181a';
+        x.fillRect(winX0 - 6, wy0 - 6, winX1 - winX0 + 12, 8);
+        x.fillRect(winX0 - 6, wy1 - 4, winX1 - winX0 + 12, 6);
+        const panes = Math.max(1, Math.round((winX1 - winX0) / 130));
+        for (let k = 0; k <= panes; k++) x.fillRect(winX0 - 4 + k * ((winX1 - winX0) / panes), wy0, 7, wy1 - wy0);
+        x.fillRect(doorX - 5, wy0 - 6, doorW + 10, 8);
+        x.fillRect(doorX - 5, wy0, 7, wy1 - wy0);
+        x.fillRect(doorX + doorW - 2, wy0, 7, wy1 - wy0);
+        x.fillStyle = '#b8b8b8';
+        x.fillRect(doorX + 14, wy0 + 150, doorW - 28, 8); // push bar
+        // glass reflection streaks
+        x.save();
+        x.globalAlpha = lit ? 0.12 : 0.25;
+        x.fillStyle = '#ffffff';
+        for (let k = 0; k < 3; k++) {
+          const sx = winX0 + rng() * (winX1 - winX0);
+          x.beginPath();
+          x.moveTo(sx, wy0); x.lineTo(sx + 40, wy0); x.lineTo(sx - 30, wy1); x.lineTo(sx - 70, wy1);
+          x.fill();
+        }
+        x.restore();
+        // window posters / OPEN sign
+        if (lit && rng() < 0.7) {
+          const col = pick(['#ff2a2a', '#2ae0ff', '#ff5ad8']);
+          const ox = winX0 + 20 + rng() * Math.max(10, winX1 - winX0 - 140);
+          x.fillStyle = col;
+          x.font = 'bold 30px Arial';
+          x.fillText('OPEN', ox, wy0 + 90);
+          ex.fillStyle = col; ex.font = 'bold 30px Arial'; ex.shadowColor = col; ex.shadowBlur = 12;
+          ex.fillText('OPEN', ox, wy0 + 90);
+          ex.shadowBlur = 0;
+        }
+        if (kind === 'dark' && rng() < 0.6) {
+          x.fillStyle = '#e8e2d0';
+          x.fillRect(winX0 + 30, wy0 + 60, 120, 70);
+          x.fillStyle = '#b3261e';
+          x.font = 'bold 20px Arial';
+          x.fillText('FOR LEASE', winX0 + 36, wy0 + 102);
+        }
       }
-      // door frame
-      x.fillStyle = '#111';
-      x.fillRect(x0 + uw * 0.7, 56, uw * 0.18, 60);
-      // neon sign
-      const txt = signs[Math.floor(rng() * signs.length)];
-      const col = neon[Math.floor(rng() * neon.length)];
-      x.font = 'bold 22px Arial, sans-serif';
-      x.textAlign = 'center';
-      x.fillStyle = col;
-      x.fillText(txt, x0 + uw / 2, 38);
-      ex.font = 'bold 22px Arial, sans-serif';
-      ex.textAlign = 'center';
-      ex.fillStyle = col;
-      ex.shadowColor = col;
-      ex.shadowBlur = 10;
-      ex.fillText(txt, x0 + uw / 2, 38);
-      ex.shadowBlur = 0;
+      // sign band
+      const sign = pick(T.signs);
+      const boxSign = rng() < 0.45;
+      x.fillStyle = '#1b1a19';
+      x.fillRect(x0 + 18, 14, UW - 36, 100);
+      if (boxSign) {
+        const bg = pick(['#f4efe0', '#ffe066', '#e8f4ff', '#c8322a', '#1d3f8f']);
+        const fg = bg === '#c8322a' || bg === '#1d3f8f' ? '#ffffff' : '#16140f';
+        x.fillStyle = bg;
+        x.fillRect(x0 + 40, 26, UW - 80, 76);
+        x.fillStyle = fg;
+        x.font = 'bold 50px Arial Black, Arial';
+        x.textAlign = 'center';
+        x.fillText(sign, x0 + UW / 2, 82, UW - 100);
+        ex.fillStyle = bg;
+        ex.globalAlpha = kind === 'dark' ? 0.0 : 0.85;
+        ex.fillRect(x0 + 40, 26, UW - 80, 76);
+        ex.globalAlpha = 1;
+        ex.fillStyle = '#000';
+        ex.font = 'bold 50px Arial Black, Arial';
+        ex.textAlign = 'center';
+        ex.fillText(sign, x0 + UW / 2, 82, UW - 100);
+      } else {
+        const col = pick(neon);
+        x.font = 'bold 58px Arial, sans-serif';
+        x.textAlign = 'center';
+        x.lineWidth = 3;
+        x.strokeStyle = col;
+        x.strokeText(sign, x0 + UW / 2, 86, UW - 80);
+        if (kind !== 'dark') {
+          ex.font = 'bold 58px Arial, sans-serif';
+          ex.textAlign = 'center';
+          ex.lineWidth = 6;
+          ex.strokeStyle = col;
+          ex.shadowColor = col;
+          ex.shadowBlur = 16;
+          ex.strokeText(sign, x0 + UW / 2, 86, UW - 80);
+          ex.shadowBlur = 0;
+        }
+      }
+      x.textAlign = 'left';
+      ex.textAlign = 'left';
     }
+    grain(x, W, H, rng, 0.08, 1);
     return { map: toTex(c), emi: toTex(e) };
   });
 }

@@ -134,7 +134,22 @@ function loop(now) {
     perfAcc = 0;
     perfFrames = 0;
     if (scr?.onPerf) scr.onPerf(game.fps);
+    autoQuality(scr);
   }
+}
+
+// Auto quality: while racing, drop the internal resolution a notch if the
+// frame rate sags, and give it back once there's headroom again.
+let lowStreak = 0, highStreak = 0;
+function autoQuality(scr) {
+  if (!settings.get('autoQuality') || game._transition || scr?.name !== 'race') { lowStreak = highStreak = 0; return; }
+  const r = game.renderer;
+  const steps = [480, 600, 720];
+  const want = settings.get('lines');
+  const i = steps.indexOf(r.internalLines);
+  if (game.fps < 40) { lowStreak++; highStreak = 0; } else if (game.fps > 57) { highStreak++; lowStreak = 0; } else { lowStreak = highStreak = 0; }
+  if (lowStreak >= 2 && i > 0) { r.setInternalLines(steps[i - 1]); lowStreak = 0; }
+  if (highStreak >= 4 && i >= 0 && steps[i] < want) { r.setInternalLines(steps[i + 1]); highStreak = 0; }
 }
 
 async function boot() {
