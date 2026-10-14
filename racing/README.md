@@ -26,6 +26,7 @@ Xbox and other standard pads work too, and so do keyboard and mouse.
 |---|---|---|
 | Steer | Left stick | A / D or ← → |
 | Gas / Brake–reverse | R2 / L2 | W / S or ↑ ↓ |
+| Drift | L2 + steer at speed | S + A / D |
 | Handbrake | □ | Space |
 | Nitrous | ✕ | Shift |
 | Shift up / down (manual) | R1 / L1 | E / Q |
@@ -94,21 +95,33 @@ Erase story save.
   drift (angle × speed scoring with a multiplier chain that a crash wipes out),
   and time attack (a pro drives your exact car first; you chase the ghost and
   the target time).
+- **Handling:** steering on the gas or coasting grips. The car corners at
+  the limit, and pushed too hard it runs wide instead of swapping ends. A
+  steering limiter means a full-lock stab on keys or the stick still corners
+  at peak grip. **Brake while you turn at speed and the tail comes out:** that's
+  a drift. Go back to the gas to hold it, steer into the turn for more angle
+  (up to about 40°) or out of it to straighten up, and flick the other way to
+  link the next corner. Stay on the brakes through the slide, or let the angle
+  run away, and you spin. Drifts carry their speed, and the chase camera
+  swings to show where the car is going.
 - **Physics:** a 120 Hz tire model with load transfer, load-sensitive
   cornering stiffness, combined slip (a braking or driving tire has less left
   for cornering), ABS and brake balance, traction control and stability control
   (assists on; off means you own every slide, and drift events always run
   loose), wheelspin, clutch launches, a real gearbox in auto or manual, turbo
   lag and blow-off, nitrous, drafting, jumps and landings, and car-to-car
-  contact.
+  contact. Kerbs and sidewalks are bumps the springs soak up, not ramps, and a
+  glancing hit on a wall slides you along it instead of stopping you dead.
 - **AI:** drives the racing line on the same physics, overtakes and defends,
   picks gaps in traffic by time to collision, catches its own slides, backs out
   of walls, uses nitrous, makes the occasional mistake, and has optional
   catch-up.
 - **Traffic:** two-way city traffic, freeway traffic with trucks, near-miss
   nitrous bonuses, and wrecked civilians that recover.
-- **HUD:** tach, digital speed, gear, boost and nitrous, radar minimap, live
-  standings with gaps, lap and best times, and a countdown with launch grading.
+- **HUD:** tach, digital speed, gear, boost and nitrous, a heading-up radar
+  minimap that zooms out with speed, live standings with gaps, lap and best
+  times, and a countdown with launch grading. Across the line, the results
+  board follows in a few seconds (✕ / Enter skips straight to it).
 - **Instant replay:** after any race, WATCH REPLAY plays the whole race back
   like a late-night TV broadcast. A director cuts between trackside cameras
   that pan and zoom as the pack goes by, a helicopter, a camera car, a wheel

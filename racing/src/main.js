@@ -96,7 +96,9 @@ function loop(now) {
   requestAnimationFrame(loop);
   let dt = (now - last) / 1000;
   last = now;
-  if (dt > 0.1) dt = 0.1;
+  // a slow PC still races in real time down to ~7 fps (the sim catches up
+  // in fixed steps); only a real stall (tab switch, hitch) is cut short
+  if (dt > 0.15) dt = 0.15;
   if (dt <= 0) dt = 0.001;
   game.time += dt;
   game.frame++;
@@ -153,18 +155,39 @@ function loop(now) {
   }
 }
 
-// Auto quality: while racing, drop the internal resolution a notch if the
-// frame rate sags, and give it back once there's headroom again.
+// Auto quality: while racing, step the picture down if the frame rate sags
+// and give it back once there's headroom again. The rungs, cheapest last:
+// internal 3D lines 720 → 600 → 480, then 480 without multisampling, then
+// 360 lines with the TV's own picture drawn at a lower resolution.
+const QUALITY = [
+  { lines: 720 }, { lines: 600 }, { lines: 480 },
+  { lines: 480, msaa: false }, { lines: 360, msaa: false, display: 0.7 },
+];
 let lowStreak = 0, highStreak = 0;
 function autoQuality(scr) {
-  if (!settings.get('autoQuality') || game._transition || scr?.name !== 'race') { lowStreak = highStreak = 0; return; }
   const r = game.renderer;
-  const steps = [480, 600, 720];
-  const want = settings.get('lines');
-  const i = steps.indexOf(r.internalLines);
+  if (!settings.get('autoQuality') || game._transition || scr?.name !== 'race') {
+    lowStreak = highStreak = 0;
+    // the menus are cheap: never leave them drawn at the race's reduced scale
+    if (r.displayScale !== 1 && !game._transition) {
+      const q = QUALITY[QUALITY.length - 2];
+      r.qualityRung = QUALITY.length - 2;
+      r.setQuality({ lines: q.lines, msaa: q.msaa !== false, display: 1 });
+    }
+    return;
+  }
+  const top = Math.max(0, QUALITY.findIndex((q) => q.lines === settings.get('lines')));
+  let i = r.qualityRung ?? QUALITY.findIndex((q) => q.lines === r.internalLines);
+  if (i < 0) i = top;
   if (game.fps < 40) { lowStreak++; highStreak = 0; } else if (game.fps > 57) { highStreak++; lowStreak = 0; } else { lowStreak = highStreak = 0; }
-  if (lowStreak >= 2 && i > 0) { r.setInternalLines(steps[i - 1]); lowStreak = 0; }
-  if (highStreak >= 4 && i >= 0 && steps[i] < want) { r.setInternalLines(steps[i + 1]); highStreak = 0; }
+  let next = i;
+  if (lowStreak >= 2 && i < QUALITY.length - 1) { next = i + 1; lowStreak = 0; }
+  if (highStreak >= 4 && i > top) { next = i - 1; highStreak = 0; }
+  if (next !== i) {
+    const q = QUALITY[next];
+    r.qualityRung = next;
+    r.setQuality({ lines: q.lines, msaa: q.msaa !== false, display: q.display || 1 });
+  }
 }
 
 async function boot() {

@@ -450,8 +450,13 @@ export class RaceSession {
         if (!v.airborne && (amount > 0.25 || (loose && v.speed > 8))) {
           if (!loose && amount > 0.25) fx.skids.add(key, wx, v.y, wz, lX, lZ, clamp(amount, 0, 1));
           else fx.skids.break(key);
-          if (near && Math.random() < (loose ? 0.5 + Math.min(0.5, v.speed / 40) : clamp(amount * 0.9, 0, 0.9))) {
-            fx.tireSmoke(wx, v.y, wz, v.vx, v.vz, clamp(amount, 0, 1), surf);
+          // puffs per second (not per frame, so a fast PC isn't foggier)
+          const acc = r.smokeAcc || (r.smokeAcc = [0, 0]);
+          const si = side > 0 ? 0 : 1;
+          acc[si] += dt * (loose ? 8 + Math.min(10, v.speed / 3) : clamp(amount, 0, 1.2) * 13);
+          while (acc[si] >= 1) {
+            acc[si] -= 1;
+            if (near) fx.tireSmoke(wx, v.y, wz, v.vx, v.vz, clamp(amount, 0, 1), surf);
           }
         } else fx.skids.break(key);
       }
@@ -483,13 +488,13 @@ export class RaceSession {
 
   updateCamera(dt) {
     const v = this.player.vehicle;
-    const car = { x: v.x, y: v.y, z: v.z, heading: v.heading, vF: v.vF, nitroOn: v.nitroOn };
+    const car = { x: v.x, y: v.y, z: v.z, heading: v.heading, vF: v.vF, vx: v.vx, vz: v.vz, nitroOn: v.nitroOn };
     const surfR = { curb: 0.6, grass: 0.4, dirt: 0.5, sand: 0.5, gravel: 0.9, sidewalk: 0.3 }[v.surface] || 0;
     this.camera.update(dt, car, { lookBack: this.lookBack, rumble: surfR * clamp(v.speed / 20, 0, 1) });
     if (this.world.sun) this.world.sunFollow = _v.set(v.x, v.y, v.z);
     // radial speed blur + nitro kick for the renderer
-    const k = clamp((v.speed - 35) / 45, 0, 1);
-    this.fx = { radialBlur: k * 0.35 + (v.nitroOn ? 0.35 : 0), blurCenter: [0.5, 0.56] };
+    const k = clamp((v.speed - 27) / 45, 0, 1);
+    this.fx = { radialBlur: k * 0.4 + (v.nitroOn ? 0.35 : 0), blurCenter: [0.5, 0.56] };
     if (surfR > 0 && v.speed > 4) input.rumble(surfR * 0.25, surfR * 0.5, 60);
   }
 

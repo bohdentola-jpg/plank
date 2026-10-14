@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { C, vText, vWidth, text, panel } from '../core/ui.js';
 import { settings } from '../core/settings.js';
-import { clamp, fmtTime } from '../core/util.js';
+import { clamp, damp, fmtTime } from '../core/util.js';
 
 const _p = new THREE.Vector3();
 
@@ -38,6 +38,7 @@ export class HUD {
 
   draw(ctx, dt) {
     this.t += dt;
+    this.dt = dt;
     const s = this.s;
     if (!s.sim) return;
     const st = s.state;
@@ -50,6 +51,7 @@ export class HUD {
     this.drawCountdown(ctx);
     this.drawMessages(ctx);
     this.drawWarnings(ctx);
+    if (st === 'finished' && this.t % 1.2 < 0.85) text(ctx, 'PRESS ✕ / ENTER FOR RESULTS', 512, 596, { size: 14, color: C.dim, align: 'center', weight: 800, spacing: 2 });
   }
 
   // ------------------------------------------------------------------ intro
@@ -95,7 +97,10 @@ export class HUD {
   drawMinimap(ctx, cx, cy, R) {
     const s = this.s;
     const pv = s.player.vehicle;
-    const scale = R / 220; // ~220 m radius visible
+    // ~190 m radius when slow, opening out to ~320 m flat out so the next
+    // corner shows up in time
+    this.mapRange = damp(this.mapRange ?? 190, 190 + clamp((pv.speed - 15) / 45, 0, 1) * 130, 1.5, this.dt || 0.016);
+    const scale = R / this.mapRange;
     ctx.save();
     // backing disc
     ctx.beginPath();
@@ -108,10 +113,12 @@ export class HUD {
     ctx.beginPath();
     ctx.arc(cx, cy, R, 0, Math.PI * 2);
     ctx.clip();
-    // rotate so the player's heading points up
+    // top-down view turned so the car's nose points up the screen and its
+    // left side is on the left: screen = scale·(−right·d, −fwd·d) with
+    // fwd = (sinθ, cosθ) and left = (cosθ, −sinθ) in world x/z
+    const ch = Math.cos(pv.heading), sh = Math.sin(pv.heading);
     ctx.translate(cx, cy);
-    ctx.rotate(Math.PI + pv.heading);
-    ctx.scale(-scale, scale);
+    ctx.transform(-scale * ch, -scale * sh, scale * sh, -scale * ch, 0, 0);
     ctx.translate(-pv.x, -pv.z);
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
@@ -161,8 +168,8 @@ export class HUD {
     ctx.shadowBlur = 8;
     ctx.fill();
     ctx.restore();
-    // compass tick
-    text(ctx, 'N', cx + Math.sin(-pv.heading + Math.PI) * (R - 10), cy - Math.cos(-pv.heading + Math.PI) * (R - 10) + 4, { size: 11, color: C.dim, align: 'center', weight: 700 });
+    // compass tick: world +z, the top of the track-select maps
+    text(ctx, 'N', cx + sh * (R - 10), cy - ch * (R - 10) + 4, { size: 11, color: C.dim, align: 'center', weight: 700 });
   }
 
   // ------------------------------------------------------------------ tach

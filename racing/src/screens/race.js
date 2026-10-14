@@ -27,6 +27,7 @@ registerScreen('race', () => {
   let pauseMenu = null;
   let resultsMenu = null;
   let resultsT = 0;
+  let skipToResults = false;
   let results = null;
 
   const buildOpponents = (p, spec) => {
@@ -195,9 +196,14 @@ registerScreen('race', () => {
         if (session.state === 'intro' && game.query.get('autopilot')) session.startCountdown();
       }
       Object.assign(game.fx, session.fx || {});
+      // across the line: ✕ / Enter skips straight to the results
+      if (session.state === 'finished' && input.pressed('confirm')) {
+        session.sim.end();
+        skipToResults = true;
+      }
       if (session.state === 'done') {
         resultsT += dt;
-        if (!results && session.doneT > 2.5) finishResults();
+        if (!results && (session.doneT > 2.5 || (skipToResults && session.doneT > 0.4))) finishResults();
         if (resultsMenu) {
           const it = resultsMenu.update(dt);
           if (it?.id === 'replay') { if (session.startReplay()) uiSound('select'); }

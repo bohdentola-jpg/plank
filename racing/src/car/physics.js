@@ -146,6 +146,10 @@ export class Vehicle {
     this.escCut = 0;      // stability-control power trim (0..1)
     this.lastFyF = 0; this.lastFyR = 0;
     this.tcActive = false; this.escActive = false; // assist warning lights
+    this.driftState = 0;  // 0 grip, 1 drifting, 2 spinning out
+    this.driftDir = 0;    // + = drifting left
+    this.driftK = 0;      // 0..1 blend into the drift handling
+    this.driftT = 0; this.driftCalm = 0; this.driftAngRate = 0; this.prevDriftAng = null; this.prevDriftDir = 0; this.driftWant = 0.42;
     this.speed = 0;
     this.vF = 0; this.vL = 0;
   }
@@ -248,13 +252,77 @@ export class Vehicle {
     if (this.gear > 0 && this.escCut > 0) drivePedal *= 1 - this.escCut;
     this.throttle = drivePedal;
 
+    // -------------------------------------------------- drifting
+    // Steering on the power or coasting stays planted. Braking into a turn
+    // at speed (or the handbrake) throws the tail out: the rear lets go, the
+    // stability control steps aside and the car holds the slide on the
+    // throttle with the front wheels catching it. Steer into the turn for
+    // more angle, out of it to straighten up. Stay on the brakes, or let the
+    // angle run away, and it spins. (This is the human driver's car —
+    // env.human; the AI drives the raw chassis and never drifts.)
+    const steerIn = clamp(ctl.steer || 0, -1, 1);
+    const slip = Math.atan2(vL, Math.max(1, Math.abs(vF))); // body slip (+ = sliding left)
+    const human = !!env.human;
+    if (!human || this.gear < 0) {
+      this.driftState = 0;
+    } else if (this.driftState === 0) {
+      if (!this.airborne && this.gear > 0 && vF > 12 && Math.abs(steerIn) > 0.3 && (brake > 0.25 || hand)) {
+        this.driftState = 1;
+        this.driftDir = -Math.sign(steerIn); // + = drifting left
+        this.driftT = 0;
+        this.driftCalm = 0;
+      }
+    } else {
+      this.driftT += dt;
+      const ang = -slip * this.driftDir; // the drift angle, + = tail out the right way
+      if (this.driftState === 1) {
+        // flick it the other way: the slide changes sides (a transition)
+        if (ang < -0.25 && steerIn * this.driftDir > 0.5) { this.driftDir = -this.driftDir; this.driftT = Math.max(this.driftT, 0.4); }
+        // too far round to catch: it's a spin
+        else if (ang > 1.25) this.driftState = 2;
+        // straight again for a moment (and off the brakes): back to grip
+        if (ang < 0.1 && this.driftT > 0.4 && brake < 0.2 && !hand) this.driftCalm += dt; else this.driftCalm = 0;
+        if (this.driftCalm > 0.2 || speed < 6) this.driftState = 0;
+      } else if (speed < 4 || Math.abs(slip) < 0.3) {
+        // the spin has run its course
+        this.driftState = 0;
+      }
+    }
+    const driftTgt = this.driftState ? 1 : 0;
+    this.driftK += (driftTgt - this.driftK) * Math.min(1, dt * (driftTgt > this.driftK ? 12 : 3.5));
+    if (this.driftK < 0.002) this.driftK = 0;
+    const dk = this.driftK;
+    // the drift angle the stick asks for: ~24° centred, up to ~41° steering
+    // into the turn, and steering out of it winds the angle off to nothing
+    if (this.driftState === 1) {
+      const into = -steerIn * this.driftDir;
+      const want = Math.max(0, 0.42 + into * (into > 0 ? 0.3 : 0.6));
+      // eased, so a stab of countersteer winds the slide off rather than
+      // whipping the car the other way
+      this.driftWant += clamp(want - this.driftWant, -1.4 * dt, 2.5 * dt);
+    } else this.driftWant = 0.42;
+    // in a slide the brake pedal mostly swings the tail; it doesn't stop the car dead
+    if (dk > 0 && this.gear > 0) brakePedal *= 1 - 0.55 * dk;
+
     // steering: speed-sensitive lock + rate limit + countersteer assist
     const lock = P.steerLock / (1 + Math.max(0, Math.abs(vF) - 6) / 24) * (1 + P.handling * 0.1);
-    let target = -clamp(ctl.steer || 0, -1, 1) * lock;
-    // countersteer help: steer into the slide when the tail steps out
-    if (assists > 0 && vF > 6) {
-      const beta = Math.atan2(vL, Math.abs(vF)); // body slip angle (+ = sliding left)
-      target += clamp(beta * 0.55 * assists, -0.25, 0.25) * (1 - Math.min(1, Math.abs(ctl.steer || 0)) * 0.5);
+    let target = -steerIn * lock;
+    // countersteer help: steer into the slide when the tail steps out (in a
+    // drift the front wheels follow the car's path and the stick adds to it)
+    const csK = lerp(0.55 * assists, 0.8, dk);
+    if (csK > 0 && vF > 6) {
+      const csMax = lerp(0.25, 0.6, dk);
+      target += clamp(slip * csK, -csMax, csMax) * (1 - Math.min(1, Math.abs(steerIn)) * 0.5 * (1 - dk));
+    }
+    // steering limiter: at speed the front wheels never point much further
+    // than the tire's grip peak from where the nose is actually going, so a
+    // full-lock stab (keyboard, or a stick slammed over) corners at the
+    // limit instead of scrubbing the front and swinging the tail round. A
+    // drift opens it up so the stick can ask for more angle.
+    if (vF > 8 && human) {
+      const thetaF = Math.atan2(vL + this.yawRate * P.a, Math.max(1, vF));
+      const aMax = lerp(lerp(0.17, 0.26, 1 - assists), 0.45, dk) + (1 - clamp((vF - 8) / 7, 0, 1)) * 0.6;
+      target = clamp(target, thetaF - aMax, thetaF + aMax);
     }
     const rate = 3.2 + (Math.abs(target) < Math.abs(this.steer) ? 2.5 : 0);
     this.steer += clamp(target - this.steer, -rate * dt, rate * dt);
@@ -274,7 +342,7 @@ export class Vehicle {
         const upAt = P.redline * 0.95;
         const onLimit = this.rpm > P.redline * 0.985 && groundRpm > P.redline * 0.82;
         if (this.gear < nG && (groundRpm > upAt || onLimit) && drivePedal > 0.2) this.shift(+1);
-        else if (this.gear > 1 && (this.sinceShift ?? 9) > 1.1) {
+        else if (this.gear > 1 && (this.sinceShift ?? 9) > 1.1 && !this.driftState) {
           const lower = this.wheelRpm(this.gear - 1, false);
           const downAt = drivePedal > 0.6 ? P.redline * 0.58 : P.redline * 0.4;
           if (groundRpm < downAt && lower < P.redline * 0.86) this.shift(-1);
@@ -382,10 +450,11 @@ export class Vehicle {
       }
       // traction control (assist) trims wheelspin before it starts
       if (assists > 0 && this.gear > 0) {
-        const tcl = 1.0 + (1 - assists) * 0.6;
+        // (in a drift it lets the rear spin up: the throttle holds the slide)
+        const tcl = 1.0 + (1 - assists) * 0.6 + dk * 0.5;
         // keep what the tire is already using for cornering (last step's
         // side force) out of what the throttle may take
-        const room = (fy, cap) => Math.sqrt(Math.max(0.1, 1 - Math.pow(Math.min(1, Math.abs(fy) / Math.max(1, cap)), 2) * assists));
+        const room = (fy, cap) => Math.sqrt(Math.max(0.1, 1 - Math.pow(Math.min(1, Math.abs(fy) / Math.max(1, cap)), 2) * assists * (1 - dk)));
         const tcF = capF * tcl * room(this.lastFyF || 0, capF), tcR = capR * tcl * room(this.lastFyR || 0, capR);
         let tc = false;
         if (reqF > tcF) { reqF = tcF; tc = true; }
@@ -397,7 +466,7 @@ export class Vehicle {
       // driven-wheel spin state
       const drivenCap = (P.split > 0 ? capF * P.split : 0) + (P.split < 1 ? capR * (1 - P.split) : 0);
       // with traction control on, only what it lets through can spin the tires
-      const tcCap = assists > 0 && this.gear > 0 ? drivenCap * (1.0 + (1 - assists) * 0.6) : Infinity;
+      const tcCap = assists > 0 && this.gear > 0 ? drivenCap * (1.0 + (1 - assists) * 0.6 + dk * 0.5) : Infinity;
       const excess = Math.min(Math.abs(driveForce), tcCap) - drivenCap * 1.02;
       if (excess > 0 && this.gear !== 0 && !hand && drivePedal > 0.2) {
         this.wheelSpin = Math.min(25, this.wheelSpin + excess / P.mass * dt * 6);
@@ -419,8 +488,27 @@ export class Vehicle {
       const kR = Math.pow(Math.max(0.3, Wr / (W * P.a / wb)), -0.35);
       const latF = -muF * Wf * tireCurve(alphaF * kF) * lowFade;
       let rearGrip = hand ? 0.42 : 1;
+      if (dk > 0) {
+        // braking into it the tail swings wide; on the throttle the rear
+        // finds grip as the angle runs past what the stick asks for (the
+        // way a driver feeds the throttle to hold a slide)
+        let slide = 0.6;
+        if (this.driftState === 1) {
+          const ang = -slip * this.driftDir;
+          slide = brake > 0.2 ? 0.55 : clamp(0.72 + (ang - this.driftWant) * 1.2, 0.55, 0.95);
+        }
+        rearGrip = Math.min(rearGrip, lerp(1, slide, dk));
+      }
       if (spinning && P.split < 1) rearGrip *= clamp(1 - this.wheelSpin * 0.045, 0.55, 1);
-      const latR = -muR * Wr * tireCurve(alphaR * kR, 9.0, 1.4, -0.4) * lowFade * rearGrip;
+      // grip driving keeps a little more side grip at the rear than the
+      // front can use (the job lateral load transfer does on a real chassis):
+      // pushed too hard, the car runs wide rather than swapping ends
+      // (and more on the brakes, where the rear goes light: a lane change
+      // under braking stays a lane change)
+      const rearBias = human ? lerp(1.12 + 0.18 * brakePedal, 1, Math.max(dk, hand ? 1 : 0)) : 1;
+      // (the human's rear tire is a touch stiffer too, so the tail follows
+      // the nose instead of lagging it into a slide)
+      const latR = -muR * Wr * (human ? tireCurve(alphaR * kR, 12, 1.35, -0.3) : tireCurve(alphaR * kR, 9.0, 1.4, -0.4)) * lowFade * rearGrip * rearBias;
       // combined slip: a tire that is braking or driving hard has less left
       // for cornering — across its whole curve, not just at the peak (only
       // capping the peak leaves a hard-braking front axle stiff enough to
@@ -428,7 +516,7 @@ export class Vehicle {
       const share = (fxv, cap) => Math.sqrt(Math.max(0.12, 1 - Math.pow(fxv / Math.max(1, cap), 2) * 0.95));
       const sF = share(FxF, capF), sR = share(FxR, capR);
       FyF = clamp(latF * sF, -capF * sF, capF * sF);
-      FyR = clamp(latR * sR, -capR * sR, capR * sR);
+      FyR = clamp(latR * sR, -capR * rearBias * sR, capR * rearBias * sR);
       this.lastFyF = FyF; this.lastFyR = FyR;
 
       this.slipF = Math.abs(alphaF) * lowFade;
@@ -448,6 +536,17 @@ export class Vehicle {
     let Fwd = FxF * cosD - FyF * sinD + FxR + rrF;
     let Lat = FxF * sinD + FyF * cosD + FyR;
     let torque = P.a * (FxF * sinD + FyF * cosD) - P.b * FyR;
+    // a drift carries its speed: give back part of what the sideways tires
+    // scrub off along the direction of travel (they still turn the car)
+    if (dk > 0 && speed > 5) {
+      const cb = vF / speed, sb = vL / speed;
+      const along = (-FyF * sinD) * cb + (FyF * cosD + FyR) * sb;
+      if (along < 0) {
+        const back = -along * 0.4 * dk;
+        Fwd += back * cb;
+        Lat += back * sb;
+      }
+    }
 
     // slope: gravity along the surface
     const n = this.groundN;
@@ -462,12 +561,12 @@ export class Vehicle {
     // stability assist: yaw damping (stronger with assists, gentler drifting)
     if (!this.airborne) {
       const yawDamp = (0.18 + 0.5 * assists) * P.mass * Math.min(1, speed / 20);
-      torque -= this.yawRate * yawDamp * (hand ? 0.15 : 1);
+      torque -= this.yawRate * yawDamp * (hand ? 0.15 : 1) * (1 - 0.85 * dk);
       // stability control (assists): rein the yaw rate back toward what the
       // driver's steering asks for when the car rotates past it — hardest on
       // the brakes and on the power, never adding rotation (it can't make
       // grip), and off while the handbrake is up so drifts still start
-      if (assists > 0 && speed > 8 && !hand) {
+      if (assists > 0 && speed > 8 && !hand && dk < 0.05) {
         const vAbs = Math.abs(vF);
         const cmd = -clamp(ctl.steer || 0, -1, 1) * lock;
         // the most the car can turn: the grip left over after braking/driving
@@ -492,9 +591,24 @@ export class Vehicle {
         this.escCut = 0;
         this.escActive = false;
       }
-      // drift sustain: holding throttle in a slide keeps the angle
-      if (Math.abs(this.slipR) > 0.12 && drivePedal > 0.5 && P.split < 0.7 && !hand) {
-        torque += Math.sign(vL) * -0.0 * P.mass;
+      // drift: hold the angle the stick asks for — about 24° with it
+      // centred, up to ~40° steering into the turn, and steering out of it
+      // straightens the car up. Riding the brakes through the slide lets go
+      // of it: that's a spin.
+      if (this.driftState === 1) {
+        const dir = this.driftDir;
+        const ang = -slip * dir;
+        if (this.prevDriftAng === null || this.prevDriftDir !== dir) this.prevDriftAng = ang;
+        this.driftAngRate += ((ang - this.prevDriftAng) / dt - this.driftAngRate) * Math.min(1, dt * 30);
+        this.prevDriftAng = ang;
+        this.prevDriftDir = dir;
+        const want = this.driftWant;
+        let k = (0.8 + 0.2 * assists) * clamp((speed - 5) / 7, 0, 1);
+        if (brake > 0.2 && this.driftT > 0.35) k *= 0.3;
+        torque += dir * (6 * (want - ang) - 4 * this.driftAngRate) * P.inertia * k * dk;
+      } else {
+        this.prevDriftAng = null;
+        this.driftAngRate = 0;
       }
     } else {
       torque = -this.yawRate * P.inertia * 1.5;
@@ -582,15 +696,23 @@ export class Vehicle {
       // scrape friction along the wall
       const tx = -nz, tz = nx;
       const vt = this.vx * tx + this.vz * tz;
-      const fr = Math.min(Math.abs(vt), impact * 0.35 + 0.15);
+      const fr = Math.min(Math.abs(vt), impact * 0.25 + 0.1);
       this.vx -= Math.sign(vt) * fr * tx;
       this.vz -= Math.sign(vt) * fr * tz;
-      // turn the car toward parallel (glancing blows rotate it)
+      // a glancing blow swings the nose back parallel to the wall, so the
+      // car slides along it and drives on; a hit near head-on is a crash
       if (contactLocal) {
         const [fx, fz] = this.fwd;
+        const [lx, lz] = this.left;
         const along = fx * tx + fz * tz;
         const into = fx * nx + fz * nz;
+        // the corner's impulse turns the car (harder the harder it hits)
         this.yawRate += clamp(-into * Math.sign(along) * impact * 0.08, -1.5, 1.5);
+        if (into < -0.02) {
+          const glance = clamp(1 - Math.abs(into) * 1.4, 0, 1);
+          const turn = Math.sign(lx * nx + lz * nz) * Math.asin(Math.min(1, -into));
+          this.yawRate += (turn / 0.3 - this.yawRate) * glance * 0.6;
+        }
       }
       this.yawRate *= 0.85;
     }

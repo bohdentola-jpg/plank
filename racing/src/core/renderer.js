@@ -257,6 +257,8 @@ export class Renderer {
     this.sceneOn = true; // false = only UI over black (cheaper title cards)
     this.time = 0;
     this.internalLines = 600;
+    this.useMsaa = true;
+    this.displayScale = 1;
 
     // 2D UI layer — logical 1024×768, backing store matches the display
     this.uiCanvas = document.createElement('canvas');
@@ -305,6 +307,18 @@ export class Renderer {
   /** Internal 3D resolution (lines). 480 = PS2-crunchy, 600 default, 720 sharp. */
   setInternalLines(lines) {
     this.internalLines = lines;
+    this.qualityRung = undefined;
+    this.useMsaa = true;
+    if (this.displayScale !== 1) { this.displayScale = 1; this.resize(); }
+    this._buildTargets();
+  }
+
+  /** Auto-quality: lines, multisampling on/off, and the scale the final
+   *  TV picture is drawn at (1 = the screen's own pixels). */
+  setQuality({ lines, msaa = true, display = 1 }) {
+    this.internalLines = lines;
+    this.useMsaa = msaa;
+    if (display !== this.displayScale) { this.displayScale = display; this.resize(); }
     this._buildTargets();
   }
 
@@ -321,7 +335,7 @@ export class Renderer {
     const depthTexture = new THREE.DepthTexture(w, h);
     depthTexture.type = THREE.UnsignedIntType;
     const scene = new THREE.WebGLRenderTarget(w, h, {
-      type, samples: this.msaa, depthBuffer: true, stencilBuffer: false, depthTexture,
+      type, samples: this.useMsaa ? this.msaa : 0, depthBuffer: true, stencilBuffer: false, depthTexture,
       minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, generateMipmaps: false,
     });
     const mips = [];
@@ -339,7 +353,7 @@ export class Renderer {
 
   resize() {
     const rect = this.canvas.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2) * (this.displayScale || 1);
     const cw = Math.max(320, Math.round(rect.width * dpr));
     const ch = Math.max(240, Math.round(rect.height * dpr));
     this.gl.setPixelRatio(1);

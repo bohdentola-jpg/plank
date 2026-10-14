@@ -115,7 +115,9 @@ export class RaceSim {
     for (const r of this.racers) if (r.ai) r.ai.update(dt, this);
     this.physics(dt);
     this.progress(dt);
-    if (this.state === 'finished' && this.raceTime - (this.playerFinishTime ?? this.raceTime) > (this.opts.afterFinish ?? 40)) this.end();
+    // a few seconds of glory after your flag, then the board (anyone still
+    // out there gets a time from their pace)
+    if (this.state === 'finished' && this.raceTime - (this.playerFinishTime ?? this.raceTime) > (this.opts.afterFinish ?? 7)) this.end();
   }
 
   go() {
@@ -146,9 +148,9 @@ export class RaceSim {
   physics(dt) {
     const T = this.T;
     const frozen = this.state === 'grid' || this.state === 'countdown';
-    this.physAcc += Math.min(dt, 0.1);
+    this.physAcc += Math.min(dt, 0.15);
     let steps = 0;
-    while (this.physAcc >= PHYS_DT && steps < 14) {
+    while (this.physAcc >= PHYS_DT && steps < 19) {
       this.physAcc -= PHYS_DT;
       steps++;
       for (const r of this.racers) {
@@ -163,6 +165,10 @@ export class RaceSim {
           // drag racing is always stick: you shift on the light
           auto: r.isPlayer && !r.ai ? (this.type !== 'drag' && this.opts.auto !== false) : true,
           assists: r.isPlayer ? (this.opts.assists ?? 1) : 1,
+          // a human at the wheel gets the drift handling, the steering
+          // limiter (made for thumbs and keys) and a planted rear; the AI
+          // drives the raw chassis
+          human: !!(r.isPlayer && !r.ai),
           draft: r.draft,
         };
         const ctl = r.ctl;

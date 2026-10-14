@@ -84,6 +84,9 @@ class ParticleSystem {
         void main(){
           vUv = uv; vCol = icol;
           vec4 mv = modelViewMatrix * vec4(ipos, 1.0);
+          // thin out right in front of the lens: driving through a cloud
+          // shouldn't white out the screen
+          vCol.a *= smoothstep(1.5, 6.0, -mv.z);
           float c = cos(irot), s = sin(irot);
           vec2 q = vec2(position.x * c - position.y * s, position.x * s + position.y * c) * isize;
           mv.xy += q;
@@ -268,9 +271,10 @@ export class Effects {
     const dusty = surface === 'dirt' || surface === 'sand' || surface === 'gravel' || surface === 'grass';
     const c = dusty ? (surface === 'sand' ? [0.78, 0.66, 0.48] : surface === 'grass' ? [0.42, 0.38, 0.28] : [0.55, 0.47, 0.37]) : this.smokeColor;
     const k = this.night && !dusty ? 0.55 : 1;
-    this.smoke.emit(x + (Math.random() - 0.5) * 0.3, y + 0.25, z + (Math.random() - 0.5) * 0.3,
-      vx * 0.25 + (Math.random() - 0.5) * 1.5, 0.6 + Math.random() * 1.2, vz * 0.25 + (Math.random() - 0.5) * 1.5,
-      1.3 + Math.random() * 1.2 + amount, 0.8, 4.5 + amount * 3.5, c[0] * k, c[1] * k, c[2] * k, Math.min(0.5, 0.18 + amount * 0.3), 1.6, -0.25);
+    // light, low and quick to clear: you see the slide, and still see the road
+    this.smoke.emit(x + (Math.random() - 0.5) * 0.3, y + 0.2, z + (Math.random() - 0.5) * 0.3,
+      vx * 0.3 + (Math.random() - 0.5) * 1.2, 0.3 + Math.random() * 0.7, vz * 0.3 + (Math.random() - 0.5) * 1.2,
+      0.8 + Math.random() * 0.6 + amount * 0.4, 0.6, 2.0 + amount * 1.6, c[0] * k, c[1] * k, c[2] * k, Math.min(0.3, 0.1 + amount * 0.2), 1.8, -0.15);
   }
 
   sparks(x, y, z, nx, nz, count = 6, speed = 8) {
