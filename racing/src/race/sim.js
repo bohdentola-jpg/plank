@@ -160,7 +160,8 @@ export class RaceSim {
             r.hint = g.i;
             return g;
           },
-          auto: r.isPlayer ? this.opts.auto !== false : true,
+          // drag racing is always stick: you shift on the light
+          auto: r.isPlayer && !r.ai ? (this.type !== 'drag' && this.opts.auto !== false) : true,
           assists: r.isPlayer ? (this.opts.assists ?? 1) : 1,
           draft: r.draft,
         };
@@ -174,7 +175,23 @@ export class RaceSim {
         }
         ctl.shiftUp = false;
         ctl.shiftDown = false;
-        if (v.lastShift) { if (r.isPlayer) this.emit('shift', { dir: v.lastShift }); v.lastShift = 0; }
+        if (v.lastShift) {
+          if (r.isPlayer) {
+            // grade manual upshifts: right at the top of the band pays off
+            let grade = null;
+            if (v.lastShift > 0 && !env.auto && this.state === 'racing') {
+              const f = (v.shiftRpm || 0) / v.P.redline;
+              grade = f >= 0.87 && f <= 0.99 ? 'PERFECT' : f >= 0.76 ? 'GOOD' : f < 0.66 ? 'EARLY' : null;
+              if (grade === 'PERFECT') {
+                const [fx, fz] = v.fwd;
+                v.vx += fx * 0.5; v.vz += fz * 0.5;
+                v.nitro = Math.min(1, v.nitro + 0.06);
+              }
+            }
+            this.emit('shift', { dir: v.lastShift, grade });
+          }
+          v.lastShift = 0;
+        }
         if (v.landing > 0.15) this.emit('landing', { id: r.id, strength: v.landing });
         this.walls(r);
       }

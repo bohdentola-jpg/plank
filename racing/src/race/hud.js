@@ -228,8 +228,24 @@ export class HUD {
     // gear
     const gear = v.shiftT > 0 ? (v.pendingGear || v.gear) : v.gear;
     const gtxt = gear < 0 ? 'R' : gear === 0 ? 'N' : String(gear);
-    const manual = settings.get('transmission') === 'manual';
+    const manual = settings.get('transmission') === 'manual' || s.type === 'drag';
     const hot = v.rpm > P.redline * 0.93;
+    // shift-light LED bar over the dial (stick shift)
+    if (manual) {
+      const f = v.rpm / P.redline;
+      const cols = ['#3dff7a', '#3dff7a', '#ffd23a', '#ffd23a', '#ff3a3a'];
+      const flash = f > 0.955 && Math.floor(this.t * 14) % 2;
+      for (let k = 0; k < 5; k++) {
+        const on = f > 0.72 + k * 0.055;
+        const lx = cx - 44 + k * 22, ly = cy - R - 30;
+        ctx.beginPath();
+        ctx.arc(lx, ly, 6.5, 0, Math.PI * 2);
+        ctx.fillStyle = on && !flash ? cols[k] : 'rgba(255,255,255,0.1)';
+        if (on && !flash) { ctx.shadowColor = cols[k]; ctx.shadowBlur = 12; }
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
     // gear: boxed digit right of center
     const gx = cx + R * 0.36, gy = cy + 4;
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
@@ -266,7 +282,7 @@ export class HUD {
     // boost mini gauge (turbo cars)
     if (P.turbo > 0) this.drawBoost(ctx, cx - R * 0.92, cy + R * 0.62, 26, v.boost * (v.throttle > 0.1 ? 1 : 0.2));
     // shift light
-    if (hot && settings.get('transmission') === 'manual') {
+    if (hot && manual) {
       const on = Math.floor(this.t * 12) % 2 === 0;
       if (on) text(ctx, 'SHIFT', cx, cy - R - 12, { size: 14, color: '#ff4040', weight: 900, align: 'center', glow: 10 });
     }

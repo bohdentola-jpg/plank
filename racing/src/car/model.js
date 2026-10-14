@@ -434,6 +434,23 @@ export function buildCarModel(spec, lookIn = {}, opts = {}) {
   cabMesh.castShadow = true;
   body.add(cabMesh);
   disposables.push(cab.geometry, cabMat);
+  // dark inner shell (headliner, pillar trim, far-side door cards): through
+  // the glass you see a dim cabin instead of the world behind the car
+  if (!b.roadster) {
+    const shellG = cab.geometry.clone();
+    const pa = shellG.attributes.position;
+    const beltY = S.topF(b.cowl + (b.deck - b.cowl) * 0.5);
+    for (let k = 0; k < pa.count; k++) {
+      pa.setX(k, pa.getX(k) * 0.965);
+      pa.setY(k, beltY + (pa.getY(k) - beltY) * 0.965);
+    }
+    shellG.computeVertexNormals();
+    const shellM = new THREE.MeshStandardMaterial({ color: 0x141518, roughness: 0.92, metalness: 0, side: THREE.BackSide });
+    const shell = new THREE.Mesh(shellG, shellM);
+    shell.renderOrder = 1;
+    body.add(shell);
+    disposables.push(shellG, shellM);
+  }
 
   // interior
   if (opts.interior !== false) {

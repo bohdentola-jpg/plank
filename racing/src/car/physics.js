@@ -490,6 +490,7 @@ export class Vehicle {
     const ng = this.gear + dir;
     if (ng < 1 || ng > this.P.gears.length) return false;
     this.pendingGear = ng;
+    this.shiftRpm = this.rpm;
     this.shiftT = this.P.shiftTime;
     this.sinceShift = 0;
     this.shiftedAt = performance.now?.() || 0;

@@ -238,6 +238,7 @@ export class RaceSession {
           break;
         case 'go':
           try { sfx.countdown(0); music.stinger('go'); music.setRaceState({ countdown: false }); } catch { /* */ }
+          if (this.type === 'drag') this.message('SHIFT ON THE LIGHTS', 'R1 / E  UP   ·   L1 / Q  DOWN', { slot: 'top', dur: 2.6, color: '#ffb21e' });
           this.hudEvents.push({ type: 'go', t: this.time });
           break;
         case 'launch':
@@ -311,6 +312,9 @@ export class RaceSession {
           break;
         case 'shift':
           try { sfx.shift(); } catch { /* */ }
+          if (e.grade === 'PERFECT') this.message('PERFECT SHIFT', '+ BOOST', { slot: 'top', dur: 1.1, color: '#4dff8b' });
+          else if (e.grade === 'GOOD') this.message('GOOD SHIFT', '', { slot: 'top', dur: 0.9, color: '#46e8ff' });
+          else if (e.grade === 'EARLY') this.message('EARLY SHIFT', '', { slot: 'top', dur: 0.9, color: '#ffb21e' });
           if (e.dir > 0 && pv.rpm > pv.P.redline * 0.8 && Math.random() < 0.55) this.backfire(P, 0.7);
           break;
         case 'reset':
