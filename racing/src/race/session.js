@@ -10,7 +10,7 @@ import { TrafficRender } from './trafficModels.js';
 import { ChaseCamera } from './camera.js';
 import { Effects } from './effects.js';
 import { input } from '../core/input.js';
-import { settings } from '../core/settings.js';
+import { settings, store } from '../core/settings.js';
 import { clamp, damp } from '../core/util.js';
 import { audio } from '../audio/audio.js';
 import { EngineSound } from '../audio/engine.js';
@@ -244,11 +244,17 @@ export class RaceSession {
         case 'launch':
           this.message(e.grade, e.perfect ? '+ BOOST' : '', { color: e.perfect ? '#4dff8b' : undefined, dur: 1.8, slot: 'top' });
           break;
-        case 'lap':
+        case 'lap': {
           try { sfx.checkpoint(); music.stinger('lap'); } catch { /* */ }
-          if (e.final) this.message('FINAL LAP', '', { color: '#ffb21e', dur: 2.6, big: true });
+          // beat the hall-of-fame lap for this road?
+          const rec = this.recordLap ?? ((store.load('records') || {})[this.def.id]?.bestLap ?? Infinity);
+          const record = e.time < rec;
+          if (record) this.recordLap = e.time;
+          if (e.final) this.message('FINAL LAP', record ? `TRACK RECORD ${fmt(e.time)}` : '', { color: '#ffb21e', dur: 2.6, big: true });
+          else if (record && rec !== Infinity) this.message('TRACK RECORD', fmt(e.time), { color: '#4dff8b', dur: 2.4 });
           else this.message(`LAP ${e.lap + 1}`, `${e.best ? 'BEST ' : ''}${fmt(e.time)}`, { dur: 2.2 });
           break;
+        }
         case 'finallap':
           try { music.stinger('finalLap'); music.setRaceState({ finalLap: true }); } catch { /* */ }
           break;

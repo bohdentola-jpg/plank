@@ -20,7 +20,17 @@ export const PLAN_DEFAULT = { front: 0.84, frontR: 0.32, rear: 0.88, rearR: 0.26
 export const CAB_DEFAULT = { inset: 0.05, tumble: 0.2, rr: 0.075, crown: 0.035, bulge: 0.012 };
 
 /** Precomputed shape functions for a spec (cheap; used by hull + parts + painter). */
+/** Beltline drop: real cars carry less body above the wheels than the
+ *  blueprints imply — pull the top line (and lamp boxes) down a touch. */
+const BELT_K = 0.085, BELT_Y0 = 0.35;
+const belt = (y) => (y > BELT_Y0 ? y - (y - BELT_Y0) * BELT_K : y);
+
 export function shapeOf(b) {
+  if (!b._belt) {
+    b._belt = true;
+    b.top = b.top.map(([u, y]) => [u, belt(y)]);
+    for (const k of ['headBox', 'tailBox']) if (b[k]) b[k] = { ...b[k], y0: belt(b[k].y0), y1: belt(b[k].y1) };
+  }
   const L = b.L, W = b.W;
   const sec = { ...SEC_DEFAULT, ...(b.section || {}) };
   const plan = { ...PLAN_DEFAULT, ...(b.plan || {}) };
