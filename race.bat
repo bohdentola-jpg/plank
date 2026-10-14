@@ -9,13 +9,20 @@ if not defined PY python -V >nul 2>nul && set PY=python
 if not defined PY python3 -V >nul 2>nul && set PY=python3
 
 if not defined PY (
+  rem ---- no Python: Windows' own PowerShell can serve the game just as well
   echo.
-  echo  Python is needed to run the game server and wasn't found.
+  echo  Starting the game server...
+  echo  Your browser will open by itself in a moment.
+  echo  Keep this window open while you play.
   echo.
-  echo  1. Go to  https://python.org/downloads  and install it
-  echo     ^(check the "Add python.exe to PATH" box in the installer^)
-  echo  2. Then double-click race.bat again.
-  echo.
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0serve.ps1" -Open racing/
+  if errorlevel 1 (
+    echo.
+    echo  The built-in server couldn't start. Installing Python also works:
+    echo  https://python.org/downloads  ^(tick "Add python.exe to PATH"^),
+    echo  then double-click race.bat again.
+    echo.
+  )
   pause
   exit /b
 )

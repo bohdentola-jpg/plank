@@ -9,12 +9,14 @@ and real driving physics. There is no install and no build step.
 ## Run it
 
 **Windows:** double-click **`race.bat`** in the repo root. It starts a tiny local
-server and opens the game in your browser.
+server and opens the game in your browser. It uses Python if you have it and
+otherwise falls back to Windows' built-in PowerShell (`serve.ps1`), so nothing
+needs installing.
 
 **Mac / Linux:** from the repo root run `python3 serve.py --open racing/` (or
 `python3 serve.py` and browse to `http://localhost:8000/racing/`).
 
-You need Python 3 and a recent Chrome, Edge or Firefox. Plug in a **PS5 DualSense**
+You need a recent Chrome, Edge or Firefox (plus Python 3 on Mac/Linux). Plug in a **PS5 DualSense**
 (USB or Bluetooth) before or after loading, and press any button to turn the TV on.
 Xbox and other standard pads work too, and so do keyboard and mouse.
 
@@ -159,6 +161,7 @@ turbo whistle, blow-off, backfires and pops.
   - `shot.mjs`: screenshots.
   - `sheet.mjs`: car contact sheet.
   - `perf.mjs`: track build and draw-call report.
+  - `aibench.mjs`, `traffic_eval.mjs`: AI lap/contact benchmark and traffic cost.
   - `tour.mjs`: contact sheet of camera stops along each track.
   - `carviews.mjs`: car model grid from any set of camera angles.
   - `e2e_story.mjs`, `e2e_flow.mjs`: story-mode and menu-flow end-to-end tests.
