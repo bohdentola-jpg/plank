@@ -18,7 +18,8 @@ $listener = $null
 for ($i = 0; $i -lt 25; $i++) {
   try {
     $listener = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, $Port)
-    $listener.Start()
+    # big queue: the browser opens many connections at once for the game's modules
+    $listener.Start(512)
     break
   } catch {
     $listener = $null
@@ -46,7 +47,8 @@ function Send($stream, [string]$status, [string]$type, [byte[]]$body, [string]$e
 while ($true) {
   $client = $listener.AcceptTcpClient()
   try {
-    $client.ReceiveTimeout = 5000
+    # a browser may open a spare connection and never use it: don't stall on it
+    $client.ReceiveTimeout = 1500
     $stream = $client.GetStream()
     $reader = New-Object System.IO.StreamReader($stream, [System.Text.Encoding]::ASCII, $false, 8192, $true)
     $line = $reader.ReadLine()

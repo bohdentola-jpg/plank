@@ -42,13 +42,21 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
         pass  # keep the console clean
 
 
+class GameServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    # Browsers fetch dozens of module files at once. A single-threaded server
+    # with the default 5-slot queue makes Windows refuse the extras, so the
+    # page fails with "Failed to fetch dynamically imported module".
+    daemon_threads = True
+    request_queue_size = 128
+
+
 def main():
     httpd = None
     port = START_PORT
     for _ in range(25):
         try:
             # localhost-only: no Windows firewall popup, no LAN exposure
-            httpd = socketserver.TCPServer(('127.0.0.1', port), NoCacheHandler)
+            httpd = GameServer(('127.0.0.1', port), NoCacheHandler)
             break
         except OSError:
             port += 1
