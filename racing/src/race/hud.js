@@ -68,6 +68,25 @@ export class HUD {
     const kind = { circuit: `CIRCUIT · ${s.sim.laps} LAPS`, sprint: 'SPRINT', knockout: `LAP KNOCKOUT · ${s.sim.laps} LAPS`, drag: 'DRAG · 1/4 MILE', drift: 'DRIFT', timeattack: 'TIME ATTACK' }[s.type] || s.type.toUpperCase();
     text(ctx, `${kind}   ·   ${settings.get('units') === 'kmh' ? (s.track.length / 1000).toFixed(2) + ' KM' : (s.track.length / 1609.34).toFixed(2) + ' MI'}   ·   ${s.sim.racers.length} RACER${s.sim.racers.length > 1 ? 'S' : ''}`, 66, 712, { size: 17, color: C.accent, weight: 700, spacing: 2 });
     text(ctx, def.blurb || '', 66, 738, { size: 15, color: C.dim });
+    // story banner: event + crew, and the boss card
+    const b = s.opts.banner;
+    if (b) {
+      panel(ctx, 40, 40, 420, 74, { accent: b.color || C.accent, accentLen: 160, alpha: 0.9 });
+      text(ctx, b.sub || '', 64, 66, { size: 12, color: b.color || C.accent, weight: 900, spacing: 2 });
+      vText(ctx, b.title || '', 62, 98, Math.min(26, 380 / Math.max(1, vWidth(b.title || '', 1))), { color: '#fff' });
+      if (b.boss) {
+        const k = clamp((s.introT - 0.5) / 0.5, 0, 1);
+        ctx.save();
+        ctx.globalAlpha *= k;
+        ctx.translate((1 - k) * 60, 0);
+        panel(ctx, 560, 150, 420, 150, { accent: b.color || C.red, accentLen: 420, alpha: 0.92 });
+        vText(ctx, 'VS', 590, 230, 64, { color: b.color || C.red, outline: 3, outlineColor: '#000' });
+        vText(ctx, b.boss.name, 700, 210, 40, { color: '#fff', outline: 3, outlineColor: '#000' });
+        text(ctx, b.boss.car, 702, 240, { size: 14, color: C.dim, weight: 800, spacing: 1.5 });
+        if (b.boss.quote) text(ctx, `"${b.boss.quote}"`, 590, 280, { size: 14, color: '#d8dee8', weight: 600, italic: true });
+        ctx.restore();
+      }
+    }
     ctx.restore();
     if (Math.floor(this.t * 2) % 2) text(ctx, 'PRESS ✕ / ENTER TO START', 960, 738, { size: 13, color: C.dim, align: 'right', weight: 700, spacing: 2 });
   }
@@ -113,6 +132,15 @@ export class HUD {
     };
     mark(this.startPos, '#ffffff');
     if (this.finishPos) mark(this.finishPos, '#4dff8b');
+    // civilian traffic
+    if (s.sim.traffic) {
+      ctx.fillStyle = 'rgba(170,180,195,0.75)';
+      for (const c of s.sim.traffic.cars) {
+        ctx.beginPath();
+        ctx.arc(c.x, c.z, 4 / scale * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
     // opponents
     for (const r of s.sim.racers) {
       if (r.isPlayer || (r.out && r.parked)) continue;

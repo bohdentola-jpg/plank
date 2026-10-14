@@ -1331,7 +1331,7 @@ function buildForest(ctx) {
       if (!list.length) return;
       count += list.length;
       const local = list.map((o) => ({ ...o, x: o.x - cx, z: o.z - cz }));
-      near.add(instanced(geos[k], mats[k], local, { shadow: shadows, receive: true }));
+      near.add(instanced(geos[k], mats[k], local, { shadow: false, receive: true }));
       farG.add(instanced(far[k], mats[k], local, { receive: true }));
     });
     const lod = new THREE.LOD();

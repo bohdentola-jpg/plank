@@ -15,35 +15,35 @@ export const CHAPTERS = [
     blurb: 'Four-lane boulevards, wet asphalt, neon. The Kings run every light on Main Street.',
     members: ['LIL MO', 'SPARKY', 'TINA', 'JAY-R', 'BOOGIE'],
     pool: ['civica', 'golfo', 'trueno', 'miyako'],
-    boss: { name: 'DEZ', car: 'silvio', tier: 0, skill: 0.86, look: { paint: '#f2f1ec', vinyl: 'tribal', paint2: '#c8102e', rims: 'six', rimColor: 'gold', kit: 'street', spoiler: 'gt', neon: '#ff2a6d', plate: 'KING DEZ' } },
+    boss: { name: 'DEZ', quote: 'Main Street is mine. Always has been.', car: 'silvio', tier: 0, skill: 0.86, look: { paint: '#f2f1ec', vinyl: 'tribal', paint2: '#c8102e', rims: 'six', rimColor: 'gold', kit: 'street', spoiler: 'gt', neon: '#ff2a6d', plate: 'KING DEZ' } },
   },
   {
     id: 'docks', name: 'THE DOCKS', crew: 'HARBOR RATS', color: '#ffb21e', district: 'docks',
     blurb: 'Container canyons and gantry cranes. Sodium light, diesel, salt — and no rules.',
     members: ['RUST', 'BILGE', 'MARLOW', 'KEEL', 'SKIFF'],
     pool: ['silvio', 'nx350', 'stallion', 'golfo'],
-    boss: { name: 'TANK', car: 'stallion', tier: 1, skill: 0.88, look: { paint: '#141416', vinyl: 'stripes', paint2: '#e3b52a', rims: 'dish', rimColor: 'black', hood: 'scoop', kit: 'race', plate: 'TANK' } },
+    boss: { name: 'TANK', quote: 'I hit things for a living, kid.', car: 'stallion', tier: 1, skill: 0.88, look: { paint: '#141416', vinyl: 'stripes', paint2: '#e3b52a', rims: 'dish', rimColor: 'black', hood: 'scoop', kit: 'race', plate: 'TANK' } },
   },
   {
     id: 'pass', name: 'THE PASS', crew: 'KAIDO GHOSTS', color: '#46e8ff', district: 'mountain',
     blurb: 'Guardrail on one side, rock on the other. The Ghosts only race downhill, and only at night.',
     members: ['HAYATE', 'SORA', 'RIN', 'TETSU', 'MIKA'],
     pool: ['kaze', 'lancet', 'rz7', 'silvio', 'm3'],
-    boss: { name: 'KAITO', car: 'trueno', tier: 3, skill: 0.97, look: { paint: '#f2f1ec', vinyl: 'twotone', paint2: '#141416', rims: 'dish', rimColor: 'bronze', hood: 'carbon', plate: 'GHOST', number: 86 } },
+    boss: { name: 'KAITO', quote: 'The mountain decides. Not the car.', car: 'trueno', tier: 3, skill: 0.97, look: { paint: '#f2f1ec', vinyl: 'twotone', paint2: '#141416', rims: 'dish', rimColor: 'bronze', hood: 'carbon', plate: 'GHOST', number: 86 } },
   },
   {
     id: 'desert', name: 'ROUTE 99', crew: 'ROUTE 99 SYNDICATE', color: '#ff7a2a', district: 'desert',
     blurb: 'Two hundred miles of heat shimmer. The Syndicate races for money — big money.',
     members: ['DUNE', 'RATTLER', 'MESA', 'COLT', 'SIDEWINDER'],
     pool: ['suprano', 'skyhawk', 'm3', 'rz7', 'stallion'],
-    boss: { name: 'VEX', car: 'venom', tier: 1, skill: 0.9, look: { paint: '#7a1020', vinyl: 'stripes', paint2: '#141416', rims: 'five', rimColor: 'chrome', kit: 'wide', spoiler: 'big', plate: 'VEX' } },
+    boss: { name: 'VEX', quote: 'Twenty-five grand says you blink first.', car: 'venom', tier: 1, skill: 0.9, look: { paint: '#7a1020', vinyl: 'stripes', paint2: '#141416', rims: 'five', rimColor: 'chrome', kit: 'wide', spoiler: 'big', plate: 'VEX' } },
   },
   {
     id: 'freq', name: 'THE FREQUENCY', crew: 'THE FREQUENCY', color: '#a45cf0', district: 'highway',
     blurb: 'Nobody knows who runs it. Interstates at 200, and the old raceway after hours.',
     members: ['STATIC', 'ECHO', 'CIPHER', 'NULL', 'HALO'],
     pool: ['stuttgard', 'venom', 'skyhawk', 'suprano', 'pipistrello'],
-    boss: { name: 'ZERO', car: 'pipistrello', tier: 2, skill: 0.95, look: { paint: '#0e0f12', finish: 'matte', vinyl: 'kanji', paint2: '#a45cf0', rims: 'turbine', rimColor: 'red', neon: '#a45cf0', tint: 3, plate: 'ZERO' } },
+    boss: { name: 'ZERO', quote: '...', car: 'pipistrello', tier: 2, skill: 0.95, look: { paint: '#0e0f12', finish: 'matte', vinyl: 'kanji', paint2: '#a45cf0', rims: 'turbine', rimColor: 'red', neon: '#a45cf0', tint: 3, plate: 'ZERO' } },
   },
 ];
 
@@ -55,7 +55,7 @@ export const CHAPTERS = [
 export const EVENTS = [
   // ch 1 — DOWNTOWN
   { id: 'c1e1', ch: 0, name: 'FRIDAY NIGHT LIGHTS', track: 'downtown', type: 'circuit', laps: 2, rivals: 3, pr: 500, prize: 1500, flavor: 'Easy money. Four cars, two laps, the whole boulevard watching.' },
-  { id: 'c1e2', ch: 0, name: 'UPTOWN RUN', track: 'uptown', type: 'sprint', rivals: 3, pr: 510, prize: 1800, flavor: 'Bridge to the hill, every light red. Nobody brakes first.' },
+  { id: 'c1e2', ch: 0, name: 'UPTOWN RUN', track: 'uptown', type: 'sprint', rivals: 3, pr: 510, prize: 1800, traffic: true, flavor: 'Bridge to the hill, every light red, cabs in both directions. Nobody brakes first.' },
   { id: 'c1e3', ch: 0, name: 'LAST ONE OUT', track: 'oldtown', type: 'knockout', rivals: 3, pr: 520, prize: 2200, flavor: 'Old Town is tight and the Kings play rough. Last car each lap goes home.' },
   { id: 'c1e4', ch: 0, name: 'RAIN CHECK', track: 'uptown', type: 'timeattack', tt: 1.03, prize: 1600, flavor: 'Tina set the uptown record in the rain. Beat her number.' },
   { id: 'c1e5', ch: 0, name: 'MAIN EVENT', track: 'oldtown', type: 'circuit', laps: 3, rivals: 5, pr: 535, prize: 2600, flavor: 'Full grid on the narrow streets. Win this and Dez has to answer.' },
@@ -65,7 +65,7 @@ export const EVENTS = [
   { id: 'c2e2', ch: 1, name: 'END OF THE PIER', track: 'pier9', type: 'circuit', laps: 3, rivals: 3, pr: 585, prize: 3400, flavor: 'Square corners and a hairpin over the water. Brake late or go swimming.' },
   { id: 'c2e3', ch: 1, name: 'RAT RACE', track: 'harbor', type: 'knockout', rivals: 4, pr: 595, prize: 4000, flavor: 'Five Rats, one survivor. They will trade paint.' },
   { id: 'c2e4', ch: 1, name: 'NIGHT SHIFT', track: 'pier9', type: 'timeattack', tt: 1.02, prize: 3000, flavor: 'The foreman times every lap from the crane cab. Make him look twice.' },
-  { id: 'c2e5', ch: 1, name: 'DOWNTOWN DELIVERY', track: 'downtown', type: 'circuit', laps: 3, rivals: 5, pr: 605, prize: 4200, flavor: 'The Rats come uptown to settle a debt. Six cars, wet streets.' },
+  { id: 'c2e5', ch: 1, name: 'DOWNTOWN DELIVERY', track: 'downtown', type: 'circuit', laps: 3, rivals: 5, pr: 605, prize: 4200, traffic: true, flavor: 'The Rats come uptown to settle a debt. Six cars, wet streets, rush-hour traffic.' },
   { id: 'c2b', ch: 1, boss: true, name: 'TANK: HARBOR MASTER', track: 'harbor', type: 'circuit', laps: 3, rivals: 1, pr: 0, prize: 10000, flavor: 'Tank\'s Stallion weighs as much as a forklift and drives like one. A fast one.' },
   // ch 3 — THE PASS
   { id: 'c3e1', ch: 2, name: 'DOWNHILL', track: 'kaido', type: 'sprint', rivals: 3, pr: 640, prize: 5500, flavor: 'Five kilometers of pass road, top to bottom. Respect the guardrail.' },

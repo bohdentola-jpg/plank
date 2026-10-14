@@ -9,7 +9,7 @@
 // profiles into per-chunk meshes so frustum culling keeps draw calls low.
 import * as THREE from 'three';
 import { glowMaterial } from '../build.js';
-import { concreteTexture, groundTexture, facadeTextures, toTex, glowTexture, streakTexture } from '../textures.js';
+import { concreteTexture, groundTexture, toTex, glowTexture, streakTexture } from '../textures.js';
 import { GeoBuilder, instanced } from './common.js';
 import { makeRng, clamp, smoothstep, nextFrame } from '../../core/util.js';
 
@@ -395,6 +395,70 @@ function wallTex() {
   });
 }
 
+/**
+ * Building facade (256 × 512): window grid with whole floors lit or dark,
+ * warm/cool/TV-blue panes, grime. map + emissive mask. Like textures.js
+ * facadeTextures but with per-pixel grain, ~10× faster to build.
+ */
+function facadeTex(style, seed) {
+  return cached(`hw-fac|${style}|${seed}`, () => {
+    const W = 256, H = 512;
+    const c = cvs(W, H), x = c.getContext('2d');
+    const e = cvs(W, H), ex = e.getContext('2d');
+    const rng = makeRng(`hwfac${style}${seed}`);
+    const base = { brick: '#5b2e24', concrete: '#77736c', glass: '#1c2733', stucco: '#9b8f7a', dark: '#2a2a2e', warehouse: '#5d6266' }[style] || '#77736c';
+    x.fillStyle = base;
+    x.fillRect(0, 0, W, H);
+    ex.fillStyle = '#000';
+    ex.fillRect(0, 0, W, H);
+    if (style === 'brick') {
+      x.fillStyle = 'rgba(30,15,10,0.35)';
+      for (let y = 0; y < H; y += 6) {
+        x.fillRect(0, y, W, 1);
+        for (let xx = (y / 6) % 2 ? 0 : 7; xx < W; xx += 14) x.fillRect(xx, y, 1, 6);
+      }
+    }
+    const cols = style === 'glass' ? 8 : style === 'warehouse' ? 4 : 6;
+    const rows = style === 'glass' ? 16 : 12;
+    const cw = W / cols, rh = H / rows;
+    const litP = style === 'warehouse' ? 0.12 : 0.3;
+    for (let r = 0; r < rows; r++) {
+      const floor = rng();
+      const floorLit = floor < 0.25 ? 0.05 : floor < 0.8 ? 1 : 2.2;
+      for (let k = 0; k < cols; k++) {
+        const lit = rng() < litP * floorLit;
+        const tone = rng();
+        const col = tone < 0.62 ? ['#f0cf8e', '#ffbe78'] : tone < 0.9 ? ['#c8dcf2', '#9cc0ff'] : ['#8ab0ff', '#5a8cff'];
+        let wx, wy, ww, wh;
+        if (style === 'glass') { wx = k * cw + 1; wy = r * rh + 1; ww = cw - 2; wh = rh - 2; }
+        else if (style === 'warehouse') { wx = k * cw + cw * 0.15; wy = r * rh + rh * 0.2; ww = cw * 0.7; wh = rh * 0.3; }
+        else { wx = k * cw + cw * 0.24; wy = r * rh + rh * 0.3; ww = cw * 0.52; wh = rh * 0.46; }
+        x.fillStyle = lit ? col[0] : style === 'glass' ? `rgb(${40 + rng() * 30},${58 + rng() * 30},${78 + rng() * 30})` : `rgb(${18 + rng() * 20},${22 + rng() * 20},${30 + rng() * 25})`;
+        x.fillRect(wx, wy, ww, wh);
+        if (style !== 'glass') { x.fillStyle = 'rgba(0,0,0,0.35)'; x.fillRect(wx, wy + wh, ww, 2); }
+        if (lit) {
+          ex.globalAlpha = 0.3 + rng() * 0.5;
+          ex.fillStyle = col[1];
+          ex.fillRect(wx, wy, ww, wh);
+          if (rng() < 0.3) { x.fillStyle = 'rgba(0,0,0,0.3)'; x.fillRect(wx, wy, ww, wh * 0.4); ex.globalAlpha = 0.5; ex.fillStyle = '#000'; ex.fillRect(wx, wy, ww, wh * 0.4); }
+          ex.globalAlpha = 1;
+        }
+      }
+    }
+    if (style === 'glass') { x.fillStyle = 'rgba(160,190,220,0.08)'; for (let k = 0; k <= cols; k++) x.fillRect(k * cw - 1, 0, 2, H); }
+    speckle(x, W, H, rng, 0.6, 0.25);
+    for (let i = 0; i < 18; i++) {
+      const sx = rng() * W;
+      const g = x.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(1, 'rgba(0,0,0,0.22)');
+      x.fillStyle = g;
+      x.fillRect(sx, rng() * H * 0.5, 2 + rng() * 6, H);
+    }
+    return { map: toTex(c), emi: toTex(e) };
+  });
+}
+
 /** Corrugated metal cladding (tube exteriors, sign backs). 8 m × 8 m. */
 function panelTex() {
   return cached('hw-panel', () => {
@@ -684,7 +748,7 @@ const ADS = [
 ];
 const POLE_ADS = [['GAS', '24 HRS', '#c81e1e', '#ffffff'], ['MOTEL', 'VACANCY', '#1a1a5a', '#ff4a8a'], ['DINER', 'EAT', '#0a4a2a', '#ffe14a'], ['BURGER', 'BARN', '#8a2a00', '#ffd000'], ['TIRES', 'OIL', '#1a1a1a', '#ffb000'], ['LIQUOR', 'BEER', '#2a0a3a', '#30e0ff']];
 
-function drawAd(at, r, ad, rng) {
+function drawAd(at, r, ad) {
   const x = at.x;
   const { px, py, w, h } = r;
   const g = x.createLinearGradient(px, py, px + w, py + h);
@@ -713,7 +777,6 @@ function drawAd(at, r, ad, rng) {
   x.fillStyle = '#000';
   x.font = `bold ${Math.round(h * 0.1)}px ${SIGN_FONT}`;
   x.fillText('WWW.' + ad[0].split(' ')[0] + '.COM', px + w * 0.05, py + h * 0.91, w * 0.9);
-  void rng;
 }
 
 function drawPoleAd(at, r, ad) {
@@ -888,7 +951,6 @@ const nearAny = (s, list, d) => list.some((q) => Math.abs(q - s) < d);
 
 export async function build(world, def, track, progress) {
   const cfg = def.hw || {};
-  const T0 = performance.now(); const tlog = (l) => console.log('[hw] ' + l + ' ' + Math.round(performance.now() - T0));
   const xway = cfg.style === 'expressway';
   const lit = !!world.at.lamps;
   const wet = def.weather === 'wet' || def.weather === 'rain';
@@ -925,6 +987,11 @@ export async function build(world, def, track, progress) {
   const verge = groundTexture(xway ? 'gravel' : 'grass');
   const signAt = new Atlas(2048, 2048, 56);
   const adAt = new Atlas(1024, 1024, 36);
+  const adSlots = new Map();
+  const adSlot = (k) => {
+    if (!adSlots.has(k)) { const r = adAt.alloc(14, 4.8); drawAd(adAt, r, ADS[k % ADS.length]); adSlots.set(k, r); }
+    return adSlots.get(k);
+  };
   const signTex = toTex(signAt.c, { repeat: false });
   const adTex = toTex(adAt.c, { repeat: false });
   const panelMat = glowMaterial(new THREE.MeshStandardMaterial({ map: panelTex(), color: xway ? 0x9aa6a2 : 0x8a8f8c, roughness: 0.6, metalness: 0.35, envMapIntensity: 0.5 }), 1.4);
@@ -942,7 +1009,6 @@ export async function build(world, def, track, progress) {
     water: { mat: new THREE.MeshStandardMaterial({ color: 0x070b12, roughness: 0.32, metalness: 0.5, envMapIntensity: 0.45 }) },
   };
   for (const t of [verge]) t.repeat.set(1, 1);
-  tlog('materials');
 
   // ---- accumulation bins: class × chunk/feature key → one mesh each
   const bins = new Map();
@@ -1222,7 +1288,6 @@ export async function build(world, def, track, progress) {
   }
   // corridor keep-out: everything that must stay clear of buildings and piers
   keep.add(F, (a) => extL(a) + (xway ? 3 : gradeAt(a) ? (inS(cfg.wideVerge, F.s(a)) ? 76 : 28) : 4), (a) => extR(a) + (xway ? 3 : gradeAt(a) ? (inS(cfg.wideVerge, F.s(a)) ? 76 : 28) : 4), 2, 0);
-  tlog("0.15, 'POURING CONCRE");
   progress(0.15, 'POURING CONCRETE');
   await nextFrame();
 
@@ -1351,7 +1416,7 @@ export async function build(world, def, track, progress) {
             pts.push([q.x, q.z, y, w]);
           }
           if (dir > 0) pts.reverse();
-          pathRoad(pts, { key: 'ic', mirror: true, texW: 16, lamps: { sp: 46, side: sd * dir } });
+          pathRoad(pts, { key: 'ic', mirror: true, texW: 16, lamps: { sp: 46, side: sd } });
         }
       }
     }
@@ -1415,7 +1480,6 @@ export async function build(world, def, track, progress) {
       pathRoad(pts, { key: 'ex' + ex.s, mirror: true, texW: 12, barrier: 'parapet', deck: 1.8, pierR: 1.0, pierSp: 26, lamps: { sp: 40, side: sd, color: cfg.lampColor || '#ffb768' } });
     }
   }
-  tlog("0.3, 'HANGING SIGNS')");
   progress(0.3, 'HANGING SIGNS');
   await nextFrame();
 
@@ -1482,7 +1546,6 @@ export async function build(world, def, track, progress) {
     });
   }
   signTex.needsUpdate = true;
-  tlog("0.4, 'ZONING THE CITY");
   progress(0.4, 'ZONING THE CITY');
   await nextFrame();
 
@@ -1531,8 +1594,6 @@ export async function build(world, def, track, progress) {
         const u = edge + out * 2.5;
         const x = rv.axis === 'x' ? t : u, z = rv.axis === 'x' ? u : t;
         if (keep.blocked(x, z, 3) || inCorridor(x, z, 6)) continue;
-        const dToRoute = Math.abs(t - (rv.axis === 'x' ? MP(0).x : MP(0).z));
-        void dToRoute;
         lamp(x, GY + 4.6, z, 0, '#ffc27a', { r: 12, i: 0.7, halo: 0.6, size: 3.2, bake: false, hi: 4 });
         poles.city.push({ x, y: GY, z, ry: ryFor(rv.axis === 'x' ? 0 : -out, rv.axis === 'x' ? -out : 0), sy: 0.55 });
         if (lit) wstreaks.push({ x: rv.axis === 'x' ? x : x - out * 5, z: rv.axis === 'x' ? z - out * 5 : z, c: col.clone().multiplyScalar(0.55), s: 1 });
@@ -1568,7 +1629,6 @@ export async function build(world, def, track, progress) {
       }
     }
   }
-  tlog("0.5, 'RAISING THE CIT");
   progress(0.5, 'RAISING THE CITY');
   await nextFrame();
 
@@ -1587,7 +1647,7 @@ export async function build(world, def, track, progress) {
   const fac = (st, v) => {
     const k = st + v;
     if (!FAC[k]) {
-      const tx = facadeTextures(st, v + (def.id || ''));
+      const tx = facadeTex(st, v);
       FAC[k] = {
         gb: new GeoBuilder(),
         mat: new THREE.MeshStandardMaterial({
@@ -1684,12 +1744,22 @@ export async function build(world, def, track, progress) {
           const h = hMin + Math.pow(rng(), 1.4) * (hMax - hMin);
           const st = h > 60 ? (rng() < 0.55 ? 'glass' : rng() < 0.5 ? 'dark' : 'concrete') : pickStyle(false);
           building(q.x, q.z, Math.atan2(ux, uz) + Math.PI / 2, fw, fd, h, st, { tiers: h > 90 && rng() < 0.5 ? 2 : 1, water: h < 40 });
+          // lit ad panel on the face toward the expressway
+          if (fw > 15 && rng() < (cfg.facadeAds ?? 0.3)) {
+            const k = Math.floor(rng() * ADS.length), r = adSlot(k);
+            const n = [-sd * F.LX[a], 0, -sd * F.LZ[a]];
+            const e1 = [-n[2], 0, n[0]];
+            const hw = Math.min(6.5, fw / 2 - 1), hh = hw * 0.343;
+            const yc = F.Y[a] + 7 + rng() * 9;
+            const fx = q.x + n[0] * (fd / 2 + 0.25), fz = q.z + n[2] * (fd / 2 + 0.25);
+            bin('ads', 'ads').quad([fx - e1[0] * hw, yc - hh, fz - e1[2] * hw], [fx + e1[0] * hw, yc - hh, fz + e1[2] * hw], [fx + e1[0] * hw, yc + hh, fz + e1[2] * hw], [fx - e1[0] * hw, yc + hh, fz - e1[2] * hw], r.uv);
+            if (lit) halos.push({ x: fx + n[0] * 2, y: yc, z: fz + n[2] * 2, c: new THREE.Color(ADS[k % ADS.length][3]).multiplyScalar(0.12), s: hw * 2.6, f: 0.45 });
+          }
           s += fw + 1 + (rng() < 0.2 ? 8 + rng() * 14 : 0);
         } else s += 6;
       }
     }
   }
-  tlog("0.6, 'RAISING THE CIT");
   progress(0.6, 'RAISING THE CITY');
   await nextFrame();
 
@@ -1779,7 +1849,6 @@ export async function build(world, def, track, progress) {
     }
     world.add(new THREE.Mesh(A.geometry(), MATS.steel.mat));
   }
-  tlog("0.72, 'LIGHTING THE S");
   progress(0.72, 'LIGHTING THE SKYLINE');
   await nextFrame();
 
@@ -1813,9 +1882,7 @@ export async function build(world, def, track, progress) {
         if (h > 110 && lit) blinkers.push({ x, y: GY + h + 2, z, far: true });
       }
     }
-    const tex = facadeTextures('dark', 'sky' + def.id);
-    const tex2 = facadeTextures('glass', 'sky' + def.id);
-    void tex2;
+    const tex = facadeTex('dark', 'sky');
     const mat = weakFog(new THREE.MeshStandardMaterial({ map: tex.map, emissive: 0xffffff, emissiveMap: tex.emi, emissiveIntensity: lit ? 1.7 : 0, color: 0x8890a0, roughness: 0.8 }), sk.fog ?? 0.42);
     if (gb.count) world.add(new THREE.Mesh(gb.build(), mat));
   }
@@ -1831,9 +1898,7 @@ export async function build(world, def, track, progress) {
       const off = (sd < 0 ? extR(a) : extL(a)) + (xway ? 9 : gradeAt(a) && inS(cfg.soundWalls, s) ? 14 : 30) + rng() * 8;
       const q = MP(s, sd * off);
       if (keep.blocked(q.x, q.z, 3) || inRiver(q.x, q.z, 3) || inCorridor(q.x, q.z, 2)) continue;
-      const ad = ADS[k % ADS.length];
-      const r = adAt.alloc(14, 4.8);
-      drawAd(adAt, r, ad, rng);
+      const r = adSlot(k);
       // face the oncoming traffic, turned toward the road
       const nx = -F.TX[a] - sd * F.LX[a] * 0.5, nz = -F.TZ[a] - sd * F.LZ[a] * 0.5, nl = Math.hypot(nx, nz);
       const nn = [nx / nl, 0, nz / nl];
@@ -1876,7 +1941,6 @@ export async function build(world, def, track, progress) {
     }
     adTex.needsUpdate = true;
   }
-  tlog("0.85, 'WIRING THE LAM");
   progress(0.85, 'WIRING THE LAMPS');
   await nextFrame();
 
@@ -1992,7 +2056,6 @@ export async function build(world, def, track, progress) {
     let t = 0;
     world.animators.push((dt) => { t += dt; const on = t % 1.6 < 0.8; for (const m of ims) m.visible = on; });
   }
-  tlog("1, 'HIGHWAY READY');");
   progress(1, 'HIGHWAY READY');
 }
 

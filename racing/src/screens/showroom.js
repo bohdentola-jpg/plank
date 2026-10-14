@@ -173,6 +173,7 @@ registerScreen('showroom', () => {
   const regions = () => REGIONS.filter(([r]) => regionTracks(r).length);
   const track = () => TRACK_BY_ID[cfg.track] || TRACKS[0];
   const racers = () => (cfg.type === 'timeattack' ? 1 : cfg.opp + 1);
+  const trafficOK = () => ['city', 'highway', 'docks'].includes(track().env) && cfg.type !== 'drag';
 
   function fixType() {
     const allowed = typesFor(track());
@@ -224,6 +225,11 @@ registerScreen('showroom', () => {
         options: [{ value: true, label: 'ON' }, { value: false, label: 'OFF' }],
         get: () => cfg.catchup, set: (v) => { cfg.catchup = v; },
       },
+      {
+        label: 'TRAFFIC', type: 'choice', id: 'traffic',
+        get options() { return trafficOK() ? [{ value: true, label: 'ON' }, { value: false, label: 'OFF' }] : [{ value: false, label: 'CLOSED ROAD' }]; },
+        get: () => (trafficOK() ? cfg.traffic ?? !!track().traffic : false), set: (v) => { cfg.traffic = v; },
+      },
       { label: 'RACE!', id: 'race' },
     ];
     return new Menu(items, { id: 'route', sel: 0 });
@@ -267,6 +273,7 @@ registerScreen('showroom', () => {
       laps: type === 'knockout' ? Math.max(1, opp) : cfg.laps,
       opponents: pickRivals(sp, opp, skill, paintOf(idx), def.id + type),
       rubber: cfg.catchup ? 1 : 0,
+      traffic: trafficOK() ? (cfg.traffic ?? !!def.traffic) : false,
       back: 'showroom', station: 'quick',
     };
     go('race', params);
@@ -585,7 +592,7 @@ registerScreen('showroom', () => {
     // options
     const ox = 620, oy = 150, ow = 370, oh = 360;
     panel(ctx, ox, oy, ow, oh, { accent: C.cyan, accentLen: 120, alpha: 0.9 });
-    menu.draw(ctx, ox + 42, oy + 52, ow - 60, { rowH: 43, size: 17, hints: false });
+    menu.draw(ctx, ox + 42, oy + 48, ow - 60, { rowH: 39, size: 17, hints: false });
     text(ctx, TYPE_DESC[cfg.type] || '', ox + 24, oy + oh + 26, { size: 13, color: C.dim, weight: 600 });
     const rc = racers();
     text(ctx, `${rc} CAR${rc > 1 ? 'S' : ''} ON THE GRID  ·  ${SKILLS[cfg.skill].label} RIVALS`, ox + 24, oy + oh + 48, { size: 12, color: '#8fa0b8', weight: 700, spacing: 1 });

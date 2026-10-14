@@ -27,8 +27,8 @@ function withProfile(def, knots) {
 export default [
   withProfile({
     id: 'kaido', name: 'KAIDO PASS', env: 'mountain', time: 'dusk', weather: 'dry', type: 'sprint',
-    blurb: 'Five kilometers of cedar-lined pass road falling off the ridge at sundown. Guardrail on one side, rock on the other.',
-    width: 9.5, lanes: 2, center: 'yellow-dashed', edge: 'white', bank: 0.25, startS: 110, finishPad: 110,
+    blurb: 'Five kilometers of cedar-lined pass falling off the ridge at sundown.',
+    width: 10, lanes: 2, center: 'yellow-dashed', edge: 'white', bank: 0.55, startS: 110, finishPad: 110,
     shoulder: 1.5, wall: 1.2, shoulderSurface: 'road', offSurface: 'dirt',
     atmos: { sun: { color: '#ffb07a', i: 1.0, el: 0.07, az: 1.45 } },
     // scenery: rock shed span, summit lookout, extra lamps, power-line spans (meters along the road)
@@ -45,16 +45,16 @@ export default [
     },
     points: [
       [-1070, -626, 0], [-770, -642, 193], [-535, -599, 214], [-321, -633, 278], [-64, -615, 235], [139, -578, 139],
-      [417, -605, 16], [417, -559, 16], [128, -511, 214], [-150, -484, 342], [-449, -494, 15], [-449, -449, 15],
-      [-139, -419, 15], [-139, -374, 15], [-428, -345, 16], [-428, -300, 16], [-139, -268, 17], [-139, -223, 17],
+      [417, -605, 19], [417, -559, 19], [128, -511, 214], [-150, -484, 342], [-449, -494, 20], [-449, -449, 20],
+      [-139, -419, 19], [-139, -374, 19], [-428, -345, 20], [-428, -300, 20], [-139, -268, 21], [-139, -223, 21],
       [-353, -193, 64], [-310, -54, 54], [-171, 11, 48], [-203, 139, 64], [-449, 187, 128], [-642, 321, 160],
       [-696, 514, 150], [-942, 599, 171], [-1177, 556, 0],
     ],
-  }, [[0, 640], [268, 637], [1605, 584], [1733, 578], [2482, 540], [2568, 536], [3798, 434], [4654, 400], [9000, 388]]),
+  }, [[0, 640], [268, 637], [1605, 584], [1733, 578], [2482, 540], [2568, 536], [3480, 448], [3560, 444], [4100, 418], [4654, 400], [9000, 388]]),
   withProfile({
     id: 'summit', name: 'SUMMIT LOOP', env: 'mountain', time: 'night', weather: 'dry', type: 'circuit', laps: 3,
-    blurb: 'A fogbound lap around the peak: switchbacks up the east face, a flat-out plunge down the west.',
-    width: 9, lanes: 2, center: 'yellow-dashed', edge: 'white', bank: 0.3, startS: 200,
+    blurb: 'A fogbound lap of the peak: switchbacks up, a flat-out plunge down.',
+    width: 9.5, lanes: 2, center: 'yellow-dashed', edge: 'white', bank: 0.5, startS: 200,
     shoulder: 1.5, wall: 1.2, shoulderSurface: 'road', offSurface: 'dirt', fogD: 0.0042,
     viewpoint: { s: 2090, len: 70, depth: 18 }, lamps: [190, 1890], lampColor: '#d6e4ff', poles: [[260, 760], [2600, 3300]],
     // hazy moonlit night: no stars, blue-gray fog that the sky fades into
@@ -66,9 +66,9 @@ export default [
       peaks: [[-150, -60, 60, 160]],
     },
     points: [
-      [-300, 420, 90], [220, 430, 90], [450, 300, 120], [480, -80, 16], [435, -95, 16], [395, 170, 16], [350, 185, 16],
+      [-300, 420, 90], [220, 430, 90], [450, 300, 120], [480, -80, 19], [435, -95, 19], [395, 170, 19], [350, 185, 19],
       [300, -230, 110], [90, -420, 140], [-160, -430, 120], [-380, -300, 100], [-420, -60, 55], [-330, 60, 45],
       [-440, 200, 80],
     ],
-  }, [[0, 745], [300, 742], [700, 770], [1100, 812], [1600, 860], [1900, 868], [2300, 840], [3000, 770], [3400, 745]]),
+  }, [[0, 745], [300, 743], [700, 772], [1100, 812], [1450, 846], [1650, 862], [1850, 868], [2050, 862], [2300, 842], [3000, 772], [3400, 745]]),
 ];

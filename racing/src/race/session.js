@@ -6,6 +6,7 @@ import { buildWorld } from '../track/build.js';
 import { buildCarModel } from '../car/model.js';
 import { RaceSim } from './sim.js';
 import { proRun, ghostAt, ghostTimeAtDist } from './ghost.js';
+import { TrafficRender } from './trafficModels.js';
 import { ChaseCamera } from './camera.js';
 import { Effects } from './effects.js';
 import { input } from '../core/input.js';
@@ -66,6 +67,7 @@ export class RaceSession {
       auto: settings.get('transmission') !== 'manual',
       assists: settings.get('assists') === 'on' ? 1 : 0.25,
       rubber: this.opts.rubber ?? 1, playerGrid: this.opts.playerGrid || 'back', seed: this.def.id,
+      traffic: this.opts.traffic ?? !!this.def.traffic,
     });
     this.player = this.sim.player;
     if (this.type === 'timeattack') {
@@ -86,6 +88,10 @@ export class RaceSession {
       r.model = buildCarModel(r.spec, r.look || {}, { hiRes: r.isPlayer, interior: true });
       this.scene.add(r.model.group);
       r.prevThrottle = 0;
+    }
+    if (this.sim.traffic) {
+      progress(0.88, 'CLEARING THE ROADS');
+      this.trafficRender = new TrafficRender(this.scene, this.sim.traffic, { night: !!this.world.at.headlights, seed: this.def.id });
     }
     if (this.world.at.headlights) {
       this.addHeadlights(this.player);
@@ -173,6 +179,7 @@ export class RaceSession {
     this.handleEvents();
     this.syncModels(dt);
     this.updateGhost(dt);
+    this.trafficRender?.update(this.camera.cam);
     this.updateEffects(dt);
     this.updateCamera(dt);
     this.updateAudio(dt);
@@ -281,6 +288,11 @@ export class RaceSession {
           break;
         case 'airtime':
           if (e.t > 0.8) this.message('AIR TIME', `${e.t.toFixed(1)}s  + NITROUS`, { slot: 'top', dur: 1.6, color: '#46e8ff' });
+          break;
+        case 'nearmiss':
+          this.message(e.oncoming ? 'ONCOMING!' : 'NEAR MISS', '+ NITROUS', { slot: 'top', dur: 1.3, color: e.oncoming ? '#ffb21e' : '#46e8ff' });
+          try { sfx.whoosh(0.9); } catch { /* */ }
+          input.rumble(0.15, 0.4, 90);
           break;
         case 'driftbonus':
           this.message('DRIFT', '+ NITROUS', { slot: 'top', dur: 1.2, color: '#46e8ff' });
@@ -486,6 +498,7 @@ export class RaceSession {
       r.model?.dispose();
     }
     this.ghostModel?.dispose();
+    this.trafficRender?.dispose();
     try { sfx.stopAll(); sfx.ambience(null); } catch { /* */ }
     this.world?.dispose();
   }

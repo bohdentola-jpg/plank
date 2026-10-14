@@ -4,6 +4,7 @@
 // nitrous rewards, auto-resets, finish + results.
 import { Vehicle, PHYS_DT, collideCars } from '../car/physics.js';
 import { AIDriver } from './ai.js';
+import { TrafficSim } from './traffic.js';
 import { clamp } from '../core/util.js';
 
 export class RaceSim {
@@ -42,13 +43,19 @@ export class RaceSim {
       if (!r.isPlayer) r.ai = new AIDriver(r, track, { skill: r.skill, rubber: opts.rubber ?? 1, seed: opts.seed || '' });
     }
     this.placeGrid();
+    if (opts.traffic) {
+      this.traffic = new TrafficSim(track, track.def, { seed: opts.seed || '' });
+      this.traffic.place(track.startS);
+    }
   }
 
   emit(type, data = {}) { this.events.push({ type, t: this.time, ...data }); }
 
   placeGrid() {
     const T = this.T;
-    const others = this.racers.filter((r) => !r.isPlayer);
+    // rivals line up by pace (fastest on pole) so the field spreads out
+    // instead of jamming behind the slowest car; the player starts per opts
+    const others = this.racers.filter((r) => !r.isPlayer).sort((a, b) => (b.skill * (b.ai?.gripScale || 1)) - (a.skill * (a.ai?.gripScale || 1)));
     let order;
     const pg = this.opts.playerGrid || 'back';
     if (!this.player) order = others;
@@ -173,6 +180,10 @@ export class RaceSim {
           const hit = collideCars(R[a].vehicle, R[b].vehicle, R[a].dims, R[b].dims);
           if (hit && hit.impact > 1.0) this.emit('carhit', { a: R[a].id, b: R[b].id, impact: hit.impact, x: (R[a].vehicle.x + R[b].vehicle.x) / 2, z: (R[a].vehicle.z + R[b].vehicle.z) / 2, y: R[a].vehicle.y });
         }
+      }
+      if (this.traffic) {
+        this.traffic.step(PHYS_DT, this);
+        this.traffic.collide(this, collideCars);
       }
     }
   }

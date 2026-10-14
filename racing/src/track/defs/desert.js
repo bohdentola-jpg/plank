@@ -35,14 +35,14 @@ const DAY_HAZE = {
 };
 
 const SUNSET_CANYON = {
-  sky: ['#2a2560', '#b5577a', '#ffaa62'], glowHorizon: '#ffc076', fog: '#c78a70',
+  sky: ['#1d2258', '#7a4c8e', '#ff9e5a'], glowHorizon: '#ffb466', fog: '#c98a6c',
   sun: { color: '#ffae66', i: 2.5, el: 0.13, az: 2.05 }, hemi: ['#8c86cc', '#6e3a26', 0.72], amb: 0.12,
   post: { exposure: 1.02, bloomStrength: 0.8, bloomThreshold: 1.1, saturation: 1.14, contrast: 1.06, lift: [0.012, 0.0, 0.014], gain: [1.07, 0.99, 0.93] },
 };
 
 const SUNSET_LAKE = {
-  sky: ['#262a66', '#a35f92', '#ffb27a'], glowHorizon: '#ffcf96', fog: '#d2a28c',
-  sun: { color: '#ffb874', i: 2.4, el: 0.1, az: 1.95 }, hemi: ['#9a92d6', '#a07070', 0.8], amb: 0.12,
+  sky: ['#1f2a66', '#6e5a9a', '#ffaa6a'], glowHorizon: '#ffc488', fog: '#d6a488',
+  sun: { color: '#ffb874', i: 2.4, el: 0.1, az: 1.95 }, hemi: ['#8a90d0', '#a07a68', 0.8], amb: 0.12,
   post: { exposure: 1.0, bloomStrength: 0.85, bloomThreshold: 1.05, saturation: 1.12, contrast: 1.05, lift: [0.014, 0.0, 0.018], gain: [1.06, 0.99, 0.95] },
 };
 
@@ -67,6 +67,7 @@ export default [
       [6000, 0, 3000], [6300, 4, 1200], [6600, 1, 2000], [7004, 0],
     ],
     canyons: [{ s0: 4290, s1: 5590, h: 58, gap: 6.5 }],
+    washes: [{ s: 2400, w: 16, depth: 1.4, angle: 0.3 }, { s: 2580, w: 22, depth: 1.6, angle: -0.2 }, { s: 2760, w: 14, depth: 1.2, angle: 0.1 }, { s: 2960, w: 26, depth: 1.8, angle: -0.35 }],
     stop: { s: 1545, side: -1 },
     poles: { side: 1, from: 20, to: 6990, skip: [[4210, 5680]] },
     fence: 32,
@@ -89,7 +90,7 @@ export default [
       [180, 820, 70], [-50, 960, 110], [-380, 820, 90], [-420, 420, 120], [-300, 0, 130],
     ],
     canyons: [{ s0: 1440, s1: 2660, h: 52, gap: 5.5 }],
-    washes: [{ s: 3135, w: 34, depth: 2.6, angle: 0.25 }],
+    washes: [{ s: 3135, w: 34, depth: 3.4, angle: 0.25 }],
     fence: 30,
     ads: [[350, -1, 1]],
     signs: [

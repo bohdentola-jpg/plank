@@ -15,9 +15,24 @@ import webbrowser
 
 args = [a for a in sys.argv[1:] if a.isdigit()]
 START_PORT = int(args[0]) if args else 8000
+# --open racing/  → open that page instead of the site root (used by race.bat)
+OPEN_PATH = ''
+if '--open' in sys.argv:
+    i = sys.argv.index('--open')
+    if i + 1 < len(sys.argv):
+        OPEN_PATH = sys.argv[i + 1].lstrip('/')
 
 
 class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
+    # Windows sometimes maps .js to text/plain in the registry, which makes
+    # browsers refuse ES modules. Pin the types the games need.
+    extensions_map = {
+        **http.server.SimpleHTTPRequestHandler.extensions_map,
+        '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css',
+        '.json': 'application/json', '.html': 'text/html', '.png': 'image/png',
+        '.svg': 'image/svg+xml', '.wav': 'audio/wav',
+    }
+
     def end_headers(self):
         self.send_header('Cache-Control', 'no-store, must-revalidate')
         self.send_header('Expires', '0')
@@ -42,9 +57,9 @@ def main():
         input('Press Enter to close...')
         return
 
-    url = f'http://localhost:{port}'
+    url = f'http://localhost:{port}/{OPEN_PATH}'
     print()
-    print('  VARSITY 27')
+    print('  MIDNIGHT FREQUENCY' if OPEN_PATH.startswith('racing') else '  VARSITY 27')
     print(f'  Game is live at  {url}')
     if port != START_PORT:
         print(f'  (port {START_PORT} was busy — an old window may still be running)')

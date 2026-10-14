@@ -345,37 +345,48 @@ function buildWindshield(group) {
       vec2 h22(vec2 p){ float n = h21(p); return vec2(n, h21(p + n)); }
       void main(){
         vec2 uv = vUv * vec2(2.1, 1.0);
-        float a = 0.0; vec3 col = vec3(0.0);
-        // wiper sweep clears drops: angle around each pivot at the bottom
+        // premultiplied accumulation: drops are mostly clear lenses
+        vec3 pc = vec3(0.0); float pa = 0.0;
         float since = time - wipe;
-        for (int layer = 0; layer < 2; layer++) {
-          float sc = layer == 0 ? 11.0 : 6.5;
+        for (int layer = 0; layer < 3; layer++) {
+          float sc = layer == 0 ? 15.0 : (layer == 1 ? 9.0 : 5.5);
           vec2 g = uv * sc;
           vec2 id = floor(g);
           vec2 f = fract(g) - 0.5;
           vec2 r = h22(id + float(layer) * 17.0);
-          float born = r.x * 6.0;
-          float age = mod(time + born, 6.0);
+          float present = step(0.35, h21(id + float(layer) * 5.3));
+          float born = r.x * 7.0;
+          float age = mod(time + born, 7.0);
           // cleared by the wiper (drops born before the sweep vanish)
           float clearMask = step(since, age) * step(0.0, since);
-          vec2 off = (r - 0.5) * 0.6;
-          float size = mix(0.06, 0.2, r.y) * (layer == 0 ? 1.0 : 1.4) * smoothstep(0.0, 0.6, age);
-          float d = length(f - off);
-          float drop = smoothstep(size, size * 0.4, d) * (1.0 - clearMask) * rain;
-          // highlight: city light caught in the drop
-          vec3 tint = mix(vec3(1.0, 0.7, 0.35), vec3(0.4, 0.8, 1.0), h21(id + 3.1));
-          col += tint * drop * (0.45 + 0.9 * smoothstep(size * 0.6, 0.0, length(f - off - vec2(-0.02, 0.03))));
-          a = max(a, drop * 0.6);
+          present *= (1.0 - clearMask) * rain;
+          vec2 off = (r - 0.5) * 0.55;
+          float size = mix(0.07, 0.17, r.y) * (layer == 2 ? 1.25 : 1.0) * smoothstep(0.0, 0.8, age);
+          vec2 q = f - off;
+          q.y *= 1.12; // drops sag a little
+          float d = length(q);
+          float body = smoothstep(size, size * 0.72, d);
+          // light from the street gathers along the lower edge (refraction flips it)
+          float lower = body * smoothstep(0.1 * size, -0.75 * size, q.y) * smoothstep(size * 0.35, size * 0.9, d);
+          // tiny specular glint, upper left
+          float glint = smoothstep(size * 0.28, 0.0, length(q - vec2(-0.3, 0.35) * size));
+          vec3 tint = mix(vec3(1.0, 0.62, 0.3), vec3(0.45, 0.8, 1.0), h21(id + 3.1));
+          tint = mix(tint, vec3(1.0, 0.25, 0.4), step(0.85, h21(id + 9.7)));
+          pc += present * (tint * lower * 0.42 + vec3(1.0) * glint * 0.75);
+          pa += present * (body * 0.14 + lower * 0.24 + glint * 0.5);
         }
         // a few running streaks
         float sx = floor(uv.x * 40.0);
         float sr = h21(vec2(sx, 7.0));
-        if (sr > 0.92) {
+        if (sr > 0.93) {
           float y = fract(vUv.y + time * (0.05 + sr * 0.1) + sr * 10.0);
           float streak = smoothstep(0.02, 0.0, abs(fract(uv.x * 40.0) - 0.5) * 0.05) * smoothstep(0.0, 0.3, y) * (1.0 - y) * rain;
-          col += vec3(0.5, 0.6, 0.7) * streak * 0.25;
-          a = max(a, streak * 0.2);
+          pc += vec3(0.6, 0.7, 0.8) * streak * 0.12;
+          pa += streak * 0.12;
         }
+        pa = clamp(pa, 0.0, 0.85);
+        vec3 col = pc / max(pa, 0.001);
+        float a = pa;
         gl_FragColor = vec4(col, a);
       }`,
   });

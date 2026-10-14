@@ -137,9 +137,13 @@ registerScreen('story', () => {
     const laps = ev.type === 'knockout' ? Math.max(2, ev.rivals) : ev.type === 'timeattack' ? (def.type === 'sprint' ? 1 : 3) : ev.laps || def.laps || 3;
     go('race', {
       trackDef: def, spec, look: story.look(), upgrades: story.up(), type: ev.type, laps,
-      opponents: story.rivals(ev), rubber: ev.boss ? 0.4 : 0.75, ttFactor: ev.tt,
+      opponents: story.rivals(ev), rubber: ev.boss ? 0.4 : 0.75, ttFactor: ev.tt, traffic: ev.traffic,
       musicTheme: ev.boss ? 'race_boss' : undefined, playerGrid: ev.boss ? 'back' : 'back',
       quitLabel: 'QUIT TO GARAGE', story: ev.id,
+      banner: {
+        title: ev.name, sub: `${CHAPTERS[ev.ch].crew}  ·  ${ev.boss ? 'BOSS RACE' : TYPE_NAMES[ev.type] || ''}`, color: CHAPTERS[ev.ch].color,
+        boss: ev.boss ? { name: CHAPTERS[ev.ch].boss.name, car: `${CAR_BY_ID[CHAPTERS[ev.ch].boss.car].make} ${CAR_BY_ID[CHAPTERS[ev.ch].boss.car].model}`, quote: CHAPTERS[ev.ch].boss.quote } : null,
+      },
       onResult: (res) => story.applyResult(ev, res),
       onDone: () => go('story', { from: 'race', event: ev.id }),
     });

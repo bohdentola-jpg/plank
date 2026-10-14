@@ -30,9 +30,9 @@ function profile(len, knots, step = 12) {
 export default [
   {
     id: 'redwood', name: 'REDWOOD RACEWAY', env: 'circuit', time: 'day', weather: 'dry', type: 'circuit', laps: 3,
-    blurb: 'Grand-prix speedway in the redwoods: a kilometer of pit straight into a brutal hairpin, then the esses.',
+    blurb: 'Pit straight, brutal hairpin, flowing esses: grand prix racing in the redwoods.',
     width: 14, lanes: 1, center: 'none', edge: 'white', startS: 420, wall: 10, shoulder: 1.6, worn: 0.25, asphalt: '#36373b',
-    scenery: 'redwood',
+    scenery: 'redwood', fogD: 0.0006,
     points: [
       [-340, 0, 75], [945, 0, 18], [719, 130, 110], [832, 326, 140], [709, 502, 140],
       [817, 687, 130], [693, 835, 160], [-98, 835, 22], [-118, 854, 22], [-536, 854, 140],
@@ -46,7 +46,7 @@ export default [
   },
   {
     id: 'crestwood', name: 'CRESTWOOD HILLS', env: 'circuit', time: 'sunset', weather: 'dry', type: 'circuit', laps: 3,
-    blurb: 'Golden hills at sundown: over the blind crest, down the corkscrew, up the banked carousel.',
+    blurb: 'Golden hills at sundown: a blind crest, the corkscrew, a banked carousel.',
     width: 12, lanes: 1, center: 'none', edge: 'white', startS: 270, wall: 8, shoulder: 1.4, worn: 0.5, asphalt: '#424247',
     scenery: 'crestwood', fogD: 0.001,
     // extra banking through the carousel: [sFrom, sTo, radians] (applied by env/circuit.js)

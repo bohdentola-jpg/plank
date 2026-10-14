@@ -33,6 +33,7 @@ export class AIDriver {
   /** Called every frame before physics. race: the RaceSession. */
   update(dt, race) {
     const r = this.r, T = this.T, v = r.vehicle, ctl = r.ctl;
+    this._dt = dt;
     const line = T.line;
     const speed = v.speed;
     const i0 = r.hint >= 0 ? r.hint : T.nearestIndex(v.x, v.z);
@@ -142,15 +143,18 @@ export class AIDriver {
     this.blocked = false;
     let target = 0;
     let threat = null, threatDs = Infinity;
-    for (const o of race.racers) {
+    const others = race.traffic ? race.racers.concat(race.traffic.cars) : race.racers;
+    for (const o of others) {
       if (o === r || o.out) continue;
+      const oncoming = o.dir !== undefined && o.alongSpeed < 0;
       const ds = T.deltaS(r.s, o.s);
       const dLat = (o.lat ?? 0) - (r.lat ?? 0);
       if (ds > -6 && ds < 8 && Math.abs(dLat) < 2.6) {
         // alongside: lean away
         target += (dLat > 0 ? -1 : 1) * (2.6 - Math.abs(dLat)) * 0.9;
       }
-      if (ds > 2 && ds < 18 + v.speed * 0.6 && Math.abs(dLat) < 2.8) {
+      const reach = oncoming ? 30 + (v.speed - o.vehicle.speed) * 1.4 : 18 + v.speed * 0.6;
+      if (ds > 2 && ds < reach && Math.abs(dLat) < 2.8) {
         const closing = v.speed - o.vehicle.speed;
         if ((closing > -1 || ds < 10) && ds < threatDs) { threat = o; threatDs = ds; }
       }
@@ -167,11 +171,26 @@ export class AIDriver {
       }
       const want = clamp(tl + this.passSide * 3.3, -W + 1.3, W - 1.3);
       target += want - lineOff;
-      // not enough room: tuck in and match speed
+      // about to rear-end it before we've moved over: brake to its speed
+      // (oncoming traffic: just get out of its lane)
+      const dLatT = Math.abs(tl - (r.lat ?? 0));
+      const closingT = v.speed - threat.vehicle.speed;
+      const headOn = threat.alongSpeed !== undefined && threat.alongSpeed < 0;
+      if (!headOn && dLatT < 1.9 && threatDs < 5 + Math.max(0, closingT) * 0.9) {
+        this.blocked = true;
+        this.blockedSpeed = Math.max(0, threat.vehicle.speed - 0.5);
+      }
+      // not enough room: tuck in and match speed — and after a while, try the other side
       const room = this.passSide > 0 ? (W - 1.3) - tl : tl + W - 1.3;
-      if (room < 2.6 && threatDs < 12) { this.blocked = true; this.blockedSpeed = threat.vehicle.speed * 0.98; }
+      if (!headOn && room < 2.3 && threatDs < 12) {
+        this.blocked = true;
+        this.blockedSpeed = threat.vehicle.speed * 0.985;
+        this.blockedT = (this.blockedT || 0) + (this._dt || 1 / 60);
+        if (this.blockedT > 2.2) { this.passSide = -this.passSide; this.blockedT = 0; }
+      } else this.blockedT = 0;
     } else {
       this.passSide = 0;
+      this.blockedT = 0;
     }
     this.offsetTarget = clamp(target, -7, 7);
   }

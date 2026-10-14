@@ -18,11 +18,11 @@ const TEAMS = ['#c8161e', '#1d4fa8', '#f0a818', '#1b1b1d', '#2f9a4a', '#e6e6e6',
 // walls: [s0, s1, side, runoff past the road edge, kind (2 concrete)]
 const LOOK = {
   redwood: {
-    grass: '#6a9440', steep: '#7d7158', floor: '#3e5a2c', verge: '#6c9a42', gravel: '#efe6d2',
-    far: ['#5e8048', '#3a5446'], mountains: 300,
+    grass: '#5b7842', steep: '#7d7158', floor: '#3a5428', verge: '#5f7a45', gravel: '#e6ddc8',
+    far: ['#4f6e3e', '#3a5446'], mountains: 380, leaf: ['#3f6a2c', '#4c7a34'],
     hills: { amp: 9, rise: 90, freq: 0.0032, infield: 0.25 },
     terrain: { margin: 520, cell: 13, flat: 26, blend: 44 },
-    forest: { bias: 0.1, infield: 0.22, count: 2800, conifer: 1, coniferH: [20, 50], oakH: [8, 13] },
+    forest: { bias: 0.1, infield: 0.22, count: 2800, conifer: 0.9, coniferH: [20, 50], oakH: [9, 15] },
     seats: ['#2b5fb8', '#d6dce2'], roof: '#eef1f2', accent: '#1d5c34', building: '#e4e6e2',
     walls: [[150, 1170, -1, 3.6, 2], [195, 1090, 1, 7.5, 2]],
     pits: { lane: [182, 1010], garages: [330, 706], tower: 432 },
@@ -32,7 +32,7 @@ const LOOK = {
   },
   crestwood: {
     grass: '#d8c174', steep: '#a8865c', floor: '#8a8248', verge: '#c8cc7c', gravel: '#ecd8ae',
-    far: ['#a68a5a', '#6e5c66'], mountains: 220,
+    far: ['#a68a5a', '#6e5c66'], mountains: 260, leaf: ['#5a6c2e', '#6a7c3a'],
     hills: { amp: 16, rise: 120, freq: 0.0042, infield: 0.5 },
     terrain: { margin: 520, cell: 11, flat: 14, blend: 30 },
     forest: { bias: -0.06, infield: 0.7, count: 1800, conifer: 0.22, coniferH: [14, 24], oakH: [7, 13] },
@@ -1325,7 +1325,7 @@ export async function build(world, def, track, progress) {
       count++;
     }
     const tmat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, side: DS, envMapIntensity: 0.25 });
-    const geos = { c0: coniferGeo(L, 0), c1: coniferGeo(L, 1), o0: oakGeo(0), o1: oakGeo(1) };
+    const geos = { c0: coniferGeo(L, 0), c1: coniferGeo(L, 1), o0: oakGeo(L, 0), o1: oakGeo(L, 1) };
     for (const [key, list] of sets) world.add(instancedColor(geos[key.slice(0, 2)], list, false, tmat));
   }
 
@@ -1415,23 +1415,24 @@ function cone(g, y, h, r, seg, hex) {
 /** Unit conifer (height 1, crown radius 1). lod 0: trunk + three cones; lod 1: one cone. */
 function coniferGeo(L, lod) {
   const g = new GeoBuilder();
-  const cols = L.forest.conifer > 0.5 ? ['#1c3a1e', '#24482a', '#2f5a30'] : ['#26401f', '#2e4c24', '#3a5a2a'];
+  const cols = L.forest.conifer > 0.5 ? ['#1d3b22', '#25472b', '#2f5534'] : ['#2e4424', '#38502a', '#45602f'];
   if (lod) {
     cone(g, 0.08, 0.92, 0.92, 6, cols[1]);
     return g.build(true);
   }
-  g.setColor(...rgb('#5a3424')).cylinder(0, 0, 0, 0.13, 0.42, 4, 0.07);
+  g.setColor(...rgb('#6a3a26')).cylinder(0, 0, 0, 0.13, 0.42, 4, 0.07);
   [[0.16, 0.5, 1.0], [0.38, 0.46, 0.76], [0.6, 0.4, 0.5]].forEach(([y, h, r], k) => cone(g, y, h, r, 7, cols[k]));
   return g.build(true);
 }
 
 /** Unit broadleaf (height 1, crown radius ~1). lod 0: trunk + lumpy canopy; lod 1: one blob. */
-function oakGeo(lod) {
+function oakGeo(L, lod) {
   const g = new GeoBuilder();
   g.setColor(...rgb('#4a3424')).cylinder(0, 0, 0, 0.1, 0.5, lod ? 3 : 4, 0.07);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion();
-  const blobs = lod ? [[0, 0.64, 0, 0.95, 0.4, '#3a4a20']] : [[0, 0.62, 0, 0.85, 0.36, '#3a4a20'], [0.32, 0.76, 0.18, 0.55, 0.26, '#46582a']];
-  const geo = lod ? new THREE.OctahedronGeometry(1, 0) : new THREE.IcosahedronGeometry(1, 0);
+  const [a, b] = L.leaf;
+  const blobs = lod ? [[0, 0.64, 0, 0.95, 0.4, a]] : [[0, 0.6, 0, 0.82, 0.36, a], [0.36, 0.74, 0.2, 0.55, 0.28, b], [-0.3, 0.76, -0.22, 0.5, 0.26, b]];
+  const geo = new THREE.IcosahedronGeometry(1, 0);
   for (const [x, y, z, r, ry, c] of blobs) {
     g.setColor(...rgb(c));
     g.geometry(geo, m.compose(new THREE.Vector3(x, y, z), q, new THREE.Vector3(r, ry, r)));
@@ -1451,7 +1452,7 @@ function farRing(terrain, L, nat, noise) {
     const r0 = Math.min(hx / Math.max(1e-6, Math.abs(dx)), hz / Math.max(1e-6, Math.abs(dz)));
     for (let k = 0; k < R.length; k++) {
       const x = cx + dx * (r0 + R[k]), z = cz + dz * (r0 + R[k]);
-      const h = k === 0 ? terrain.heightAt(x, z) - 1.2 : nat(x, z) + L.mountains * smoothstep(0, 1500, R[k]) * (0.25 + 0.75 * noise.ridged(x * 0.0011 + 7, z * 0.0011 - 3, 4));
+      const h = k === 0 ? terrain.heightAt(x, z) - 1.2 : nat(x, z) + L.mountains * smoothstep(0, 900, R[k]) * (0.25 + 0.75 * noise.ridged(x * 0.0011 + 7, z * 0.0011 - 3, 4));
       pos.push(x, h, z);
       const t = clamp(R[k] / 1400, 0, 1);
       tmp.copy(c0).lerp(c1, smoothstep(0, 0.35, t)).lerp(c2, smoothstep(0.35, 1, t));

@@ -15,9 +15,9 @@ const n = parseInt(nRaw, 10);
 const pool = carArg === 'mixed' ? CARS.filter((c) => c.cls === 'B' || c.cls === 'A') : [CAR_BY_ID[carArg]];
 const racers = [];
 for (let k = 0; k < n; k++) racers.push({ spec: pool[k % pool.length], name: `AI${k}`, skill: 0.6 + 0.4 * (k / Math.max(1, n - 1)) });
-const sim = new RaceSim(T, { type: def.type, laps: lapsRaw ? parseInt(lapsRaw, 10) : (def.laps || 3), racers, afterFinish: 60 });
+const sim = new RaceSim(T, { type: def.type, laps: lapsRaw ? parseInt(lapsRaw, 10) : (def.laps || 3), racers, afterFinish: 60, traffic: process.env.TRAFFIC === '1' || (process.env.TRAFFIC !== '0' && !!def.traffic) });
 sim.startCountdown(3);
-const counts = { carhit: 0, wallhit: 0, reset: 0, landing: 0 };
+const counts = { carhit: 0, wallhit: 0, reset: 0, landing: 0, nearmiss: 0 };
 let t = 0;
 const t0 = Date.now();
 while (sim.state !== 'done' && t < 900) {

@@ -122,7 +122,8 @@ registerScreen('race', () => {
         track: def, type: p.type || def.type, laps: p.laps ? Number(p.laps) : def.laps,
         player: { spec, look: p.look || {}, upgrades: p.upgrades || {}, name: p.playerName || 'YOU' },
         opponents: (p.type || def.type) === 'timeattack' ? [] : buildOpponents(p, spec),
-        playerGrid: p.playerGrid, rubber: p.rubber, musicTheme: p.musicTheme, ttFactor: p.ttFactor,
+        playerGrid: p.playerGrid, rubber: p.rubber, musicTheme: p.musicTheme, ttFactor: p.ttFactor, banner: p.banner,
+        traffic: p.traffic === undefined ? undefined : (p.traffic === true || p.traffic === '1' || p.traffic === 'true'),
       });
       await session.load(game.renderer.gl, (f, label) => { loading = { f, label }; });
       game.renderer.setPost(session.world.at.post || {}, true);

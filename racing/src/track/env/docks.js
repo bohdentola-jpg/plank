@@ -1036,8 +1036,8 @@ function crane(X, ox, oz, ax, az, wx, wz, style, overRoad) {
       refl.push({ x: c[0], z: c[2], color: HALIDE, i: 1.5, w: 2.2, len: 1.6 });
       wash.push({ x: c[0], y: 40, z: c[2], color: new THREE.Color(HALIDE), radius: 60, intensity: 1.1 });
     } else if (overRoad) {
-      world.addLamp(c[0], 43, c[2], HALIDE, 30, 0.45);
-      X.pool(c[0], 15, c[2], HALIDE, 28, 1.25);
+      world.addLamp(c[0], 43, c[2], HALIDE, 30, 0.4);
+      X.pool(c[0], 15, c[2], '#e9e6dc', 28, 0.95);
     } else {
       wash.push({ x: c[0], y: 30, z: c[2], color: new THREE.Color(HALIDE), radius: 50, intensity: 1.2 });
     }
@@ -1268,7 +1268,8 @@ function warehouse(X, cx, cz, tx, tz, fx, fz, bays, sideBays, h, kit) {
       L.claim(cells);
       trailer(X, q[0], q[1], Math.atan2(-fz, fx), rng);
     }
-    if (rng() < 0.3) X.pallets.push(...palletStack(fr(a + (rng() - 0.5) * 3, 4.3 + rng() * 2), ry, rng));
+    if (rng() < 0.3) palletStack(X, fr(a + (rng() - 0.5) * 3, 4.3 + rng() * 2), ry, rng);
+    if (kit !== 'rail' && rng() < 0.12) { const q = fr(a + 2, 5 + rng() * 3); if (L.rectFree(q[0], q[1], Math.atan2(fx, fz), 2, 1.2, 1, 0)) forklift(X, q[0], q[1], Math.atan2(fx, fz) + (rng() - 0.5), rng); }
   });
   if (kit === 'rail') G.conc.box(fr(0, 1.4)[0], GROUND_Y, fr(0, 1.4)[1], w, 1.3, 2.8, ry, { uw: 4, uh: 2 });
   const sb = fr(office === 0 ? w / 2 - 9 : -w / 2 + 9, 0);
@@ -1290,9 +1291,15 @@ function trailer(X, x, z, ry, rng, onlyChassis = false) {
   containerBox(G.cont, x, GROUND_Y + 1.1, z, ry, [7, 2, 5, 0][Math.floor(rng() * 4)], 13.4);
 }
 
-function palletStack(p, ry, rng) {
+/** Stack of pallets, sometimes with shrink-wrapped goods on top. */
+function palletStack(X, p, ry, rng) {
   const n = 2 + Math.floor(rng() * 7);
-  return [{ x: p[0], y: GROUND_Y, z: p[1], ry: ry + (rng() - 0.5) * 0.3, sy: n }];
+  const a = ry + (rng() - 0.5) * 0.3;
+  for (let k = 0; k < n; k++) {
+    X.G.misc.setColor(0.42 + rng() * 0.1, 0.32, 0.2);
+    X.G.misc.box(p[0], GROUND_Y + k * 0.15, p[1], 1.2, 0.13, 1.0, a + (rng() - 0.5) * 0.05);
+  }
+  if (rng() < 0.5) { X.G.misc.setColor(0.7, 0.72, 0.74); X.G.misc.box(p[0], GROUND_Y + n * 0.15, p[1], 1.15, 0.9 + rng() * 0.5, 0.95, a); }
 }
 
 /** Oil tank: shell, cone roof, rim railing, stair steps, bund wall, beacons. */
@@ -1326,7 +1333,8 @@ function oilTank(X, x, z, r, h, bund) {
   L.claimCircle(x, z, Math.max(r, bund) + 2);
   for (let k = 0; k < 8; k++) {
     const a = rng() * Math.PI * 2, rr = r + 2 + rng() * 2;
-    X.drums.push({ x: x + Math.cos(a) * rr, y: GROUND_Y, z: z + Math.sin(a) * rr, color: ['#2a4a8a', '#8a2a1a', '#6a5a3a', '#3a5a3a'][k % 4] });
+    G.steel.setColor(...[[0.16, 0.29, 0.54], [0.54, 0.16, 0.1], [0.4, 0.35, 0.22], [0.22, 0.35, 0.22]][k % 4]);
+    G.steel.cylinder(x + Math.cos(a) * rr, GROUND_Y, z + Math.sin(a) * rr, 0.3, 0.9, 7);
   }
 }
 
@@ -1521,6 +1529,84 @@ function tractor(X, x, z, ang, rng) {
   trailer(X, x, z, ry, rng, rng() < 0.3);
 }
 
+function forklift(X, x, z, ang, rng) {
+  const { G } = X;
+  const tx = Math.sin(ang), tz = Math.cos(ang);
+  const ry = ang - Math.PI / 2;
+  G.steel.setColor(0.85, 0.62, 0.08);
+  G.steel.box(x, GROUND_Y + 0.3, z, 2.4, 1.0, 1.2, ry);
+  G.steel.setColor(0.1, 0.1, 0.1);
+  for (const sd of [-1, 1]) {
+    G.steel.box(x + tz * sd * 0.5 - tx * 0.4, GROUND_Y + 1.3, z - tx * sd * 0.5 - tz * 0.4, 0.08, 1.2, 0.08, ry);
+    G.steel.box(x + tz * sd * 0.5 + tx * 0.6, GROUND_Y + 1.3, z - tx * sd * 0.5 + tz * 0.6, 0.08, 1.2, 0.08, ry);
+  }
+  G.steel.box(x + tx * 0.1, GROUND_Y + 2.45, z + tz * 0.1, 1.2, 0.08, 1.1, ry);
+  const m = [x + tx * 1.3, z + tz * 1.3];
+  G.steel.box(m[0], GROUND_Y, m[1], 0.15, 2.6, 0.9, ry);
+  const f = [x + tx * 1.9, z + tz * 1.9];
+  G.steel.box(f[0], GROUND_Y + 0.1 + rng() * 0.8, f[1], 1.1, 0.06, 0.8, ry);
+  for (const a of [-0.7, 0.7]) G.steel.box(x + tx * a, GROUND_Y, z + tz * a, 0.5, 0.5, 1.3, ry);
+}
+
+/** Pipe bridge over the road: two lattice posts, a truss, pipes dropping to the ground. */
+function pipeBridge(X, s0) {
+  const { G, track, L, halos, world } = X;
+  // find a spot where both posts are clear
+  let i = -1, posts = null;
+  for (const ds of [0, 8, -8, 16, -16, 24]) {
+    const k = track.posAt(s0 + ds, 0).i;
+    const ang = Math.atan2(track.TX[k], track.TZ[k]);
+    const q = [1, -1].map((sd) => L.at(k, sd * ((sd > 0 ? track.WL[k] : track.WR[k]) + 1.6)));
+    const cells = q.map((c) => L.rectFree(c.x, c.z, ang, 2.2, 1.6, 1.2, 0));
+    if (cells[0] && cells[1]) { i = k; posts = q; cells.forEach((c) => L.claim(c)); break; }
+  }
+  if (i < 0) return;
+  const T = [track.TX[i], track.TZ[i]];
+  for (const q of posts) {
+    G.steel.setColor(0.42, 0.4, 0.36);
+    for (const a of [-1.2, 1.2]) beam(G.steel, q.x + T[0] * a, GROUND_Y, q.z + T[1] * a, q.x + T[0] * a, 8.2, q.z + T[1] * a, 0.35);
+    beam(G.steel, q.x - T[0] * 1.2, 1, q.z - T[1] * 1.2, q.x + T[0] * 1.2, 7.8, q.z + T[1] * 1.2, 0.18);
+    halos.push({ x: q.x, y: 7.6, z: q.z, color: SODIUM, i: 1.8, size: 3 });
+  }
+  const [l, r] = posts;
+  const c = { x: (l.x + r.x) / 2, z: (l.z + r.z) / 2 };
+  world.addLamp(c.x, 7.6, c.z, SODIUM, 22, 1.0);
+  G.steel.setColor(0.38, 0.37, 0.35);
+  for (const a of [-1.3, 1.3]) beam(G.steel, l.x + T[0] * a, 8.3, l.z + T[1] * a, r.x + T[0] * a, 8.3, r.z + T[1] * a, 0.3, 0.5);
+  const cols = [[0.62, 0.6, 0.55], [0.55, 0.42, 0.18], [0.35, 0.4, 0.45], [0.5, 0.18, 0.12]];
+  [-0.8, -0.1, 0.55, 1.1].forEach((a, k) => {
+    G.steel.setColor(...cols[k]);
+    const rad = [0.32, 0.45, 0.25, 0.38][k], y = 8.9 + rad;
+    const A = new THREE.Vector3(l.x + T[0] * a, y, l.z + T[1] * a), B = new THREE.Vector3(r.x + T[0] * a, y, r.z + T[1] * a);
+    tube(G.steel, A, B, rad, 8);
+    tube(G.steel, A, new THREE.Vector3(A.x, GROUND_Y, A.z), rad, 8);
+    tube(G.steel, B, new THREE.Vector3(B.x, GROUND_Y, B.z), rad, 8);
+  });
+}
+
+/** Guard booth beside a gate: lit cabin with a raised boom. */
+function booth(X, s) {
+  const { G, track, L, halos, world } = X;
+  const i = track.posAt(s, 0).i;
+  const ry = Math.atan2(-track.TZ[i], track.TX[i]);
+  for (const side of [1, -1]) {
+    const w = (side > 0 ? track.WL[i] : track.WR[i]) + 3.2;
+    const q = L.at(i, side * w);
+    const cells = L.rectFree(q.x, q.z, Math.atan2(track.TX[i], track.TZ[i]), 2.2, 2.0, 1.5, 0);
+    if (!cells) continue;
+    L.claim(cells);
+    G.house.box(q.x, GROUND_Y, q.z, 3.2, 3.0, 2.6, ry, { uw: 10, uh: 10, topUv: [0, 0, 0.1, 0.1] });
+    G.steel.setColor(0.2, 0.2, 0.22);
+    G.steel.box(q.x, 2.7, q.z, 3.8, 0.25, 3.2, ry);
+    G.steel.setColor(0.85, 0.12, 0.1);
+    const b = L.at(i, side * (w - 2.2));
+    beam(G.steel, b.x, 1.1, b.z, b.x + track.TX[i] * 0.4, 6.5, b.z + track.TZ[i] * 0.4, 0.12);
+    halos.push({ x: q.x, y: 3.2, z: q.z, color: WARM, i: 1.5, size: 2.4 });
+    world.addLamp(q.x - side * track.LX[i] * 2, 3.2, q.z - side * track.LZ[i] * 2, WARM, 14, 0.9);
+    return;
+  }
+}
+
 // ------------------------------------------------------------------ effects
 
 /** Drifting low mist (soft billboards, normal blending). */
@@ -1616,10 +1702,10 @@ export async function build(world, def, track, progress) {
   const G = {
     cont: new GeoBuilder(), steel: new GeoBuilder(), pole: new GeoBuilder(), conc: new GeoBuilder(),
     shed: new GeoBuilder(), roof: new GeoBuilder(), hull: new GeoBuilder(), house: new GeoBuilder(),
-    tank: new GeoBuilder(), lamps: new GeoBuilder(), ballast: new GeoBuilder(), rails: new GeoBuilder(), sign: new GeoBuilder(),
+    tank: new GeoBuilder(), lamps: new GeoBuilder(), ballast: new GeoBuilder(), rails: new GeoBuilder(), sign: new GeoBuilder(), misc: new GeoBuilder(),
   };
   const X = {
-    world, track, L, rng, G, halos: [], refl: [], wash: [], pallets: [], drums: [], tires: [],
+    world, track, L, rng, G, halos: [], refl: [], wash: [],
     signs: (function* () { for (let k = 0; ; k++) yield k % 8; })(),
     pool: (x, y, z, color, radius, intensity) => world.lamps.push({ x, y, z, color: new THREE.Color(color), radius, intensity }),
   };
@@ -1655,6 +1741,25 @@ export async function build(world, def, track, progress) {
       for (let k = -3; k <= 3; k++) gap.add(track.idx(p.i + k));
     }
     for (let i = 0; i < R.N; i += 2) L.claimCircle(R.X[i], R.Z[i], 2.6);
+  }
+
+  // ---- drift venues: tire walls replace the barrier on the outside of big corners
+  const tireWall = [new Set(), new Set()]; // [left, right] sample indices
+  if (D.tires) {
+    let run = null;
+    for (let i = 0; i <= N; i++) {
+      const k = track.K[track.idx(i)];
+      const on = Math.abs(k) > 1e-6 && i < N;
+      if (on && !run) run = { i0: i, sign: Math.sign(k) };
+      if ((!on || i === N) && run) {
+        const span = i - run.i0;
+        if (span * track.step * Math.abs(track.K[track.idx(run.i0 + (span >> 1))]) > 1.0) {
+          const set = tireWall[run.sign > 0 ? 1 : 0];
+          for (let q = run.i0 - 2; q < i + 2; q++) set.add(track.idx(q));
+        }
+        run = null;
+      }
+    }
   }
 
   // ---- yard ground (lit grid: dense near the track, sparse far out)
@@ -1763,11 +1868,13 @@ export async function build(world, def, track, progress) {
     for (const side of [1, -1]) {
       for (let i = 0, step = 1; i < N; i += step) {
         step = 1;
-        while (step < 4 && i + step < N && straight(track.idx(i + step)) && straight(i) && !gap.has(track.idx(i + step)) &&
+        while (step < 4 && i + step < N && straight(track.idx(i + step)) && straight(i) && !gap.has(track.idx(i + step)) && !tireWall[side > 0 ? 0 : 1].has(track.idx(i + step)) &&
           L.kit(track.idx(i + step), side) === L.kit(i, side) && Math.abs(wallAt(track.idx(i + step), side) - wallAt(i, side)) < 0.02) step++;
         const j = track.idx(i + step);
         if (!track.closed && i + step > N - 1) break;
         if (gap.has(i) || gap.has(j)) continue;
+        const tw = tireWall[side > 0 ? 0 : 1];
+        if (tw.has(i) && tw.has(j)) continue;
         const fenced = FENCED[L.kit(i, side)];
         const wi = wallAt(i, side), wj = wallAt(j, side);
         const P = (k, w, dl, y) => new THREE.Vector3(track.X[k] + track.LX[k] * side * (w + dl), y, track.Z[k] + track.LZ[k] * side * (w + dl));
@@ -1888,33 +1995,32 @@ export async function build(world, def, track, progress) {
   }
   progress(0.45, 'STACKING CONTAINERS');
 
-  // ---- tire walls on the outside of the big corners (drift venues)
-  if (D.tires) {
-    let run = null;
-    for (let i = 0; i <= N; i++) {
-      const k = track.K[track.idx(i)];
-      const on = Math.abs(k) > 1e-6 && i < N;
-      if (on && !run) run = { i0: i, sign: Math.sign(k) };
-      if ((!on || i === N) && run) {
-        const span = i - run.i0;
-        if (span * track.step * Math.abs(track.K[track.idx(run.i0 + (span >> 1))]) > 1.0) {
-          const side = -run.sign;
-          for (let q = run.i0 + Math.floor(span * 0.1); q < i - Math.floor(span * 0.1); q++) {
-            for (let t = 0; t < 1; t += 0.55) {
-              const ii = track.idx(q);
-              const lat = side * (wallAt(ii, side) + 1.35);
-              const pp = L.at(ii, lat);
-              const x = pp.x + track.TX[ii] * t * track.step, z = pp.z + track.TZ[ii] * t * track.step;
-              const cells = L.rectFree(x, z, Math.atan2(track.TX[ii], track.TZ[ii]), 0.5, 0.5, 0.5, 0);
-              if (!cells) continue;
-              L.claim(cells);
-              const paint = (q + Math.floor(t * 2)) % 4;
-              X.tires.push({ x, y: GROUND_Y, z, ry: rng() * 3, sy: 0.8 + rng() * 0.4, color: paint === 0 ? '#c8c8c0' : paint === 2 ? '#a02018' : '#151515' });
-            }
-          }
+  // ---- tire walls (painted stacks) along the wall line where the barrier was dropped
+  for (const side of [1, -1]) {
+    const tw = tireWall[side > 0 ? 0 : 1];
+    let acc = 0, band = 0;
+    for (let i = 0; i < N; i++) {
+      if (!tw.has(i)) continue;
+      const j = track.idx(i + 1);
+      const w0 = wallAt(i, side) + 0.56;
+      const a = L.at(i, side * w0), c = L.at(j, side * (wallAt(j, side) + 0.56));
+      const seg = Math.hypot(c.x - a.x, c.z - a.z);
+      for (; acc < seg; acc += 1.12) {
+        const t = acc / seg, x = a.x + (c.x - a.x) * t, z = a.z + (c.z - a.z) * t;
+        L.claimCircle(x, z, 1);
+        const col = band % 2 ? [0.78, 0.78, 0.74] : [0.6, 0.1, 0.07];
+        band++;
+        const n = 4 + (band % 3 === 0 ? 1 : 0);
+        for (let k = 0; k < n; k++) {
+          G.misc.setColor(...(k % 2 ? col : col.map((v) => v * 0.85)));
+          G.misc.cylinder(x, GROUND_Y + k * 0.26, z, 0.56, 0.2, 7);
+          G.misc.setColor(0.04, 0.04, 0.04);
+          G.misc.cylinder(x, GROUND_Y + k * 0.26 + 0.2, z, 0.47, 0.06, 7);
         }
-        run = null;
+        G.misc.setColor(0.05, 0.05, 0.05);
+        G.misc.box(x, GROUND_Y + n * 0.26 - 0.02, z, 0.8, 0.02, 0.8, band);
       }
+      acc -= seg;
     }
   }
   // ---- port signage: overhead gate + boards behind the barriers
@@ -1929,6 +2035,8 @@ export async function build(world, def, track, progress) {
     board(X, p.x + fx * 0.3, 7.3, p.z + fz * 0.3, fx, fz, Math.min(14, track.W[i] * 1.6), 1.6, k);
     for (const sd of [-0.4, 0.4]) { const q = L.at(i, sd * track.W[i]); X.halos.push({ x: q.x + fx * 1.2, y: 8.2, z: q.z + fz * 1.2, color: HALIDE, i: 1.6, size: 2.2 }); world.addLamp(q.x + fx * 1.5, 8, q.z + fz * 1.5, HALIDE, 16, 0.7); }
   }
+  for (const ps of D.pipes || []) pipeBridge(X, ps);
+  for (const [gs] of D.gates || []) booth(X, gs + 14);
   for (let s = 140 + rng() * 80; s < track.length - 50; s += 260 + rng() * 200) {
     const i = track.posAt(s, 0).i;
     const side = L.kit(i, 1) === 'water' ? -1 : 1;
@@ -2107,13 +2215,13 @@ export async function build(world, def, track, progress) {
         for (let t = 0; t < len; t += 16 + rng() * 20) {
           const x = ax + (bx - ax) * t / len + nx * (6 + rng() * 40), z = az + (bz - az) * t / len + nz * (6 + rng() * 40);
           if (L.onLand(x, z) || track.distToRoad(x, z) > 260) continue;
-          list.push({ x, y: WATER_Y + 1 + rng() * 3, z, size: 26 + rng() * 26, a: 0.16 + rng() * 0.12, seed: rng() });
+          list.push({ x, y: 0.5 + rng() * 4, z, size: 24 + rng() * 26, a: 0.3 + rng() * 0.2, seed: rng() });
         }
       }
     }
-    for (let k = 0; k < 26; k++) {
+    for (let k = 0; k < 30; k++) {
       const p = track.posAt(rng() * track.length, (rng() - 0.5) * 30);
-      list.push({ x: p.x, y: 1.5 + rng() * 3, z: p.z, size: 16 + rng() * 14, a: 0.08 + rng() * 0.07, seed: rng() });
+      list.push({ x: p.x, y: 1.5 + rng() * 3, z: p.z, size: 16 + rng() * 14, a: 0.12 + rng() * 0.1, seed: rng() });
     }
     if (night) mistField(world, list.slice(0, 220));
   }
@@ -2138,6 +2246,7 @@ export async function build(world, def, track, progress) {
   if (D.ships?.length) add(G.hull, glowMaterial(new THREE.MeshStandardMaterial({ map: hullAtlas(D.ships), roughness: 0.6, metalness: 0.3 }), 1.4));
   const dh = deckhouseTextures();
   add(G.house, glowMaterial(new THREE.MeshStandardMaterial({ map: dh.map, emissive: 0xffffff, emissiveMap: dh.emi, emissiveIntensity: night ? 1.6 : 0, roughness: 0.6 }), 1.3));
+  add(G.misc, glowMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), 1.3), true);
   add(G.sign, glowMaterial(new THREE.MeshStandardMaterial({ map: signAtlas(), roughness: 0.6 }), 1.5));
   add(G.tank, glowMaterial(new THREE.MeshStandardMaterial({ map: tankTexture(), color: 0xc8c4bc, roughness: 0.7, metalness: 0.2 }), 1.0));
   add(G.lamps, new THREE.MeshBasicMaterial({ vertexColors: true, color: night ? 0xffffff : 0x222222 }), true, false);
@@ -2148,21 +2257,6 @@ export async function build(world, def, track, progress) {
     bg.cylinder(0, 0, 0, 0.22, 0.55, 6, 0.18);
     bg.cylinder(0, 0.55, 0, 0.3, 0.12, 6, 0.3);
     world.add(instanced(bg.build(), new THREE.MeshStandardMaterial({ color: 0x1e2022, roughness: 0.5, metalness: 0.4 }), bollards));
-  }
-  if (X.pallets.length) {
-    const pg = new THREE.BoxGeometry(1.2, 0.15, 1.0);
-    pg.translate(0, 0.075, 0);
-    world.add(instanced(pg, new THREE.MeshStandardMaterial({ color: 0x7a6040, roughness: 0.9, emissive: 0x2a1a08, emissiveIntensity: night ? 1 : 0 }), X.pallets));
-  }
-  if (X.tires.length) {
-    const tg = new THREE.CylinderGeometry(0.55, 0.55, 1.25, 10, 1);
-    tg.translate(0, 0.625, 0);
-    world.add(instanced(tg, new THREE.MeshStandardMaterial({ roughness: 0.85, emissive: 0x1a0c04, emissiveIntensity: night ? 1 : 0 }), X.tires));
-  }
-  if (X.drums.length) {
-    const dg = new THREE.CylinderGeometry(0.3, 0.3, 0.9, 10);
-    dg.translate(0, 0.45, 0);
-    world.add(instanced(dg, new THREE.MeshStandardMaterial({ roughness: 0.6, metalness: 0.3 }), X.drums));
   }
   haloField(world, night ? X.halos : []);
   waterStreaks(world, night ? X.refl : []);

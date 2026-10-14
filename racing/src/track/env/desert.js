@@ -28,8 +28,8 @@ const LOOKS = {
   },
   redrock: {
     margin: 550, cell: 12, detail: 'red', tile: 8, frameRise: 0, shrubs: 0.55,
-    sand: '#c99070', soil: '#b07554', red: '#a85a3a', pave: '#7e5a46', dune: '#d6a37c', rock: '#a0462c', cap: '#dcb692', talus: '#8d5638',
-    top: '#87604a', wash: '#ddb592', lot: '#8a7a6c', shoulder: '#b08d72',
+    sand: '#d29c78', soil: '#b47a58', red: '#a85a3a', pave: '#7e5a46', dune: '#dcae86', rock: '#a0462c', cap: '#dcb692', talus: '#8d5638',
+    top: '#87604a', wash: '#ecd2ae', lot: '#8a7a6c', shoulder: '#b08d72',
     hills: 14, hummock: 1.8, dunes: 3, duneAt: 0.5, duneLen: 90, outcrops: 32, outcropAt: 0.3, outcropF: 0.003, terrace: 7, follow: 110,
     bands: ['#fff0e4', '#c2846c', '#fff6e6'],
     veg: { creosote: 700, bursage: 400, saguaro: 0, ocotillo: 30, barrel: 50, yucca: 200, juniper: 340, rock: 650, boulder: 300 },
@@ -457,12 +457,18 @@ function rockCanvas() {
       x.fillStyle = g;
       x.fillRect(px, py, w, len);
     }
+    // plain gritty band (canvas rows 0..40 → v 0.92..1) for mesa tops and ledges
+    x.fillStyle = '#ddd2c6';
+    x.fillRect(0, 0, S, 40);
+    for (let i = 0; i < 900; i++) { const v = 150 + rng() * 90; x.fillStyle = `rgba(${v},${v * 0.95},${v * 0.9},0.5)`; x.fillRect(rng() * S, rng() * 40, 1 + rng() * 3, 1 + rng() * 2); }
     const img = x.getImageData(0, 0, S, S), d = img.data;
     for (let k = 0; k < d.length; k += 4) { const n = (rng() - 0.5) * 22; d[k] += n; d[k + 1] += n; d[k + 2] += n; }
     x.putImageData(img, 0, 0);
     return c;
   });
 }
+
+const TOP_V = (x, z) => 0.935 + 0.05 * (0.5 + 0.5 * Math.sin(x * 0.07 + z * 0.05));
 
 function gravelCanvas() {
   return cachedCanvas('gravel', () => {
@@ -631,7 +637,7 @@ function gridGeo(rows, wantN) {
 }
 
 /** Fan cap over a closed/open outline; normal hint picks the winding. */
-function fanGeo(center, ring, wantN, c) {
+function fanGeo(center, ring, wantN, c, top = false) {
   const n = ring.length;
   const pos = new Float32Array((n + 1) * 3), color = new Float32Array((n + 1) * 3), uv = new Float32Array((n + 1) * 2);
   pos.set([center.x, center.y, center.z], 0);
@@ -640,7 +646,7 @@ function fanGeo(center, ring, wantN, c) {
     const cc = k === 0 ? c : (ring[k - 1].c || c);
     color.set([cc.r, cc.g, cc.b], k * 3);
     const p = k === 0 ? center : ring[k - 1];
-    uv.set([p.x / 14, p.z / 14], k * 2);
+    uv.set(top ? [(p.x + p.z) / 30, TOP_V(p.x, p.z)] : [(p.x + p.z) / 20, p.y / 16], k * 2);
   }
   const idx = [];
   const a = ring[0], b = ring[1];
@@ -791,9 +797,14 @@ function groundColor(P, x, y, z, ny, out) {
   // thin drainage rills: pale sand lines
   const rill = smoothstep(0.75, 0.95, 1 - Math.abs(N(C.n3, x * 0.0045 - 3, z * 0.0045 + 8, 3)) * 0.8);
   out.lerp(C.wash, rill * 0.45);
-  let wash = 0;
-  for (const W of P.washes) wash = Math.max(wash, W.mask(x, z, 6));
-  out.lerp(C.wash, wash * 0.9);
+  let wash = 0, bank = 0;
+  for (const W of P.washes) {
+    const m = W.mask(x, z, 6);
+    wash = Math.max(wash, m);
+    bank = Math.max(bank, W.mask(x, z, 26) - m);
+  }
+  out.multiplyScalar(1 - bank * 0.22);
+  out.lerp(C.wash, wash);
   if (P.stop) out.lerp(C.lot, smoothstep(0.55, 0.95, P.stop.mask(x, z)) * 0.85);
   const hRel = y - P.floorAt(x, z);
   out.lerp(C.top, smoothstep(12, 24, hRel) * 0.5);
@@ -801,7 +812,7 @@ function groundColor(P, x, y, z, ny, out) {
   out.lerp(C.rock, steep);
   out.multiplyScalar(0.9 + 0.2 * smoothstep(-1, 1, N(C.n3, x * 0.02, z * 0.02, 2)));
   let dens = L.shrubs * (1 - dune * 0.85) * (1 - steep) * (1 - wash * 0.7) * (0.3 + 0.7 * smoothstep(-0.7, 0.7, N(C.n2, x * 0.006, z * 0.006 + 3, 2)));
-  dens = Math.min(1, dens + rill * 0.35 * L.shrubs);
+  dens = Math.min(1, dens + rill * 0.35 * L.shrubs + bank * 0.9);
   return dens;
 }
 
@@ -1047,14 +1058,16 @@ function canyonWalls(world, P, mat) {
           const t = clamp((y - gy) / H, 0, 1);
           let c;
           if (tag === 0) c = cTalus;
-          else if (tag === 3 || tag === 5) c = cTop;
+          else if (tag === 5) c = new THREE.Color().copy(cTop).multiplyScalar(0.85 + 0.3 * smoothstep(-1, 1, nz(22, 0.01, s + lat * 0.7)));
+          else if (tag === 3) c = cTop;
           else if (tag === 2) c = new THREE.Color().copy(cHigh).lerp(cCap, 0.7);
           else c = new THREE.Color().copy(cLow).lerp(cHigh, t).multiplyScalar(streak);
-          return { x: T.X[i] + T.LX[i] * side * lat, y, z: T.Z[i] + T.LZ[i] * side * lat, c, u: s / 20, v: q < 12 ? y / 16 : lat / 20 };
+          const px = T.X[i] + T.LX[i] * side * lat, pz = T.Z[i] + T.LZ[i] * side * lat;
+          return { x: px, y, z: pz, c, u: s / 20, v: tag === 5 ? TOP_V(px, pz) : y / 16 };
         }));
         if (rng() < 0.2) {
           const bl = side * (Lin - 2.6 + (rng() - 0.5) * 2.4);
-          const bx = T.X[i] + T.LX[i] * bl, bz = T.Z[i] + T.LZ[i] * bl, sc = 0.5 + Math.pow(rng(), 2) * 2.2;
+          const bx = T.X[i] + T.LX[i] * bl, bz = T.Z[i] + T.LZ[i] * bl, sc = 0.35 + Math.pow(rng(), 2.5) * 1.5;
           boulders.push({ x: bx, y: gy + 0.2 + rng() * 0.6, z: bz, s: sc, ry: rng() * 6, rx: rng() * 2, rz: rng() * 2 });
         }
       }
@@ -1091,7 +1104,7 @@ function canyonWalls(world, P, mat) {
     }
   }
   const bg = jitter(new THREE.IcosahedronGeometry(1, 0), 0.5, 9, 0.75);
-  scatter(world, bg, new THREE.MeshStandardMaterial({ color: col(L.talus).multiplyScalar(1.1), roughness: 0.95, flatShading: true }), boulders, { cell: 400, shadow: true, name: 'canyon-boulders', maxDist: 700 });
+  scatter(world, bg, new THREE.MeshStandardMaterial({ color: col(L.talus).multiplyScalar(0.8), roughness: 0.95, flatShading: true }), boulders, { cell: 400, shadow: true, name: 'canyon-boulders', maxDist: 700 });
 }
 
 // ------------------------------------------------------------------ buttes + mesas
@@ -1169,7 +1182,7 @@ function formationGeo(f, baseY, L) {
   const topRow = rows[rows.length - 1];
   const ring = topRow.map((v) => Object.assign(new THREE.Vector3(v.x, v.y, v.z), { c: cTop }));
   const ctr = new THREE.Vector3(f.x + ox * cr - oz * sr, baseY + f.H + 0.6, f.z + ox * sr + oz * cr);
-  return [g, fanGeo(ctr, ring, new THREE.Vector3(0, 1, 0), cTop)];
+  return [g, fanGeo(ctr, ring, new THREE.Vector3(0, 1, 0), cTop, true)];
 }
 
 function formations(world, P, mat) {
@@ -1334,7 +1347,11 @@ function vegetation(world, P) {
     const list = [];
     for (let t = 0; t < count * 4 && list.length < count; t++) {
       let x, z;
-      if (opts.cluster && list.length > 4 && rng() < opts.cluster) {
+      if (P.washes.length && opts.banks && rng() < opts.banks) {
+        const W = P.washes[Math.floor(rng() * P.washes.length)];
+        const u = (rng() - 0.5) * 1000, v = W.mid(u) + (rng() < 0.5 ? -1 : 1) * (W.half(u) + 2 + rng() * 14);
+        x = W.cx + W.ux * u + W.vx * v; z = W.cz + W.uz * u + W.vz * v;
+      } else if (opts.cluster && list.length > 4 && rng() < opts.cluster) {
         // grow a stand around an existing plant
         const o = list[Math.floor(rng() * list.length)];
         const a = rng() * Math.PI * 2, r = 4 + rng() * opts.spread;
@@ -1361,12 +1378,12 @@ function vegetation(world, P) {
     const all = place(counts.saguaro, { ...near, dMin: 7, s: [0.55, 1.25], minUp: 0.9, clear: 5, cluster: 0.55, spread: 40 });
     G.saguaro.forEach((g, k) => scatter(world, g, plantMat, all.filter((_, j) => j % 4 === k), { shadow: true, name: 'saguaro', maxDist: 1100, cell: 900 }));
   }
-  if (counts.creosote) scatter(world, G.creosote, plantMat, place(counts.creosote, { ...near, s: [0.6, 1.4], pow: 1.9 }), { name: 'creosote', maxDist: 480, cell: 600 });
+  if (counts.creosote) scatter(world, G.creosote, plantMat, place(counts.creosote, { ...near, s: [0.6, 1.4], pow: 1.9, banks: 0.18 }), { name: 'creosote', maxDist: 480, cell: 600 });
   if (counts.bursage) scatter(world, G.bursage, plantMat, place(counts.bursage, { ...near, dMin: 3, s: [0.7, 1.5] }), { name: 'bursage', maxDist: 380, cell: 600 });
   if (counts.ocotillo) scatter(world, G.ocotillo, plantMat, place(counts.ocotillo, { ...near, dMin: 6, s: [0.8, 1.3] }), { name: 'ocotillo', maxDist: 750, cell: 900 });
   if (counts.barrel) scatter(world, G.barrel, plantMat, place(counts.barrel, { ...near, dMax: 120, s: [0.7, 1.4] }), { name: 'barrel', maxDist: 300, cell: 600 });
   if (counts.yucca) scatter(world, G.yucca, plantMat, place(counts.yucca, { ...near, s: [0.8, 1.5] }), { name: 'yucca', maxDist: 450, cell: 600 });
-  if (counts.juniper) scatter(world, G.juniper, plantMat, place(counts.juniper, { ...near, dMin: 8, s: [0.8, 1.7], minUp: 0.8 }), { shadow: true, name: 'juniper', maxDist: 900, cell: 700 });
+  if (counts.juniper) scatter(world, G.juniper, plantMat, place(counts.juniper, { ...near, dMin: 8, s: [0.8, 1.7], minUp: 0.8, banks: 0.3 }), { shadow: true, name: 'juniper', maxDist: 900, cell: 700 });
   if (counts.rock) scatter(world, G.rock, rockMat, place(counts.rock, { ...near, dMin: 2, s: [0.25, 0.8], sink: 0.35, minUp: 0.6, tilt: 0.8, wash: true }), { name: 'rocks', maxDist: 380, cell: 600 });
   if (counts.boulder) scatter(world, G.boulder, rockMat, place(counts.boulder, { ...near, dMin: 10, dMax: 420, s: [1.2, 3.6], sink: 0.4, minUp: 0.55, tilt: 0.6, clear: 6 }), { shadow: true, name: 'boulders', maxDist: 900, cell: 900 });
   void fence;
@@ -2103,6 +2120,79 @@ function truckStop(world, P) {
   }
 }
 
+// ------------------------------------------------------------------ dry wash
+
+function sandDriftCanvas() {
+  return cachedCanvas('drift', () => {
+    const c = cvs(256, 256), x = c.getContext('2d');
+    const rng = makeRng('drift');
+    for (let i = 0; i < 70; i++) {
+      const px = rng() * 256, py = 40 + rng() * 176, rx = 12 + rng() * 60, ry = 4 + rng() * 16;
+      const g = x.createRadialGradient(px, py, 0, px, py, rx);
+      g.addColorStop(0, `rgba(226,190,150,${0.35 + rng() * 0.4})`);
+      g.addColorStop(1, 'rgba(226,190,150,0)');
+      x.fillStyle = g;
+      x.save(); x.translate(px, py); x.scale(1, ry / rx); x.translate(-px, -py);
+      x.fillRect(px - rx, py - rx, rx * 2, rx * 2);
+      x.restore();
+    }
+    return c;
+  });
+}
+
+function washDressing(world, P) {
+  const T = P.track, terr = world.terrain;
+  const rng = makeRng('wash' + P.def.id);
+  const q = {};
+  for (const W of P.washes) {
+    const cobbles = [], wood = new GeoBuilder();
+    for (let k = 0; k < 900; k++) {
+      const u = (rng() - 0.5) * 900, v = W.mid(u) + (rng() - 0.5) * W.half(u) * 1.8;
+      const x = W.cx + W.ux * u + W.vx * v, z = W.cz + W.uz * u + W.vz * v;
+      if (x < P.gx0 + 20 || x > P.gx1 - 20 || z < P.gz0 + 20 || z > P.gz1 - 20) continue;
+      P.near(x, z, q);
+      if (q.d < T.W[q.i] + T.shoulder + 2) continue;
+      const sc = 0.15 + Math.pow(rng(), 3) * 1.1;
+      cobbles.push({ x, y: terr.heightAt(x, z) - sc * 0.3, z, s: sc, ry: rng() * 6, rx: rng(), rz: rng(), color: new THREE.Color().setScalar(0.85 + rng() * 0.3) });
+      if (k % 45 === 0) {
+        // bleached driftwood snag
+        setColor(wood, '#b8a690');
+        const a = rng() * 6.28, len = 2 + rng() * 3, y = terr.heightAt(x, z) + 0.15;
+        tube(wood, [new THREE.Vector3(x, y, z), new THREE.Vector3(x + Math.cos(a) * len * 0.5, y + 0.25, z + Math.sin(a) * len * 0.5), new THREE.Vector3(x + Math.cos(a + 0.4) * len, y + 0.1, z + Math.sin(a + 0.4) * len)], [0.12, 0.08, 0.03], 4);
+      }
+    }
+    const cg = jitter(new THREE.IcosahedronGeometry(1, 0), 0.35, 4, 0.6);
+    scatter(world, cg, new THREE.MeshStandardMaterial({ color: col('#c8b6a0'), roughness: 0.9, flatShading: true }), cobbles, { name: 'cobbles', cell: 500, maxDist: 400 });
+    // flood depth gauge in the dip
+    const i = W.i;
+    for (const side of [1, -1]) {
+      const lat = side * (T.W[i] + T.shoulder + 1.2);
+      const a = i * T.step + side * 9;
+      const p = T.posAt(a, lat);
+      const gy = p.y - 0.3;
+      for (let k = 0; k < 8; k++) {
+        setColor(wood, k % 2 ? '#1a1a1a' : '#f0eee8');
+        wood.box(p.x, gy + k * 0.3, p.z, 0.16, 0.3, 0.06, p.heading);
+      }
+    }
+    if (wood.count) world.add(new THREE.Mesh(wood.build(true), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 })));
+    // sand washed across the asphalt in the dip
+    const tex = canvasTex(sandDriftCanvas(), { repeat: false });
+    const dg = new GeoBuilder();
+    const s0 = i * T.step - 16, s1 = i * T.step + 16;
+    for (let s = s0; s < s1; s += 4) {
+      const a0 = T.posAt(s), a1 = T.posAt(s + 4);
+      const w0 = T.W[a0.i] + 0.6, w1 = T.W[a1.i] + 0.6;
+      const P0 = T.posAt(s, -w0), P1 = T.posAt(s, w0), P2 = T.posAt(s + 4, w1), P3 = T.posAt(s + 4, -w1);
+      const v0 = (s - s0) / (s1 - s0), v1 = (s + 4 - s0) / (s1 - s0);
+      dg.quad(new THREE.Vector3(P0.x, P0.y + 0.02, P0.z), new THREE.Vector3(P1.x, P1.y + 0.02, P1.z), new THREE.Vector3(P2.x, P2.y + 0.02, P2.z), new THREE.Vector3(P3.x, P3.y + 0.02, P3.z), [0, v0, 1, v1]);
+    }
+    const dm = new THREE.Mesh(dg.build(), new THREE.MeshStandardMaterial({ map: tex, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }));
+    dm.renderOrder = 1;
+    world.add(dm);
+  }
+}
+
 // ------------------------------------------------------------------ drag strip
 
 function dragAtlas() {
@@ -2413,6 +2503,7 @@ export async function build(world, def, track, progress) {
 
   if (P.stop) truckStop(world, P);
   if (def.type === 'drag') dragStrip(world, P);
+  if (P.washes.length) washDressing(world, P);
   if (def.poles) telephone(world, P);
   if (def.fence && !P.look.flat) fence(world, P);
   roadside(world, P);
