@@ -263,6 +263,20 @@ function buildSpoiler(S, kind, rearZ) {
     const g = extrudeAcross(prof, hr);
     place(g, 0, yr - 0.01, S.z(ur) + 0.02);
     parts.push(g);
+  } else if (kind === 'whale') {
+    // 996 Turbo bi-plane tail: a lip on the lid edge plus a low, wide blade
+    // on thick body-colour risers, all part of the engine lid
+    const lip = extrudeAcross([[0, 0.05], [0.05, -0.04], [0.03, -0.07], [0, -0.07]], half * 0.92);
+    place(lip, 0, y0 - 0.005, z + 0.02);
+    parts.push(lip);
+    const bl = extrudeAcross(airfoil(0.3, 0.13, 0.02), half * 0.9);
+    place(bl, 0, y0 + 0.1, z + 0.16);
+    parts.push(bl);
+    for (const s of [-1, 1]) {
+      const r = new THREE.BoxGeometry(0.16, 0.11, 0.24);
+      place(r, s * half * 0.45, y0 + 0.05, z + 0.04);
+      parts.push(r);
+    }
   } else {
     // winged: gt / big / hoop / evo
     const height = kind === 'big' ? 0.3 : kind === 'evo' ? 0.2 : kind === 'hoop' ? 0.2 : 0.17;
@@ -494,9 +508,20 @@ export function buildCarModel(spec, lookIn = {}, opts = {}) {
     const u = b.cowl + 0.16;
     const y = S.topF(u) + 0.09;
     const x = S.beltHalf(u) + 0.11;
+    // D-shaped housing: rounded nose, flat glass face toward the rear
+    const pod = new THREE.SphereGeometry(1, 14, 8);
+    {
+      const pp = pod.attributes.position;
+      for (let k = 0; k < pp.count; k++) {
+        const zz = pp.getZ(k);
+        if (zz < 0) pp.setZ(k, zz * 0.25);
+        pp.setX(k, pp.getX(k) * (1 + 0.15 * Math.max(0, -pp.getY(k))));
+      }
+      pod.scale(0.1, 0.06, 0.07);
+      pod.computeVertexNormals();
+    }
+    disposables.push(pod);
     for (const s of [-1, 1]) {
-      const pod = new THREE.SphereGeometry(1, 12, 8);
-      pod.scale(0.085, 0.052, 0.045);
       const m = new THREE.Mesh(pod, solid);
       m.position.set(s * x, y, S.z(u));
       body.add(m);
@@ -504,10 +529,10 @@ export function buildCarModel(spec, lookIn = {}, opts = {}) {
       stalk.position.set(s * (x - 0.07), y - 0.02, S.z(u) + 0.01);
       body.add(stalk);
       const glassG = new THREE.CircleGeometry(1, 14);
-      glassG.scale(0.07, 0.04, 1);
+      glassG.scale(0.088, 0.05, 1);
       const mg = new THREE.Mesh(glassG, chrome);
       mg.rotation.y = Math.PI;
-      mg.position.set(s * x, y, S.z(u) - 0.046);
+      mg.position.set(s * x, y, S.z(u) - 0.019);
       body.add(mg);
     }
   }

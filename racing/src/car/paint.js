@@ -4,7 +4,7 @@
 //   orm     (R clearcoat, G roughness, B metalness)
 //   emissive(R headlight, G tail-light, B brake-light) — masks the light
 //            shader multiplies by live intensities.
-import { IDX, CIDX } from './hull.js';
+import { IDX, CIDX, CAB_GLASS_IDX } from './hull.js';
 
 export const FINISHES = {
   gloss: { metal: 0.0, rough: 0.32, coat: 1.0 },
@@ -155,13 +155,15 @@ export function paintBody(S, look, vs, res = 1024) {
   const shadeBand = (i0, i1, right) => {
     const y0 = Y(right ? vR(i0) : vL(i0)), y1 = Y(right ? vR(i1) : vL(i1));
     const g = P.a.createLinearGradient(0, y0, 0, y1);
-    g.addColorStop(0, 'rgba(0,0,0,0.28)');
+    g.addColorStop(0, 'rgba(0,0,0,0.42)');
+    g.addColorStop(0.35, 'rgba(0,0,0,0.16)');
     g.addColorStop(1, 'rgba(0,0,0,0)');
     P.a.fillStyle = g;
     P.a.fillRect(0, Math.min(y0, y1), W, Math.abs(y1 - y0));
   };
-  shadeBand(IDX.cornerEnd, IDX.cornerEnd + 4, false);
-  shadeBand(IDX.cornerEnd, IDX.cornerEnd + 4, true);
+  // rocker/sill falls into shadow: gives the sides visual weight at the bottom
+  shadeBand(IDX.cornerEnd - 1, IDX.cornerEnd + 5, false);
+  shadeBand(IDX.cornerEnd - 1, IDX.cornerEnd + 5, true);
 
   // two-tone / vinyls that live on the body
   drawBodyVinyl(P, S, look, X, Y, vL, vR, W, H, paintO);
@@ -257,6 +259,19 @@ export function paintBody(S, look, vs, res = 1024) {
       for (let k = 0; k < 5; k++) {
         const x = X(b.cowl - 0.5 + k * 0.07);
         P.fill((c) => rrect(c, x, cy - H * 0.035, (0.035 / L) * W, H * 0.07, 2), { a: '#050505', o: [0, 0.9, 0] });
+      }
+    }
+  }
+  // big louvered hood vents (Viper-style), either side of the centre bulge
+  if (b.hoodVents) {
+    const u0 = hoodFront + (b.cowl - hoodFront) * 0.3, u1 = hoodFront + (b.cowl - hoodFront) * 0.62;
+    for (const side of [-1, 1]) {
+      const cy = H / 2 + side * (yTopL - yTopR) * 0.21;
+      const hh = (yTopL - yTopR) * 0.09;
+      P.fill((c) => rrect(c, X(u0), cy - hh, X(u1) - X(u0), hh * 2, 6), { a: '#060607', o: [0, 0.85, 0] });
+      for (let k = 1; k < 7; k++) {
+        const x = X(u0) + (X(u1) - X(u0)) * k / 7;
+        P.fill((c) => { c.beginPath(); c.rect(x - 1.5, cy - hh * 0.85, 3, hh * 1.7); }, { a: '#2a2c30', o: [0.3, 0.4, 0.2] });
       }
     }
   }
@@ -462,31 +477,93 @@ const LENS = (c, x0, y0, x1, y1, tint = '#cfd8e6') => {
 
 function drawFront(P, m, b, look, paintO) {
   const { hw, top, bot } = m;
+  const H = top - bot;
   const hs = b.head || 'rect';
   const glass = [1, 0.05, 0.2];
   const black = { a: '#08090a', o: [0, 0.75, 0] };
-  const trim = { a: '#1a1b1e', o: [0.2, 0.5, 0.1] };
+  const mesh = () => ({ a: meshPattern(P.a), o: [0, 0.8, 0] });
+  const frame = { a: '#16171a', o: [0.3, 0.45, 0.1] };
+  const chromeS = { a: '#c9cdd3', o: [0.6, 0.15, 1] };
   const kit = look.kit || 'stock';
+  void paintO;
 
-  // --- lower bumper: intakes
-  const lowY = bot + (top - bot) * 0.12;
-  const intakeH = (top - bot) * (kit === 'race' ? 0.42 : 0.34);
-  const intake = b.intake || 'center';
-  if (intake === 'mouth' || kit === 'race') {
-    P.fill((c) => rrectPath(c, -hw * 0.62, lowY, hw * 1.24, intakeH, 0.05), { a: meshPattern(P.a), o: [0, 0.8, 0] });
+  // bumper AO: the lower valance falls into shadow under the nose
+  {
+    const g = P.a.createLinearGradient(0, bot, 0, bot + H * 0.32);
+    g.addColorStop(0, 'rgba(0,0,0,0.55)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    P.a.fillStyle = g;
+    P.a.fillRect(-hw * 1.2, bot - 0.05, hw * 2.4, H * 0.32 + 0.05);
+  }
+
+  // --- lower bumper: intakes (style per car; race kits open the mouth up)
+  const lowY = bot + H * 0.1;
+  const intakeH = H * (kit === 'race' ? 0.42 : 0.36);
+  let intake = b.intake || 'center';
+  if (kit === 'race' && (intake === 'center' || intake === 'slot' || intake === 'wide')) intake = 'mouth';
+  let fogs = [[-hw * 0.74, lowY + intakeH * 0.35], [hw * 0.74, lowY + intakeH * 0.35]];
+  const trap = (x0, x1, y0, y1, k = 0.85) => (c) => poly(c, [[x0, y1], [x1, y1], [x1 - (x1 - x0) * (1 - k) / 2, y0], [x0 + (x1 - x0) * (1 - k) / 2, y0]]);
+  const opening = (path, style = mesh()) => {
+    P.fill(path, frame);
+    P.save();
+    P.clip(path);
+    P.fill((c) => { c.beginPath(); c.rect(-hw * 2, bot - 1, hw * 4, 3); }, style);
+    // depth: darker toward the top edge of the opening (bumper overhang shadow)
+    const g = P.a.createLinearGradient(0, top, 0, bot);
+    g.addColorStop(0, 'rgba(0,0,0,0.65)');
+    g.addColorStop(0.7, 'rgba(0,0,0,0.15)');
+    g.addColorStop(1, 'rgba(0,0,0,0.35)');
+    P.a.fillStyle = g;
+    P.a.fillRect(-hw * 2, bot - 1, hw * 4, 3);
+    P.restore();
+  };
+  if (intake === 'mouth') {
+    opening((c) => rrectPath(c, -hw * 0.64, lowY, hw * 1.28, intakeH, 0.06));
   } else if (intake === 'center') {
-    P.fill((c) => rrectPath(c, -hw * 0.42, lowY, hw * 0.84, intakeH * 0.8, 0.04), { a: meshPattern(P.a), o: [0, 0.8, 0] });
+    opening((c) => rrectPath(c, -hw * 0.44, lowY, hw * 0.88, intakeH * 0.8, 0.04));
+  } else if (intake === 'wide') {
+    // hot-hatch bumper: one wide honeycomb slot, fogs at its ends
+    opening((c) => rrectPath(c, -hw * 0.7, lowY + intakeH * 0.08, hw * 1.4, intakeH * 0.62, 0.03));
+    fogs = [[-hw * 0.6, lowY + intakeH * 0.39], [hw * 0.6, lowY + intakeH * 0.39]];
+  } else if (intake === 'oval' || intake === 'fd') {
+    const rx = hw * (intake === 'fd' ? 0.42 : 0.56);
+    opening((c) => ellipsePath(c, 0, lowY + intakeH * 0.52, rx, intakeH * 0.56));
+    if (intake === 'fd') for (const s of [-1, 1]) opening((c) => ellipsePath(c, s * hw * 0.74, lowY + intakeH * 0.42, hw * 0.13, intakeH * 0.3));
   } else if (intake === 'triple') {
-    P.fill((c) => rrectPath(c, -hw * 0.3, lowY, hw * 0.6, intakeH, 0.04), { a: meshPattern(P.a), o: [0, 0.8, 0] });
-    for (const s of [-1, 1]) P.fill((c) => rrectPath(c, s > 0 ? hw * 0.42 : -hw * 0.78, lowY, hw * 0.36, intakeH * 0.7, 0.04), { a: meshPattern(P.a), o: [0, 0.8, 0] });
+    opening((c) => rrectPath(c, -hw * 0.32, lowY, hw * 0.64, intakeH * 1.02, 0.05));
+    for (const s of [-1, 1]) opening(trap(s > 0 ? hw * 0.44 : -hw * 0.86, s > 0 ? hw * 0.86 : -hw * 0.44, lowY, lowY + intakeH * 0.9, 0.8));
+    fogs = [];
+  } else if (intake === 'gtr') {
+    // R34-style: a huge intercooler mouth across the bumper + corner ducts
+    opening((c) => rrectPath(c, -hw * 0.66, lowY, hw * 1.32, intakeH * 1.05, 0.04));
+    for (const s of [-1, 1]) opening(trap(s > 0 ? hw * 0.74 : -hw * 0.93, s > 0 ? hw * 0.93 : -hw * 0.74, lowY, lowY + intakeH * 0.6, 0.75), black);
+    fogs = [];
+  } else if (intake === 'evo') {
+    // Evo VIII: gaping trapezoid mouth, side pockets carrying the fogs
+    opening(trap(-hw * 0.52, hw * 0.52, lowY - H * 0.04, lowY + intakeH * 1.2, 0.78));
+    for (const s of [-1, 1]) opening(trap(s > 0 ? hw * 0.6 : -hw * 0.94, s > 0 ? hw * 0.94 : -hw * 0.6, lowY, lowY + intakeH * 0.8, 0.8), black);
+    fogs = [[-hw * 0.77, lowY + intakeH * 0.42], [hw * 0.77, lowY + intakeH * 0.42]];
+  } else if (intake === 'sti') {
+    opening(trap(-hw * 0.5, hw * 0.5, lowY + intakeH * 0.05, lowY + intakeH * 0.85, 0.85));
+    for (const s of [-1, 1]) opening((c) => rrectPath(c, s > 0 ? hw * 0.62 : -hw * 0.9, lowY + intakeH * 0.12, hw * 0.28, intakeH * 0.56, 0.04), black);
+    fogs = [[-hw * 0.76, lowY + intakeH * 0.4], [hw * 0.76, lowY + intakeH * 0.4]];
+  } else if (intake === 'z') {
+    opening(trap(-hw * 0.7, hw * 0.7, lowY, lowY + intakeH * 1.08, 0.88));
+    P.fill((c) => rrectPath(c, -hw * 0.66, lowY + intakeH * 0.5, hw * 1.32, 0.022, 0.008), frame);
+    fogs = [[-hw * 0.82, lowY + intakeH * 0.3], [hw * 0.82, lowY + intakeH * 0.3]];
+  } else if (intake === 'lambo') {
+    opening((c) => rrectPath(c, -hw * 0.34, lowY + intakeH * 0.2, hw * 0.68, intakeH * 0.36, 0.02));
+    for (const s of [-1, 1]) opening((c) => poly(c, s > 0
+      ? [[hw * 0.42, lowY], [hw * 0.98, lowY], [hw * 0.98, lowY + intakeH * 1.15], [hw * 0.58, lowY + intakeH * 0.75]]
+      : [[-hw * 0.42, lowY], [-hw * 0.98, lowY], [-hw * 0.98, lowY + intakeH * 1.15], [-hw * 0.58, lowY + intakeH * 0.75]]));
   } else if (intake === 'slot') {
     P.fill((c) => rrectPath(c, -hw * 0.7, lowY + intakeH * 0.2, hw * 1.4, intakeH * 0.35, 0.03), black);
   }
   // fog lights
   if (b.fog !== false) {
-    for (const s of [-1, 1]) {
-      const fx = s * hw * 0.74, fy = lowY + intakeH * 0.35;
-      P.fill((c) => ellipsePath(c, fx, fy, 0.055, 0.04), { a: LENS(P.a, fx - 0.05, fy + 0.04, fx + 0.05, fy - 0.04, '#e9e4c8'), o: glass, e: [0.35, 0, 0] });
+    for (const [fx, fy] of fogs) {
+      P.fill((c) => ellipsePath(c, fx, fy, 0.05, 0.038), { a: '#0b0c0e', o: [0.2, 0.4, 0] });
+      P.fill((c) => ellipsePath(c, fx, fy, 0.042, 0.031), { a: LENS(P.a, fx - 0.05, fy + 0.04, fx + 0.05, fy - 0.04, '#e9e4c8'), o: glass, e: [0.35, 0, 0] });
     }
   }
   // splitter lip
@@ -494,11 +571,32 @@ function drawFront(P, m, b, look, paintO) {
 
   // --- grille
   const gs = b.grille || 'mesh';
-  const gy0 = top - (top - bot) * 0.48, gy1 = top - (top - bot) * 0.12;
+  const gy0 = top - H * 0.48, gy1 = top - H * 0.12;
+  let badgeY = (gy0 + gy1) / 2 + 0.01;
   if (gs === 'mesh' || gs === 'evo') {
     const gw = gs === 'evo' ? hw * 0.55 : hw * 0.42;
-    P.fill((c) => poly(c, [[-gw, gy1], [gw, gy1], [gw * 0.82, gy0], [-gw * 0.82, gy0]]), { a: meshPattern(P.a), o: [0, 0.8, 0] });
+    P.fill((c) => poly(c, [[-gw, gy1], [gw, gy1], [gw * 0.82, gy0], [-gw * 0.82, gy0]]), mesh());
     P.stroke((c) => poly(c, [[-gw, gy1], [gw, gy1], [gw * 0.82, gy0], [-gw * 0.82, gy0]]), { a: '#9ea3ab', o: [0.5, 0.2, 1] }, 0.012);
+  } else if (gs === 'gtr') {
+    // wide, shallow mesh between the lamps, badge on the left
+    const gw = hw * 0.5, y0 = top - H * 0.36, y1 = top - H * 0.08;
+    P.fill((c) => poly(c, [[-gw, y1], [gw, y1], [gw * 0.9, y0], [-gw * 0.9, y0]]), mesh());
+    P.stroke((c) => poly(c, [[-gw, y1], [gw, y1], [gw * 0.9, y0], [-gw * 0.9, y0]]), { a: '#2a2c30', o: [0.4, 0.3, 0.5] }, 0.014);
+    P.fill((c) => rrectPath(c, gw * 0.35, (y0 + y1) / 2 - 0.016, 0.11, 0.032, 0.008), { a: '#b3141c', o: [0.8, 0.2, 0.3] });
+    badgeY = null;
+  } else if (gs === 'golf') {
+    // narrow horizontal grille spanning between the headlamps, chrome bar + roundel
+    const gw = hw * 0.48, y0 = top - H * 0.34, y1 = top - H * 0.1;
+    P.fill((c) => rrectPath(c, -gw, y0, gw * 2, y1 - y0, 0.02), black);
+    for (let k = 1; k < 4; k++) P.fill((c) => rrectPath(c, -gw * 0.96, y0 + (y1 - y0) * k / 4 - 0.004, gw * 1.92, 0.008, 0.003), { a: '#2b2d31', o: [0.3, 0.4, 0.2] });
+    P.fill((c) => rrectPath(c, -gw, (y0 + y1) / 2 - 0.007, gw * 2, 0.014, 0.004), chromeS);
+    badgeY = (y0 + y1) / 2;
+  } else if (gs === 'sti') {
+    const gw = hw * 0.36, y0 = top - H * 0.46, y1 = top - H * 0.12;
+    const hex = (c) => poly(c, [[-gw, y1], [gw, y1], [gw * 1.08, (y0 + y1) / 2], [gw * 0.75, y0], [-gw * 0.75, y0], [-gw * 1.08, (y0 + y1) / 2]]);
+    P.fill(hex, mesh());
+    P.stroke(hex, chromeS, 0.012);
+    P.fill((c) => rrectPath(c, -gw * 1.05, (y0 + y1) / 2 - 0.009, gw * 2.1, 0.018, 0.006), chromeS);
   } else if (gs === 'bars') {
     const gw = hw * 0.4;
     P.fill((c) => rrectPath(c, -gw, gy0, gw * 2, gy1 - gy0, 0.03), black);
@@ -507,16 +605,34 @@ function drawFront(P, m, b, look, paintO) {
       P.fill((c) => rrectPath(c, -gw * 0.95, y - 0.008, gw * 1.9, 0.016, 0.005), { a: '#8b9098', o: [0.6, 0.25, 0.9] });
     }
   } else if (gs === 'kidney') {
+    // tall twin kidneys with chrome surrounds and vertical slats
+    const kh = H * 0.52, ky = top - H * 0.06 - kh;
     for (const s of [-1, 1]) {
-      P.fill((c) => rrectPath(c, s > 0 ? 0.02 : -0.17, gy0 - 0.02, 0.15, gy1 - gy0 + 0.04, 0.04), black);
-      P.stroke((c) => rrectPath(c, s > 0 ? 0.02 : -0.17, gy0 - 0.02, 0.15, gy1 - gy0 + 0.04, 0.04), { a: '#c9cdd3', o: [0.6, 0.15, 1] }, 0.012);
+      const x0 = s > 0 ? 0.018 : -0.168;
+      const path = (c) => rrectPath(c, x0, ky, 0.15, kh, 0.045);
+      P.fill(path, black);
+      for (let k = 1; k < 6; k++) P.fill((c) => { c.beginPath(); c.rect(x0 + 0.15 * k / 6 - 0.003, ky + 0.01, 0.006, kh - 0.02); }, { a: '#3a3c40', o: [0.4, 0.3, 0.6] });
+      P.stroke(path, chromeS, 0.014);
     }
+    badgeY = top + 0.01;
   } else if (gs === 'muscle') {
-    P.fill((c) => rrectPath(c, -hw * 0.7, gy0 - 0.03, hw * 1.4, gy1 - gy0 + 0.02, 0.04), { a: meshPattern(P.a), o: [0, 0.8, 0] });
+    // upright pony-car grille: dark trapezoid, round fog lamps in its corners
+    const gw = hw * 0.66, y0 = gy0 - H * 0.06, y1 = gy1 + H * 0.02;
+    const path = (c) => poly(c, [[-gw, y1], [gw, y1], [gw * 0.92, y0], [-gw * 0.92, y0]]);
+    P.fill(path, mesh());
+    P.stroke(path, { a: '#2a2c30', o: [0.4, 0.3, 0.5] }, 0.016);
+    for (const s of [-1, 1]) {
+      const fx = s * gw * 0.72, fy = (y0 + y1) / 2;
+      P.fill((c) => ellipsePath(c, fx, fy, 0.05, 0.05), { a: '#0b0c0e', o: [0.2, 0.4, 0] });
+      P.fill((c) => ellipsePath(c, fx, fy, 0.04, 0.04), { a: LENS(P.a, fx - 0.04, fy + 0.04, fx + 0.04, fy - 0.04, '#e9e4c8'), o: glass, e: [0.5, 0, 0] });
+    }
+    // galloping-horse badge stand-in
+    P.fill((c) => poly(c, [[-0.06, (y0 + y1) / 2 - 0.02], [0.05, (y0 + y1) / 2 + 0.03], [0.07, (y0 + y1) / 2 + 0.01], [-0.03, (y0 + y1) / 2 - 0.03]]), chromeS);
+    badgeY = null;
   }
   // badge
-  if (gs !== 'none') {
-    P.fill((c) => ellipsePath(c, 0, (gy0 + gy1) / 2 + 0.01, 0.045, 0.03), { a: '#d5d9df', o: [0.6, 0.15, 1] });
+  if (gs !== 'none' && badgeY !== null) {
+    P.fill((c) => ellipsePath(c, 0, badgeY, 0.045, 0.03), { a: '#d5d9df', o: [0.6, 0.15, 1] });
   }
 
   // --- pop-up headlight cars: parking lamps live in the bumper
@@ -526,7 +642,7 @@ function drawFront(P, m, b, look, paintO) {
     }
   }
   // front plate (JDM cars carry one)
-  if (b.frontPlate) drawPlate(P, 0, lowY + intakeH + 0.08, look, 0.38, 0.1);
+  if (b.frontPlate) drawPlate(P, 0, b.frontPlateY ?? (lowY + intakeH + 0.06), look, 0.38, 0.1);
 }
 
 function drawRear(P, m, b, look, paintO) {
@@ -534,6 +650,19 @@ function drawRear(P, m, b, look, paintO) {
   const glass = [1, 0.06, 0.15];
   const kit = look.kit || 'stock';
 
+  // bumper AO: the lower valance falls into shadow
+  {
+    const g = P.a.createLinearGradient(0, bot, 0, bot + (top - bot) * 0.35);
+    g.addColorStop(0, 'rgba(0,0,0,0.5)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    P.a.fillStyle = g;
+    P.a.fillRect(-hw * 1.2, bot - 0.05, hw * 2.4, (top - bot) * 0.35 + 0.05);
+  }
+  // lights garnish: a dark panel joining the tail lamps (AE86, 996, Viper…)
+  if (b.garnish) {
+    const [gy0, gy1, gw] = b.garnish;
+    P.fill((c) => rrectPath(c, -hw * gw, gy0, hw * gw * 2, gy1 - gy0, 0.02), { a: '#0d0d0f', o: [1, 0.12, 0.1] });
+  }
   // lower bumper / diffuser
   const diffH = (top - bot) * (kit === 'race' ? 0.32 : 0.2);
   P.fill((c) => rrectPath(c, -hw * 0.86, bot, hw * 1.72, diffH, 0.04), { a: kit === 'race' ? carbonPattern(P.a) : '#121315', o: [0.2, 0.55, 0.05] });
@@ -640,7 +769,8 @@ export function paintCabin(S, look, vs, res = 512) {
   // the glass runs from the belt right up into the roof corner (thin roof rail)
   const topIdx = CIDX.sideEnd + 2;
   const sideTop = (right) => Y(right ? vi(28 - topIdx) : vi(topIdx));
-  const beltY = (right) => Y(right ? vi(28) : vi(0));
+  // glass starts just above the greenhouse foot fillet
+  const beltY = (right) => Y(right ? vi(28 - CAB_GLASS_IDX) : vi(CAB_GLASS_IDX));
   const pillarIn = (right) => Y(right ? vi(28 - 7) : vi(7));
   const windshield = (c) => {
     c.beginPath();

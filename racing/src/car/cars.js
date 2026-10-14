@@ -59,7 +59,7 @@ export const CARS = [
       doors: 2, win: { b: 0.5, c: 0.72, cSlant: 26 },
       head: 'rect', headBox: { x0: 0.32, x1: 0.84, y0: 0.62, y1: 0.76 },
       tail: 'bar', tailBox: { x0: 0.5, x1: 0.86, y0: 0.8, y1: 0.95 },
-      grille: 'bars', intake: 'slot', wing: 'roof', exhaust: 'single-left', script: 'GTi',
+      grille: 'golf', intake: 'wide', wing: 'roof', exhaust: 'single-left', script: 'GTi',
     },
   }),
   C({
@@ -105,7 +105,7 @@ export const CARS = [
       roadster: true, doors: 2, win: { b: 0.99, c: 0.99 },
       head: 'teardrop', headBox: { x0: 0.36, x1: 0.8, y0: 0.53, y1: 0.64 },
       tail: 'oval', tailBox: { x0: 0.42, x1: 0.8, y0: 0.7, y1: 0.84 },
-      grille: 'none', intake: 'mouth', wing: 'none', exhaust: 'dual-right', script: 'Miyako',
+      grille: 'none', intake: 'oval', wing: 'none', exhaust: 'dual-right', script: 'Miyako',
     },
   }),
   // ------------------------------------------------------------ class C
@@ -129,7 +129,7 @@ export const CARS = [
       doors: 2, win: { b: 0.52, c: 0.766 },
       head: 'slant', headBox: { x0: 0.34, x1: 0.82, y0: 0.56, y1: 0.68 },
       tail: 'wrap-clear', tailBox: { x0: 0.42, x1: 0.82, y0: 0.82, y1: 0.95 },
-      grille: 'none', intake: 'mouth', wing: 'ducktail', exhaust: 'single', script: 'Silvio',
+      grille: 'none', intake: 'triple', wing: 'ducktail', exhaust: 'single', script: 'Silvio',
     },
   }),
   C({
@@ -153,7 +153,7 @@ export const CARS = [
       doors: 2, win: { b: 0.99, c: 0.643, cSlant: 30 },
       head: 'swoop', headBox: { x0: 0.45, x1: 0.88, y0: 0.6, y1: 0.77 },
       tail: 'boomerang', tailBox: { x0: 0.5, x1: 0.89, y0: 0.8, y1: 0.96 },
-      grille: 'none', intake: 'mouth', wing: 'lip', exhaust: 'dual', script: '350X',
+      grille: 'none', intake: 'z', wing: 'lip', exhaust: 'dual', script: '350X',
     },
   }),
   // ------------------------------------------------------------ class B
@@ -178,7 +178,7 @@ export const CARS = [
       doors: 4, seats2: true, win: { b: 0.47, c: 0.822 },
       head: 'teardrop', headBox: { x0: 0.36, x1: 0.84, y0: 0.58, y1: 0.735 },
       tail: 'round2', tailBox: { x0: 0.46, x1: 0.865, y0: 0.82, y1: 0.96 },
-      grille: 'mesh', intake: 'triple', wing: 'big', exhaust: 'dual-center', script: 'WRS STi',
+      grille: 'sti', intake: 'sti', wing: 'big', exhaust: 'dual-center', script: 'WRS STi',
     },
   }),
   C({
@@ -202,7 +202,7 @@ export const CARS = [
       doors: 4, seats2: true, win: { b: 0.47, c: 0.82 },
       head: 'slant', headBox: { x0: 0.36, x1: 0.83, y0: 0.6, y1: 0.745 },
       tail: 'wrap', tailBox: { x0: 0.4, x1: 0.865, y0: 0.82, y1: 0.965 },
-      grille: 'evo', intake: 'triple', wing: 'evo', exhaust: 'single',
+      grille: 'evo', intake: 'evo', wing: 'evo', exhaust: 'single',
       script: 'Lancet Evolution', frontPlate: true,
     },
   }),
@@ -227,7 +227,7 @@ export const CARS = [
       doors: 2, win: { b: 0.99, c: 0.631, cSlant: 30 },
       head: 'popup',
       tail: 'round3', tailBox: { x0: 0.36, x1: 0.86, y0: 0.72, y1: 0.85 },
-      grille: 'none', intake: 'mouth', wing: 'hoop', exhaust: 'dual', script: 'RZ-7', fog: false,
+      grille: 'none', intake: 'fd', wing: 'hoop', exhaust: 'dual', script: 'RZ-7', fog: false,
     },
   }),
   C({
@@ -300,7 +300,7 @@ export const CARS = [
       doors: 2, win: { b: 0.99, c: 0.712, cSlant: 30 },
       head: 'oval', headBox: { x0: 0.42, x1: 0.86, y0: 0.5, y1: 0.63 },
       tail: 'round2', tailBox: { x0: 0.32, x1: 0.88, y0: 0.76, y1: 0.9 },
-      grille: 'none', intake: 'mouth', wing: 'hoop', exhaust: 'single', script: 'SUPRANO',
+      grille: 'none', intake: 'oval', wing: 'hoop', exhaust: 'single', script: 'SUPRANO',
     },
   }),
   C({
@@ -324,7 +324,7 @@ export const CARS = [
       doors: 2, seats2: true, win: { b: 0.99, c: 0.803 },
       head: 'squint', headBox: { x0: 0.38, x1: 0.85, y0: 0.62, y1: 0.745 },
       tail: 'round2', tailBox: { x0: 0.42, x1: 0.865, y0: 0.84, y1: 0.99 },
-      grille: 'mesh', intake: 'mouth', wing: 'gt', exhaust: 'single', script: 'SKYHAWK GT-R', frontPlate: true,
+      grille: 'gtr', intake: 'gtr', wing: 'gt', exhaust: 'single', script: 'SKYHAWK GT-R', frontPlate: true,
     },
   }),
   // ------------------------------------------------------------ class S
@@ -349,7 +349,7 @@ export const CARS = [
       doors: 2, win: { b: 0.99, c: 0.625, cSlant: 34 },
       head: 'teardrop', headBox: { x0: 0.44, x1: 0.86, y0: 0.52, y1: 0.665 },
       tail: 'wrap', tailBox: { x0: 0.4, x1: 0.86, y0: 0.77, y1: 0.89 },
-      grille: 'none', intake: 'triple', wing: 'gt', exhaust: 'dual', louvers: true, script: '996 turbo', fog: false,
+      grille: 'none', intake: 'triple', wing: 'whale', exhaust: 'dual', louvers: true, script: '996 turbo', fog: false,
     },
   }),
   C({
@@ -368,12 +368,12 @@ export const CARS = [
       cowl: 1.95, deck: 3.75, hoodFront: 0.14, trunkEnd: 0.06,
       plan: { front: 0.72, frontR: 0.55, rear: 0.88, rearR: 0.28, flare: 0.07, waist: 0.03 },
       section: { bulge: 0.04, tumble: 0.07, rs: 0.13, rb: 0.05, crown: 0.025 },
-      cabin: { inset: 0.08, tumble: 0.17, rr: 0.11 },
+      cabin: { inset: 0.08, tumble: 0.17, rr: 0.11, bubble: 0.035, crown: 0.03 },
       fender: 0.08, fenderClear: 0.1,
       doors: 2, win: { b: 0.99, c: 0.713, cSlant: 30 },
       head: 'teardrop', headBox: { x0: 0.46, x1: 0.9, y0: 0.55, y1: 0.68 },
       tail: 'oval', tailBox: { x0: 0.46, x1: 0.9, y0: 0.77, y1: 0.9 },
-      grille: 'none', intake: 'mouth', wing: 'lip', exhaust: 'side', sideVent: [1.62, 0.36], script: 'VENOM', fog: false,
+      grille: 'none', intake: 'oval', hoodVents: true, wing: 'lip', exhaust: 'side', sideVent: [1.62, 0.36], script: 'VENOM', fog: false,
     },
   }),
   C({
@@ -397,7 +397,7 @@ export const CARS = [
       doors: 2, win: { b: 0.99, c: 0.48, cSlant: 40 },
       head: 'thin', headBox: { x0: 0.5, x1: 0.94, y0: 0.44, y1: 0.555 },
       tail: 'strip', tailBox: { x0: 0.36, x1: 0.94, y0: 0.8, y1: 0.92 },
-      grille: 'none', intake: 'mouth', wing: 'lip', exhaust: 'center', sideVent: [3.0, 0.5], louvers: true, script: 'PIPISTRELLO', fog: false,
+      grille: 'none', intake: 'lambo', wing: 'lip', exhaust: 'center', sideVent: [3.0, 0.5], louvers: true, script: 'PIPISTRELLO', fog: false,
     },
   }),
 ];

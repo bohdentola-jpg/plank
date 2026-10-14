@@ -150,7 +150,11 @@ function halfSection(S, u) {
   // fender ridges: hood sits a little lower than the fender tops
   const ridge = S.b.fender || 0;
   if (ridge > 0) {
-    const fu = u < S.b.cowl ? smooth01(0, 0.25, u) : (u > S.b.deck ? smooth01(S.L, S.b.deck + 0.2, u) * (S.b.deckRidge ?? 0.6) : 0);
+    // ramp the ridges out into the cowl and back in behind the cabin (no
+    // full-height ridge right behind the C-pillars: that reads as a truck bed)
+    const fu = u < S.b.cowl
+      ? smooth01(0, 0.25, u) * smooth01(S.b.cowl + 0.02, S.b.cowl - 0.3, u)
+      : (u > S.b.deck ? smooth01(S.b.deck, S.b.deck + 0.45, u) * smooth01(S.L + 0.05, S.L - 0.3, u) * (S.b.deckRidge ?? 0.6) : 0);
     if (fu > 0) {
       const xt = hwTop - rs;
       for (let i = IDX.sideEnd + 1; i < pts.length; i++) {
@@ -305,34 +309,74 @@ const CHALF = 15;
 export const CRING = CHALF * 2 - 1; // 29
 export const CIDX = { sideEnd: 5, cornerEnd: 10, top: 14 };
 
+// side samples (0 = greenhouse foot on the body, 1 = start of the roof
+// corner); dense at the bottom where the foot fillets into the shoulder
+const SIDE_S = [0, 0.05, 0.13, 0.36, 0.62, 0.85];
+export const CAB_GLASS_IDX = 2; // first side index above the fillet (glass bottom)
+
+/** y of the lower body's top surface (shoulder → center) at lateral x. */
+function bodyTopY(half, x) {
+  for (let i = IDX.sideEnd; i < half.length - 1; i++) {
+    const a = half[i], c = half[i + 1];
+    if ((a[0] - x) * (c[0] - x) <= 0 && a[0] !== c[0]) {
+      return a[1] + (c[1] - a[1]) * ((a[0] - x) / (a[0] - c[0]));
+    }
+  }
+  return half[half.length - 1][1];
+}
+
 function cabinHalf(S, u) {
-  const { cab } = S;
+  const { cab, b } = S;
   const yb = S.topF(u) - 0.004;
   const ytop = Math.max(yb + 0.002, S.roofF(u));
   const h = ytop - yb;
   const hwB = S.beltHalf(u);
-  const fullH = Math.max(0.2, S.roofY - S.topF((S.b.cowl + S.b.deck) / 2));
-  const hwR = hwB - cab.tumble * Math.min(1.2, h / fullH);
+  const fullH = Math.max(0.2, S.roofY - S.topF((b.cowl + b.deck) / 2));
+  const k = Math.min(1.2, h / fullH);
+  // the roof narrows toward the rear glass (and a little toward the
+  // windshield header), so the C-pillars lean in like real ones
+  const uRf = b.roof[1][0], uRe = b.roof[b.roof.length - 2][0];
+  const taper = (cab.rearTaper ?? 0.05) * smooth01(uRf + (uRe - uRf) * 0.45, b.deck, u)
+    + (cab.frontTaper ?? 0.025) * smooth01(uRf + 0.25, b.cowl, u);
+  const hwR = hwB - (cab.tumble + taper) * k;
   const rr = Math.min(cab.rr, h * 0.45);
+  // greenhouse foot: a fillet onto the body shoulder everywhere, sweeping
+  // further out at the C-pillar base (sail panels) and the A-pillar base
+  const body = halfSection(S, u);
+  const hwTop = body[IDX.sideEnd + 1][0];
+  const rsU = hwTop - body[IDX.shoulderEnd][0];
+  const xMax = hwTop - rsU * 0.3;
+  const sail = (cab.sail ?? 0.13) * smooth01(uRe - 0.45, b.deck - 0.05, u);
+  const aSw = (cab.aSweep ?? 0.025) * smooth01(uRf, b.cowl + 0.05, u);
+  const fil = cab.fillet ?? 0.028;
+  const sweep = sail + aSw;
   const pts = [];
-  // side: s = 0..5/6 (6 points from the belt)
-  for (let i = 0; i < 6; i++) {
-    const s = i / 6;
-    pts.push([lerp(hwB, hwR, s) + cab.bulge * Math.sin(Math.PI * s), lerp(yb, ytop - rr, s)]);
+  for (let i = 0; i < SIDE_S.length; i++) {
+    const s = SIDE_S[i];
+    let x = lerp(hwB, hwR, s) + cab.bulge * Math.sin(Math.PI * s);
+    x += fil * (s < 0.2 ? (1 - s / 0.2) ** 2 : 0) + sweep * (1 - s) ** 2.4;
+    let y = lerp(yb, ytop - rr, s);
+    if (x > xMax) x = xMax - 0.002 * (1 - s);
+    if (i === 0) y = Math.min(yb, bodyTopY(body, x) - 0.003);
+    else y = Math.max(y, bodyTopY(body, x) + 0.002 * s);
+    pts.push([x, y]);
   }
   // corner 0°..90° (5)
   for (let i = 0; i <= 4; i++) {
     const a = (i / 4) * (Math.PI / 2);
     pts.push([hwR - rr + Math.cos(a) * rr, ytop - rr + Math.sin(a) * rr]);
   }
-  // roof (3 interior + center)
+  // roof (3 interior + center); `bubble` dips the centre for a double-bubble roof
   const xt = Math.max(0.01, hwR - rr);
+  const hk = Math.min(1, h / 0.25);
+  const bub = (cab.bubble || 0) * hk * smooth01(uRf, uRf + 0.25, u) * smooth01(uRe + 0.1, uRe - 0.2, u);
   for (let i = 1; i <= 3; i++) {
     const f = i / 4;
     const x = xt * (1 - f);
-    pts.push([x, ytop + cab.crown * (1 - (x / xt) * (x / xt)) * Math.min(1, h / 0.25)]);
+    const xn = x / xt;
+    pts.push([x, ytop + cab.crown * (1 - xn * xn) * hk + bub * (Math.sin(Math.PI * xn) - 1) * (1 - xn) * 1.4]);
   }
-  pts.push([0, ytop + cab.crown * Math.min(1, h / 0.25)]);
+  pts.push([0, ytop + cab.crown * hk - bub]);
   return pts;
 }
 
