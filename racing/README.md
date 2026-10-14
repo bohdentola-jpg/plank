@@ -104,6 +104,12 @@ Erase story save.
   nitrous bonuses, and wrecked civilians that recover.
 - **HUD:** tach, digital speed, gear, boost and nitrous, radar minimap, live
   standings with gaps, lap and best times, and a countdown with launch grading.
+- **Instant replay:** after any race, WATCH REPLAY plays the whole race back
+  like a late-night TV broadcast. A director cuts between trackside cameras
+  that pan and zoom as the pack goes by, a helicopter, a camera car, a wheel
+  cam and the chase view. A VCR's transport controls it: ✕ play/pause, L1/R1
+  rewind and fast-forward with tracking noise, ← → to follow another car, △
+  to pick the camera, ◯ to stop the tape.
 
 ## Tracks (16)
 

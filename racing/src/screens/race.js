@@ -6,6 +6,7 @@
 import { registerScreen, game, go } from '../main.js';
 import { RaceSession } from '../race/session.js';
 import { HUD } from '../race/hud.js';
+import { drawReplayOSD } from '../race/replayOsd.js';
 import { TRACK_BY_ID, TRACKS } from '../track/tracks.js';
 import { CAR_BY_ID, CARS } from '../car/cars.js';
 import { C, vText, text, panel, hints, osd } from '../core/ui.js';
@@ -87,10 +88,12 @@ registerScreen('race', () => {
     const items = [];
     if (params.onDone) items.push({ label: 'CONTINUE', id: 'continue' });
     items.push({ label: 'RACE AGAIN', id: 'restart' });
+    if (session.canReplay) items.splice(1, 0, { label: 'WATCH REPLAY', id: 'replay' });
     if (!params.onDone) items.push({ label: 'CHANGE CAR / TRACK', id: 'setup' }, { label: 'MAIN MENU', id: 'menu' });
     resultsMenu = new Menu(items, { id: 'results' });
-    try { music.play(results.place === 1 ? 'results_win' : 'results_lose', { fade: 2.5 }); } catch { /* */ }
+    try { music.play(resultsTheme(), { fade: 2.5 }); } catch { /* */ }
   };
+  const resultsTheme = () => (results?.place === 1 ? 'results_win' : 'results_lose');
 
   const leave = (where) => {
     if (where === 'restart') { go('race', params); return; }
@@ -156,6 +159,24 @@ registerScreen('race', () => {
         if (it?.id === 'quit') leave('quit');
         return;
       }
+      // instant replay: a VCR's transport on the pad
+      if (session.replay) {
+        const rp = session.replay;
+        if (input.pressed('back') || input.pressed('pause')) {
+          session.stopReplay(resultsTheme());
+          uiSound('back');
+          return;
+        }
+        if (input.pressed('confirm')) rp.playPause();
+        if (input.pressed('tabR')) rp.fast(1);
+        if (input.pressed('tabL')) rp.fast(-1);
+        if (input.pressed('left')) rp.cycleFocus(-1);
+        if (input.pressed('right')) rp.cycleFocus(1);
+        if (input.pressed('camera')) rp.cycleMode();
+        session.update(dt);
+        Object.assign(game.fx, session.fx || {});
+        return;
+      }
       // controller unplugged / battery died mid-race: pause, like a console would
       const padLost = input.padEvent === 'lost' && (session.state === 'racing' || session.state === 'countdown');
       if ((input.pressed('pause') || padLost) && session.state !== 'done') {
@@ -179,7 +200,8 @@ registerScreen('race', () => {
         if (!results && session.doneT > 2.5) finishResults();
         if (resultsMenu) {
           const it = resultsMenu.update(dt);
-          if (it) leave(it.id);
+          if (it?.id === 'replay') { if (session.startReplay()) uiSound('select'); }
+          else if (it) leave(it.id);
         }
       }
     },
@@ -189,6 +211,7 @@ registerScreen('race', () => {
         drawStandBy(ctx, loading, game.time);
         return;
       }
+      if (session.replay) { drawReplayOSD(ctx, session.replay, session, game.time); return; }
       if (!window.__noHud) hud.draw(ctx, dt);
       if (results) drawResults(ctx, results, resultsMenu, resultsT, session);
       if (pauseMenu) drawPause(ctx, pauseMenu, session);

@@ -7,6 +7,7 @@ import { buildCarModel } from '../car/model.js';
 import { RaceSim } from './sim.js';
 import { proRun, ghostAt, ghostTimeAtDist } from './ghost.js';
 import { TrafficRender } from './trafficModels.js';
+import { ReplayRecorder, ReplayPlayer } from './replay.js';
 import { ChaseCamera } from './camera.js';
 import { Effects } from './effects.js';
 import { input } from '../core/input.js';
@@ -102,6 +103,8 @@ export class RaceSession {
       for (const r of this.sim.racers) if (!r.isPlayer) this.addLightPool(r);
     }
     this.effects = new Effects(this.scene, { rain: this.def.weather === 'rain', night: !!this.world.at.lamps });
+    this.recorder = new ReplayRecorder(this.sim.racers.length, this.sim.traffic ? this.sim.traffic.cars.length : 0);
+    this.replay = null;
     progress(0.92, 'WARMING ENGINES');
     this.setupAudio();
     // intro: orbit the player's car
@@ -128,6 +131,7 @@ export class RaceSession {
       if (this.def.weather === 'rain') sfx.rain(0.8);
     } catch { /* */ }
     const theme = this.opts.musicTheme || `race_${this.def.env === 'city' ? 'city' : this.def.env}`;
+    this.raceTheme = theme;
     try { music.play(theme, { seed: this.def.id, fade: 2, intensity: 0.5 }); music.setRaceState({ countdown: true }); } catch { /* */ }
   }
 
@@ -195,6 +199,7 @@ export class RaceSession {
     this.time += dt;
     const sim = this.sim;
     sim.events.length = 0;
+    if (this.replay) { this.updateReplay(dt); return; }
 
     if (this.state === 'intro') {
       this.introT += dt;
@@ -203,7 +208,7 @@ export class RaceSession {
 
     this.readPlayer();
     sim.step(dt);
-    if (sim.state === 'racing' && this.state === 'countdown') this.state = 'racing';
+    if (sim.state === 'racing' && this.state === 'countdown') { this.state = 'racing'; this.recorder.goT = this.recorder.clock; }
     if (sim.state === 'finished' && this.state === 'racing') this.state = 'finished';
     if (sim.state === 'done' && this.state !== 'done') { this.state = 'done'; this.doneT = 0; }
     if (this.state === 'done') this.doneT += dt;
@@ -212,6 +217,10 @@ export class RaceSession {
     this.syncModels(dt);
     this.dimHeadlights(dt);
     this.updateGhost(dt);
+    // tape the race from the countdown until a few seconds after the flag
+    if (this.state === 'countdown' || this.state === 'racing' || this.state === 'finished' || (this.state === 'done' && this.doneT < 4)) {
+      this.recorder.update(dt, sim.racers, sim.traffic);
+    }
     this.trafficRender?.update(this.camera.cam);
     this.updateEffects(dt);
     this.updateCamera(dt);
@@ -389,6 +398,7 @@ export class RaceSession {
       m.group.position.set(v.x, v.y, v.z);
       const vis = v.visual();
       m.animate(dt, vis.speed, vis.steer, vis.pitch, vis.roll, vis.heave, vis.wheel);
+      r._vis = vis;
       m.setLights(night ? 1 : 0, night ? 1 : 0.18, v.brakeLight);
       m.group.visible = !(r.out && r.parked);
     }
@@ -544,7 +554,44 @@ export class RaceSession {
     try { audio.duck(on ? 1 : 0); } catch { /* */ }
   }
 
-  view() { return { scene: this.scene, camera: this.camera.cam }; }
+  view() { return { scene: this.scene, camera: this.replay ? this.replay.cam : this.camera.cam }; }
+
+  // ---------------------------------------------------------------- replay
+
+  /** Enough tape for a replay? (the race got under way) */
+  get canReplay() { return this.recorder.duration > 3; }
+
+  startReplay() {
+    if (!this.canReplay) return false;
+    this.replay = new ReplayPlayer(this, this.recorder);
+    if (this.ghostModel) this.ghostModel.group.visible = false; // the pro's ghost isn't on the tape
+    try { sfx.skid(0); sfx.scrape(0); sfx.nitro(false); sfx.wind(0); sfx.roll(0, 'asphalt'); } catch { /* */ }
+    try { music.play(this.raceTheme || 'race_city', { seed: this.def.id + 'replay', fade: 1.5, intensity: 0.6 }); } catch { /* */ }
+    return true;
+  }
+
+  stopReplay(resultsTheme) {
+    if (!this.replay) return;
+    this.replay.exit();
+    this.replay = null;
+    this.camera.first = true;
+    if (resultsTheme) { try { music.play(resultsTheme, { fade: 1.5 }); } catch { /* */ } }
+  }
+
+  updateReplay(dt) {
+    const rp = this.replay;
+    rp.update(dt);
+    this.trafficRender?.update(rp.cam);
+    const c = rp.cars[rp.focus];
+    this.effects.update(dt, rp.cam, { x: Math.sin(c.heading) * c.speed, z: Math.cos(c.heading) * c.speed });
+    this.world.update(dt, rp.cam);
+    if (this.world.sun) this.world.sunFollow = _v.set(c.x, c.y, c.z);
+    this.fx = { radialBlur: 0, blurCenter: [0.5, 0.5], interference: rp.paused ? 0.06 : rp.rate !== 1 ? 0.35 : 0, staticAmt: rp.glitch * 0.5 };
+    try {
+      music.setRaceState({ countdown: false, position: 1, cars: this.sim.racers.length, lap: 1, laps: 1, nitro: !!c.nitro && rp.rate === 1, speed: clamp(c.speed / 70, 0, 1), airborne: false, crashed: false, finished: false });
+      music.update?.();
+    } catch { /* */ }
+  }
 
   dispose() {
     for (const r of this.sim?.racers || []) {
