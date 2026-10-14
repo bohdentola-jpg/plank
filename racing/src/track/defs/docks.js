@@ -16,7 +16,7 @@ export default [
     blurb: 'Container canyons, gantry cranes and a long wet quay under sodium light.',
     width: 16, lanes: 2, center: 'yellow-dashed', edge: 'white', worn: 0.65, asphalt: '#323337', bank: 0, startS: 120, fogD: 0.0021,
     points: [
-      [0, 0, 40], [950, 0, 42], [950, -600, 26], [740, -390, 60], [470, -390, 30], [470, -210, 28], [0, -210, 36],
+      [0, 0, 40], [950, 0, 42], [950, -600, 32], [740, -390, 60], [470, -390, 36], [470, -210, 34], [0, -210, 40],
     ],
     docks: {
       land: [[-900, -1400, 1700, 20]],

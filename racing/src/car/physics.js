@@ -149,7 +149,7 @@ export class Vehicle {
     this.driftState = 0;  // 0 grip, 1 drifting, 2 spinning out
     this.driftDir = 0;    // + = drifting left
     this.driftK = 0;      // 0..1 blend into the drift handling
-    this.driftT = 0; this.driftCalm = 0; this.driftAngRate = 0; this.prevDriftAng = null; this.prevDriftDir = 0; this.driftWant = 0.42;
+    this.driftT = 0; this.driftCalm = 0; this.driftAngRate = 0; this.prevDriftAng = null; this.prevDriftDir = 0; this.driftWant = 0.42; this.driftArm = 0;
     this.speed = 0;
     this.vF = 0; this.vL = 0;
   }
@@ -266,11 +266,16 @@ export class Vehicle {
     if (!human || this.gear < 0) {
       this.driftState = 0;
     } else if (this.driftState === 0) {
-      if (!this.airborne && this.gear > 0 && vF > 12 && Math.abs(steerIn) > 0.3 && (brake > 0.25 || hand)) {
+      // a real turn on the brakes (held for a moment, so a quick correction
+      // while braking in a straight line stays a correction), or the handbrake
+      const asking = !this.airborne && this.gear > 0 && vF > 12 && Math.abs(steerIn) > 0.3;
+      this.driftArm = asking && brake > 0.25 ? this.driftArm + dt : 0;
+      if (asking && (this.driftArm > 0.15 || hand)) {
         this.driftState = 1;
         this.driftDir = -Math.sign(steerIn); // + = drifting left
         this.driftT = 0;
         this.driftCalm = 0;
+        this.driftArm = 0;
       }
     } else {
       this.driftT += dt;
@@ -281,7 +286,7 @@ export class Vehicle {
         // too far round to catch: it's a spin
         else if (ang > 1.25) this.driftState = 2;
         // straight again for a moment (and off the brakes): back to grip
-        if (ang < 0.1 && this.driftT > 0.4 && brake < 0.2 && !hand) this.driftCalm += dt; else this.driftCalm = 0;
+        if (ang < 0.1 && this.driftT > 0.4 && (brake < 0.2 || Math.abs(steerIn) < 0.2) && !hand) this.driftCalm += dt; else this.driftCalm = 0;
         if (this.driftCalm > 0.2 || speed < 6) this.driftState = 0;
       } else if (speed < 4 || Math.abs(slip) < 0.3) {
         // the spin has run its course
@@ -296,7 +301,10 @@ export class Vehicle {
     // into the turn, and steering out of it winds the angle off to nothing
     if (this.driftState === 1) {
       const into = -steerIn * this.driftDir;
-      const want = Math.max(0, 0.42 + into * (into > 0 ? 0.3 : 0.6));
+      let want = Math.max(0, 0.42 + into * (into > 0 ? 0.3 : 0.6));
+      // on the brakes with the wheel straight you're scrubbing speed off,
+      // not holding a slide: the tail comes back in line
+      if (brake > 0.2 && into < 0.3 && this.driftT > 0.4) want *= 0.35;
       // eased, so a stab of countersteer winds the slide off rather than
       // whipping the car the other way
       this.driftWant += clamp(want - this.driftWant, -1.4 * dt, 2.5 * dt);
@@ -604,7 +612,8 @@ export class Vehicle {
         this.prevDriftDir = dir;
         const want = this.driftWant;
         let k = (0.8 + 0.2 * assists) * clamp((speed - 5) / 7, 0, 1);
-        if (brake > 0.2 && this.driftT > 0.35) k *= 0.3;
+        // still on the brakes and still steering into it: that's a spin
+        if (brake > 0.2 && -steerIn * dir > 0.3 && this.driftT > 0.5) k *= 0.3;
         torque += dir * (6 * (want - ang) - 4 * this.driftAngRate) * P.inertia * k * dk;
       } else {
         this.prevDriftAng = null;
