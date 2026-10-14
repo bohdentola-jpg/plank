@@ -678,7 +678,15 @@ export function paintCabin(S, look, vs, res = 512) {
     return P;
   }
   P.fill(windshield, glass);
-  P.fill(rearWin, glass);
+  if (b.engineCover) {
+    // mid-engine: a painted cover with louvers behind a small upright rear glass
+    const r0 = U(roofR) + 3, r1 = U(b.deck) - 2;
+    P.fill((c) => { c.beginPath(); c.rect(r0, Y(vi(9)), (r1 - r0) * 0.18, Y(vi(19)) - Y(vi(9))); }, glass);
+    for (let k = 0; k < 7; k++) {
+      const x = r0 + (r1 - r0) * (0.28 + k * 0.095);
+      P.fill((c) => { c.beginPath(); c.rect(x, Y(vi(10)), (r1 - r0) * 0.05, Y(vi(18)) - Y(vi(10))); }, { a: '#0a0a0b', o: [0, 0.8, 0] });
+    }
+  } else P.fill(rearWin, glass);
   for (const right of [false, true]) {
     P.fill(sideWin(right), glass);
     // B-pillar (black)
@@ -691,13 +699,13 @@ export function paintCabin(S, look, vs, res = 512) {
   }
   // black frit + wipers on the windshield
   P.stroke(windshield, { a: 'rgba(5,5,6,0.95)', o: trimO }, 6);
-  P.stroke(rearWin, { a: 'rgba(5,5,6,0.95)', o: trimO }, 5);
+  if (!b.engineCover) P.stroke(rearWin, { a: 'rgba(5,5,6,0.95)', o: trimO }, 5);
   for (const k of [0, 1]) {
     const y = H / 2 + (k ? -1 : 1) * H * 0.12;
     P.stroke((c) => { c.beginPath(); c.moveTo(U(b.cowl) + 5, y); c.lineTo(U(b.cowl) + 5 + W * 0.05, y + (k ? -1 : 1) * H * 0.1); }, { a: '#050505' }, 2.5);
   }
   // rear defroster lines
-  for (let k = 1; k < 7; k++) {
+  for (let k = 1; k < 7 && !b.engineCover; k++) {
     const x = U(roofR) + (U(b.deck) - U(roofR)) * k / 7;
     P.a.strokeStyle = 'rgba(120,60,30,0.35)';
     P.a.lineWidth = 1;
