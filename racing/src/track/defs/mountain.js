@@ -31,6 +31,9 @@ export default [
     width: 9.5, lanes: 2, center: 'yellow-dashed', edge: 'white', bank: 0.25, startS: 110, finishPad: 110,
     shoulder: 1.5, wall: 1.2, shoulderSurface: 'road', offSurface: 'dirt',
     atmos: { sun: { color: '#ffb07a', i: 1.0, el: 0.07, az: 1.45 } },
+    // scenery: rock shed span, summit lookout, extra lamps, power-line spans (meters along the road)
+    shed: [1890, 2030], viewpoint: { s: 125, len: 76, depth: 18 },
+    lamps: [104, 4985, 5085], poles: [[180, 1320], [3560, 5180]],
     // landform: height profile across the fall line (z), noise relief, peaks
     land: {
       axis: [0, 1], snow: 1010, seed: 3,
@@ -38,6 +41,7 @@ export default [
         [150, 402], [450, 388], [800, 386], [1050, 420], [1300, 560], [1600, 760]],
       relief: [[-1200, 70], [-700, 45], [-300, 40], [100, 22], [600, 12], [1000, 30], [1400, 60]],
       peaks: [[-650, -1150, 260, 380], [380, -1080, 200, 300], [-1350, -950, 180, 320], [900, -800, 160, 280]],
+      town: [[-500, 780, 110, 50], [120, 720, 90, 34], [-1500, 830, 140, 70], [520, 880, 70, 24], [-1000, 980, 90, 30]],
     },
     points: [
       [-1070, -626, 0], [-770, -642, 193], [-535, -599, 214], [-321, -633, 278], [-64, -615, 235], [139, -578, 139],
@@ -50,8 +54,11 @@ export default [
   withProfile({
     id: 'summit', name: 'SUMMIT LOOP', env: 'mountain', time: 'night', weather: 'dry', type: 'circuit', laps: 3,
     blurb: 'A fogbound lap around the peak: switchbacks up the east face, a flat-out plunge down the west.',
-    width: 9, lanes: 2, center: 'yellow-dashed', edge: 'white', bank: 0.3, startS: 150,
+    width: 9, lanes: 2, center: 'yellow-dashed', edge: 'white', bank: 0.3, startS: 200,
     shoulder: 1.5, wall: 1.2, shoulderSurface: 'road', offSurface: 'dirt', fogD: 0.0042,
+    viewpoint: { s: 2090, len: 70, depth: 18 }, lamps: [190, 1890], lampColor: '#d6e4ff', poles: [[260, 760], [2600, 3300]],
+    // hazy moonlit night: no stars, blue-gray fog that the sky fades into
+    atmos: { sky: ['#06080f', '#111725', '#2a3242'], glowHorizon: '#3c4456', fog: '#252c3a', stars: false },
     land: {
       center: [0, 0], tilt: [0, -1, 0.11], snow: 960, seed: 11,
       base: [[0, 1060], [150, 990], [300, 900], [450, 805], [600, 720], [800, 640], [1100, 600], [1400, 680]],

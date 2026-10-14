@@ -331,13 +331,24 @@ export class HUD {
     const P = s.player;
     const raceT = sim.state === 'grid' || sim.state === 'countdown' ? 0 : sim.raceTime;
     const lapT = P.finished ? (P.lastLap ?? raceT) : raceT - P.lapStart;
-    panel(ctx, 20, 18, 236, sim.T.closed ? 86 : 60, { accent: C.cyan, accentLen: 90 });
+    const tgt = s.target;
+    panel(ctx, 20, 18, 236, (sim.T.closed ? 86 : 60) + (tgt ? 30 : 0), { accent: C.cyan, accentLen: 90 });
     text(ctx, sim.T.closed ? 'LAP TIME' : 'TIME', 44, 42, { size: 12, color: C.dim, weight: 800, spacing: 2 });
     vText(ctx, fmtTime(sim.T.closed ? lapT : raceT), 44, 70, 24, { color: '#fff' });
+    let y = 93;
     if (sim.T.closed) {
-      text(ctx, 'BEST', 44, 93, { size: 12, color: C.dim, weight: 800, spacing: 2 });
-      text(ctx, P.bestLap ? fmtTime(P.bestLap) : '-:--.--', 92, 93, { size: 14, color: C.accent, weight: 800 });
-      text(ctx, 'TOTAL ' + fmtTime(raceT), 236, 93, { size: 11, color: C.dim, weight: 700, align: 'right' });
+      text(ctx, 'BEST', 44, y, { size: 12, color: C.dim, weight: 800, spacing: 2 });
+      text(ctx, P.bestLap ? fmtTime(P.bestLap) : '-:--.--', 92, y, { size: 14, color: P.bestLap && tgt && P.bestLap <= tgt ? C.green : C.accent, weight: 800 });
+      text(ctx, 'TOTAL ' + fmtTime(raceT), 236, y, { size: 11, color: C.dim, weight: 700, align: 'right' });
+      y += 24;
+    } else y = 93;
+    if (tgt) {
+      text(ctx, 'TARGET', 44, y, { size: 12, color: C.dim, weight: 800, spacing: 2 });
+      text(ctx, fmtTime(tgt), 112, y, { size: 14, color: '#fff', weight: 800 });
+      const d = s.ghostDelta;
+      if (d !== null && d !== undefined && sim.state === 'racing') {
+        text(ctx, `${d > 0 ? '+' : '-'}${Math.abs(d).toFixed(2)}`, 236, y, { size: 15, color: d > 0 ? '#ff8a8a' : '#8affb0', weight: 900, align: 'right' });
+      }
     }
   }
 

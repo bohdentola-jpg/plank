@@ -70,8 +70,14 @@ registerScreen('race', () => {
       bestLap: session.player.bestLap,
       order: sim.finishOrder.map((r) => ({ name: r.name, car: r.spec.id, time: r.finishTime, best: r.bestLap, player: r.isPlayer, estimated: r.estimated, out: r.out })),
       racers: sim.racers.length,
+      target: session.target || null,
+      beat: session.target ? !!(session.player.bestLap && (sim.T.closed ? session.player.bestLap : session.player.finishTime) <= session.target) : null,
     };
+    if (session.target && !sim.T.closed) results.bestLap = session.player.finishTime;
     try { saveRecords(results); } catch (e) { console.warn('records', e); }
+    if (params.onResult) {
+      try { results.summary = params.onResult(results); } catch (e) { console.warn('result', e); }
+    }
     const items = [];
     if (params.onDone) items.push({ label: 'CONTINUE', id: 'continue' });
     items.push({ label: 'RACE AGAIN', id: 'restart' });
@@ -116,7 +122,7 @@ registerScreen('race', () => {
         track: def, type: p.type || def.type, laps: p.laps ? Number(p.laps) : def.laps,
         player: { spec, look: p.look || {}, upgrades: p.upgrades || {}, name: p.playerName || 'YOU' },
         opponents: (p.type || def.type) === 'timeattack' ? [] : buildOpponents(p, spec),
-        playerGrid: p.playerGrid, rubber: p.rubber, musicTheme: p.musicTheme,
+        playerGrid: p.playerGrid, rubber: p.rubber, musicTheme: p.musicTheme, ttFactor: p.ttFactor,
       });
       await session.load(game.renderer.gl, (f, label) => { loading = { f, label }; });
       game.renderer.setPost(session.world.at.post || {}, true);
@@ -218,8 +224,10 @@ function drawResults(ctx, res, menu, t, session) {
   ctx.globalAlpha = a;
   ctx.fillStyle = 'rgba(2,4,10,0.72)';
   ctx.fillRect(0, 0, 1024, 768);
-  const title = res.out ? 'KNOCKED OUT' : res.place === 1 ? 'VICTORY' : `${ordinal(res.place)} PLACE`;
-  vText(ctx, title, 70, 110, 52, { color: res.place === 1 ? '#4dff8b' : res.out ? '#ff3d52' : C.accent, outline: 3, outlineColor: '#000' });
+  const title = res.target ? (res.beat ? 'TARGET BEATEN' : 'TARGET MISSED') : res.out ? 'KNOCKED OUT' : res.place === 1 ? 'VICTORY' : `${ordinal(res.place)} PLACE`;
+  const good = res.target ? res.beat : res.place === 1;
+  vText(ctx, title, 70, 110, 52, { color: good ? '#4dff8b' : res.out || (res.target && !res.beat) ? '#ff3d52' : C.accent, outline: 3, outlineColor: '#000' });
+  if (res.summary?.pay) text(ctx, `PRIZE  $${res.summary.pay.toLocaleString()}`, 690, 118, { size: 20, color: C.green, weight: 900, spacing: 2 });
   text(ctx, `${session.def.name}  ·  ${res.type.toUpperCase()}`, 74, 142, { size: 16, color: C.dim, weight: 700, spacing: 2 });
   if (res.newLap) {
     const p = 0.6 + 0.4 * Math.sin(t * 6);

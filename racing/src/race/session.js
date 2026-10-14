@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { buildWorld } from '../track/build.js';
 import { buildCarModel } from '../car/model.js';
 import { RaceSim } from './sim.js';
+import { proRun, ghostAt, ghostTimeAtDist } from './ghost.js';
 import { ChaseCamera } from './camera.js';
 import { Effects } from './effects.js';
 import { input } from '../core/input.js';
@@ -67,6 +68,20 @@ export class RaceSession {
       rubber: this.opts.rubber ?? 1, playerGrid: this.opts.playerGrid || 'back', seed: this.def.id,
     });
     this.player = this.sim.player;
+    if (this.type === 'timeattack') {
+      progress(0.86, 'TIMING THE PRO');
+      await new Promise((r) => setTimeout(r, 0));
+      const g = proRun(this.track, this.opts.player.spec, this.opts.player.upgrades || {}, { skill: 0.93 });
+      if (g) {
+        this.ghostRun = g;
+        this.target = g.target * (this.opts.ttFactor ?? 1);
+        const gm = buildCarModel(this.opts.player.spec, this.opts.player.look || {}, { hiRes: false, interior: false, shadow: false });
+        const holo = new THREE.MeshBasicMaterial({ color: 0x46e8ff, transparent: true, opacity: 0.16, depthWrite: false, blending: THREE.AdditiveBlending });
+        gm.group.traverse((o) => { if (o.isMesh) { o.material = holo; o.castShadow = false; } });
+        this.ghostModel = gm;
+        this.scene.add(gm.group);
+      }
+    }
     for (const r of this.sim.racers) {
       r.model = buildCarModel(r.spec, r.look || {}, { hiRes: r.isPlayer, interior: true });
       this.scene.add(r.model.group);
@@ -157,6 +172,7 @@ export class RaceSession {
 
     this.handleEvents();
     this.syncModels(dt);
+    this.updateGhost(dt);
     this.updateEffects(dt);
     this.updateCamera(dt);
     this.updateAudio(dt);
@@ -312,6 +328,32 @@ export class RaceSession {
     }
   }
 
+  /** Place the pro's ghost for the current lap and work out the split delta. */
+  updateGhost(dt) {
+    const g = this.ghostRun;
+    if (!g || !this.ghostModel) return;
+    const sim = this.sim, P = this.player, T = this.track;
+    const trace = P.lap === 0 ? g.lap1 : g.fly;
+    const racing = sim.state === 'racing' && !P.finished;
+    const lapT = racing ? sim.raceTime - (T.closed ? P.lapStart : 0) : 0;
+    const pose = ghostAt(trace, lapT, this._gp || (this._gp = {}));
+    const m = this.ghostModel;
+    m.group.visible = !!pose && !P.finished;
+    if (pose) {
+      m.group.position.set(pose.x, pose.y, pose.z);
+      m.group.rotation.set(0, pose.heading, 0);
+      m.animate(dt, racing ? 20 : 0, 0);
+      // fade out when it's right on top of us
+      const d = Math.hypot(pose.x - P.vehicle.x, pose.z - P.vehicle.z);
+      m.group.traverse((o) => { if (o.isMesh) o.material.opacity = 0.05 + 0.13 * clamp(d / 8, 0, 1); });
+    }
+    if (racing) {
+      const dist = T.closed ? P.total - P.lap * T.length : P.total;
+      const gt = ghostTimeAtDist(trace, dist);
+      this.ghostDelta = gt === null ? null : lapT - gt;
+    } else this.ghostDelta = null;
+  }
+
   updateEffects(dt) {
     const fx = this.effects;
     for (const r of this.sim.racers) {
@@ -443,6 +485,7 @@ export class RaceSession {
       try { r.engine?.stop(); } catch { /* */ }
       r.model?.dispose();
     }
+    this.ghostModel?.dispose();
     try { sfx.stopAll(); sfx.ambience(null); } catch { /* */ }
     this.world?.dispose();
   }

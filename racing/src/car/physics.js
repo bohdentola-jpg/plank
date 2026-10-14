@@ -91,7 +91,7 @@ export function derivePerf(spec, up = {}) {
     brakeG: 1.25 * (p.brake || 1) * m.brake,
     steerLock: 0.56,
     shiftTime: 0.26 * m.shift,
-    turbo: spec.sound?.turbo || 0,
+    turbo: Math.max(spec.sound?.turbo || 0, up.turbo || 0),
     nitroPower: m.nitro,
     handling: m.handling,
     hp: p.hp * m.power,
@@ -369,7 +369,9 @@ export class Vehicle {
       }
       // driven-wheel spin state
       const drivenCap = (P.split > 0 ? capF * P.split : 0) + (P.split < 1 ? capR * (1 - P.split) : 0);
-      const excess = Math.abs(driveForce) - drivenCap * 1.02;
+      // with traction control on, only what it lets through can spin the tires
+      const tcCap = assists > 0 && this.gear > 0 ? drivenCap * (1.0 + (1 - assists) * 0.6) : Infinity;
+      const excess = Math.min(Math.abs(driveForce), tcCap) - drivenCap * 1.02;
       if (excess > 0 && this.gear !== 0 && !hand && drivePedal > 0.2) {
         this.wheelSpin = Math.min(25, this.wheelSpin + excess / P.mass * dt * 6);
         spinning = true;

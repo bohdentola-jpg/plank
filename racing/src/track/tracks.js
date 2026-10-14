@@ -19,6 +19,24 @@ const CITY = [
       [900, 820, 40], [900, 250, 35], [650, 0, 70], [650, -350, 28], [200, -350, 30], [200, -150, 22],
     ],
   },
+  {
+    id: 'uptown', name: 'UPTOWN RUN', env: 'city', time: 'night', weather: 'rain', type: 'sprint',
+    blurb: 'Point to point from the financial district up the hill to the old observatory. Raining hard.',
+    width: 15, lanes: 4, center: 'double-yellow', bank: 0, startS: 40, finishPad: 70,
+    points: [
+      [0, 0, 0, 0], [0, 600, 40, 3], [-350, 600, 30, 6], [-350, 1100, 35, 13], [150, 1100, 60, 9],
+      [150, 1500, 40, 4], [700, 1500, 50, 2], [700, 1950, 0, 6],
+    ],
+  },
+  {
+    id: 'oldtown', name: 'OLD TOWN', env: 'city', time: 'dusk', weather: 'dry', type: 'circuit', laps: 3,
+    blurb: 'Two narrow lanes between brick walls and fire escapes. Twelve corners, no room to pass.',
+    width: 11, lanes: 2, center: 'dashed-white', bank: 0, startS: 60,
+    points: [
+      [0, -100, 15], [0, 300, 18], [-150, 300, 15], [-150, 520, 20], [120, 520, 25], [260, 380, 30],
+      [260, 120, 20], [400, 120, 15], [400, -200, 25], [150, -200, 18], [150, -100, 15],
+    ],
+  },
 ];
 
 export const TRACKS = [...CITY, ...DOCKS, ...HIGHWAY, ...CIRCUIT, ...MOUNTAIN, ...DESERT];

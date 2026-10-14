@@ -15,20 +15,20 @@ const WALL_Z = -3.9;
 const CEIL = 3.05;
 const AISLE_FAR = 11.5;
 
-function canvas(w, h) {
+export function canvas(w, h) {
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
   return c;
 }
 
-function grain(x, w, h, rng, n, a = 0.18) {
+export function grain(x, w, h, rng, n, a = 0.18) {
   for (let i = 0; i < n; i++) {
     x.fillStyle = rng() < 0.5 ? `rgba(255,255,255,${rng() * a})` : `rgba(0,0,0,${rng() * a})`;
     x.fillRect(rng() * w, rng() * h, 1 + rng() * 1.5, 1 + rng() * 1.5);
   }
 }
 
-function blot(x, cx, cy, r, color, a) {
+export function blot(x, cx, cy, r, color, a) {
   const g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
   g.addColorStop(0, `rgba(${color},${a})`);
   g.addColorStop(1, `rgba(${color},0)`);

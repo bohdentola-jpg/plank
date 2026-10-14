@@ -8,3 +8,4 @@ import './trackview.js';
 import './showroom.js';
 import './options.js';
 import './records.js';
+import './story.js';

@@ -305,7 +305,7 @@ registerScreen('radio', () => {
       if (st) {
         text(ctx, st.name, 64, 476, { size: 15, color: C.cyan, weight: 800, spacing: 3 });
         vText(ctx, st.mode, 62, 532, 46, { color: '#fff', outline: 3, outlineColor: 'rgba(0,0,0,0.6)', shadow: [3, 3, 'rgba(0,0,0,0.5)'] });
-        paragraph(ctx, st.desc, 64, 568, 410, { size: 15, color: '#c8d0dc', weight: 500, lineHeight: 20 });
+        paragraph(ctx, st.id === 'story' ? storyDesc(st) : st.desc, 64, 568, 410, { size: 15, color: '#c8d0dc', weight: 500, lineHeight: 20 });
         if (st.id === 'records') drawRecordsTeaser(ctx, records);
         const pulse = 0.6 + 0.4 * Math.sin(t * 5);
         ctx.globalAlpha = a * pulse;
@@ -402,6 +402,14 @@ function drawPhone(c, t) {
       x.fillRect(22, 40, 20, 14);
     }
   }
+}
+
+const CREWS = ['KINGS OF MAIN', 'HARBOR RATS', 'KAIDO GHOSTS', 'ROUTE 99 SYNDICATE', 'THE FREQUENCY'];
+function storyDesc(st) {
+  const s = store.load('story');
+  if (!s || !s.cars?.length) return st.desc;
+  if (s.finished) return `Port Halcyon is yours. $${Math.round(s.cash).toLocaleString()} in the bank. The crews still want rematches.`;
+  return `Chapter ${s.chapter + 1}: ${CREWS[s.chapter] || ''}. $${Math.round(s.cash).toLocaleString()} in the bank, ${s.stats?.wins || 0} wins so far. Pick up where you left off.`;
 }
 
 function loadRecords() {
