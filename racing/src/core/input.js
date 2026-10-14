@@ -65,7 +65,9 @@ class Input {
     this.lookBack = false;
     this._repeat = {};
     this._click = false;
-    this.mouse = { x: 0, y: 0, down: false, moved: false, wheel: 0 };
+    this.mouse = { x: 0, y: 0, down: false, moved: false, wheel: 0, dx: 0, dy: 0 };
+    this._dxAcc = 0;
+    this._dyAcc = 0;
     this.enabled = true;
     this._kbSteer = 0;
 
@@ -83,6 +85,7 @@ class Input {
   bindMouse(canvas, mapFn) {
     canvas.addEventListener('pointermove', (e) => {
       const p = mapFn(e.clientX, e.clientY);
+      if (this.mouse.down) { this._dxAcc += p.x - this.mouse.x; this._dyAcc += p.y - this.mouse.y; }
       this.mouse.x = p.x; this.mouse.y = p.y; this.mouse.moved = true;
       this.device = 'mouse';
     });
@@ -141,6 +144,8 @@ class Input {
   /** Call once per frame before game logic. */
   update(dt) {
     this.edges.clear();
+    this.mouse.dx = this._dxAcc; this.mouse.dy = this._dyAcc;
+    this._dxAcc = 0; this._dyAcc = 0;
     const padEvent = this._readPad();
     this.padEvent = padEvent;
 

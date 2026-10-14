@@ -11,7 +11,7 @@ import { CAR_BY_ID, CARS } from '../car/cars.js';
 import { C, vText, text, panel, hints, osd } from '../core/ui.js';
 import { Menu, uiSound } from '../core/menu.js';
 import { input } from '../core/input.js';
-import { settings } from '../core/settings.js';
+import { settings, store } from '../core/settings.js';
 import { fmtTime, ordinal } from '../core/util.js';
 import { audio } from '../audio/audio.js';
 import { music } from '../audio/music.js';
@@ -71,6 +71,7 @@ registerScreen('race', () => {
       order: sim.finishOrder.map((r) => ({ name: r.name, car: r.spec.id, time: r.finishTime, best: r.bestLap, player: r.isPlayer, estimated: r.estimated, out: r.out })),
       racers: sim.racers.length,
     };
+    try { saveRecords(results); } catch (e) { console.warn('records', e); }
     const items = [];
     if (params.onDone) items.push({ label: 'CONTINUE', id: 'continue' });
     items.push({ label: 'RACE AGAIN', id: 'restart' });
@@ -82,8 +83,27 @@ registerScreen('race', () => {
   const leave = (where) => {
     if (where === 'restart') { go('race', params); return; }
     if (params.onDone) { params.onDone(where === 'continue' ? results : null, where); return; }
-    if (where === 'setup') { go(params.back || 'radio', { station: 'quick', resume: 'setup' }); return; }
-    go(params.back || 'radio', { station: 'quick' });
+    if (where === 'setup') { go(params.back || 'showroom', { station: params.station || 'quick', resume: 'route' }); return; }
+    go('radio', { station: params.station || 'quick' });
+  };
+
+  /** Hall of fame: best lap / best time / wins per track, and the last car driven. */
+  const saveRecords = (res) => {
+    if (params.noRecords) return;
+    const all = store.load('records') || {};
+    const P = session.player;
+    const r = all[res.track] || { trackName: session.def.name, races: 0, wins: 0 };
+    r.trackName = session.def.name;
+    r.races = (r.races || 0) + 1;
+    if (res.place === 1 && res.racers > 1) r.wins = (r.wins || 0) + 1;
+    const car = `${P.spec.make} ${P.spec.model}`;
+    if (res.bestLap && (!r.bestLap || res.bestLap < r.bestLap)) { r.bestLap = res.bestLap; r.bestLapCar = car; r.newLap = true; } else r.newLap = false;
+    if (res.time && !res.out && (session.type === 'sprint' || session.type === 'drag') && (!r.bestTime || res.time < r.bestTime)) { r.bestTime = res.time; r.bestTimeCar = car; }
+    r.date = Date.now();
+    all[res.track] = r;
+    store.save('records', all);
+    store.save('lastCar', P.spec.id);
+    res.newLap = r.newLap;
   };
 
   const scr = {
@@ -201,6 +221,10 @@ function drawResults(ctx, res, menu, t, session) {
   const title = res.out ? 'KNOCKED OUT' : res.place === 1 ? 'VICTORY' : `${ordinal(res.place)} PLACE`;
   vText(ctx, title, 70, 110, 52, { color: res.place === 1 ? '#4dff8b' : res.out ? '#ff3d52' : C.accent, outline: 3, outlineColor: '#000' });
   text(ctx, `${session.def.name}  ·  ${res.type.toUpperCase()}`, 74, 142, { size: 16, color: C.dim, weight: 700, spacing: 2 });
+  if (res.newLap) {
+    const p = 0.6 + 0.4 * Math.sin(t * 6);
+    text(ctx, `NEW LAP RECORD  ${fmtTime(res.bestLap)}`, 690, 142, { size: 16, color: C.accent, weight: 900, spacing: 2, alpha: p, glow: 8 });
+  }
   panel(ctx, 60, 170, 600, 46 + res.order.length * 34, { accent: C.cyan });
   text(ctx, 'POS', 90, 200, { size: 12, color: C.dim, weight: 800 });
   text(ctx, 'DRIVER', 150, 200, { size: 12, color: C.dim, weight: 800 });

@@ -4,7 +4,7 @@
 //   { label, type: 'action'|'choice'|'slider'|'toggle', options:[{label,value}],
 //     get(): value, set(v), step, min, max, hint, disabled, id }
 import { input } from './input.js';
-import { C, vText, text, hit } from './ui.js';
+import { C, vText, vWidth, text, hit } from './ui.js';
 import { clamp } from './util.js';
 
 let sfxMod = null;
@@ -114,9 +114,8 @@ export class Menu {
         const vx = x + w - 20;
         vText(ctx, cur.label, vx, yy, size * 0.82, { align: 'right', color: sel ? C.accent : C.dim });
         if (sel) {
-          const tw = Math.min(260, ctx.measureText ? 0 : 0);
-          void tw;
-          text(ctx, '◄', vx - 12 - Math.max(80, cur.label.length * size * 0.62), yy - 3, { size: 14, color: C.accent, align: 'right' });
+          const tw = vWidth(cur.label, size * 0.82);
+          text(ctx, '◄', vx - 10 - tw, yy - 3, { size: 14, color: C.accent, align: 'right' });
           text(ctx, '►', vx + 16, yy - 3, { size: 14, color: C.accent });
         }
       } else if (it.type === 'slider') {

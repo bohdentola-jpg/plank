@@ -5,3 +5,6 @@ import './race.js';
 import './dev.js';
 import './carlab.js';
 import './trackview.js';
+import './showroom.js';
+import './options.js';
+import './records.js';

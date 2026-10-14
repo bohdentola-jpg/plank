@@ -66,7 +66,7 @@ export class HUD {
     ctx.fillRect(0, 560, 1024, 208);
     vText(ctx, def.name, 64, 680, 46, { color: C.text, outline: 3, outlineColor: 'rgba(0,0,0,0.7)' });
     const kind = { circuit: `CIRCUIT · ${s.sim.laps} LAPS`, sprint: 'SPRINT', knockout: `LAP KNOCKOUT · ${s.sim.laps} LAPS`, drag: 'DRAG · 1/4 MILE', drift: 'DRIFT', timeattack: 'TIME ATTACK' }[s.type] || s.type.toUpperCase();
-    text(ctx, `${kind}   ·   ${(s.track.length / 1000).toFixed(2)} KM   ·   ${s.sim.racers.length} RACERS`, 66, 712, { size: 17, color: C.accent, weight: 700, spacing: 2 });
+    text(ctx, `${kind}   ·   ${settings.get('units') === 'kmh' ? (s.track.length / 1000).toFixed(2) + ' KM' : (s.track.length / 1609.34).toFixed(2) + ' MI'}   ·   ${s.sim.racers.length} RACER${s.sim.racers.length > 1 ? 'S' : ''}`, 66, 712, { size: 17, color: C.accent, weight: 700, spacing: 2 });
     text(ctx, def.blurb || '', 66, 738, { size: 15, color: C.dim });
     ctx.restore();
     if (Math.floor(this.t * 2) % 2) text(ctx, 'PRESS ✕ / ENTER TO START', 960, 738, { size: 13, color: C.dim, align: 'right', weight: 700, spacing: 2 });

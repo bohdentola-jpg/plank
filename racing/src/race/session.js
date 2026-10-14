@@ -421,7 +421,8 @@ export class RaceSession {
     try {
       music.setRaceState({
         countdown: this.state === 'countdown' || this.state === 'intro',
-        position: P.pos, cars: sim.racers.length, lap: P.lap + 1, laps: sim.laps,
+        // hold the hook through the countdown and the first seconds after GO
+        position: this.state === 'racing' && sim.raceTime > 6 ? P.pos : 1, cars: sim.racers.length, lap: P.lap + 1, laps: sim.laps,
         nitro: pv.nitroOn, speed: clamp(pv.speed / 70, 0, 1), airborne: pv.airborne && pv.airTime > 0.25,
         crashed: this.crashT > 0.25, finished: P.finished,
       });

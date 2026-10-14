@@ -253,6 +253,7 @@ export class Renderer {
     this.post = { ...DEFAULT_POST };
     this.postTarget = { ...DEFAULT_POST };
     this.power = 0;      // CRT power 0 (off) → 1 (on)
+    this.crt = 1;        // player's CRT-effect strength (options)
     this.sceneOn = true; // false = only UI over black (cheaper title cards)
     this.time = 0;
     this.internalLines = 600;
@@ -444,11 +445,12 @@ export class Renderer {
     u.saturation.value = p.saturation;
     u.contrast.value = p.contrast;
     u.vignette.value = p.vignette;
-    u.aberration.value = p.aberration;
-    u.grain.value = p.grain;
-    u.scanline.value = p.scanline;
-    u.curvature.value = p.curvature;
-    u.maskStr.value = p.maskStr;
+    const crt = this.crt;
+    u.aberration.value = p.aberration * crt;
+    u.grain.value = p.grain * (0.35 + 0.65 * crt);
+    u.scanline.value = p.scanline * crt;
+    u.curvature.value = p.curvature * (0.3 + 0.7 * crt);
+    u.maskStr.value = p.maskStr * crt;
     u.staticAmt.value = Math.max(p.staticAmt, fx.staticAmt || 0);
     u.flash.value = Math.max(p.flash, fx.flash || 0);
     u.fade.value = Math.max(p.fade, fx.fade || 0);
@@ -474,7 +476,7 @@ export class Renderer {
     let x = (clientX - r.left) / r.width;
     let y = 1 - (clientY - r.top) / r.height;
     // invert uv' = 0.5 + c(1 + k|c|²) by fixed-point iteration (screen → source)
-    const k = this.post.curvature;
+    const k = this.post.curvature * (0.3 + 0.7 * this.crt);
     const tx = x - 0.5, ty = y - 0.5;
     // we want the source uv that the shader samples for this fragment: it's forward, not inverse
     const r2 = tx * tx + ty * ty;

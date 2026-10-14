@@ -5,7 +5,7 @@
 
 import { Song } from './song.js';
 import { Mono, Poly, Guitar, Twang, Breath } from './inst.js';
-import { pat, rolePat, makeChase, rhythm, indexNotes, makeMelody } from './util.js';
+import { pat, makeChase, rhythm, indexNotes, makeMelody } from './util.js';
 
 const ROCK_FORM = (r) => {
   const f = [

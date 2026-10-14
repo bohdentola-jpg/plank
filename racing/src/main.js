@@ -141,6 +141,8 @@ async function boot() {
   const canvas = document.getElementById('screen');
   game.renderer = new Renderer(canvas);
   game.renderer.setInternalLines(settings.get('lines'));
+  game.renderer.crt = settings.get('crt') ?? 1;
+  input.settingsRumble = settings.get('rumble') !== false;
   input.bindMouse(canvas, (x, y) => game.renderer.clientToUI(x, y));
   audio.setVolumes({
     master: settings.get('volMaster'), music: settings.get('volMusic'), sfx: settings.get('volSfx'),

@@ -2,13 +2,25 @@
 //
 //   decks (one per playing theme, crossfaded) ─┐
 //   stingers, nitro swell ─────────────────────┼→ input → tape-stop delay → tone LP + nitro shelf
-//                                               → dip → glue compressor → makeup → peak limiter
+//                                               → 28 Hz HP → dip → glue compressor → peak limiter
 //                                               → AM-radio tuning (warble delay, band-pass, level)
 //                                               → soft clipper → audio.musicBus
 //   deck reverb sends → revIn → (tuning level) → audio.reverbSend
 //
-// The game calls play/stop/update/setIntensity/setRaceState/stinger/setTuning.
-// Scheduling runs ahead of the audio clock from update() and a 25 ms interval.
+// API (all safe before audio is unlocked; requests are remembered):
+//   music.play(theme, { seed, fade = 1.5, intensity })  crossfade to a theme (no-op if already
+//       playing with the same seed). seed: number or string (e.g. the track id).
+//   music.stop(fade = 1)
+//   music.update()                  call every frame; a 25 ms interval also schedules
+//   music.setIntensity(x)           0..1 layer density, applied on the next bar line
+//   music.setRaceState(s)           { countdown, position, cars, lap, laps, finalLap, nitro,
+//                                     speed, airborne, crashed, finished } — any subset, every frame
+//   music.stinger(name)             go | lap | finalLap | win | lose | select | unlock | boss
+//   music.setTuning(x)              radio dial: 0 clear … 1 between stations (silent)
+//   music.theme                     current theme id (or the pending one) | null
+//   music.beatInfo()                { bpm, bar, beat, phase } for visual sync
+// Themes: nitro underground records talk showroom | race_city race_circuit race_mountain
+//   race_desert race_docks race_highway race_boss | results_win results_lose
 
 import { audio } from './audio.js';
 import { clamp, mtof, hashStr } from './music/util.js';
@@ -16,7 +28,6 @@ import { bank, clipCurve, DRUM_NAMES, MS_KINDS } from './music/render.js';
 import { THEMES } from './music/themes.js';
 
 const LOOKAHEAD = 0.2;
-const MAKEUP = 1.0;
 
 class Music {
   constructor() {
@@ -135,7 +146,7 @@ class Music {
     this.lim.attack.value = 0.002;
     this.lim.release.value = 0.09;
     this.lim.connect(this.limOut);
-    this.makeup = G(MAKEUP, this.lim);
+    this.makeup = G(1, this.lim);
     this.comp = ctx.createDynamicsCompressor();
     this.comp.threshold.value = -18;
     this.comp.knee.value = 10;
@@ -144,7 +155,8 @@ class Music {
     this.comp.release.value = 0.2;
     this.comp.connect(this.makeup);
     this.dip = G(1, this.comp);
-    this.shelf = F('highshelf', 5200, 0, this.dip, 0);
+    this.subHP = F('highpass', 28, 0, this.dip); // keep subsonics out of the compressor/limiter
+    this.shelf = F('highshelf', 5200, 0, this.subHP, 0);
     this.tone = F('lowpass', 22000, 0, this.shelf);
     this.tapeDry = G(1, this.tone);
     this.tapeWet = G(0, this.tone);
@@ -261,6 +273,7 @@ class Music {
     const d = this.deck && !this.deck.dying ? this.deck : null;
     if ('countdown' in s && !!s.countdown !== !!r.countdown) {
       r.countdown = !!s.countdown;
+      if (r.countdown) { delete r.finalLap; delete r.finished; } // new race
       d?.countdown(r.countdown);
     }
     if ('position' in s && s.position !== r.position) {
@@ -441,10 +454,12 @@ class Music {
         }
         break;
       case 'lap':
-        this._hit('crash', q, 0.55, 0.25);
-        this._chord('stab', q, root + 12, [0, 7, 12, 12 + third], 0.22, 0.4);
-        this._note('bell', q, root + 24, 0.6, 0.25);
-        this._note('bell', q + step * 2, root + 31, 0.6, 0.2);
+        if (!(d && d.accent(q))) {
+          this._hit('crash', q, 0.55, 0.25);
+          this._chord('stab', q, root + 12, [0, 7, 12, 12 + third], 0.22, 0.4);
+        }
+        this._note('bell', q, root + 24, 0.6, 0.22);
+        this._note('bell', q + step * 2, root + 31, 0.6, 0.18);
         break;
       case 'finalLap':
         d?.finalLap();
@@ -562,13 +577,14 @@ class Music {
     g.gain.setValueAtTime(0, t);
     g.gain.setTargetAtTime(0.12, t, 0.01);
     g.gain.setTargetAtTime(0, t + dur, 0.08);
-    const half = 0.19;
+    o1.frequency.value = f0;
+    o2.frequency.value = f0;
+    const half = 0.19; // two-tone alarm
     for (let i = 0, tt = t; tt < t + dur; i++, tt += half) {
       const f = i % 2 ? f1 : f0;
       o1.frequency.setTargetAtTime(f, tt, 0.012);
       o2.frequency.setTargetAtTime(f * 1.005, tt, 0.012);
     }
-    o1.frequency.value = f0; o2.frequency.value = f0;
     o1.connect(bp); o2.connect(bp); bp.connect(g); g.connect(this.sting);
     o1.start(t); o2.start(t);
     o1.stop(t + dur + 0.5); o2.stop(t + dur + 0.5);

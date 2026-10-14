@@ -6,15 +6,16 @@ import { buildCenterline } from '../path.js';
 
 function profile(def, knots) {
   const L = buildCenterline(def).length;
-  const out = [];
-  const end = knots[knots.length - 1][0];
-  for (let s = 0; s <= Math.max(L, end); s += 12) {
+  const at = (s) => {
     let k = 0;
     while (k < knots.length - 2 && knots[k + 1][0] < s) k++;
     const [s0, y0] = knots[k], [s1, y1] = knots[k + 1];
     const t = Math.max(0, Math.min(1, (s - s0) / (s1 - s0)));
-    out.push([Math.min(1, s / L), y0 + (y1 - y0) * t]);
-  }
+    return y0 + (y1 - y0) * t;
+  };
+  const out = [];
+  for (let s = 0; s < L; s += 12) out.push([s / L, at(s)]);
+  out.push([1, at(L)]);
   return out;
 }
 
@@ -30,6 +31,14 @@ export default [
     width: 9.5, lanes: 2, center: 'yellow-dashed', edge: 'white', bank: 0.25, startS: 110, finishPad: 110,
     shoulder: 1.5, wall: 1.2, shoulderSurface: 'road', offSurface: 'dirt',
     atmos: { sun: { color: '#ffb07a', i: 1.0, el: 0.07, az: 1.45 } },
+    // landform: height profile across the fall line (z), noise relief, peaks
+    land: {
+      axis: [0, 1], snow: 1010, seed: 3,
+      base: [[-1500, 1150], [-1100, 900], [-800, 700], [-640, 618], [-520, 562], [-380, 503], [-220, 448], [-60, 420],
+        [150, 402], [450, 388], [800, 386], [1050, 420], [1300, 560], [1600, 760]],
+      relief: [[-1200, 70], [-700, 45], [-300, 40], [100, 22], [600, 12], [1000, 30], [1400, 60]],
+      peaks: [[-650, -1150, 260, 380], [380, -1080, 200, 300], [-1350, -950, 180, 320], [900, -800, 160, 280]],
+    },
     points: [
       [-1070, -626, 0], [-770, -642, 193], [-535, -599, 214], [-321, -633, 278], [-64, -615, 235], [139, -578, 139],
       [417, -605, 16], [417, -559, 16], [128, -511, 214], [-150, -484, 342], [-449, -494, 15], [-449, -449, 15],
@@ -43,6 +52,12 @@ export default [
     blurb: 'A fogbound lap around the peak: switchbacks up the east face, a flat-out plunge down the west.',
     width: 9, lanes: 2, center: 'yellow-dashed', edge: 'white', bank: 0.3, startS: 150,
     shoulder: 1.5, wall: 1.2, shoulderSurface: 'road', offSurface: 'dirt', fogD: 0.0042,
+    land: {
+      center: [0, 0], tilt: [0, -1, 0.11], snow: 960, seed: 11,
+      base: [[0, 1060], [150, 990], [300, 900], [450, 805], [600, 720], [800, 640], [1100, 600], [1400, 680]],
+      relief: [[0, 40], [400, 30], [800, 45], [1400, 70]],
+      peaks: [[-150, -60, 60, 160]],
+    },
     points: [
       [-300, 420, 90], [220, 430, 90], [450, 300, 120], [480, -80, 16], [435, -95, 16], [395, 170, 16], [350, 185, 16],
       [300, -230, 110], [90, -420, 140], [-160, -430, 120], [-380, -300, 100], [-420, -60, 55], [-330, 60, 45],

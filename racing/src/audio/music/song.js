@@ -6,7 +6,7 @@
 
 import { audio } from '../audio.js';
 import { Rng, hashStr, mix32, prog, voice, clamp, makeMelody, rhythm, indexNotes } from './util.js';
-import { bank, driveCurve } from './render.js';
+import { bank } from './render.js';
 import { LEVELS } from './levels.js';
 
 // layer → mix group: r rhythm (air-filtered), b bass (ducked + air), m music (ducked), l lead, f fx
@@ -390,6 +390,7 @@ export class Song {
       }
     } else if (role === 'ohat') this._ohat = { g, end, t };
     if (role === 'kick') { // one kick voice: a new hit chokes the previous tail
+      if (this.m._kickLog) this.m._kickLog.push(t);
       const k = this._kick;
       if (k && k.end > t && k.t < t - 0.01) k.g.gain.setTargetAtTime(0, Math.max(k.t, t - 0.004), 0.0015);
       this._kick = { g, end, t };
@@ -487,13 +488,6 @@ export class Song {
   rootIn(ch, lo) {
     const pc = (this.keyPc + ch.root) % 12;
     return lo + ((pc - lo) % 12 + 12) % 12;
-  }
-
-  /** Chord tone by index (0 root, 1 third, 2 fifth...) above rootIn(ch, lo). */
-  toneOf(ch, lo, idx) {
-    const r = this.rootIn(ch, lo);
-    const iv = ch.iv;
-    return r + iv[idx % iv.length] + 12 * Math.floor(idx / iv.length);
   }
 
   // ---- transport ---------------------------------------------------------------------
@@ -822,6 +816,12 @@ export class Song {
 
   // ---- countdown → GO ---------------------------------------------------------------
   _enterCountdown(t) {
+    // a countdown starts a new race: drop any key lift / climax / outro from the last one
+    this.transpose = 0;
+    this.climax = false;
+    this.liftPending = false;
+    this.liftAt = null;
+    this.finishPending = false;
     this.mode = 'countdown';
     this.cdT = t;
     this.cdBar = -1;
@@ -973,9 +973,12 @@ export class Song {
     this.liftAt = null;
   }
 
+  /** Lap accent in the theme's own voice (crash + its stab). False if the theme has no stab. */
   accent(t) {
-    this.hit('crash', t, 0.75, { force: true });
-    this.stab(t, this.chordAt(0) || this.chord, 0.6);
+    if (this.stab === Song.prototype.stab || !this.chord) return false;
+    this.hit('crash', t, 0.7, { force: true, pan: 0.25 });
+    this.stab(t, this.chordAt(((t - this.anchorT) / this.stepDur) & 15) || this.chord, 0.5);
+    return true;
   }
 
   airborne(on) {
@@ -986,7 +989,7 @@ export class Song {
       f.cancelScheduledValues(now); f.setTargetAtTime(340, now, 0.06);
       g.cancelScheduledValues(now); g.setTargetAtTime(0.4, now, 0.06);
     } else {
-      const long = this._airT != null && now - this._airT > 0.35;
+      const long = this._airT != null && now - this._airT > 0.15;
       const t = long ? this.nextStepTime(now) : now;
       f.cancelScheduledValues(now); f.setTargetAtTime(22000, t, long ? 0.006 : 0.05);
       g.cancelScheduledValues(now); g.setTargetAtTime(1, t, long ? 0.004 : 0.05);
@@ -1126,5 +1129,4 @@ export class Song {
     inst.note(t, this.rootIn(ch, lo - 12), dur, vel * 0.7, { force: true });
   }
 
-  drive(k = 3) { return driveCurve(k); }
 }

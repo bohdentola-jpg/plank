@@ -17,7 +17,8 @@ import { buildCenterline } from '../path.js';
 
 function profiled(def) {
   const L = buildCenterline(def).length;
-  def.elevation = def.profile.map(([s, y]) => [s / L, y]);
+  // fallback elevation skips the sharp crests (smoothed anchors would over-steepen them)
+  def.elevation = def.profile.filter((p) => !(p[2] < 100)).map(([s, y]) => [s / L, y]);
   return def;
 }
 
@@ -65,7 +66,7 @@ export default [
       [4800, -12, 3000], [5100, -15, 3000], [5350, -14, 3000], [5650, -7, 3000],
       [6000, 0, 3000], [6300, 4, 1200], [6600, 1, 2000], [7004, 0],
     ],
-    canyons: [{ s0: 4290, s1: 5590, h: 58, gap: 5 }],
+    canyons: [{ s0: 4290, s1: 5590, h: 58, gap: 6.5 }],
     stop: { s: 1545, side: -1 },
     poles: { side: 1, from: 20, to: 6990, skip: [[4210, 5680]] },
     fence: 32,
@@ -87,7 +88,7 @@ export default [
       [0, 0], [700, 0, 160], [1000, 380, 200], [880, 760, 90], [620, 720, 60], [430, 900, 65],
       [180, 820, 70], [-50, 960, 110], [-380, 820, 90], [-420, 420, 120], [-300, 0, 130],
     ],
-    canyons: [{ s0: 1440, s1: 2660, h: 52, gap: 4 }],
+    canyons: [{ s0: 1440, s1: 2660, h: 52, gap: 5.5 }],
     washes: [{ s: 3135, w: 34, depth: 2.6, angle: 0.25 }],
     fence: 30,
     ads: [[350, -1, 1]],

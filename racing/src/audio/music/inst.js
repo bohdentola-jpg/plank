@@ -83,7 +83,7 @@ export class Mono {
 
   /** o: { slide, accent, cut (filter base override), force } */
   note(t, midi, dur, vel = 0.8, o = {}) {
-    if (!o.force && !this.s.isOn(this.o.layerGate || this.layer)) return;
+    if (!o.force && !this.s.isOn(this.layer)) return;
     const O = this.o;
     const f = mtof(midi + this.s.transpose);
     const p = this.pitch.offset;
