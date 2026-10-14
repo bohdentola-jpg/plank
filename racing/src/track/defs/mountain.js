@@ -24,13 +24,16 @@ function withProfile(def, knots) {
   return def;
 }
 
+// Hairpins are vertex pairs ~45 m apart with an oversized radius (40): both
+// fillets clamp to the gap and meet in one continuous ~20 m arc.
+
 export default [
   withProfile({
     id: 'kaido', name: 'KAIDO PASS', env: 'mountain', time: 'dusk', weather: 'dry', type: 'sprint',
     blurb: 'Five kilometers of cedar-lined pass falling off the ridge at sundown.',
     width: 10, lanes: 2, center: 'yellow-dashed', edge: 'white', bank: 0.55, startS: 110, finishPad: 110,
     shoulder: 1.5, wall: 1.2, shoulderSurface: 'road', offSurface: 'dirt',
-    atmos: { sun: { color: '#ffb07a', i: 1.0, el: 0.07, az: 1.45 } },
+    atmos: { sun: { color: '#ffb07a', i: 1.0, el: 0.07, az: 1.45 } }, // sets over the valley (+z)
     // scenery: rock shed span, summit lookout, extra lamps, power-line spans (meters along the road)
     shed: [1890, 2030], viewpoint: { s: 125, len: 76, depth: 18 },
     lamps: [104, 4985, 5085], poles: [[180, 1320], [3560, 5180]],
@@ -50,15 +53,22 @@ export default [
       [-353, -193, 64], [-310, -54, 54], [-171, 11, 48], [-203, 139, 64], [-449, 187, 128], [-642, 321, 160],
       [-696, 514, 150], [-942, 599, 171], [-1177, 556, 0],
     ],
-  }, [[0, 640], [268, 637], [1605, 584], [1733, 578], [2482, 540], [2568, 536], [3480, 448], [3560, 444], [4100, 418], [4654, 397], [5152, 386]]),
+  }, [ // elevation [s m, y m]: ridge road, switchbacks (~9%), eased esses, valley run
+    [0, 640], [268, 637], [1605, 584], [1733, 578], [2482, 540], [2568, 536], [3480, 448], [3560, 444],
+    [4100, 418], [4654, 397], [5152, 386],
+  ]),
   withProfile({
     id: 'summit', name: 'SUMMIT LOOP', env: 'mountain', time: 'night', weather: 'dry', type: 'circuit', laps: 3,
     blurb: 'A fogbound lap of the peak: switchbacks up, a flat-out plunge down.',
     width: 9.5, lanes: 2, center: 'yellow-dashed', edge: 'white', bank: 0.35, startS: 208,
     shoulder: 1.5, wall: 1.2, shoulderSurface: 'road', offSurface: 'dirt', fogD: 0.0042,
-    viewpoint: { s: 2174, len: 70, depth: 18 }, lamps: [198, 1966], lampColor: '#d6e4ff', poles: [[270, 790], [2700, 3430]],
+    viewpoint: { s: 2174, len: 70, depth: 18 }, lamps: [198, 1966], lampColor: '#d6e4ff',
+    poles: [[270, 790], [2700, 3430]],
     // hazy moonlit night: no stars, blue-gray fog that the sky fades into
-    atmos: { sky: ['#06080f', '#111725', '#2a3242'], glowHorizon: '#3c4456', fog: '#252c3a', stars: false, sun: { color: '#9fb4ff', i: 0.24, el: 0.62, az: 2.5 } },
+    atmos: {
+      sky: ['#06080f', '#111725', '#2a3242'], glowHorizon: '#3c4456', fog: '#252c3a', stars: false,
+      sun: { color: '#9fb4ff', i: 0.24, el: 0.62, az: 2.5 },
+    },
     land: {
       center: [0, 0], tilt: [0, -1, 0.11], snow: 960, seed: 11,
       base: [[0, 1060], [156, 990], [312, 900], [468, 805], [624, 720], [832, 640], [1144, 600], [1456, 680]],
@@ -70,5 +80,8 @@ export default [
       [312, -239, 110], [94, -437, 140], [-166, -447, 120], [-395, -312, 100], [-437, -62, 55], [-343, 62, 45],
       [-458, 208, 80],
     ],
-  }, [[0, 745], [312, 743], [728, 772], [1186, 814], [1321, 819], [1508, 838], [1633, 843], [1789, 859], [1955, 867], [2132, 862], [2392, 842], [3120, 772], [3536, 745]]),
+  }, [ // elevation [s m, y m]: climb with eased hairpins, summit, long descent
+    [0, 745], [312, 743], [728, 772], [1186, 814], [1321, 819], [1508, 838], [1633, 843], [1789, 859],
+    [1955, 867], [2132, 862], [2392, 842], [3120, 772], [3536, 745],
+  ]),
 ];

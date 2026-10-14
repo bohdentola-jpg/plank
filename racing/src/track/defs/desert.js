@@ -41,7 +41,7 @@ const SUNSET_CANYON = {
 };
 
 const SUNSET_LAKE = {
-  sky: ['#1f2a66', '#6e5a9a', '#ffaa6a'], glowHorizon: '#ffc488', fog: '#d6a488',
+  sky: ['#141c58', '#55508f', '#ffa860'], glowHorizon: '#ffc07a', fog: '#d49a78',
   sun: { color: '#ffb874', i: 2.4, el: 0.1, az: 1.95 }, hemi: ['#8a90d0', '#a07a68', 0.8], amb: 0.12,
   post: { exposure: 1.0, bloomStrength: 0.85, bloomThreshold: 1.05, saturation: 1.12, contrast: 1.05, lift: [0.014, 0.0, 0.018], gain: [1.06, 0.99, 0.95] },
 };
@@ -104,7 +104,7 @@ export default [
     id: 'drylake', name: 'DRY LAKE DRAG', env: 'desert', look: 'salt', time: 'sunset', weather: 'dry', type: 'drag',
     blurb: 'A quarter mile chalked onto the salt. Trucks line the strip, the tree drops amber, the mountains turn purple.',
     width: 20, lanes: 2, center: 'lanes-solid', edge: 'white', worn: 0.3, asphalt: '#3e3d3e',
-    startS: 120, dragLength: 402, finishPad: 1200 - 120 - 402, shoulder: 2, shoulderSurface: 'dirt', offSurface: 'dirt', fogD: 0.00042,
+    startS: 120, dragLength: 402, finishPad: 1200 - 120 - 402, shoulder: 2, shoulderSurface: 'dirt', offSurface: 'dirt', fogD: 0.00036,
     atmos: SUNSET_LAKE,
     points: [[0, 0], [0, 1200]],
     fence: 34,

@@ -849,7 +849,6 @@ function coverRow(ctx, i, sd, crest, yTop, wob = 0) {
   return row;
 }
 
-
 // ---------------------------------------------------------------- rock shed
 
 /** def.shed = [s0, s1]: a concrete gallery against the mountain side. */
@@ -857,7 +856,7 @@ function shedInfo(def, track, sides) {
   if (!def.shed) return null;
   const i0 = Math.round(def.shed[0] / track.step), i1 = Math.round(def.shed[1] / track.step);
   let rl = 0, rr = 0;
-  for (let i = i0; i <= i1; i++) { rl += sides[1].rise[i]; rr += sides[-1].rise[i]; }
+  for (let i = i0; i <= i1; i++) { rl += sides[1].rise[track.idx(i)]; rr += sides[-1].rise[track.idx(i)]; }
   const sd = rl >= rr ? 1 : -1;
   for (let i = i0 - 10; i <= i1 + 10; i++) sides[sd].cls[track.idx(i)] = 1;
   for (let i = i0; i <= i1; i++) sides[-sd].cls[track.idx(i)] = 0;
@@ -873,7 +872,7 @@ function buildShed(ctx) {
   const gb = new GeoBuilder();
   const fix = new GeoBuilder();
   const wallRows = [], roofRows = [], paraRows = [], coverRows = [];
-  let caps = [];
+  const caps = [];
   for (let r = shed.i0; r <= shed.i1; r++) {
     const i = track.idx(r);
     const s = r * track.step;
@@ -941,8 +940,16 @@ function lotInfo(def, track, sides) {
 function flattenLot(ctx) {
   const { world, track, lot, M } = ctx;
   const T = world.terrain;
-  for (let j = 0; j < T.nz; j++) {
-    for (let k = 0; k < T.nx; k++) {
+  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+  for (let r = lot.i0; r <= lot.i1; r++) {
+    const i = track.idx(r);
+    x0 = Math.min(x0, track.X[i]); x1 = Math.max(x1, track.X[i]); z0 = Math.min(z0, track.Z[i]); z1 = Math.max(z1, track.Z[i]);
+  }
+  const pad = lot.depth + track.W[track.idx(lot.i0)] + 24;
+  const k0 = Math.max(0, Math.floor((x0 - pad - T.x0) / T.cell)), k1 = Math.min(T.nx - 1, Math.ceil((x1 + pad - T.x0) / T.cell));
+  const j0 = Math.max(0, Math.floor((z0 - pad - T.z0) / T.cell)), j1 = Math.min(T.nz - 1, Math.ceil((z1 + pad - T.z0) / T.cell));
+  for (let j = j0; j <= j1; j++) {
+    for (let k = k0; k <= k1; k++) {
       const x = T.x0 + k * T.cell, z = T.z0 + j * T.cell;
       const i = M.nearest(x, z);
       if (i < 0) continue;
@@ -1014,8 +1021,8 @@ function buildLot(ctx) {
     col.box(o.x, o.y + 0.95, o.z, 0.08, 0.08, 2.5, o.ry);
     col.box(o.x, o.y + 0.5, o.z, 0.06, 0.06, 2.5, o.ry);
   }
-  // rest hut with vending machines in front, at the far end
-  const hutS = s1 - 6, hut = at(hutS, lot.depth - 4.2);
+  // rest hut (6.5 m across the lot, 4 m along the road) with vending machines on its road side
+  const hutS = s1 - 6, hutD = lot.depth - 4.2, hut = at(hutS, hutD);
   C('#8e8b84');
   col.box(hut.x, hut.y, hut.z, 6.5, 3.1, 4.0, hut.ry);
   C('#4a4744');
@@ -1026,7 +1033,7 @@ function buildLot(ctx) {
     const i = hut.i;
     const tx = track.TX[i], tz = track.TZ[i];
     const lx = track.LX[i] * sd, lz = track.LZ[i] * sd;
-    const fx = hut.x - tx * 3.27, fz = hut.z - tz * 3.27;
+    const fx = hut.x - tx * 2.02, fz = hut.z - tz * 2.02;
     const V = (dl, y) => new THREE.Vector3(fx + lx * dl, hut.y + y, fz + lz * dl);
     win.quad(V(-1.6, 1.0), V(-0.2, 1.0), V(-0.2, 2.1), V(-1.6, 2.1));
     C('#222222');
@@ -1035,7 +1042,7 @@ function buildLot(ctx) {
   // vending machines (front faces the road)
   const vend = [new GeoBuilder(), new GeoBuilder()];
   for (let k = 0; k < 3; k++) {
-    const a = at(hutS - 1.2 + k * 1.15, lot.depth - 7.0);
+    const a = at(hutS - 1.2 + k * 1.15, hutD - 3.25 - 0.5);
     const i = a.i;
     const fwd = [-track.LX[i] * sd, -track.LZ[i] * sd];
     const ry = Math.atan2(fwd[0], fwd[1]);

@@ -1731,7 +1731,6 @@ export async function build(world, def, track, progress) {
     pool: (x, y, z, color, radius, intensity) => world.lamps.push({ x, y, z, color: new THREE.Color(color), radius, intensity }),
   };
   const lit = [];
-  const __t0 = performance.now(); const __m = (n) => console.log('[prof]', n, Math.round(performance.now() - __t0));
   const env = docksEnv(world.renderer);
   if (env) world.scene.environment = env;
 
@@ -2248,7 +2247,6 @@ export async function build(world, def, track, progress) {
   }
   progress(0.85, 'SWITCHING ON THE YARD');
 
-  __m('// ---- assemble merge');
   // ---- assemble merged meshes
   const tex = containerAtlas();
   const add = (gb, mat, color = false, bake = true) => {
@@ -2283,9 +2281,7 @@ export async function build(world, def, track, progress) {
   }
   haloField(world, night ? X.halos : []);
   waterStreaks(world, night ? X.refl : []);
-  __m('bakeLit(lit,');
   bakeLit(lit, [...world.lamps, ...X.wash]);
-  __m("progress(1, 'DOCKS REA");
   progress(1, 'DOCKS READY');
 }
 

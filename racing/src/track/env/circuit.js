@@ -2,7 +2,7 @@
 // curbs, gravel traps, tire walls / armco / concrete with catch fences,
 // grandstands full of people, pit building + garages + paddock, a start
 // gantry with working lights, sponsor boards, a footbridge, marshal posts,
-// braking boards, forests and distant hills. One LOOK preset per def.scenery.
+// braking boards, forests and distant hills. STYLE per def.scenery, PLAN per track.
 import * as THREE from 'three';
 import { glowMaterial } from '../build.js';
 import { toTex } from '../textures.js';
@@ -14,9 +14,8 @@ const DS = THREE.DoubleSide;
 const BRANDS = ['KUROSHIO', 'RAZOR FUEL', 'NITRO-X', 'STATIC TIRES', 'MIDNIGHT 88.1'];
 const TEAMS = ['#c8161e', '#1d4fa8', '#f0a818', '#1b1b1d', '#2f9a4a', '#e6e6e6', '#ff6a00', '#5a2a8a'];
 
-// s = meters along the lap; side +1 = left of the driving direction, -1 = right.
-// walls: [s0, s1, side, runoff past the road edge, kind (2 concrete)]
-const LOOK = {
+// Visual style per def.scenery (falls back on time of day).
+const STYLE = {
   redwood: {
     grass: '#5b7842', steep: '#7d7158', floor: '#3a5428', verge: '#5f7a45', gravel: '#e6ddc8',
     far: ['#3f5c34', '#2c4238'], mountains: 380, leaf: ['#3f6a2c', '#4c7a34'],
@@ -24,11 +23,6 @@ const LOOK = {
     terrain: { margin: 520, cell: 13, flat: 26, blend: 44 },
     forest: { bias: 0.1, infield: 0.22, count: 2800, conifer: 0.9, coniferH: [20, 50], oakH: [9, 15] },
     seats: ['#2b5fb8', '#d6dce2'], roof: '#eef1f2', accent: '#1d5c34', building: '#e4e6e2',
-    walls: [[150, 1170, -1, 3.6, 2], [195, 1090, 1, 7.5, 2]],
-    pits: { lane: [182, 1010], garages: [330, 706], tower: 432 },
-    stands: [[236, 724, 1, 12], [1150, 1262, 1, 9], [3380, 3545, 1, 9], [2860, 2990, -1, 8]],
-    banks: [[1600, 1760, 1], [2040, 2200, -1]],
-    bridge: 2620, parking: [[480, 1, 220, 80]],
   },
   crestwood: {
     grass: '#d8c174', steep: '#a8865c', floor: '#8a8248', verge: '#c8cc7c', gravel: '#ecd8ae',
@@ -37,6 +31,22 @@ const LOOK = {
     terrain: { margin: 520, cell: 11, flat: 22, blend: 34 },
     forest: { bias: -0.06, infield: 0.7, count: 1800, conifer: 0.22, coniferH: [14, 24], oakH: [7, 13] },
     seats: ['#b42a2a', '#ebe5d8'], roof: '#f2ede2', accent: '#7a1f2b', building: '#f0eadd',
+  },
+};
+const styleFor = (def) => STYLE[def.scenery] || STYLE[def.id] || (def.time === 'sunset' || def.time === 'dusk' ? STYLE.crestwood : STYLE.redwood);
+
+// Hand-placed structures per track (other circuits get autoPlan()).
+// s = meters along the lap; side +1 = left of the driving direction, -1 = right.
+// walls: [s0, s1, side, runoff past the road edge, kind (2 concrete)]; stands: [s0, s1, side, tiers]
+const PLAN = {
+  redwood: {
+    walls: [[150, 1170, -1, 3.6, 2], [195, 1090, 1, 7.5, 2]],
+    pits: { lane: [182, 1010], garages: [330, 706], tower: 432 },
+    stands: [[236, 724, 1, 12], [1150, 1262, 1, 9], [3380, 3545, 1, 9], [2860, 2990, -1, 8]],
+    banks: [[1600, 1760, 1], [2040, 2200, -1]],
+    bridge: 2620, parking: [[480, 1, 220, 80]],
+  },
+  crestwood: {
     walls: [[150, 470, -1, 3.4, 2], [175, 462, 1, 6.5, 2]],
     pits: { lane: [172, 470], garages: [205, 425], tower: 270 },
     stands: [[182, 452, 1, 10], [790, 905, -1, 8], [3175, 3335, -1, 9]],
@@ -44,19 +54,18 @@ const LOOK = {
     bridge: 2700, parking: [[300, -1, 160, 70]],
   },
 };
-const lookFor = (def) => LOOK[def.scenery] || LOOK[def.id] || LOOK.redwood;
 const rgb = (hex) => { const c = new THREE.Color(hex); return [c.r, c.g, c.b]; };
 
 // ------------------------------------------------------------------ terrain
 
 export function terrainOpts(def) {
-  return { ...lookFor(def).terrain };
+  return { ...styleFor(def).terrain };
 }
 
 /** Far-field ground: follows the track's own elevation, rolls away into hills. */
 export function natural(def, track) {
   bankBoost(def, track);
-  const L = lookFor(def);
+  const L = styleFor(def);
   const noise = makeNoise2D(hashString(def.id) % 9973);
   const field = trackField(track, L.terrain.margin + 300);
   const { amp, rise, freq, infield } = L.hills;
@@ -671,13 +680,36 @@ function analyzeCorners(T) {
   return list;
 }
 
+/** Placements for a circuit without a hand-made PLAN, read off its layout. */
+function autoPlan(T, corners) {
+  const st = T.step, len = T.length, S = T.startS;
+  const straights = runs(T, (i) => Math.abs(T.K[i]) < 1e-6).map(([k0, k1]) => ({ a: k0 * st, b: (k1 + 1) * st }));
+  straights.sort((p, q) => (q.b - q.a) - (p.b - p.a));
+  const hit = (q, s) => (s >= q.a && s <= q.b) || (s + len >= q.a && s + len <= q.b);
+  const main = straights.find((q) => hit(q, S)) || straights[0] || { a: S - 100, b: S + 300 };
+  const s = main.a <= S ? S : S + len;
+  const g0 = Math.max(main.a + 70, s - 130), g1 = Math.max(g0 + 48, Math.min(main.b - 160, s + 190));
+  const heavy = corners.filter((c) => c.angle > 0.5).sort((p, q) => q.sev - p.sev);
+  const slow = corners.filter((c) => c.angle > 0.5).sort((p, q) => p.r - q.r);
+  const second = straights.find((q) => q !== main && q.b - q.a > 220);
+  return {
+    walls: [[main.a + 10, main.b - 90, -1, 3.6, 2], [main.a + 30, main.b - 150, 1, 7.5, 2]],
+    pits: { lane: [main.a + 20, main.b - 100], garages: [g0, g1], tower: clamp(s + 12, g0 + 13, g1 - 13) },
+    stands: [[Math.max(main.a + 45, s - 180), Math.min(main.b - 50, s + 300), 1, 12],
+      ...heavy.slice(0, 2).map((c) => [c.s0 - 115, c.s0 - 5, -c.sign, 9])],
+    banks: slow.filter((c) => !heavy.slice(0, 2).includes(c)).slice(0, 2).map((c) => [c.s0 - 20, c.s1 + 40, -c.sign]),
+    bridge: second ? (second.a + second.b) / 2 : 0,
+    parking: [[s + 60, 1, 200, 70]],
+  };
+}
+
 /** Walls (WL/WR), curbs, gravel traps and barrier kinds from the corner list. */
 function layoutRunoff(T, corners, L) {
   const N = T.N, st = T.step, W = T.W, sh = T.shoulder;
   const mk = () => [new Float32Array(N), new Float32Array(N)];
-  const want = mk(), cap = mk(), tire = mk(), grav = mk(), zone = mk();
+  const want = mk(), cap = mk(), tire = mk(), grav = mk(), zone = mk(), gin = mk();
   const curb = [new Uint8Array(N), new Uint8Array(N)];
-  want[0].fill(8); want[1].fill(8); cap[0].fill(99); cap[1].fill(99);
+  want[0].fill(8); want[1].fill(8); cap[0].fill(99); cap[1].fill(99); gin[0].fill(2.2); gin[1].fill(2.2);
   const span = (k0, k1, fn) => { for (let k = Math.floor(k0); k <= Math.ceil(k1); k++) fn(T.idx(k)); };
   for (const c of corners) {
     if (c.angle < 0.15) continue;
@@ -691,7 +723,8 @@ function layoutRunoff(T, corners, L) {
     const pre = (15 + 70 * c.sev) / st, post = (25 + 45 * c.fast) / st;
     span(c.i0 - pre * 0.7, c.i1 + post, (i) => { want[out][i] = Math.max(want[out][i], run); });
     if (run > 13) span(c.i0 - pre * 0.3, c.i1 + post * 0.7, (i) => { tire[out][i] = 1; });
-    if (c.sev > 0.25 || c.fast > 0.3) span(c.i0 - pre * 0.2, c.i1 + post * 0.6, (i) => { grav[out][i] = 1; });
+    // gravel: right off the curb at heavy stops, beyond a strip of grass on fast sweepers
+    if (c.sev > 0.25 || c.fast > 0.3) span(c.i0 - pre * 0.2, c.i1 + post * 0.6, (i) => { grav[out][i] = 1; if (c.sev < 0.45) gin[out][i] = Math.max(gin[out][i], 5.5); });
     span(c.i0, c.i1, (i) => { cap[inn][i] = Math.min(cap[inn][i], ins); want[inn][i] = Math.max(want[inn][i], ins); });
     const n = c.i1 - c.i0, half = Math.max(9 / st, n * 0.3);
     span(c.apex - half, c.apex + half, (i) => { curb[inn][i] = 1; });
@@ -732,8 +765,9 @@ function layoutRunoff(T, corners, L) {
   for (const q of [0, 1]) {
     const g = smoothArray(grav[q], 6, true, 2);
     const t = smoothArray(tire[q], 4, true, 1);
+    const gi = smoothArray(gin[q], 6, true, 2);
     for (let i = 0; i < N; i++) {
-      const inner = W[i] + sh + 2.2, outer = W[i] + dist[q][i] - 1.6;
+      const inner = W[i] + sh + gi[i], outer = W[i] + dist[q][i] - 1.6;
       const w = (outer - inner) * smoothstep(0.05, 0.6, g[i]);
       if (w > 1.5) { gIn[q][i] = inner; gOut[q][i] = inner + w; }
       kind[q][i] = zone[q][i] || (t[i] > 0.5 ? 1 : 0);
@@ -800,7 +834,6 @@ function flatten(terrain, f, lx0, lx1, lz0, lz1, h, fall = 10) {
 // ------------------------------------------------------------------ build
 
 export async function build(world, def, track, progress) {
-  const L = lookFor(def);
   const T = track, N = T.N, st = T.step;
   const terrain = world.terrain;
   const rng = makeRng('circuit' + def.id);
@@ -814,6 +847,7 @@ export async function build(world, def, track, progress) {
 
   // ---- layout: corners → walls, curbs, gravel
   const corners = analyzeCorners(T);
+  const L = { ...styleFor(def), ...(PLAN[def.id] || autoPlan(T, corners)) };
   const lay = layoutRunoff(T, corners, L);
   installSurfaces(T, lay);
   const wall = (i, side) => (side > 0 ? T.WL[i] : T.WR[i]);
@@ -1267,8 +1301,8 @@ export async function build(world, def, track, progress) {
         if (!isFree(fa.x, fa.z)) continue;
         const a = V(fa.x, tH(fa.x, fa.z) - 0.1, fa.z), b = V(fb.x, tH(fb.x, fb.z) - 0.1, fb.z);
         const [l, rr] = side > 0 ? [a, b] : [b, a];
-        const u0 = rng() * 4;
-        crowd.quad(l, rr, rr.clone().setY(rr.y + 1.05), l.clone().setY(l.y + 1.05), [u0, 0, u0 + 9 / 8.8, 1]);
+        const u0 = rng() * 4, lean = (v) => v.clone().set(v.x + fa.ez[0] * 0.45, v.y + 1.0, v.z + fa.ez[1] * 0.45);
+        crowd.quad(l, rr, lean(rr), lean(l), [u0, 0, u0 + 9 / 8.8, 1]);
       }
     }
     for (let s = s0 + 8; s < s1; s += 26 + rng() * 20) {
