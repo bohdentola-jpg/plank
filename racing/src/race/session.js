@@ -68,6 +68,7 @@ export class RaceSession {
       assists: settings.get('assists') === 'on' ? 1 : 0.25,
       rubber: this.opts.rubber ?? 1, playerGrid: this.opts.playerGrid || 'back', seed: this.def.id,
       traffic: this.opts.traffic ?? !!this.def.traffic,
+      driftRivals: this.opts.driftRivals,
     });
     this.player = this.sim.player;
     if (this.type === 'timeattack') {
@@ -254,7 +255,7 @@ export class RaceSession {
           if (e.player) {
             const won = e.place === 1;
             try { music.stinger(won ? 'win' : 'lose'); music.setRaceState({ finished: true }); } catch { /* */ }
-            this.message(e.out ? 'KNOCKED OUT' : won ? 'YOU WIN' : `${ordinal(e.place)} PLACE`, e.out ? '' : fmt(e.time), { color: won ? '#4dff8b' : e.out ? '#ff3d52' : '#ffb21e', dur: 5, big: true });
+            this.message(e.out ? 'KNOCKED OUT' : won ? 'YOU WIN' : `${ordinal(e.place)} PLACE`, e.out ? '' : this.type === 'drift' ? `${(e.score || 0).toLocaleString()} PTS` : fmt(e.time), { color: won ? '#4dff8b' : e.out ? '#ff3d52' : '#ffb21e', dur: 5, big: true });
           }
           break;
         case 'knockout':
@@ -289,13 +290,24 @@ export class RaceSession {
         case 'airtime':
           if (e.t > 0.8) this.message('AIR TIME', `${e.t.toFixed(1)}s  + NITROUS`, { slot: 'top', dur: 1.6, color: '#46e8ff' });
           break;
+        case 'driftbank':
+          this.message(`+${e.pts.toLocaleString()}`, e.mult > 1 ? `X${e.mult} DRIFT` : 'DRIFT', { slot: 'top', dur: 1.6, color: e.mult >= 4 ? '#ff3d6e' : e.mult >= 3 ? '#ffb21e' : '#46e8ff' });
+          try { sfx.checkpoint(); } catch { /* */ }
+          break;
+        case 'driftmult':
+          try { sfx.ui('tab'); } catch { /* */ }
+          break;
+        case 'driftlost':
+          this.message(e.why, `-${e.pts.toLocaleString()}`, { slot: 'top', dur: 1.4, color: '#ff3d52' });
+          try { sfx.ui('error'); } catch { /* */ }
+          break;
         case 'nearmiss':
           this.message(e.oncoming ? 'ONCOMING!' : 'NEAR MISS', '+ NITROUS', { slot: 'top', dur: 1.3, color: e.oncoming ? '#ffb21e' : '#46e8ff' });
           try { sfx.whoosh(0.9); } catch { /* */ }
           input.rumble(0.15, 0.4, 90);
           break;
         case 'driftbonus':
-          this.message('DRIFT', '+ NITROUS', { slot: 'top', dur: 1.2, color: '#46e8ff' });
+          if (this.type !== 'drift') this.message('DRIFT', '+ NITROUS', { slot: 'top', dur: 1.2, color: '#46e8ff' });
           break;
         case 'shift':
           try { sfx.shift(); } catch { /* */ }

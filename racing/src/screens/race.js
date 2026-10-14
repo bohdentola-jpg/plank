@@ -68,7 +68,10 @@ registerScreen('race', () => {
       out: !!session.player.out,
       time: session.player.finishTime,
       bestLap: session.player.bestLap,
-      order: sim.finishOrder.map((r) => ({ name: r.name, car: r.spec.id, time: r.finishTime, best: r.bestLap, player: r.isPlayer, estimated: r.estimated, out: r.out })),
+      order: session.type === 'drift'
+        ? [...sim.driftRivals.map((x) => ({ name: x.name, car: null, score: x.score })), { name: session.player.name, car: session.player.spec.id, score: session.player.driftTotal || 0, player: true }].sort((a, b) => b.score - a.score)
+        : sim.finishOrder.map((r) => ({ name: r.name, car: r.spec.id, time: r.finishTime, best: r.bestLap, player: r.isPlayer, estimated: r.estimated, out: r.out })),
+      score: session.player.driftTotal,
       racers: sim.racers.length,
       target: session.target || null,
       beat: session.target ? !!(session.player.bestLap && (sim.T.closed ? session.player.bestLap : session.player.finishTime) <= session.target) : null,
@@ -121,8 +124,8 @@ registerScreen('race', () => {
       session = new RaceSession({
         track: def, type: p.type || def.type, laps: p.laps ? Number(p.laps) : def.laps,
         player: { spec, look: p.look || {}, upgrades: p.upgrades || {}, name: p.playerName || 'YOU' },
-        opponents: (p.type || def.type) === 'timeattack' ? [] : buildOpponents(p, spec),
-        playerGrid: p.playerGrid, rubber: p.rubber, musicTheme: p.musicTheme, ttFactor: p.ttFactor, banner: p.banner,
+        opponents: ['timeattack', 'drift'].includes(p.type || def.type) ? [] : buildOpponents(p, spec),
+        playerGrid: p.playerGrid, rubber: p.rubber, musicTheme: p.musicTheme, ttFactor: p.ttFactor, banner: p.banner, driftRivals: p.driftRivals,
         traffic: p.traffic === undefined ? undefined : (p.traffic === true || p.traffic === '1' || p.traffic === 'true'),
       });
       await session.load(game.renderer.gl, (f, label) => { loading = { f, label }; });
@@ -238,7 +241,7 @@ function drawResults(ctx, res, menu, t, session) {
   text(ctx, 'POS', 90, 200, { size: 12, color: C.dim, weight: 800 });
   text(ctx, 'DRIVER', 150, 200, { size: 12, color: C.dim, weight: 800 });
   text(ctx, 'CAR', 300, 200, { size: 12, color: C.dim, weight: 800 });
-  text(ctx, 'TIME', 520, 200, { size: 12, color: C.dim, weight: 800 });
+  text(ctx, res.type === 'drift' ? 'SCORE' : 'TIME', 520, 200, { size: 12, color: C.dim, weight: 800 });
   text(ctx, 'BEST', 610, 200, { size: 12, color: C.dim, weight: 800, align: 'right' });
   res.order.forEach((r, k) => {
     const y = 236 + k * 34;
@@ -246,8 +249,8 @@ function drawResults(ctx, res, menu, t, session) {
     vText(ctx, r.out ? '-' : String(k + 1), 92, y, 18, { color: col });
     text(ctx, r.name, 150, y, { size: 16, color: col, weight: r.player ? 900 : 600 });
     const spec = session.sim.racers.find((x) => x.spec.id === r.car)?.spec;
-    text(ctx, spec ? `${spec.make} ${spec.model}` : r.car, 300, y, { size: 13, color: C.dim, weight: 600 });
-    text(ctx, r.out ? 'OUT' : fmtTime(r.time) + (r.estimated ? '*' : ''), 520, y, { size: 16, color: col, weight: 700 });
+    text(ctx, spec ? `${spec.make} ${spec.model}` : (r.car || (res.type === 'drift' ? 'POSTED SCORE' : '')), 300, y, { size: 13, color: C.dim, weight: 600 });
+    text(ctx, r.score !== undefined ? r.score.toLocaleString() : r.out ? 'OUT' : fmtTime(r.time) + (r.estimated ? '*' : ''), 520, y, { size: 16, color: col, weight: 700 });
     text(ctx, r.best ? fmtTime(r.best) : '', 640, y, { size: 13, color: C.dim, weight: 600, align: 'right' });
   });
   if (menu) {

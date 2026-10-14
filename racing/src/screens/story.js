@@ -138,6 +138,7 @@ registerScreen('story', () => {
     go('race', {
       trackDef: def, spec, look: story.look(), upgrades: story.up(), type: ev.type, laps,
       opponents: story.rivals(ev), rubber: ev.boss ? 0.4 : 0.75, ttFactor: ev.tt, traffic: ev.traffic,
+      driftRivals: ev.type === 'drift' ? CHAPTERS[ev.ch].members.slice(0, 3).map((n, k) => [n, [2.3, 3.6, 4.8][k] * (1 + ev.ch * 0.15)]) : undefined,
       musicTheme: ev.boss ? 'race_boss' : undefined, playerGrid: ev.boss ? 'back' : 'back',
       quitLabel: 'QUIT TO GARAGE', story: ev.id,
       banner: {
@@ -613,7 +614,7 @@ registerScreen('story', () => {
       ['TYPE', TYPE_NAMES[ev.type] || ev.type.toUpperCase()],
       ['LAPS', ev.type === 'sprint' || ev.type === 'drag' ? '—' : ev.type === 'knockout' ? String(Math.max(2, ev.rivals)) : ev.type === 'timeattack' ? (def?.type === 'sprint' ? '1 RUN' : 'BEST OF 3') : String(ev.laps || def?.laps || 3)],
       ['LENGTH', def ? fmtDistance(trackInfo(def).length, units) : '—'],
-      ['RIVALS', ev.type === 'timeattack' ? 'THE CLOCK' : ev.boss ? ch.boss.name : String(ev.rivals)],
+      ['RIVALS', ev.type === 'timeattack' ? 'THE CLOCK' : ev.type === 'drift' ? 'POSTED SCORES' : ev.boss ? ch.boss.name : String(ev.rivals)],
     ];
     facts.forEach(([k, v], i) => {
       const fx = 22 + (i % 2) * 180, fy = 282 + Math.floor(i / 2) * 42;
@@ -622,7 +623,7 @@ registerScreen('story', () => {
     });
     // performance comparison
     const mine = story.pr();
-    const theirs = ev.type === 'timeattack' ? null : story.rivalPR(ev);
+    const theirs = ev.type === 'timeattack' || ev.type === 'drift' ? null : story.rivalPR(ev);
     text(ctx, 'YOUR PR', 22, 382, { size: 10, color: sub, weight: 900, spacing: 2, shadow: false });
     vText(ctx, String(mine), 22, 408, 22, { color: ink, skew: 0 });
     if (theirs) {

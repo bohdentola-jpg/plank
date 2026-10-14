@@ -36,15 +36,16 @@ export const CLASS_COLORS = { D: '#3fbf6a', C: '#4a8fe0', B: '#f0a020', A: '#e84
 export const REGIONS = [
   ['city', 'CITY'], ['docks', 'DOCKS'], ['highway', 'HIGHWAY'], ['circuit', 'RACEWAY'], ['mountain', 'MOUNTAIN'], ['desert', 'DESERT'],
 ];
-export const TYPE_NAMES = { circuit: 'CIRCUIT', sprint: 'SPRINT', knockout: 'KNOCKOUT', drag: 'DRAG', timeattack: 'TIME ATTACK' };
+export const TYPE_NAMES = { circuit: 'CIRCUIT', sprint: 'SPRINT', knockout: 'KNOCKOUT', drag: 'DRAG', timeattack: 'TIME ATTACK', drift: 'DRIFT' };
 const TYPE_DESC = {
   circuit: 'Lapped race. First across the line after the final lap wins.',
   sprint: 'Point to point. One run, no second chances.',
   knockout: 'Last car across the line each lap is out. Survive to the end.',
   drag: 'Quarter mile. Launch, shift on the light, don\'t blink.',
-  timeattack: 'Just you and the clock. Set the fastest lap you can.',
+  timeattack: 'Just you and the clock — chase the pro\'s ghost.',
+  drift: 'Score attack. Angle times speed, chain it for multipliers, don\'t touch anything.',
 };
-export const typesFor = (def) => (def.type === 'drag' ? ['drag'] : def.type === 'sprint' ? ['sprint', 'timeattack'] : ['circuit', 'knockout', 'timeattack']);
+export const typesFor = (def) => (def.type === 'drag' ? ['drag'] : def.type === 'sprint' ? ['sprint', 'timeattack'] : ['circuit', 'knockout', 'drift', 'timeattack']);
 export const SKILLS = [
   { label: 'ROOKIE', v: 0.5 }, { label: 'STREET', v: 0.68 }, { label: 'PRO', v: 0.82 }, { label: 'LEGEND', v: 0.95 },
 ];
@@ -172,7 +173,7 @@ registerScreen('showroom', () => {
   const regionTracks = (r) => TRACKS.filter((d) => d.env === r);
   const regions = () => REGIONS.filter(([r]) => regionTracks(r).length);
   const track = () => TRACK_BY_ID[cfg.track] || TRACKS[0];
-  const racers = () => (cfg.type === 'timeattack' ? 1 : cfg.opp + 1);
+  const racers = () => (cfg.type === 'timeattack' || cfg.type === 'drift' ? 1 : cfg.opp + 1);
   const trafficOK = () => ['city', 'highway', 'docks'].includes(track().env) && cfg.type !== 'drag';
 
   function fixType() {
@@ -208,7 +209,7 @@ registerScreen('showroom', () => {
       {
         label: 'RIVALS', type: 'choice', id: 'opp',
         get options() {
-          if (cfg.type === 'timeattack') return [{ value: cfg.opp, label: 'NONE' }];
+          if (cfg.type === 'timeattack' || cfg.type === 'drift') return [{ value: cfg.opp, label: cfg.type === 'drift' ? 'POSTED SCORES' : 'NONE' }];
           const max = cfg.type === 'drag' ? (track().dragLanes?.length || 2) - 1 : 7;
           const min = cfg.type === 'knockout' ? 2 : 1;
           return Array.from({ length: max - min + 1 }, (_, k) => ({ value: k + min, label: String(k + min) }));
@@ -266,7 +267,7 @@ registerScreen('showroom', () => {
     const sp = CAR_BY_ID[cfg.car];
     const def = track();
     const type = cfg.type;
-    const opp = type === 'timeattack' ? 0 : cfg.opp;
+    const opp = type === 'timeattack' || type === 'drift' ? 0 : cfg.opp;
     const skill = SKILLS[cfg.skill].v;
     const params = {
       track: def.id, car: sp.id, look: { paint: paintOf(idx) }, type,

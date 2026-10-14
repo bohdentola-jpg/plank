@@ -19,7 +19,7 @@ const TEAMS = ['#c8161e', '#1d4fa8', '#f0a818', '#1b1b1d', '#2f9a4a', '#e6e6e6',
 const LOOK = {
   redwood: {
     grass: '#5b7842', steep: '#7d7158', floor: '#3a5428', verge: '#5f7a45', gravel: '#e6ddc8',
-    far: ['#4f6e3e', '#3a5446'], mountains: 380, leaf: ['#3f6a2c', '#4c7a34'],
+    far: ['#3f5c34', '#2c4238'], mountains: 380, leaf: ['#3f6a2c', '#4c7a34'],
     hills: { amp: 9, rise: 90, freq: 0.0032, infield: 0.25 },
     terrain: { margin: 520, cell: 13, flat: 26, blend: 44 },
     forest: { bias: 0.1, infield: 0.22, count: 2800, conifer: 0.9, coniferH: [20, 50], oakH: [9, 15] },
@@ -34,7 +34,7 @@ const LOOK = {
     grass: '#d8c174', steep: '#a8865c', floor: '#8a8248', verge: '#c8cc7c', gravel: '#ecd8ae',
     far: ['#a68a5a', '#6e5c66'], mountains: 260, leaf: ['#5a6c2e', '#6a7c3a'],
     hills: { amp: 16, rise: 120, freq: 0.0042, infield: 0.5 },
-    terrain: { margin: 520, cell: 11, flat: 14, blend: 30 },
+    terrain: { margin: 520, cell: 11, flat: 22, blend: 34 },
     forest: { bias: -0.06, infield: 0.7, count: 1800, conifer: 0.22, coniferH: [14, 24], oakH: [7, 13] },
     seats: ['#b42a2a', '#ebe5d8'], roof: '#f2ede2', accent: '#7a1f2b', building: '#f0eadd',
     walls: [[150, 470, -1, 3.4, 2], [175, 462, 1, 6.5, 2]],
@@ -872,6 +872,19 @@ export async function build(world, def, track, progress) {
     occupy(f, -len / 2, len / 2, 0, deep);
   }
   for (const [f, a, b, c, d, h] of pads) flatten(terrain, f, a, b, c, d, h);
+  // sink heightfield nodes under the road: the mesh's diagonal split can poke through banked edges
+  for (let j = 0; j < terrain.nz; j++) {
+    for (let ix = 0; ix < terrain.nx; ix++) {
+      const x = terrain.x0 + ix * terrain.cell, z = terrain.z0 + j * terrain.cell;
+      const k = T.nearestIndex(x, z, 1);
+      if (k < 0) continue;
+      const dx = x - T.X[k], dz = z - T.Z[k];
+      const lat = dx * T.LX[k] + dz * T.LZ[k];
+      if (Math.abs(dx * T.TX[k] + dz * T.TZ[k]) > st * 2 || Math.abs(lat) > T.W[k] + 1.5) continue;
+      const q = j * terrain.nx + ix;
+      terrain.H[q] = Math.min(terrain.H[q], T.roadY(k, 0, clamp(lat, -T.W[k], T.W[k])) - 0.95);
+    }
+  }
 
   // ---- terrain: grass with macro variation and darker forest floor, split into tiles
   const forestN = makeNoise2D(hashString(def.id + 'forest') % 9973);
@@ -903,7 +916,7 @@ export async function build(world, def, track, progress) {
     const verge = new Acc();
     for (const side of [1, -1]) {
       const lim = (i, d) => { const k = T.Ks[i] * side; return k > 1e-4 ? Math.min(d, 0.92 / k) : d; };
-      const dys = [0, -0.03, -0.17, -0.31, -0.55];
+      const dys = [0, -0.03, -0.17, -0.31, -0.9];
       ribbon(verge, T, side, 0, N, [0, sh, sh + 3, sh + 6, sh + 9].map((e, c) => ({ d: (i) => lim(i, T.W[i] + e), y: (i) => edgeY(i, side) + dys[c], u: e / 4 })), 12);
     }
     glowMesh(verge.mesh(gmat(new THREE.MeshStandardMaterial({ map: grassTex(true), color: L.verge, roughness: 1, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })), { glow: night }));
@@ -967,7 +980,7 @@ export async function build(world, def, track, progress) {
   const C = {
     conc: rgb('#bdbcb6'), steel: rgb('#6a7178'), dark: rgb('#2a2c30'), white: rgb('#f2f2ee'), roof: rgb(L.roof),
     seatA: rgb(L.seats[0]), seatB: rgb(L.seats[1]), bld: rgb(L.building), orange: rgb('#ff7a1a'), yellow: rgb('#ffd21a'),
-    green: rgb('#2a9a48'), blue: rgb('#1d4fa8'), black: rgb('#151517'),
+    green: rgb('#2a9a48'), blue: rgb('#1d4fa8'), black: rgb('#151517'), accent: rgb(L.accent),
   };
   {
     const conc = new Acc(), tires = new Acc(), armco = new Acc(), fence = new Acc();
@@ -1130,13 +1143,18 @@ export async function build(world, def, track, progress) {
     boxF(props, c0, 0, 0, y0 + 10.1, 3.6, 0.3, dL + dR, C.roof);
     for (const [sd, d] of [[1, dL], [-1, dR]]) {
       const ft = frame(s, sd, d + 2.4);
-      boxF(props, ft, 0, 0, y0 - 1, 4.8, 11.4, 4.8, C.bld);
+      boxF(props, ft, 0, 0, y0 - 1, 4.8, 11.4, 4.8, C.accent);
       boxF(props, ft, 0, 0, y0 + 10.4, 5.4, 0.3, 5.4, C.roof);
       occupy(ft, -4, 4, -4, 4);
     }
     const tx = T.TX[i], tz = T.TZ[i];
-    faceQuad(faces, c0.x - tx * 1.62, y0 + 7.7, c0.z - tz * 1.62, -tx, -tz, dL + dR - 1, 2.4, slotUV(0));
-    faceQuad(faces, c0.x + tx * 1.62, y0 + 7.7, c0.z + tz * 1.62, tx, tz, dL + dR - 1, 2.4, slotUV(2));
+    // a row of logos along each face (atlas slots are 2:1)
+    const span = dL + dR - 1, n = Math.max(1, Math.round(span / 5)), lw = span / n;
+    for (let k = 0; k < n; k++) {
+      const p = T.posAt(s, (dL - dR) / 2 - span / 2 + (k + 0.5) * lw);
+      faceQuad(faces, p.x - tx * 1.62, y0 + 7.7, p.z - tz * 1.62, -tx, -tz, lw - 0.1, 2.4, slotUV(k % 2 ? 6 : 0));
+      faceQuad(faces, p.x + tx * 1.62, y0 + 7.7, p.z + tz * 1.62, tx, tz, lw - 0.1, 2.4, slotUV(k % 2 ? 1 : 2));
+    }
     for (const sg of [-1, 1]) boxF(props, { ...c0, x: c0.x + tx * sg * 1.5, z: c0.z + tz * sg * 1.5 }, 0, 0, y0 + 9.95, 0.12, 0.12, dL + dR, C.steel);
   }
   progress(0.6, 'HANGING THE BANNERS');
@@ -1456,7 +1474,7 @@ function farRing(terrain, L, nat, noise) {
       pos.push(x, h, z);
       const t = clamp(R[k] / 1400, 0, 1);
       tmp.copy(c0).lerp(c1, smoothstep(0, 0.35, t)).lerp(c2, smoothstep(0.35, 1, t));
-      const sh = 0.85 + 0.25 * noise.fbm(x * 0.004, z * 0.004, 2);
+      const sh = 0.8 + 0.45 * noise.fbm(x * 0.0035, z * 0.0035, 3) + 0.15 * noise.fbm(x * 0.02, z * 0.02, 2);
       col.push(tmp.r * sh, tmp.g * sh, tmp.b * sh);
     }
   }

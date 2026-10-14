@@ -18,6 +18,13 @@ export class RaceSim {
     this.opts = opts;
     this.type = opts.type || 'circuit';
     this.laps = (this.type === 'sprint' || this.type === 'drag') ? 1 : (opts.laps || 3);
+    // drift: score attack against posted rival scores
+    if (this.type === 'drift') {
+      const per = track.length * this.laps;
+      this.driftRivals = (opts.driftRivals || [['RIN', 2.5], ['HAYATE', 4.0], ['MIKA', 5.5]])
+        .map(([name, k]) => ({ name, score: Math.round(per * k / 50) * 50 }))
+        .sort((a, b) => b.score - a.score);
+    }
     this.state = 'grid';
     this.time = 0;
     this.raceTime = 0;
@@ -178,7 +185,10 @@ export class RaceSim {
           if (R[b].out && R[b].parked) continue;
           if (R[a].ghost || R[b].ghost) continue;
           const hit = collideCars(R[a].vehicle, R[b].vehicle, R[a].dims, R[b].dims);
-          if (hit && hit.impact > 1.0) this.emit('carhit', { a: R[a].id, b: R[b].id, impact: hit.impact, x: (R[a].vehicle.x + R[b].vehicle.x) / 2, z: (R[a].vehicle.z + R[b].vehicle.z) / 2, y: R[a].vehicle.y });
+          if (hit && hit.impact > 1.0) {
+            R[a].lastHitT = R[b].lastHitT = this.time;
+            this.emit('carhit', { a: R[a].id, b: R[b].id, impact: hit.impact, x: (R[a].vehicle.x + R[b].vehicle.x) / 2, z: (R[a].vehicle.z + R[b].vehicle.z) / 2, y: R[a].vehicle.y });
+          }
         }
       }
       if (this.traffic) {
@@ -262,6 +272,8 @@ export class RaceSim {
         if (r.driftT === 0) r._driftAnnounced = false;
       }
 
+      if (this.type === 'drift' && r.isPlayer && !r.finished) this.driftScore(r, v, p, dt);
+
       // laps / finish
       if (!r.finished) {
         const lapNow = Math.floor(r.total / T.length);
@@ -273,6 +285,39 @@ export class RaceSim {
       }
     }
     this.rank();
+  }
+
+  /** Drift scoring: angle × speed while sliding, a multiplier that grows with
+   *  the length of the slide, banked when you straighten up, lost on contact. */
+  driftScore(r, v, p, dt) {
+    const T = this.T;
+    const D = r.dr || (r.dr = { cur: 0, mult: 1, t: 0, calm: 0, total: 0, best: 0, last: 0 });
+    const ang = Math.min(70, Math.abs(v.driftAngle) * 57.3);
+    const onRoad = Math.abs(p.lat) < T.W[p.i] + 0.6;
+    const crashed = r.scraping || (r.lastHitT && this.time - r.lastHitT < 0.05);
+    if (D.cur > 0 && (crashed || !onRoad)) {
+      this.emit('driftlost', { pts: Math.round(D.cur * D.mult), why: crashed ? 'CRASHED' : 'OFF ROAD' });
+      D.cur = 0; D.t = 0; D.mult = 1; D.calm = 0;
+      return;
+    }
+    if (ang > 14 && v.speed > 9 && onRoad && !v.airborne) {
+      D.cur += (ang - 10) * v.speed * 0.6 * dt;
+      D.t += dt;
+      D.calm = 0;
+      const m = 1 + Math.min(4, Math.floor(D.t / 1.6));
+      if (m > D.mult) this.emit('driftmult', { mult: m });
+      D.mult = m;
+    } else if (D.cur > 0) {
+      D.calm += dt;
+      if (D.calm > 0.7) {
+        const pts = Math.round(D.cur * D.mult / 5) * 5;
+        D.total += pts;
+        D.best = Math.max(D.best, pts);
+        D.last = pts;
+        this.emit('driftbank', { pts, mult: D.mult });
+        D.cur = 0; D.t = 0; D.mult = 1; D.calm = 0;
+      }
+    }
   }
 
   completeLap(r, L) {
@@ -305,6 +350,11 @@ export class RaceSim {
   finish(r) {
     r.finished = true;
     r.finishTime = this.raceTime;
+    if (this.type === 'drift' && r.isPlayer && r.dr) {
+      const D = r.dr;
+      if (D.cur > 0) { D.total += Math.round(D.cur * D.mult / 5) * 5; D.cur = 0; }
+      r.driftTotal = D.total;
+    }
     if (r.lapTimes.length < this.laps && this.T.closed) {
       const t = this.raceTime - r.lapStart;
       r.lapTimes.push(t);
@@ -315,7 +365,8 @@ export class RaceSim {
     }
     this.finishOrder.push(r);
     r.place = this.finishOrder.length;
-    this.emit('finish', { id: r.id, place: r.place, player: r.isPlayer, time: r.finishTime });
+    if (this.type === 'drift' && r.isPlayer) r.place = 1 + this.driftRivals.filter((x) => x.score > (r.driftTotal || 0)).length;
+    this.emit('finish', { id: r.id, place: r.place, player: r.isPlayer, time: r.finishTime, score: r.driftTotal });
     if (this.type === 'knockout' && !r.isPlayer) {
       // in knockout the winner is the last survivor; others still finish normally
     }

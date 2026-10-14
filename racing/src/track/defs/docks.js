@@ -9,6 +9,7 @@
 //   rail: polylines [[x, z, r?], …]; crossings are found where they cross the road
 //   skyline: [x, z, radius, count] city across the bay; gates: [s, sign] overhead signs
 //   tires: tire walls on the outside of the big corners; pipes: s of pipe bridges over the road
+//   mastSpacing: meters between flood-light masts along the road
 export default [
   {
     id: 'harbor', name: 'HARBOR DOCKS', env: 'docks', time: 'night', weather: 'wet', type: 'circuit', laps: 3,
@@ -33,6 +34,7 @@ export default [
       ],
       skyline: [500, 1750, 420, 60],
       gates: [[1010, 12]],
+      mastSpacing: 56,
       pipes: [1640],
     },
   },
@@ -57,6 +59,7 @@ export default [
       rail: [[[-560, -317], [110, -317, 80], [240, -420]]],
       skyline: [-100, 1500, 420, 55],
       gates: [[230, 8]],
+      mastSpacing: 46,
       pipes: [1100],
       tires: true,
     },

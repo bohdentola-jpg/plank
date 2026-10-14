@@ -183,7 +183,8 @@ function runsOf(F, pred, ja = 0, jb = F.last) {
  * lat (flat past the edges), absolute when abs is set, or a function
  * (a, x, z) → y. side −1 mirrors and reverses (faces keep pointing the same
  * way relative to the road); side 0 takes o as a raw lat, in winding order.
- * Face normal = tangent × (next profile point − this one).
+ * Face normal = tangent × (next profile point − this one). uv 'sy' maps u
+ * along s so text reads left→right from the road (o.outward: from outside).
  */
 function sweep(A, F, rows, side, base, pts, o = {}) {
   const np = pts.length, uS = o.uS ?? 1, vS = o.vS ?? 4, sy = o.uv === 'sy', y0 = o.y0 ?? 0;
@@ -204,7 +205,7 @@ function sweep(A, F, rows, side, base, pts, o = {}) {
     const tot = pl[np - 1];
     for (let kk = 0; kk < np; kk++) {
       const k = side < 0 ? np - 1 - kk : kk;
-      const u = sy ? (side < 0 ? -s : s) / uS : (o.mirror ? Math.min(pl[k], tot - pl[k]) : o.flip ? tot - pl[k] : pl[k]) / uS;
+      const u = sy ? ((side < 0) !== !!o.outward ? -s : s) / uS : (o.mirror ? Math.min(pl[k], tot - pl[k]) : o.flip ? tot - pl[k] : pl[k]) / uS;
       const v = sy ? (py[k] - y0) / vS : s / vS;
       A.v(px[k], py[k], pz[k], u, v, o.col);
     }
@@ -677,7 +678,7 @@ function drawPanel(at, r, p) {
     const sh = Math.min(1.5 * k, (bottom - top) * 0.62);
     const scx = left + sh * 0.55;
     shield(x, scx, top + sh * 0.55, sh, p.shield, p.kind);
-    if (p.dir) signText(x, p.dir, scx, top + sh * 1.22, 0.36 * k, sh * 1.2);
+    if (p.dir) signText(x, p.dir, scx, top + sh * 1.2, 0.44 * k, sh * 1.3);
     left = scx + sh * 0.6;
   }
   if (p.arrow === 'upright' || p.arrow === 'right' || p.arrow === 'left') {
@@ -689,10 +690,10 @@ function drawPanel(at, r, p) {
   let avail = bottom - top;
   if (p.arrow === 'down' || p.arrow === 'down2') avail -= 0.8 * k;
   if (p.sub) avail -= 0.55 * k;
-  const lh = Math.min(0.7 * k, avail / Math.max(1, lines.length));
+  const lh = Math.min(0.88 * k, avail / Math.max(1, lines.length));
   let y = top + lh / 2;
   for (const ln of lines) {
-    signText(x, ln, (left + right) / 2, y, lh * 0.82, right - left);
+    signText(x, ln, (left + right) / 2, y, lh * 0.84, right - left);
     y += lh;
   }
   if (p.sub) { signText(x, p.sub, (left + right) / 2, y + 0.2 * k, 0.46 * k, right - left); y += 0.55 * k; }
@@ -994,6 +995,7 @@ export async function build(world, def, track, progress) {
   };
   const signTex = toTex(signAt.c, { repeat: false });
   const adTex = toTex(adAt.c, { repeat: false });
+  world.disposables.push(signTex, adTex); // per-track atlases (the rest are cached)
   const panelMat = glowMaterial(new THREE.MeshStandardMaterial({ map: panelTex(), color: xway ? 0x9aa6a2 : 0x8a8f8c, roughness: 0.6, metalness: 0.35, envMapIntensity: 0.5 }), 1.4);
   const MATS = {
     road: { mat: world.roadMat, glow: true },
@@ -1144,7 +1146,7 @@ export async function build(world, def, track, progress) {
       for (const sd of [-1, 1]) {
         const base = sd < 0 ? extR : extL;
         sweepM('verge', ja, jb, 4, sd, base, [[0, -0.06], [7, -0.16]], { uS: 6, vS: 6 });
-        for (const p of SOUND(G + 4.9)) sweepM('wall', ja, jb, 4, sd, (a) => base(a) + 7, p, { uv: 'sy', uS: 64, vS: 8, y0: GY });
+        SOUND(G + 4.9).forEach((p, k) => sweepM('wall', ja, jb, 4, sd, (a) => base(a) + 7, p, { uv: 'sy', uS: 64, vS: 8, y0: GY, outward: k === 2 }));
       }
     }
     for (const [ja, jb] of runsOf(F, (a) => gradeAt(a) && !inS(cfg.soundWalls, F.s(a)))) {
@@ -1154,7 +1156,7 @@ export async function build(world, def, track, progress) {
       }
     }
     for (const [ja, jb] of runsOf(F, fillAt)) {
-      for (const sd of [-1, 1]) sweepM('wall', ja, jb, 4, sd, sd < 0 ? extR : extL, [[0, 0], [0.25, (a, x, z) => groundAt(x, z)]], { uv: 'sy', uS: 64, vS: 8, y0: GY });
+      for (const sd of [-1, 1]) sweepM('wall', ja, jb, 4, sd, sd < 0 ? extR : extL, [[0, 0], [0.25, (a, x, z) => groundAt(x, z)]], { uv: 'sy', uS: 64, vS: 8, y0: GY, outward: true });
     }
     for (const [ja, jb] of runsOf(F, bridgeAt)) {
       for (const sd of [-1, 1]) for (const p of FASCIA(X.deck)) sweepM('conc', ja, jb, 4, sd, sd < 0 ? extR : extL, p, { uS: 2, vS: 6 });
@@ -1319,7 +1321,7 @@ export async function build(world, def, track, progress) {
       return h >= 6.5 ? 'bridge' : h > 0.6 ? 'fill' : 'grade';
     };
     for (const [ja, jb] of runsOf(Fp, (a) => kindAt(a) === 'fill')) {
-      for (const sd of [-1, 1]) sweep(bin('wall', key), Fp, rowsOf(ja, jb, 2), sd, ext, [[0, 0], [0.2, (a, x, z) => groundAt(x, z)]], { uv: 'sy', uS: 64, vS: 8, y0: GY });
+      for (const sd of [-1, 1]) sweep(bin('wall', key), Fp, rowsOf(ja, jb, 2), sd, ext, [[0, 0], [0.2, (a, x, z) => groundAt(x, z)]], { uv: 'sy', uS: 64, vS: 8, y0: GY, outward: true });
     }
     for (const [ja, jb] of runsOf(Fp, (a) => kindAt(a) === 'bridge')) {
       const rr = rowsOf(ja, jb, 2);

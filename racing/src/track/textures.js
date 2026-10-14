@@ -380,23 +380,27 @@ export function glowTexture() {
   });
 }
 
-/** Vertical light-streak (wet road reflection) sprite. */
+/** Vertical light-streak (wet road reflection) sprite. Row 0 is the viewer's
+ *  end of the streak, the bottom row sits under the light (uv.y = 0 there). */
 export function streakTexture() {
   return cached('streak', () => {
-    const c = canvas(32, 256);
+    const W = 32, H = 256;
+    const c = canvas(W, H);
     const x = c.getContext('2d');
-    const g = x.createRadialGradient(16, 40, 0, 16, 40, 40);
-    void g;
-    for (let y = 0; y < 256; y++) {
-      const t = y / 256;
-      const a = Math.pow(1 - t, 1.6) * (0.4 + 0.6 * Math.sin(Math.min(1, t * 6) * Math.PI / 2));
-      const grd = x.createLinearGradient(0, 0, 32, 0);
-      grd.addColorStop(0, 'rgba(255,255,255,0)');
-      grd.addColorStop(0.5, `rgba(255,255,255,${a})`);
-      grd.addColorStop(1, 'rgba(255,255,255,0)');
-      x.fillStyle = grd;
-      x.fillRect(0, y, 32, 1);
+    const img = x.createImageData(W, H);
+    const d = img.data;
+    const ss = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+    for (let py = 0; py < H; py++) {
+      const t = py / (H - 1);
+      const along = ss(0, 0.5, t) * (1 - ss(0.82, 1, t));
+      for (let px = 0; px < W; px++) {
+        const u = (px / (W - 1)) * 2 - 1;
+        const k = (py * W + px) * 4;
+        d[k] = d[k + 1] = d[k + 2] = 255;
+        d[k + 3] = Math.round(along * Math.exp(-u * u * 4.5) * 255);
+      }
     }
+    x.putImageData(img, 0, 0);
     return toTex(c, { repeat: false });
   });
 }

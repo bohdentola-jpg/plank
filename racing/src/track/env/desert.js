@@ -17,12 +17,12 @@ const col = (hex) => new THREE.Color(hex);
 
 const LOOKS = {
   mojave: {
-    margin: 500, cell: 20, detail: 'sand', tile: 9, frameRise: 0, shrubs: 0.75,
+    margin: 500, cell: 20, detail: 'sand', tile: 9, frameRise: 0, shrubs: 0.75, tumbleweeds: true,
     sand: '#c8ae88', soil: '#a88f72', red: '#bb8660', pave: '#86705a', dune: '#d9c29a', rock: '#9b5b3f', cap: '#cfb18f', talus: '#97765f',
     top: '#8e7458', wash: '#e4d6ba', lot: '#8f877c', shoulder: '#b9ab96',
     hills: 12, hummock: 1.6, dunes: 8, duneAt: 0.1, duneLen: 105, outcrops: 26, outcropAt: 0.5, outcropF: 0.0024, terrace: 6.5, follow: 120,
     bands: ['#fff1e2', '#c99a83', '#fff4dc'],
-    veg: { creosote: 1500, bursage: 800, saguaro: 400, ocotillo: 110, barrel: 140, yucca: 60, juniper: 0, rock: 650, boulder: 170 },
+    veg: { creosote: 1900, bursage: 900, grass: 1400, saguaro: 400, ocotillo: 110, barrel: 140, yucca: 60, juniper: 0, rock: 650, boulder: 170 },
     forms: { mesa: [7, 520, 1700], butte: [10, 170, 900], spire: [6, 140, 700] },
     mtn: '#6f7896', ranges: [[2950, 110, 330, 0.42, 3, false], [2700, 50, 170, 0.62, 9, true]],
   },
@@ -32,12 +32,12 @@ const LOOKS = {
     top: '#87604a', wash: '#ecd2ae', lot: '#8a7a6c', shoulder: '#b08d72',
     hills: 14, hummock: 1.8, dunes: 3, duneAt: 0.5, duneLen: 90, outcrops: 32, outcropAt: 0.3, outcropF: 0.003, terrace: 7, follow: 110,
     bands: ['#fff0e4', '#c2846c', '#fff6e6'],
-    veg: { creosote: 700, bursage: 400, saguaro: 0, ocotillo: 30, barrel: 50, yucca: 200, juniper: 340, rock: 650, boulder: 300 },
+    veg: { creosote: 900, bursage: 500, grass: 1100, saguaro: 0, ocotillo: 30, barrel: 50, yucca: 200, juniper: 340, rock: 650, boulder: 300 },
     forms: { mesa: [6, 300, 1300], butte: [18, 70, 700], spire: [12, 55, 500] },
     mtn: '#4f3f6c', ranges: [[2950, 90, 260, 0.45, 5, true], [2650, 40, 150, 0.66, 13, true]],
   },
   salt: {
-    margin: 1500, cell: 40, detail: 'salt', tile: 22, flat: true, floorY: -0.35, frameRise: 70, shrubs: 0,
+    margin: 1500, cell: 40, detail: 'salt', tile: 22, flat: true, floorY: -0.35, frameRise: 70, shrubs: 0, tumbleweeds: true,
     sand: '#efebe3', soil: '#e3ddd1', red: '#e9e2d6', pave: '#ddd6ca', dune: '#efebe3', rock: '#a3735a', cap: '#d8c2a6', talus: '#9b7c66',
     top: '#a07a60', wash: '#efebe3', lot: '#d9d3c8', shoulder: '#cfc9bf', shore: '#c7aa8a',
     hills: 0, hummock: 0, dunes: 0, outcrops: 0, follow: 0,
@@ -230,9 +230,14 @@ function canyonPlan(P, c) {
     // moving minimum then blur, and keep a solid wall thickness
     const m = Lout.map((_, k) => Math.min(...Lout.slice(Math.max(0, k - 10), k + 11)));
     const sm = m.map((_, k) => { let a = 0, cnt = 0; for (let j = Math.max(0, k - 8); j <= Math.min(m.length - 1, k + 8); j++) { a += m[j]; cnt++; } return a / cnt; });
-    sides[side] = { Lin, Lout: sm.map((v, k) => Math.max(v, Lin[k] + 26)) };
+    // narrow the slab into a promontory toward each mouth
+    const taper = (k) => { const s = (i0 + k) * T.step; const e = Math.min(s - c.s0, c.s1 - s); return 0.18 + 0.82 * smoothstep(0, 170, e); };
+    sides[side] = { Lin, Lout: sm.map((v, k) => Lin[k] + Math.max(v - Lin[k], 26) * taper(k)) };
   }
-  const top = (s, side) => ymax + c.h * (0.86 + 0.14 * (n.fbm(s * 0.003 + side * 5, 1.3, 2) + 0.5));
+  const top = (s, side) => {
+    const e = Math.min(s - c.s0, c.s1 - s);
+    return ymax + c.h * (0.86 + 0.14 * (n.fbm(s * 0.003 + side * 5, 1.3, 2) + 0.5)) * (0.72 + 0.28 * smoothstep(0, 110, e));
+  };
   return { ...c, i0, i1, sides, ymax, top, noise: n };
 }
 
@@ -1047,12 +1052,14 @@ function canyonWalls(world, P, mat) {
         const j = (a) => 0.7 * nz(a, 0.07, s);
         const rim = 1.6 * nz(9, 0.035, s) - 1.2 * Math.abs(nz(10, 0.08, s));
         const streak = 0.78 + 0.22 * smoothstep(-0.6, 0.6, nz(11, 0.16, s));
+        const rimL = Lin + b1 + L1 + L2 + 0.8 + j(19);
+        const farL = Math.max(rimL + 9, Lout - 10), edgeL = Math.max(farL + 5, Lout - 3);
         const sec = [
           [Lin - 3.8, gy - 0.8, 0], [Lin - 2.2 + j(12) * 0.4, gy + 1.0, 0], [Lin - 0.6, gy + 2.8 + j(13), 0],
           [Lin + b1, gy + 0.1 * H, 1], [Lin + b1 + 0.4 + j(14), gy + 0.24 * H, 1], [Lin + b1 + 0.2 + j(15), gy + 0.36 * H, 1],
           [Lin + b1 + L1, gy + 0.37 * H + 0.4, 3], [Lin + b1 + L1 + 0.3 + j(16), gy + 0.55 * H, 4], [Lin + b1 + L1 + 0.6 + j(17), gy + 0.7 * H, 4],
-          [Lin + b1 + L1 + 0.4 + j(18), gy + 0.79 * H, 4], [Lin + b1 + L1 + L2, gy + 0.8 * H + 0.3, 3], [Lin + b1 + L1 + L2 + 0.8 + j(19), top - 0.4 + rim, 2],
-          [Lin + b1 + L1 + L2 + 7, top + 0.8 * nz(20, 0.02, s), 5], [Lout - 10, top + 1.5 * nz(21, 0.008, s), 5], [Lout - 3, top - 3, 2], [Lout + 8, gy - 9, 0],
+          [Lin + b1 + L1 + 0.4 + j(18), gy + 0.79 * H, 4], [Lin + b1 + L1 + L2, gy + 0.8 * H + 0.3, 3], [rimL, top - 0.4 + rim, 2],
+          [rimL + 6.2, top + 0.8 * nz(20, 0.02, s), 5], [farL, top + 1.5 * nz(21, 0.008, s), 5], [edgeL, top - 3, 2], [edgeL + 11, gy - 9, 0],
         ];
         rows.push(sec.map(([lat, y, tag], q) => {
           const t = clamp((y - gy) / H, 0, 1);
@@ -1070,6 +1077,23 @@ function canyonWalls(world, P, mat) {
           const bx = T.X[i] + T.LX[i] * bl, bz = T.Z[i] + T.LZ[i] * bl, sc = 0.35 + Math.pow(rng(), 2.5) * 1.5;
           boulders.push({ x: bx, y: gy + 0.2 + rng() * 0.6, z: bz, s: sc, ry: rng() * 6, rx: rng() * 2, rz: rng() * 2 });
         }
+      }
+      // round each mesa end into a sloping nose: extra rows past the ends that shrink and drop
+      for (const [end, dir] of [[0, -1], [rows.length - 1, 1]]) {
+        const i = idxs[end], base = rows[end];
+        const gy = T.Y[i] - 0.35;
+        const cl = base.reduce((a, v) => a + ((v.x - T.X[i]) * T.LX[i] + (v.z - T.Z[i]) * T.LZ[i]) * side, 0) / base.length;
+        const ext = [];
+        for (const d of [7, 14, 21, 28]) {
+          const f = d / 32;
+          ext.push(base.map((v) => {
+            const lat = ((v.x - T.X[i]) * T.LX[i] + (v.z - T.Z[i]) * T.LZ[i]) * side;
+            const nl = cl + (lat - cl) * (1 - f * 0.75);
+            const y = gy + (v.y - gy) * Math.pow(1 - f, 0.8) * (0.9 + 0.2 * rng());
+            return { ...v, x: T.X[i] + T.TX[i] * d * dir + T.LX[i] * side * nl, z: T.Z[i] + T.TZ[i] * d * dir + T.LZ[i] * side * nl, y: Math.min(v.y, Math.max(y, gy - 1)) };
+          }));
+        }
+        if (dir < 0) { rows.unshift(...ext.reverse()); idxs.unshift(...ext.map(() => i)); } else { rows.push(...ext); idxs.push(...ext.map(() => i)); }
       }
       const want = (r, c) => {
         const i = idxs[r];
@@ -1209,6 +1233,80 @@ function formations(world, P, mat) {
 
 // ------------------------------------------------------------------ vegetation + rocks
 
+/** Twiggy shrubs + dry grass as alpha-tested crossed quads (atlas: 4 cells of 256). */
+function shrubAtlas() {
+  return cachedCanvas('shrubAtlas', () => {
+    const S = 512, c = cvs(S, S), x = c.getContext('2d');
+    const rng = makeRng('shrubAtlas');
+    const branch = (px, py, len, ang, w, depth, leaf) => {
+      const ex = px + Math.cos(ang) * len, ey = py - Math.sin(ang) * len;
+      x.strokeStyle = depth > 2 ? '#5a4a36' : '#6a5a42';
+      x.lineWidth = w;
+      x.beginPath(); x.moveTo(px, py); x.lineTo(ex, ey); x.stroke();
+      if (depth <= 0) { leaf(ex, ey); return; }
+      for (let k = 0; k < 2 + (rng() < 0.4 ? 1 : 0); k++) branch(ex, ey, len * (0.6 + rng() * 0.25), ang + (rng() - 0.5) * 1.1, w * 0.7, depth - 1, leaf);
+      if (depth < 3) leaf(ex, ey);
+    };
+    const cell = (k) => [(k % 2) * 256, Math.floor(k / 2) * 256];
+    // 0,1 creosote: open, olive, small leaves
+    for (const k of [0, 1]) {
+      const [ox, oy] = cell(k);
+      x.save(); x.beginPath(); x.rect(ox, oy, 256, 256); x.clip();
+      for (let t = 0; t < 7; t++) {
+        branch(ox + 128 + (rng() - 0.5) * 30, oy + 252, 40 + rng() * 26, Math.PI / 2 + (rng() - 0.5) * 1.5, 4, 4, (lx, ly) => {
+          for (let q = 0; q < 5; q++) {
+            x.fillStyle = rng() < 0.6 ? '#5d6a32' : rng() < 0.5 ? '#7a8442' : '#47522a';
+            x.beginPath(); x.ellipse(lx + (rng() - 0.5) * 14, ly + (rng() - 0.5) * 12, 3 + rng() * 4, 2 + rng() * 3, rng() * 3, 0, Math.PI * 2); x.fill();
+          }
+        });
+      }
+      x.restore();
+    }
+    // 2 bursage: low silver-grey dome of twigs
+    {
+      const [ox, oy] = cell(2);
+      x.save(); x.beginPath(); x.rect(ox, oy, 256, 256); x.clip();
+      for (let t = 0; t < 12; t++) {
+        branch(ox + 128 + (rng() - 0.5) * 40, oy + 252, 26 + rng() * 18, Math.PI / 2 + (rng() - 0.5) * 2.2, 3, 3, (lx, ly) => {
+          for (let q = 0; q < 6; q++) {
+            x.fillStyle = rng() < 0.5 ? '#9a9a7a' : '#b4b08c';
+            x.beginPath(); x.arc(lx + (rng() - 0.5) * 12, ly + (rng() - 0.5) * 10, 2 + rng() * 3, 0, Math.PI * 2); x.fill();
+          }
+        });
+      }
+      x.restore();
+    }
+    // 3 dry bunchgrass
+    {
+      const [ox, oy] = cell(3);
+      for (let t = 0; t < 70; t++) {
+        const bx = ox + 128 + (rng() - 0.5) * 60, a = Math.PI / 2 + (rng() - 0.5) * 1.4, len = 60 + rng() * 120;
+        x.strokeStyle = rng() < 0.5 ? '#c9b07a' : rng() < 0.5 ? '#a8925e' : '#d8c494';
+        x.lineWidth = 1.5 + rng() * 1.5;
+        x.beginPath(); x.moveTo(bx, oy + 254);
+        x.quadraticCurveTo(bx + Math.cos(a) * len * 0.5, oy + 254 - Math.sin(a) * len * 0.6, bx + Math.cos(a) * len * 0.9 + (rng() - 0.5) * 20, oy + 254 - Math.sin(a) * len);
+        x.stroke();
+      }
+    }
+    return c;
+  });
+}
+
+function crossQuads(w, h, cellK, planes = 3) {
+  const gb = new GeoBuilder();
+  const [u0, v0] = [(cellK % 2) * 0.5, 0.5 - Math.floor(cellK / 2) * 0.5];
+  for (let k = 0; k < planes; k++) {
+    const a = k / planes * Math.PI;
+    const dx = Math.cos(a) * w / 2, dz = Math.sin(a) * w / 2;
+    gb.quad(new THREE.Vector3(-dx, 0, -dz), new THREE.Vector3(dx, 0, dz), new THREE.Vector3(dx, h, dz), new THREE.Vector3(-dx, h, -dz), [u0, v0, u0 + 0.5, v0 + 0.5]);
+  }
+  const g = gb.build();
+  // foliage lit like the ground it stands on
+  const n = g.attributes.normal;
+  for (let i = 0; i < n.count; i++) n.setXYZ(i, 0, 1, 0);
+  return g;
+}
+
 function vegGeometries() {
   const G = {};
   const green = '#58703a', dark = '#3f5129';
@@ -1310,7 +1408,7 @@ function vegGeometries() {
     G.juniper = gb.build(true);
   }
   G.rock = jitter(new THREE.DodecahedronGeometry(1, 0), 0.45, 2, 0.7);
-  G.boulder = jitter(new THREE.IcosahedronGeometry(1, 0), 0.4, 5, 0.85);
+  G.boulder = jitter(new THREE.DodecahedronGeometry(1, 0), 0.55, 5, 0.7);
   return G;
 }
 
@@ -1320,7 +1418,7 @@ function vegetation(world, P) {
   if (!Object.keys(counts).length) return;
   const G = vegGeometries();
   const plantMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, envMapIntensity: 0.3 });
-  const rockMat = new THREE.MeshStandardMaterial({ color: col(L.talus).multiplyScalar(1.15), roughness: 0.95, flatShading: true, envMapIntensity: 0.3 });
+  const rockMat = new THREE.MeshStandardMaterial({ color: col(L.talus).multiplyScalar(0.85), roughness: 0.95, flatShading: true, envMapIntensity: 0.3 });
   const rng = makeRng('veg' + P.def.id);
   const q = {};
   const fence = P.def.fence ?? 32;
@@ -1378,14 +1476,20 @@ function vegetation(world, P) {
     const all = place(counts.saguaro, { ...near, dMin: 7, s: [0.55, 1.25], minUp: 0.9, clear: 5, cluster: 0.55, spread: 40 });
     G.saguaro.forEach((g, k) => scatter(world, g, plantMat, all.filter((_, j) => j % 4 === k), { shadow: true, name: 'saguaro', maxDist: 1100, cell: 900 }));
   }
-  if (counts.creosote) scatter(world, G.creosote, plantMat, place(counts.creosote, { ...near, s: [0.6, 1.4], pow: 1.9, banks: 0.18 }), { name: 'creosote', maxDist: 480, cell: 600 });
-  if (counts.bursage) scatter(world, G.bursage, plantMat, place(counts.bursage, { ...near, dMin: 3, s: [0.7, 1.5] }), { name: 'bursage', maxDist: 380, cell: 600 });
+  const foliage = new THREE.MeshStandardMaterial({ map: canvasTex(shrubAtlas(), { repeat: false }), alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.95 });
+  if (counts.creosote) {
+    const all = place(counts.creosote, { ...near, s: [0.7, 1.5], pow: 1.9, banks: 0.18 });
+    scatter(world, crossQuads(2.2, 1.9, 0), foliage, all.filter((_, j) => j % 2), { name: 'creosote', maxDist: 480, cell: 600 });
+    scatter(world, crossQuads(2.0, 1.6, 1), foliage, all.filter((_, j) => !(j % 2)), { name: 'creosote', maxDist: 480, cell: 600 });
+  }
+  if (counts.bursage) scatter(world, crossQuads(1.3, 0.8, 2), foliage, place(counts.bursage, { ...near, dMin: 3, s: [0.7, 1.4] }), { name: 'bursage', maxDist: 380, cell: 600 });
+  if (counts.grass) scatter(world, crossQuads(1.0, 0.75, 3, 2), foliage, place(counts.grass, { ...near, dMin: 1.5, dMax: 140, s: [0.6, 1.3], pow: 2.2 }), { name: 'grass', maxDist: 260, cell: 500 });
   if (counts.ocotillo) scatter(world, G.ocotillo, plantMat, place(counts.ocotillo, { ...near, dMin: 6, s: [0.8, 1.3] }), { name: 'ocotillo', maxDist: 750, cell: 900 });
   if (counts.barrel) scatter(world, G.barrel, plantMat, place(counts.barrel, { ...near, dMax: 120, s: [0.7, 1.4] }), { name: 'barrel', maxDist: 300, cell: 600 });
   if (counts.yucca) scatter(world, G.yucca, plantMat, place(counts.yucca, { ...near, s: [0.8, 1.5] }), { name: 'yucca', maxDist: 450, cell: 600 });
   if (counts.juniper) scatter(world, G.juniper, plantMat, place(counts.juniper, { ...near, dMin: 8, s: [0.8, 1.7], minUp: 0.8, banks: 0.3 }), { shadow: true, name: 'juniper', maxDist: 900, cell: 700 });
   if (counts.rock) scatter(world, G.rock, rockMat, place(counts.rock, { ...near, dMin: 2, s: [0.25, 0.8], sink: 0.35, minUp: 0.6, tilt: 0.8, wash: true }), { name: 'rocks', maxDist: 380, cell: 600 });
-  if (counts.boulder) scatter(world, G.boulder, rockMat, place(counts.boulder, { ...near, dMin: 10, dMax: 420, s: [1.2, 3.6], sink: 0.4, minUp: 0.55, tilt: 0.6, clear: 6 }), { shadow: true, name: 'boulders', maxDist: 900, cell: 900 });
+  if (counts.boulder) scatter(world, G.boulder, rockMat, place(counts.boulder, { ...near, dMin: 10, dMax: 420, s: [1.0, 2.6], sink: 0.45, minUp: 0.55, tilt: 0.6, clear: 6 }), { shadow: true, name: 'boulders', maxDist: 900, cell: 900 });
   void fence;
 }
 
@@ -2120,6 +2224,95 @@ function truckStop(world, P) {
   }
 }
 
+// ------------------------------------------------------------------ finish gantry + tumbleweeds
+
+function finishGantry(world, P) {
+  const T = P.track;
+  const atlas = dragAtlas();
+  const map = canvasTex(atlas.c, { repeat: false });
+  const plain = new GeoBuilder(), tex = new GeoBuilder();
+  const p = T.posAt(T.finishS), i = p.i;
+  const w = T.W[i] + T.shoulder + 1.2;
+  const fx = T.TX[i], fz = T.TZ[i];
+  setColor(plain, '#5a5d61');
+  for (const sd of [-1, 1]) plain.box(p.x + T.LX[i] * sd * w, p.y - 0.4, p.z + T.LZ[i] * sd * w, 0.45, 8.6, 0.45, p.heading);
+  plain.box(p.x, p.y + 7.6, p.z, w * 2 + 0.6, 0.6, 0.5, p.heading);
+  const uv = cellUV(0, 128, 1024, 128, 1024, 512);
+  panel(tex, p.x - fx * 0.3, p.y + 5.5, p.z - fz * 0.3, -fx, -fz, w * 2 - 1, (w * 2 - 1) / 8, uv);
+  panel(tex, p.x - fx * 0.25, p.y + 5.5, p.z - fz * 0.25, fx, fz, w * 2 - 1, (w * 2 - 1) / 8, uv);
+  const pm = new THREE.Mesh(plain.build(true), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.4 }));
+  pm.castShadow = true;
+  world.add(pm);
+  world.add(new THREE.Mesh(tex.build(), new THREE.MeshStandardMaterial({ map, roughness: 0.7, side: THREE.DoubleSide })));
+}
+
+/** A few tumbleweeds that keep blowing across the road ahead of the camera. */
+function tumbleweeds(world, P, count = 7) {
+  const T = P.track, terr = world.terrain;
+  const rng = makeRng('tumble' + P.def.id);
+  const shapes = [];
+  for (let k = 0; k < count; k++) {
+    const pts = [];
+    for (let j = 0; j < 70; j++) {
+      const u = rng() * 2 - 1, a = rng() * Math.PI * 2, r = 0.3 + rng() * 0.22;
+      pts.push(new THREE.Vector3(Math.sqrt(1 - u * u) * Math.cos(a) * r, u * r * 0.85, Math.sqrt(1 - u * u) * Math.sin(a) * r));
+    }
+    const seg = [];
+    for (let j = 0; j < pts.length; j++) {
+      // twigs: link each point to two random near neighbours
+      const near = pts.map((q, m) => [q.distanceToSquared(pts[j]), m]).sort((a, b) => a[0] - b[0]);
+      for (const [, m] of [near[1 + Math.floor(rng() * 3)], near[2 + Math.floor(rng() * 4)]]) seg.push(pts[j], pts[m]);
+    }
+    shapes.push(seg);
+  }
+  const n = shapes.reduce((a, sh) => a + sh.length, 0);
+  const pos = new Float32Array(n * 3);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const lines = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x6e5638 }));
+  lines.frustumCulled = false;
+  world.add(lines);
+  const wind = new THREE.Vector2(0.82, 0.57).normalize();
+  const st = shapes.map(() => ({ x: 0, z: 0, y: 0, vx: 0, vz: 0, ph: rng() * 6, q: new THREE.Quaternion(), live: false, size: 0.8 + rng() * 0.6 }));
+  const proj = {}, axis = new THREE.Vector3(), dq = new THREE.Quaternion(), v = new THREE.Vector3();
+  let hint = -1;
+  const spawn = (o, cam) => {
+    const pr = T.project(cam.position.x, cam.position.z, hint, proj);
+    hint = pr.i;
+    const s = pr.s + 30 + rng() * 220;
+    const ps = T.posAt(s);
+    // start on the upwind side so it rolls across the road
+    const side = (wind.x * T.LX[ps.i] + wind.y * T.LZ[ps.i]) > 0 ? -1 : 1;
+    const q2 = T.posAt(s, side * (T.W[ps.i] + 8 + rng() * 26));
+    o.x = q2.x; o.z = q2.z;
+    const sp = 3.5 + rng() * 4.5;
+    o.vx = wind.x * sp; o.vz = wind.y * sp;
+    o.live = true;
+  };
+  world.animators.push((dt, cam) => {
+    dt = Math.min(dt, 0.1);
+    let k = 0;
+    st.forEach((o, j) => {
+      if (!o.live || Math.hypot(o.x - cam.position.x, o.z - cam.position.z) > 320) spawn(o, cam);
+      o.x += o.vx * dt; o.z += o.vz * dt;
+      o.ph += dt * Math.hypot(o.vx, o.vz) * 0.9;
+      const gy = terr ? terr.heightAt(o.x, o.z) : 0;
+      const pr = T.project(o.x, o.z, -1, proj);
+      const onRoad = Math.abs(pr.lat) < T.W[pr.i] + T.shoulder + 1;
+      const ground = onRoad ? T.roadY(pr.i, pr.t, clamp(pr.lat, -T.W[pr.i], T.W[pr.i])) : gy;
+      o.y = ground + 0.45 * o.size + Math.abs(Math.sin(o.ph * 0.5)) * 0.7;
+      axis.set(o.vz, 0, -o.vx).normalize();
+      dq.setFromAxisAngle(axis, -dt * Math.hypot(o.vx, o.vz) / (0.45 * o.size));
+      o.q.premultiply(dq);
+      for (const p of shapes[j]) {
+        v.copy(p).multiplyScalar(o.size).applyQuaternion(o.q);
+        pos[k++] = o.x + v.x; pos[k++] = o.y + v.y; pos[k++] = o.z + v.z;
+      }
+    });
+    g.attributes.position.needsUpdate = true;
+  });
+}
+
 // ------------------------------------------------------------------ dry wash
 
 function sandDriftCanvas() {
@@ -2300,11 +2493,13 @@ function dragStrip(world, P) {
     const ses = window.__game?.screen?.session;
     let st = { pre: 1, stage: 1, a1: 0, a2: 0, a3: 0, green: 0, red: 0 };
     if (ses && ses.track === T) {
-      if (ses.state === 'countdown') {
-        const c = ses.countdown;
+      // race state lives on session.sim (older builds kept it on the session)
+      const sim = ses.sim || ses;
+      if (sim.state === 'countdown') {
+        const c = sim.countdown ?? 3;
         st = { pre: 1, stage: 1, a1: c <= 3, a2: c <= 2, a3: c <= 1, green: 0, red: 0 };
-      } else if (ses.state === 'racing' || ses.state === 'finished') {
-        st = { pre: 0, stage: 0, a1: 0, a2: 0, a3: 0, green: ses.raceTime < 6, red: 0 };
+      } else if (sim.state === 'racing' || sim.state === 'finished' || sim.state === 'done') {
+        st = { pre: 0, stage: 0, a1: 0, a2: 0, a3: 0, green: (sim.raceTime ?? 0) < 6, red: 0 };
       }
     } else {
       const c = demo % 8;
@@ -2483,35 +2678,40 @@ export async function build(world, def, track, progress) {
   const T = track;
   T.shoulder = def.shoulder ?? 1.4;
   T.offSurface = def.offSurface || 'sand';
+  const tm = [], t0 = performance.now();
+  const mark = (k) => tm.push(k + ' ' + Math.round(performance.now() - t0));
 
-  buildGround(world, P);
+  buildGround(world, P); mark('ground');
   backdrop(world, P);
   progress(0.15, 'BAKING THE SAND');
   await nextFrame();
 
-  roadEdges(world, P);
+  roadEdges(world, P); mark('edges');
   const rockTex = canvasTex(rockCanvas());
-  const rockMat = desertMaterial(rockTex, P.look, 'rock');
-  if (P.canyons.length) canyonWalls(world, P, rockMat);
-  formations(world, P, rockMat);
+  const rockMat = desertMaterial(rockTex, P.look, 'rock'); mark('rocktex');
+  if (P.canyons.length) canyonWalls(world, P, rockMat); mark('canyon');
+  formations(world, P, rockMat); mark('forms');
   progress(0.35, 'RAISING BUTTES');
   await nextFrame();
 
-  vegetation(world, P);
+  vegetation(world, P); mark('veg');
   progress(0.6, 'PLANTING SAGUAROS');
   await nextFrame();
 
-  if (P.stop) truckStop(world, P);
-  if (def.type === 'drag') dragStrip(world, P);
-  if (P.washes.length) washDressing(world, P);
-  if (def.poles) telephone(world, P);
-  if (def.fence && !P.look.flat) fence(world, P);
-  roadside(world, P);
+  if (P.stop) truckStop(world, P); mark('stop');
+  if (def.type === 'drag') dragStrip(world, P); mark('drag');
+  if (P.washes.length) washDressing(world, P); mark('wash');
+  if (def.type === 'sprint') finishGantry(world, P);
+  if (P.look.tumbleweeds) tumbleweeds(world, P);
+  if (def.poles) telephone(world, P); mark('poles');
+  if (def.fence && !P.look.flat) fence(world, P); mark('fence');
+  roadside(world, P); mark('roadside');
   progress(0.75, 'STRINGING THE WIRES');
   await nextFrame();
 
   setWalls(P);
   progress(1, 'DESERT READY');
+  if (window.__desertTiming) console.log('desert build', tm.join(', '));
 }
 
 /** Collision walls: right-of-way fence in the open, rock in canyons. */

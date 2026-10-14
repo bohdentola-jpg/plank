@@ -64,7 +64,7 @@ export const EVENTS = [
   { id: 'c2e1', ch: 1, name: 'CONTAINER CANYON', track: 'harbor', type: 'circuit', laps: 3, rivals: 4, pr: 575, prize: 3200, flavor: 'Steel walls both sides, puddles deep enough to swim in.' },
   { id: 'c2e2', ch: 1, name: 'END OF THE PIER', track: 'pier9', type: 'circuit', laps: 3, rivals: 3, pr: 585, prize: 3400, flavor: 'Square corners and a hairpin over the water. Brake late or go swimming.' },
   { id: 'c2e3', ch: 1, name: 'RAT RACE', track: 'harbor', type: 'knockout', rivals: 4, pr: 595, prize: 4000, flavor: 'Five Rats, one survivor. They will trade paint.' },
-  { id: 'c2e4', ch: 1, name: 'NIGHT SHIFT', track: 'pier9', type: 'timeattack', tt: 1.02, prize: 3000, flavor: 'The foreman times every lap from the crane cab. Make him look twice.' },
+  { id: 'c2e4', ch: 1, name: 'NIGHT SHIFT', track: 'pier9', type: 'drift', laps: 2, prize: 3000, flavor: 'The crane crews score every slide from the cab. Square corners, wet concrete — beat the Rats\' posted scores.' },
   { id: 'c2e5', ch: 1, name: 'DOWNTOWN DELIVERY', track: 'downtown', type: 'circuit', laps: 3, rivals: 5, pr: 605, prize: 4200, traffic: true, flavor: 'The Rats come uptown to settle a debt. Six cars, wet streets, rush-hour traffic.' },
   { id: 'c2b', ch: 1, boss: true, name: 'TANK: HARBOR MASTER', track: 'harbor', type: 'circuit', laps: 3, rivals: 1, pr: 0, prize: 10000, flavor: 'Tank\'s Stallion weighs as much as a forklift and drives like one. A fast one.' },
   // ch 3 — THE PASS

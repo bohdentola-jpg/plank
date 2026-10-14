@@ -45,7 +45,7 @@ export class HUD {
     this.drawNameTags(ctx);
     this.drawMinimap(ctx, 108, 652, 82);
     this.drawTach(ctx, 908, 650, 96);
-    this.drawRaceInfo(ctx);
+    if (s.type === 'drift') this.drawDrift(ctx); else this.drawRaceInfo(ctx);
     this.drawTimers(ctx);
     this.drawCountdown(ctx);
     this.drawMessages(ctx);
@@ -65,7 +65,7 @@ export class HUD {
     ctx.fillStyle = g;
     ctx.fillRect(0, 560, 1024, 208);
     vText(ctx, def.name, 64, 680, 46, { color: C.text, outline: 3, outlineColor: 'rgba(0,0,0,0.7)' });
-    const kind = { circuit: `CIRCUIT · ${s.sim.laps} LAPS`, sprint: 'SPRINT', knockout: `LAP KNOCKOUT · ${s.sim.laps} LAPS`, drag: 'DRAG · 1/4 MILE', drift: 'DRIFT', timeattack: 'TIME ATTACK' }[s.type] || s.type.toUpperCase();
+    const kind = { circuit: `CIRCUIT · ${s.sim.laps} LAPS`, sprint: 'SPRINT', knockout: `LAP KNOCKOUT · ${s.sim.laps} LAPS`, drag: 'DRAG · 1/4 MILE', drift: `DRIFT · ${s.sim.laps} LAPS`, timeattack: 'TIME ATTACK' }[s.type] || s.type.toUpperCase();
     text(ctx, `${kind}   ·   ${settings.get('units') === 'kmh' ? (s.track.length / 1000).toFixed(2) + ' KM' : (s.track.length / 1609.34).toFixed(2) + ' MI'}   ·   ${s.sim.racers.length} RACER${s.sim.racers.length > 1 ? 'S' : ''}`, 66, 712, { size: 17, color: C.accent, weight: 700, spacing: 2 });
     text(ctx, def.blurb || '', 66, 738, { size: 15, color: C.dim });
     // story banner: event + crew, and the boss card
@@ -350,6 +350,42 @@ export class HUD {
         text(ctx, `${gap > 0 ? '+' : '-'}${Math.abs(sec).toFixed(1)}`, 1000 - 22, y, { size: 12, color: gap > 0 ? '#ff8a8a' : '#8affb0', align: 'right', weight: 700 });
       }
       y += 21;
+    }
+  }
+
+  /** Drift: posted scores to beat (right) and the live slide meter (center). */
+  drawDrift(ctx) {
+    const s = this.s;
+    const sim = s.sim;
+    const P = s.player;
+    const D = P.dr || { cur: 0, mult: 1, t: 0, total: 0 };
+    const rows = sim.driftRivals.map((r) => ({ name: r.name, score: r.score, me: false }));
+    rows.push({ name: 'YOU', score: D.total, me: true });
+    rows.sort((a, b) => b.score - a.score);
+    panel(ctx, 742, 18, 268, 60 + rows.length * 22 + 18, { accent: C.accent, accentLen: 120 });
+    text(ctx, 'DRIFT', 772, 46, { size: 13, color: C.dim, weight: 800, spacing: 3 });
+    vText(ctx, D.total.toLocaleString(), 1000 - 22, 72, 30, { align: 'right', color: '#fff', outline: 2, outlineColor: '#000' });
+    const lap = Math.min(sim.laps, Math.max(1, P.lap + 1));
+    text(ctx, `LAP ${lap}/${sim.laps}`, 772, 72, { size: 12, color: C.dim, weight: 800 });
+    rows.forEach((r, k) => {
+      const y = 100 + k * 22;
+      const col = r.me ? C.cyan : '#e6ebf3';
+      text(ctx, `${k + 1}`, 772, y, { size: 14, color: col, weight: 800 });
+      text(ctx, r.name, 794, y, { size: 14, color: col, weight: r.me ? 900 : 600 });
+      text(ctx, r.score.toLocaleString(), 1000 - 22, y, { size: 13, color: col, weight: 700, align: 'right' });
+    });
+    // live slide
+    if (D.cur > 0) {
+      const pts = Math.round(D.cur);
+      const pulse = 1 + Math.sin(this.t * 14) * 0.03;
+      vText(ctx, pts.toLocaleString(), 512, 178, 40 * pulse, { align: 'center', color: '#fff', outline: 4, outlineColor: 'rgba(0,0,0,0.8)' });
+      vText(ctx, `X${D.mult}`, 512 + vWidth(pts.toLocaleString(), 40) / 2 + 40, 172, 30, { align: 'center', color: D.mult >= 4 ? '#ff3d6e' : D.mult >= 3 ? C.accent : C.cyan, outline: 3, outlineColor: '#000' });
+      // progress to the next multiplier
+      const k = D.mult >= 5 ? 1 : (D.t % 1.6) / 1.6;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(432, 190, 160, 6);
+      ctx.fillStyle = C.cyan;
+      ctx.fillRect(432, 190, 160 * k, 6);
     }
   }
 

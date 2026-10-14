@@ -5,7 +5,7 @@
 // machines, power lines, a rock shed, snowy peaks and layered far ranges.
 import * as THREE from 'three';
 import { stripMesh, glowMaterial } from '../build.js';
-import { groundTexture, concreteTexture, toTex, glowTexture } from '../textures.js';
+import { concreteTexture, toTex, glowTexture } from '../textures.js';
 import { GeoBuilder, instanced } from './common.js';
 import { makeNoise2D, makeRng, clamp, smoothstep, nextFrame } from '../../core/util.js';
 
@@ -751,21 +751,20 @@ function buildRails(ctx) {
       rb.run(sd > 0 ? rows : rows.map((row) => row.slice().reverse()));
     }
   }
-  const railMat = new THREE.MeshStandardMaterial({ color: 0xdedbd2, roughness: 0.42, metalness: 0.35, side: THREE.DoubleSide });
+  const railMat = new THREE.MeshStandardMaterial({ color: 0xdedbd2, roughness: 0.45, metalness: 0.12, envMapIntensity: 0.4, side: THREE.DoubleSide });
   const rail = new THREE.Mesh(rb.build(), railMat);
   rail.castShadow = true;
   rail.receiveShadow = true;
   world.add(rail);
   const postGeo = new THREE.CylinderGeometry(0.07, 0.07, 1.25, 5, 1, true);
   postGeo.translate(0, 0.625, 0);
-  world.add(instanced(postGeo, new THREE.MeshStandardMaterial({ color: 0xc9c6bd, roughness: 0.5, metalness: 0.3 }), posts));
+  world.add(instanced(postGeo, new THREE.MeshStandardMaterial({ color: 0xc9c6bd, roughness: 0.5, metalness: 0.12, envMapIntensity: 0.4 }), posts));
 }
 
 // ---------------------------------------------------------------- cut faces
 
 function buildFaces(ctx) {
-  const { world, track, def, sides, M, rng, wallOf, edgeY, P, shed } = ctx;
-  const terrain = world.terrain;
+  const { world, track, sides, M, rng, wallOf, edgeY, P, shed } = ctx;
   const kinds = [new Ribbon(), new Ribbon(), new Ribbon()];
   const cover = new Ribbon();
   const fn = M.land.noise;
@@ -827,7 +826,6 @@ function buildFaces(ctx) {
     m.receiveShadow = true;
     world.add(m);
   }
-  void terrain; void def;
 }
 
 /** Ground from a crest (lat, y) back to where the carved terrain meets the landform again. */
@@ -1069,7 +1067,6 @@ function buildLot(ctx) {
   if (win.count) world.add(new THREE.Mesh(win.build(), new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffd9a0').multiplyScalar(night ? 1.6 : 0.5) })));
   // one lamp over the lot
   lampPost(ctx, [{ s: (s0 + s1) / 2 + 8, sd, off: lot.depth - 1.0, color: def.lampColor || '#ffb35a' }]);
-  void def;
 }
 
 /** Vending machine body (1.0 × 1.83 × 0.8) with the textured front toward ry. */
@@ -1320,18 +1317,16 @@ function buildForest(ctx) {
     new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, side: THREE.DoubleSide }),
     new THREE.MeshStandardMaterial({ map: leafTex(), alphaTest: 0.42, roughness: 0.9, side: THREE.DoubleSide }),
   ];
-  const shadows = world.sun?.castShadow;
-  let count = 0;
-  // one LOD per chunk: full trees near the camera, single cones / two cards beyond ~320 m
+  // one LOD per chunk: full trees near the camera, single cones / two cards beyond ~320 m.
+  // Trees receive but don't cast: under a grazing dusk sun the shadow pass would redraw whole chunks.
   for (const [key, lists] of chunks) {
     const [gx, gz] = key.split(',').map(Number);
     const cx = (gx + 0.5) * CH, cz = (gz + 0.5) * CH;
     const near = new THREE.Group(), farG = new THREE.Group();
     lists.forEach((list, k) => {
       if (!list.length) return;
-      count += list.length;
       const local = list.map((o) => ({ ...o, x: o.x - cx, z: o.z - cz }));
-      near.add(instanced(geos[k], mats[k], local, { shadow: false, receive: true }));
+      near.add(instanced(geos[k], mats[k], local, { receive: true }));
       farG.add(instanced(far[k], mats[k], local, { receive: true }));
     });
     const lod = new THREE.LOD();
@@ -1340,7 +1335,6 @@ function buildForest(ctx) {
     lod.addLevel(farG, 320 + CH * 0.5);
     world.add(lod);
   }
-  ctx.treeCount = count;
 }
 
 // ---------------------------------------------------------------- signs
@@ -1375,7 +1369,7 @@ function corners(track) {
 }
 
 function buildSigns(ctx) {
-  const { world, track, def, sides, wallOf, edgeY, P, lot, shed } = ctx;
+  const { world, track, sides, wallOf, edgeY, P, lot, shed } = ctx;
   const gb = new GeoBuilder();
   const posts = [];
   const up = new THREE.Vector3(0, 1, 0);
@@ -1485,7 +1479,6 @@ function buildSigns(ctx) {
     world.add(instanced(op, new THREE.MeshStandardMaterial({ color: 0xff6a10, roughness: 0.5 }), mpost));
     world.add(new THREE.Mesh(mirrors.build(), new THREE.MeshStandardMaterial({ color: 0xb8c4cc, metalness: 1, roughness: 0.08, side: THREE.DoubleSide })));
   }
-  void def;
 }
 
 // ---------------------------------------------------------------- lamps

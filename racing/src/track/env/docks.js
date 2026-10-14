@@ -1557,7 +1557,7 @@ function pipeBridge(X, s0) {
     const k = track.posAt(s0 + ds, 0).i;
     const ang = Math.atan2(track.TX[k], track.TZ[k]);
     const q = [1, -1].map((sd) => L.at(k, sd * ((sd > 0 ? track.WL[k] : track.WR[k]) + 1.6)));
-    const cells = q.map((c) => L.rectFree(c.x, c.z, ang, 2.2, 1.6, 1.2, 0));
+    const cells = q.map((c) => L.rectFree(c.x, c.z, ang, 1.7, 0.8, 1.2, 0));
     if (cells[0] && cells[1]) { i = k; posts = q; cells.forEach((c) => L.claim(c)); break; }
   }
   if (i < 0) return;
@@ -1935,6 +1935,7 @@ export async function build(world, def, track, progress) {
   (D.farCranes || []).forEach(([x, z, ry], k) => crane(X, x, z, Math.cos(ry), -Math.sin(ry), Math.sin(ry), Math.cos(ry), k + 1, false));
   (D.ships || []).forEach((sp, k) => ship(X, sp, k));
   rails.forEach((R, k) => railway(X, R, k));
+  for (const ps of D.pipes || []) pipeBridge(X, ps);
   // crane rails along the quay under the gantries
   if (D.cranes?.length) {
     const s0 = Math.min(...D.cranes) - 80, s1 = Math.max(...D.cranes) + 80;
@@ -1950,19 +1951,20 @@ export async function build(world, def, track, progress) {
   // ---- flood-light masts (sodium), every ~75 m on the landside
   {
     let side = 1;
-    for (let s = 20 + rng() * 20; s < track.length - 10; s += 62 + rng() * 26) {
+    const gapM = D.mastSpacing ?? 60;
+    for (let s = 20 + rng() * 20; s < track.length - 10; s += gapM * (0.85 + rng() * 0.35)) {
       const i = track.posAt(s, 0).i;
-      let sd = side;
+      const first = L.kit(i, side) === 'water' ? -side : side;
       side = -side;
-      if (L.kit(i, sd) === 'water') sd = -sd;
-      if (L.kit(i, sd) === 'water') continue;
-      const lat = sd * (wallAt(i, sd) + 1.6);
-      const { x, z } = L.at(i, lat);
-      if (!L.roadClear(x, z, 2.2) || L.occ.has(L.key(x, z))) continue;
-      const H = mast(X, x, z, true);
-      const r = L.at(i, sd * Math.max(0, track.W[i] - 3));
-      X.pool(r.x, 11, r.z, SODIUM, 30, 1.55);
-      void H;
+      for (const sd of [first, -first]) {
+        if (L.kit(i, sd) === 'water') continue;
+        const { x, z } = L.at(i, sd * (wallAt(i, sd) + 1.6));
+        if (!L.roadClear(x, z, 2.2) || L.occ.has(L.key(x, z))) continue;
+        mast(X, x, z, true);
+        const r = L.at(i, sd * Math.max(0, track.W[i] - 3));
+        X.pool(r.x, 11, r.z, SODIUM, 30, 1.55);
+        break;
+      }
     }
   }
 
@@ -2012,13 +2014,12 @@ export async function build(world, def, track, progress) {
         band++;
         const n = 4 + (band % 3 === 0 ? 1 : 0);
         for (let k = 0; k < n; k++) {
-          G.misc.setColor(...(k % 2 ? col : col.map((v) => v * 0.85)));
-          G.misc.cylinder(x, GROUND_Y + k * 0.26, z, 0.56, 0.2, 7);
-          G.misc.setColor(0.04, 0.04, 0.04);
-          G.misc.cylinder(x, GROUND_Y + k * 0.26 + 0.2, z, 0.47, 0.06, 7);
+          // one 6-sided ring per tire, alternate shade + radius for the grooves
+          G.misc.setColor(...(k % 2 ? col : col.map((v) => v * 0.7)));
+          G.misc.cylinder(x, GROUND_Y + k * 0.26, z, k % 2 ? 0.56 : 0.53, 0.26, 6);
         }
         G.misc.setColor(0.05, 0.05, 0.05);
-        G.misc.box(x, GROUND_Y + n * 0.26 - 0.02, z, 0.8, 0.02, 0.8, band);
+        G.misc.quad(new THREE.Vector3(x - 0.4, GROUND_Y + n * 0.26, z + 0.4), new THREE.Vector3(x + 0.4, GROUND_Y + n * 0.26, z + 0.4), new THREE.Vector3(x + 0.4, GROUND_Y + n * 0.26, z - 0.4), new THREE.Vector3(x - 0.4, GROUND_Y + n * 0.26, z - 0.4));
       }
       acc -= seg;
     }
@@ -2035,7 +2036,6 @@ export async function build(world, def, track, progress) {
     board(X, p.x + fx * 0.3, 7.3, p.z + fz * 0.3, fx, fz, Math.min(14, track.W[i] * 1.6), 1.6, k);
     for (const sd of [-0.4, 0.4]) { const q = L.at(i, sd * track.W[i]); X.halos.push({ x: q.x + fx * 1.2, y: 8.2, z: q.z + fz * 1.2, color: HALIDE, i: 1.6, size: 2.2 }); world.addLamp(q.x + fx * 1.5, 8, q.z + fz * 1.5, HALIDE, 16, 0.7); }
   }
-  for (const ps of D.pipes || []) pipeBridge(X, ps);
   for (const [gs] of D.gates || []) booth(X, gs + 14);
   for (let s = 140 + rng() * 80; s < track.length - 50; s += 260 + rng() * 200) {
     const i = track.posAt(s, 0).i;

@@ -398,8 +398,8 @@ export class World {
     ig.setAttribute('isz', new THREE.InstancedBufferAttribute(isz, 1));
     ig.instanceCount = n;
     const mat = new THREE.ShaderMaterial({
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-      uniforms: { map: { value: streakTexture() }, camPos: { value: new THREE.Vector3() }, strength: { value: 2.2 } },
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+      uniforms: { map: { value: streakTexture() }, camPos: { value: new THREE.Vector3() }, strength: { value: 1.15 } },
       vertexShader: `
         attribute vec3 ipos; attribute vec3 icol; attribute float isz;
         uniform vec3 camPos; varying vec2 vUv; varying vec3 vCol; varying float vFade;
@@ -408,14 +408,14 @@ export class World {
           float dist = length(toCam);
           vec3 dir = toCam / max(dist, 0.001);
           vec3 side = vec3(dir.z, 0.0, -dir.x);
-          float len = min(dist * 0.6, 26.0) * isz;
-          vec3 p = ipos + side * (position.x * 1.6 * isz) + dir * (position.y * len);
-          vUv = uv; vCol = icol; vFade = (1.0 - smoothstep(60.0, 220.0, dist)) * smoothstep(2.0, 8.0, dist);
+          float len = min(dist * 0.7, 30.0) * isz;
+          vec3 p = ipos + side * (position.x * 1.1 * isz) + dir * (position.y * len);
+          vUv = uv; vCol = icol; vFade = (1.0 - smoothstep(60.0, 220.0, dist)) * smoothstep(3.0, 16.0, dist);
           gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
         }`,
       fragmentShader: `
         uniform sampler2D map; uniform float strength; varying vec2 vUv; varying vec3 vCol; varying float vFade;
-        void main(){ vec4 t = texture2D(map, vec2(vUv.x, vUv.y)); gl_FragColor = vec4(vCol * t.a * strength * vFade, 1.0); }`,
+        void main(){ vec4 t = texture2D(map, vec2(vUv.x, vUv.y)); float k = t.a * t.a * (3.0 - 2.0 * t.a); gl_FragColor = vec4(vCol * k * strength * vFade, 1.0); }`,
     });
     const mesh = new THREE.Mesh(ig, mat);
     mesh.frustumCulled = false;
