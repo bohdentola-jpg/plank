@@ -49,9 +49,9 @@ function paintMaterial(layers, lights, opts = {}) {
         .replace('#include <emissivemap_fragment>', `
 #ifdef USE_EMISSIVEMAP
   vec4 emi = texture2D( emissiveMap, vEmissiveMapUv );
-  totalEmissiveRadiance = emi.r * vec3(1.0, 0.92, 0.78) * uHead * 9.0
-    + emi.g * vec3(1.0, 0.025, 0.015) * uTail * 2.6
-    + emi.b * vec3(1.0, 0.02, 0.01) * uBrake * 11.0;
+  totalEmissiveRadiance = emi.r * vec3(1.0, 0.92, 0.78) * uHead * 8.0
+    + emi.g * vec3(1.0, 0.025, 0.015) * uTail * 1.7
+    + emi.b * vec3(1.0, 0.02, 0.01) * uBrake * 5.5;
 #endif`);
     };
     mat.customProgramCacheKey = () => 'mf-car-lights';
@@ -525,6 +525,7 @@ export function buildCarModel(spec, lookIn = {}, opts = {}) {
   }
 
   // exhausts
+  const exhaustPos = [];
   {
     const ex = look.exhaust || b.exhaust || 'single';
     const capR = hull.capRear;
@@ -533,6 +534,7 @@ export function buildCarModel(spec, lookIn = {}, opts = {}) {
     const tipR = look.bigExhaust ? 0.055 : 0.042;
     for (const xl of exhaustLayout(ex, capR.w / 2)) {
       const x = -xl; // rear cap texture is mirrored (viewer's left = car's left = +x)
+      exhaustPos.push([x, exY]);
       const tube = new THREE.Mesh(new THREE.CylinderGeometry(tipR, tipR * 0.92, 0.14, 16, 1, true), chrome);
       tube.rotation.x = Math.PI / 2;
       tube.position.set(x, exY, -S.L / 2 - 0.035);
@@ -657,7 +659,7 @@ export function buildCarModel(spec, lookIn = {}, opts = {}) {
 
   const state = { spin: 0, popup: 0 };
   const handle = {
-    group, body, wheels, S, spec, look, lights, popups, neon,
+    group, body, wheels, S, spec, look, lights, popups, neon, exhausts: exhaustPos.length ? exhaustPos : [[0.4, 0.3]],
     dims: { L: S.L, W: S.W, wb: b.wb, track: wheelX(S.uF) * 2, wheelR: wr, uF: S.uF, uR: S.uR, rideLower: lower },
     /** head/tail 0..1, brake 0..1 */
     setLights(head, tail, brake) {

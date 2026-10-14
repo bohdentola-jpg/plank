@@ -354,7 +354,13 @@ export class Vehicle {
       let reqR = driveR - brakeR * sgn;
       if (hand) reqR = -sgn * muR * Wr * 0.75 + driveR * 0.15;
 
-      const capF = muF * Wf, capR = muR * Wr;
+      const capF = muF * Wf, capR = muR * Wr * 1.06; // slight rear bias: stable at the limit
+      // ABS + brake balance: brakes never use the whole friction circle,
+      // so the car keeps steering (and the tail stays put) under hard braking
+      if (!hand) {
+        if (reqF < 0 && sgn > 0) reqF = Math.max(reqF, -capF * 0.9);
+        if (reqR < 0 && sgn > 0) reqR = Math.max(reqR, -capR * 0.62);
+      }
       // traction control (assist) trims wheelspin before it starts
       if (assists > 0 && this.gear > 0) {
         const tcl = 1.0 + (1 - assists) * 0.6;

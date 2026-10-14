@@ -12,7 +12,7 @@
 
 import { audio } from './audio.js';
 import { clamp, mtof, hashStr } from './music/util.js';
-import { bank, clipCurve } from './music/render.js';
+import { bank, clipCurve, DRUM_NAMES, MS_KINDS } from './music/render.js';
 import { THEMES } from './music/themes.js';
 
 const LOOKAHEAD = 0.2;
@@ -59,6 +59,36 @@ class Music {
       const w = this._want;
       this._start(w.theme, w.seed, w.fade, w.intensity);
     }
+    if (!this._offline) this._prewarm();
+  }
+
+  /** Render the shared drum kit and common synth multisamples in idle time. */
+  _prewarm() {
+    const B = bank(this.ctx);
+    const q = (this._warmQ = []);
+    for (const n of DRUM_NAMES()) q.push(() => B.get(n));
+    const ranges = {
+      pad: [50, 78], strings: [55, 84], saw: [57, 90], choir: [62, 84], piano: [55, 84], stab: [55, 79],
+      pluck: [62, 88], brass: [50, 80], organ: [58, 77], bell: [69, 90], square: [66, 96], mallet: [67, 84], saw3: [55, 76],
+    };
+    for (const k of MS_KINDS()) {
+      const [lo, hi] = ranges[k] || [60, 72];
+      const seen = new Set();
+      for (let m = lo; m <= hi; m++) {
+        const key = B.msKey(k, m);
+        if (!seen.has(key)) { seen.add(key); q.push(() => B.ms(k, m)); }
+      }
+    }
+    const ctx = this.ctx;
+    const step = (dl) => {
+      if (this.ctx !== ctx || !q.length) return;
+      const t0 = performance.now();
+      const budget = dl && dl.timeRemaining ? Math.min(8, dl.timeRemaining()) : 6;
+      while (q.length && performance.now() - t0 < budget) q.shift()();
+      if (q.length) idle(step);
+    };
+    const idle = (fn) => (typeof requestIdleCallback === 'function' ? requestIdleCallback(fn, { timeout: 400 }) : setTimeout(fn, 40));
+    idle(step);
   }
 
   _buildChain() {
@@ -162,7 +192,7 @@ class Music {
     const cls = THEMES[theme];
     if (intensity != null) this._kindInt[cls.kind] = clamp(intensity, 0, 1);
     const cur = this.deck;
-    const same = cur && !cur.dying && cur.id === theme && (seed == null || (seed >>> 0) === cur.seed);
+    const same = cur && !cur.dying && cur.id === theme && (seed == null || seedOf(seed) === cur.seed);
     this._want = { theme, seed, fade, intensity };
     if (!this._ensure()) return; // starts when audio.onReady fires
     if (same) {
@@ -184,7 +214,10 @@ class Music {
     // radio-style rapid switching: keep at most two fading decks
     const dying = this.decks.filter((d) => d.dying && !d.dead);
     while (dying.length > 2) dying.shift().retire(0.03);
-    const s = seed == null ? DEFAULT_SEED[theme] ?? hashStr(theme) : seed >>> 0;
+    const s = seed == null ? DEFAULT_SEED[theme] ?? hashStr(theme) : seedOf(seed);
+    if (intensity == null && this._pendingInt != null) intensity = this._pendingInt;
+    this._pendingInt = null;
+    if (intensity != null) this._kindInt[cls.kind] = intensity;
     const d = new cls(this, theme, s, {
       intensity: intensity ?? this._kindInt[cls.kind] ?? cls.intensity,
       race: this._race,
@@ -212,11 +245,13 @@ class Music {
   setIntensity(x) {
     x = clamp(+x || 0, 0, 1);
     const d = this.deck;
-    if (d) {
+    if (d && !d.dying) {
       this._kindInt[d.kind] = x;
       d.targetIntensity = x;
     } else if (this._want) {
       this._want.intensity = x;
+    } else {
+      this._pendingInt = x; // applies to the next play() without an explicit intensity
     }
   }
 
@@ -438,10 +473,10 @@ class Music {
       }
       case 'lose': {
         const r = root;
-        this._hit('boom', q, 0.6);
-        this._chord('pad', q, r + 12, [0, 3, 7, 10], 2.4, 0.22, { atk: 0.15, rel: 1.2, cut: 1400 });
-        [7, 3, 0].forEach((iv, i) => this._note('mallet', q + i * step * 4, r + 24 + iv, 1.2, 0.4));
-        this._note('piano', q + step * 12, r + 12, 2, 0.35);
+        this._hit('boom', q, 0.4);
+        this._chord('pad', q, r + 12, [0, 3, 7, 10], 2.4, 0.17, { atk: 0.15, rel: 1.2, cut: 1400 });
+        [7, 3, 0].forEach((iv, i) => this._note('mallet', q + i * step * 4, r + 24 + iv, 1.2, 0.3));
+        this._note('piano', q + step * 12, r + 12, 2, 0.28);
         break;
       }
       case 'select':
@@ -540,6 +575,8 @@ class Music {
     o1.onended = () => { try { bp.disconnect(); g.disconnect(); } catch { /* */ } };
   }
 }
+
+const seedOf = (s) => (typeof s === 'number' && Number.isFinite(s) ? Math.floor(s) >>> 0 : hashStr(String(s)));
 
 // default seeds: each radio station always plays "its" song
 const DEFAULT_SEED = {

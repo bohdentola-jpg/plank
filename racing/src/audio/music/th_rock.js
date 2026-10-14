@@ -7,19 +7,23 @@ import { Song } from './song.js';
 import { Mono, Poly, Guitar, Twang, Breath } from './inst.js';
 import { pat, rolePat, makeChase, rhythm, indexNotes, makeMelody } from './util.js';
 
-const ROCK_FORM = () => [
-  { type: 'intro', bars: 8 },
-  { type: 'A', bars: 16 },
-  { type: 'B', bars: 16 },
-  { type: 'break', bars: 8 },
-  { type: 'build', bars: 4 },
-  { type: 'drop', bars: 16 },
-  { type: 'A', bars: 16, var: 1 },
-  { type: 'B', bars: 16, var: 1 },
-  { type: 'break', bars: 8, var: 1 },
-  { type: 'build', bars: 4 },
-  { type: 'drop', bars: 16, var: 1 },
-];
+const ROCK_FORM = (r) => {
+  const f = [
+    { type: 'intro', bars: 8 },
+    { type: 'A', bars: r.pick([8, 16, 16]) },
+    { type: 'B', bars: 16 },
+    { type: 'break', bars: r.pick([4, 8, 8]) },
+    { type: 'build', bars: 4 },
+    { type: 'drop', bars: 16 },
+    { type: 'A', bars: 16, var: 1 },
+    { type: 'B', bars: r.pick([8, 16]), var: 1 },
+    { type: 'break', bars: 8, var: 1 },
+    { type: 'build', bars: 4 },
+    { type: 'drop', bars: 16, var: 1 },
+  ];
+  if (r.chance(0.5)) f.splice(7, 0, { type: 'drop', bars: 8, var: 1 });
+  return f;
+};
 
 const LEAD_SQ = {
   oscs: [{ type: 'square', gain: 0.35 }, { type: 'square', detune: 14, gain: 0.3 }, { type: 'sawtooth', mul: 0.5, gain: 0.15 }],
@@ -53,7 +57,7 @@ export class Circuit extends Song {
     this.scale = mixo ? 'mixolydian' : 'minor';
     this.progs.main = this.P(mixo ? 'I:2 bVII:2 IV:2 I:2' : r.pick(['i:2 bVII:2 bVI:2 bVII:2', 'i:2 bIII iv i:2 bVII:2', 'i:4 bVI:2 bVII:2', 'i:2 iv:2 bVI:2 bVII:2']));
     this.progs.countdown = this.P(mixo ? 'bVII' : 'bVII');
-    this.form = ROCK_FORM();
+    this.form = ROCK_FORM(r);
     this.loopFrom = 1;
     this.introLP = 1000;
     this.kit = { ...this.kit, kick: 'kick_rock', snare: 'snare_rock', hat: 'hat_c', ohat: 'hat_o', crash: 'crash' };
@@ -166,7 +170,7 @@ export class Desert extends Song {
     this.scale = r.chance(0.6) ? 'harmonic' : 'minor';
     this.progs.main = this.P(r.pick(['i bVII bVI V', 'i:2 iv V', 'i:2 bII:2', 'i bVII i V', 'i:2 bVI V']));
     this.progs.countdown = this.P('V');
-    this.form = ROCK_FORM();
+    this.form = ROCK_FORM(r);
     this.loopFrom = 1;
     this.introLP = 1400;
     this.kit = { ...this.kit, kick: 'kick_rock', snare: 'snare_rock', hat: 'hat_c', ohat: 'hat_o', ride: 'ride' };
@@ -273,7 +277,7 @@ export class Docks extends Song {
     this.scale = r.chance(0.5) ? 'phrygian' : 'minor';
     this.progs.main = this.P(r.pick(['i:2 bII:2 bVI:2 v:2', 'i:4 bVI:2 bII:2', 'i:2 bIII bII i:2 bVI:2', 'i:2 bVI:1 bVII:1']));
     this.progs.countdown = this.P('bII');
-    this.form = ROCK_FORM();
+    this.form = ROCK_FORM(r);
     this.loopFrom = 1;
     this.introLP = 800;
     this.kit = { ...this.kit, kick: 'kick_metal', snare: 'snare_rock', hat: 'hat_c', ohat: 'hat_o', china: 'china' };
@@ -314,14 +318,14 @@ export class Docks extends Song {
   }
 
   cdStep(s, t, e) {
-    if ((s & 1) === 0) this.gtr.play(t, this.rootIn(this.progs.main.chords[0], 38), { mute: true, vel: 0.5 + e / 10, force: true });
+    if ((s & 1) === 0) this.gtr.play(t, this.rootIn(this.progs.main.chords[0], 35), { mute: true, vel: 0.5 + e / 10, force: true });
   }
 
   onStep(s, t) {
     const ty = this.sec.type;
     const T = this.sw(s, t);
     if (this.on('pad')) this.padPlay(this.padI, s, t, { n: 3, lo: 50, hi: 69, vel: 0.5 });
-    const root = this.rootIn(this.chordAt(s), 38);
+    const root = this.rootIn(this.chordAt(s), 35);
     let hit = null;
     if (this.on('gtr') && ty !== 'break' && ty !== 'intro') {
       const p = this.chugs[ty === 'drop' ? 1 : (this.barInSec >> 1) & 1];
@@ -345,6 +349,6 @@ export class Docks extends Song {
 
   stab(t, ch, vel) {
     this.stabChord(this.fxStab, t, ch, vel, 50, 69, 0.6);
-    this.gtr.play(t, this.rootIn(ch, 38), { vel: 1, dur: 1.4, force: true });
+    this.gtr.play(t, this.rootIn(ch, 35), { vel: 1, dur: 1.4, force: true });
   }
 }

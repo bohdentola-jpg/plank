@@ -7,6 +7,7 @@
 import { audio } from '../audio.js';
 import { Rng, hashStr, mix32, prog, voice, clamp, makeMelody, rhythm, indexNotes } from './util.js';
 import { bank, driveCurve } from './render.js';
+import { LEVELS } from './levels.js';
 
 // layer → mix group: r rhythm (air-filtered), b bass (ducked + air), m music (ducked), l lead, f fx
 const GROUP = {
@@ -16,7 +17,7 @@ const GROUP = {
 
 // drum role → layer
 const ROLE_LAYER = {
-  kick: 'kick', kick2: 'kick', snare: 'snare', ghost: 'snare', clap: 'snare', rim: 'snare', snap: 'snare',
+  kick: 'kick', kick2: 'kick', snare: 'snare', roll: 'snare', ghost: 'snare', clap: 'snare', rim: 'snare', snap: 'snare',
   brush: 'snare', tomh: 'snare', tomm: 'snare', toml: 'snare', tomf: 'snare',
   hat: 'hats', hat2: 'hats', ohat: 'hats', phat: 'hats', ride: 'hats', bell: 'hats', sweep: 'hats',
   crash: 'cym', crash2: 'cym', china: 'cym', splash: 'cym',
@@ -36,7 +37,7 @@ const KIT = {
 // minimum intensity per layer: pad only → +bass+hats → full drums+chords → +lead+perc
 const TIERS = {
   race: { pad: 0, fx: 0, extra: 0, cym: 0.1, bass: 0.2, hats: 0.2, kick: 0.45, snare: 0.45, chords: 0.45, gtr: 0.45, arp: 0.45, lead: 0.66, perc: 0.75 },
-  menu: { pad: 0, fx: 0, extra: 0, cym: 0, bass: 0, hats: 0, kick: 0.08, snare: 0.08, chords: 0, gtr: 0, arp: 0.15, lead: 0.42, perc: 0.55 },
+  menu: { pad: 0, fx: 0, extra: 0, cym: 0, bass: 0, hats: 0, kick: 0.08, snare: 0.08, chords: 0, gtr: 0, arp: 0.15, lead: 0.26, perc: 0.5 },
 };
 TIERS.results = TIERS.menu;
 
@@ -102,7 +103,17 @@ export class Song {
     this.introLP = 0;
     this.breakLP = 0;
 
+    this.trim = 1;
     this.compose(this.r);
+    if (!this.kit.roll) this.kit.roll = this.kit.snare; // build / countdown rolls (own gain)
+    if (this.kitGain.roll == null) this.kitGain.roll = 0.75;
+    const lv = LEVELS[id];
+    if (lv) {
+      for (const k in lv) {
+        if (k === 'trim') this.trim = lv.trim;
+        else (this.mix[k] ||= {}).v = lv[k];
+      }
+    }
     this.stepDur = 60 / this.bpm / 4;
     this.beatDur = this.stepDur * 4;
     this.barDur = this.beatDur * 4;
@@ -112,6 +123,7 @@ export class Song {
     this._graph();
     this.setup();
     for (const k in GROUP) this.layer(k); // every switchable layer exists
+    if (m._log) this._wrapLog(m._log);
 
     const race = opts.race || {};
     this.intensity = this.targetIntensity = clamp(opts.intensity ?? this.constructor.intensity, 0, 1);
@@ -122,6 +134,26 @@ export class Song {
     this.climax = false;
     this.mode = 'normal';
     this.solo = m._solo || null; // debug: only these layers
+  }
+
+  /** QA hook: record every played note as [inst, layer, time, midi, dur, vel, chordRootPc, chordPcs]. */
+  _wrapLog(log) {
+    for (const [name, inst] of Object.entries(this)) {
+      if (!inst || typeof inst !== 'object' || typeof inst.layer !== 'string' || inst === this) continue;
+      for (const fn of ['note', 'play']) {
+        if (typeof inst[fn] !== 'function') continue;
+        const orig = inst[fn].bind(inst);
+        inst[fn] = (t, midi, a, b, o) => {
+          const opts = fn === 'play' && typeof a === 'object' ? a : o || {};
+          if (this.isOn(inst.layer) || opts.force) {
+            const ch = this.barChords ? this.chordAt(Math.floor(((t - this.anchorT) / this.stepDur) % 16)) : null;
+            log.push([this.id, name, inst.layer, +t.toFixed(3), midi + this.transpose, typeof a === 'number' ? a : 0, typeof b === 'number' ? b : 0,
+              ch ? (this.keyPc + ch.root + this.transpose) % 12 : -1, ch ? ch.iv.map((i) => (this.keyPc + ch.root + i + this.transpose) % 12) : [], this.mode, this.sec?.type]);
+          }
+          return orig(t, midi, a, b, o);
+        };
+      }
+    }
   }
 
   // ---- theme hooks (override) -------------------------------------------------
@@ -237,7 +269,7 @@ export class Song {
     this.revOut = this.gain(0, this.m.revIn);
     this.lpF = this.filter('lowpass', 22000, 0.5, this.out);
     this.hpF = this.filter('highpass', 10, 0.5, this.lpF);
-    this.post = this.gain(1, this.hpF);
+    this.post = this.gain(this.trim, this.hpF);
     this.airG = this.gain(1, this.post);
     this.airF = this.filter('lowpass', 22000, 0, this.airG);
     this.rhythm = this.gain(1, this.airF);
@@ -351,11 +383,12 @@ export class Song {
     }
     this.track(src, g, t, end);
     if (role === 'hat' || role === 'phat' || role === 'hat2') { // open-hat choke
-      if (this._ohat && this._ohat.end > t) {
-        this._ohat.g.gain.setTargetAtTime(0, t, 0.008);
-        this._ohat.end = t;
+      const oh = this._ohat;
+      if (oh && oh.end > t && t > oh.t + 0.01) {
+        oh.g.gain.setTargetAtTime(0, t, 0.008);
+        oh.end = t;
       }
-    } else if (role === 'ohat') this._ohat = { g, end };
+    } else if (role === 'ohat') this._ohat = { g, end, t };
     if (role === 'kick') { // one kick voice: a new hit chokes the previous tail
       const k = this._kick;
       if (k && k.end > t && k.t < t - 0.01) k.g.gain.setTargetAtTime(0, Math.max(k.t, t - 0.004), 0.0015);
@@ -416,7 +449,7 @@ export class Song {
   barRng(salt = 0) { return new Rng(mix32(mix32(this.seed, this.barAbs * 131 + salt), hashStr(this.id))); }
 
   nextStepTime(t) {
-    const k = Math.ceil((Math.max(t, this.ctx.currentTime + 0.012) - this.anchorT) / this.stepDur - 1e-6);
+    const k = Math.ceil((Math.max(t, this.ctx.currentTime + 0.006) - this.anchorT) / this.stepDur - 1e-6);
     return this.anchorT + k * this.stepDur;
   }
 
@@ -475,6 +508,10 @@ export class Song {
     this.barChords = null;
     this.changes = [false, false, false, false];
     this.forceIntensityUntil = -1;
+    if (this.m._startSec) { // debug/QA: start in a given section type
+      const i = this.form.findIndex((f) => f.type === this.m._startSec);
+      if (i >= 0) { this.secIdx = i; this.sec = this.form[i]; }
+    }
     if (this.cdWanted) this._enterCountdown(t0);
   }
 
@@ -745,9 +782,9 @@ export class Song {
     if (bars <= 4) every = pos < 0.5 ? 2 : 1;
     if (this.fill && this.fill.style === 'stop' && s >= this.fill.from) return;
     if (s % every === 0) {
-      const v = 0.35 + 0.65 * pos;
-      this.hit('snare', t, v);
-      if (pos > 0.875 && this.stepDur > 0.075) this.hit('snare', t + this.stepDur / 2, v * 0.75);
+      const v = 0.3 + 0.55 * pos;
+      this.hit('roll', t, v);
+      if (pos > 0.875 && this.stepDur > 0.075) this.hit('roll', t + this.stepDur / 2, v * 0.75);
     }
     if ((s & 3) === 0 && pos < 0.75) this.hit('kick', t, 0.8);
     if ((s & 1) === 0) this.hit('hat', t, 0.35 + 0.3 * pos);
@@ -776,6 +813,10 @@ export class Song {
     this._drums(s, t);
     if (this.fill) this._fillStep(s, t);
     if (this.sec.type === 'build' && this.mode === 'normal') this._buildStep(s, t);
+    // final-lap climax: double-time hats on top of the groove
+    if (this.climax && (s & 1) && this.isOn('extra') && !(this.fill && s >= this.fill.from)) {
+      this.hit('hat2', this.sw(s, t), (s & 2) ? 0.42 : 0.3, { layer: 'perc', force: true });
+    }
     this.onStep(s, t);
   }
 
@@ -811,7 +852,11 @@ export class Song {
     nz.connect(bp); bp.connect(ng); ng.connect(this.fxBus);
     nz.start(t, this.hr.next());
     this._cdFx = [{ src: sh, g: shg, nodes: [shg] }, { src: nz, g: ng, nodes: [bp, ng] }];
-    // tense, filtered build on the whole deck
+    this._harmony(); // the tension chord must exist before onCountdown()
+    // tense, filtered build on the whole deck, held a little under the drop level
+    const pg = this.post.gain;
+    pg.cancelScheduledValues(t);
+    pg.setTargetAtTime(this.trim * (this.cdLevel ?? 0.7), t, 0.05);
     const hp = this.hpF.frequency, lp = this.lpF.frequency;
     hp.cancelScheduledValues(t); hp.setValueAtTime(10, t); hp.setTargetAtTime(240, t, 2.2);
     lp.cancelScheduledValues(t); lp.setValueAtTime(1400, t); lp.setTargetAtTime(15000, t + 0.3, 2.2);
@@ -823,9 +868,9 @@ export class Song {
     if ((s & 3) === 0) this.hit('kick', t, 0.75, { force: true });
     const every = e < 1.1 ? 4 : e < 2.2 ? 2 : 1;
     if (s % every === 0) {
-      const v = clamp(0.22 + e / 7, 0.22, 0.85);
-      this.hit('snare', t, v, { force: true });
-      if (e > 3.3 && this.stepDur > 0.07) this.hit('snare', t + this.stepDur / 2, v * 0.75, { force: true });
+      const v = clamp(0.2 + e / 8, 0.2, 0.75);
+      this.hit('roll', t, v, { force: true });
+      if (e > 3.3 && this.stepDur > 0.07) this.hit('roll', t + this.stepDur / 2, v * 0.75, { force: true });
     }
     if ((s & 3) === 2) this.hit('hat', t, 0.45, { force: true });
     this.cdStep(s, t, e);
@@ -862,6 +907,8 @@ export class Song {
     const hp = this.hpF.frequency, lp = this.lpF.frequency;
     hp.cancelScheduledValues(t); hp.setTargetAtTime(10, t, 0.004);
     lp.cancelScheduledValues(t); lp.setTargetAtTime(22000, t, 0.004);
+    const pg = this.post.gain;
+    pg.cancelScheduledValues(t); pg.setTargetAtTime(this.trim, t, 0.003);
     this._rewind(t);
     this.mode = 'normal';
     let i;
@@ -881,6 +928,7 @@ export class Song {
   }
 
   _slam(t) {
+    this.lastSlam = t;
     this.hit('crash', t, 1, { pan: -0.4, force: true });
     this.hit('crash2', t + 0.006, 0.9, { pan: 0.4, force: true });
     this.hit('impact', t, 1, { force: true });

@@ -13,10 +13,16 @@ export function hashStr(s) {
   return h >>> 0;
 }
 
+/** murmur3 finaliser: full avalanche, so seeds 1, 2, 3… give unrelated songs. */
+export function fmix32(h) {
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+  return h >>> 0;
+}
+
 export function mix32(a, b) {
-  let h = Math.imul((a ^ 0x9e3779b9) >>> 0, 0x85ebca6b) ^ (b >>> 0);
-  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
-  return (h ^ (h >>> 16)) >>> 0;
+  return fmix32((fmix32(a >>> 0) ^ Math.imul(fmix32((b >>> 0) + 0x9e3779b9), 0x27d4eb2d)) >>> 0);
 }
 
 /** Small deterministic PRNG (mulberry32). */
@@ -159,55 +165,71 @@ export function nearestPc(pcs, target) {
  */
 export function voice(ch, keyPc, n, lo, hi, prev, opts = {}) {
   const rootPc = (keyPc + ch.root) % 12;
-  let tones = [];
-  for (const i of ch.iv) { const pc = i % 12; if (!tones.includes(pc)) tones.push(pc); }
-  if (tones.length > n && tones.length >= 4 && tones.includes(7) && ch.q !== '5') tones = tones.filter((t) => t !== 7);
-  if (tones.length > n && opts.rootless) tones = tones.filter((t) => t !== 0);
-  while (tones.length > n) tones.pop();
-  const base = tones.slice();
-  let k = 0;
-  while (tones.length < n) tones.push(base[k++ % base.length]);
-  const options = tones.map((t) => {
-    const pc = (rootPc + t) % 12;
-    const arr = [];
-    for (let m = lo; m <= hi; m++) if (((m % 12) + 12) % 12 === pc) arr.push(m);
-    return arr;
-  });
+  const all = [];
+  for (const i of ch.iv) { const pc = i % 12; if (!all.includes(pc)) all.push(pc); }
+  // candidate tone sets: every reduction to n tones that keeps the 3rd and 7th
+  const third = ch.iv[1] % 12, seventh = ch.iv.length > 3 && ch.iv[3] < 12 ? ch.iv[3] % 12 : -1;
+  let sets = [];
+  if (all.length <= n) {
+    const t = all.slice();
+    let k = 0;
+    while (t.length < n) t.push(all[k++ % all.length]); // double root, then 3rd...
+    sets.push({ tones: t, pen: 0 });
+  } else {
+    const rec = (i, cur) => {
+      if (cur.length === n) { sets.push({ tones: cur.slice(), pen: 0 }); return; }
+      if (i >= all.length || all.length - i < n - cur.length) return;
+      cur.push(all[i]); rec(i + 1, cur); cur.pop();
+      rec(i + 1, cur);
+    };
+    rec(0, []);
+    sets = sets.filter((st) => (ch.q === '5' || st.tones.includes(third)) && (seventh < 0 || st.tones.includes(seventh)));
+    for (const st of sets) {
+      if (!st.tones.includes(0)) st.pen += opts.rootless ? -1.5 : 1.2;
+      const ext = all.filter((x) => x !== 0 && x !== third && x !== 7 && x !== seventh);
+      for (const x of ext) if (!st.tones.includes(x)) st.pen += 0.6; // colour tones are worth keeping
+    }
+    if (!sets.length) sets.push({ tones: all.slice(0, n), pen: 0 });
+  }
   const center = opts.center ?? (lo + hi) / 2;
   const sortedPrev = prev && prev.length ? prev.slice().sort((a, b) => a - b) : null;
   let best = null, bestCost = Infinity;
-  const cur = new Array(n);
-  const rec = (i) => {
-    if (i === n) {
-      const v = cur.slice().sort((a, b) => a - b);
-      for (let j = 1; j < n; j++) if (v[j] === v[j - 1]) return;
-      let cost = 0;
-      const span = v[n - 1] - v[0];
-      if (opts.spread) cost += Math.abs(span - opts.spread) * 0.35;
-      else if (span > 14) cost += (span - 14) * 0.8;
-      for (let j = 1; j < n; j++) {
-        const iv = v[j] - v[j - 1];
-        if (v[j - 1] < 53 && iv < 5) cost += 3;
-        if (iv === 1 && v[j] > 72) cost += 0.5;
+  for (const { tones, pen } of sets) {
+    const options = tones.map((t) => {
+      const pc = (rootPc + t) % 12;
+      const arr = [];
+      for (let m = lo; m <= hi; m++) if (((m % 12) + 12) % 12 === pc) arr.push(m);
+      return arr;
+    });
+    const cur = new Array(n);
+    const rec = (i) => {
+      if (i === n) {
+        const v = cur.slice().sort((a, b) => a - b);
+        for (let j = 1; j < n; j++) if (v[j] === v[j - 1]) return;
+        let cost = pen;
+        const span = v[n - 1] - v[0];
+        if (opts.spread) cost += Math.abs(span - opts.spread) * 0.35;
+        else if (span > 14) cost += (span - 14) * 0.8;
+        for (let j = 1; j < n; j++) {
+          const iv = v[j] - v[j - 1];
+          if (v[j - 1] < 53 && iv < 5) cost += 3;
+          if (iv === 1) cost += 2.5;
+          else if (iv === 2 && v[j] < 58) cost += 0.8;
+        }
+        if (sortedPrev) {
+          for (let j = 0; j < n; j++) cost += 0.6 * Math.abs(v[j] - sortedPrev[Math.min(j, sortedPrev.length - 1)]);
+        }
+        const mean = v.reduce((a, b) => a + b, 0) / n;
+        cost += Math.abs(mean - center) * (sortedPrev ? 0.25 : 0.8);
+        if (opts.rootBottom && ((v[0] - rootPc) % 12 + 12) % 12 !== 0) cost += 6;
+        if (cost < bestCost) { bestCost = cost; best = v; }
+        return;
       }
-      if (sortedPrev) {
-        for (let j = 0; j < n; j++) cost += Math.abs(v[j] - sortedPrev[Math.min(j, sortedPrev.length - 1)]);
-      }
-      const mean = v.reduce((a, b) => a + b, 0) / n;
-      cost += Math.abs(mean - center) * (sortedPrev ? 0.25 : 0.8);
-      if (opts.rootBottom && ((v[0] - rootPc) % 12 + 12) % 12 !== 0) cost += 6;
-      if (cost < bestCost) { bestCost = cost; best = v; }
-      return;
-    }
-    for (const m of options[i]) { cur[i] = m; rec(i + 1); }
-  };
-  rec(0);
-  if (!best) {
-    best = tones.map((t) => {
-      let m = lo + ((rootPc + t - lo) % 12 + 12) % 12;
-      return m;
-    }).sort((a, b) => a - b);
+      for (const m of options[i]) { cur[i] = m; rec(i + 1); }
+    };
+    rec(0);
   }
+  if (!best) best = all.slice(0, n).map((t) => lo + ((rootPc + t - lo) % 12 + 12) % 12).sort((a, b) => a - b);
   return best;
 }
 
@@ -262,8 +284,12 @@ export function makeMelody(o) {
   const stepFrom = (m, k) => ladder[clamp(idxOf(m) + Math.round(k), 0, ladder.length - 1)];
   const pcOf = (m) => ((m % 12) + 12) % 12;
   const center = Math.round((lo + hi) / 2);
-  const cA = r.pick(CONTOURS);
-  const cB = r.pick(CONTOURS);
+  // the motif must actually move within the notes the call rhythm uses
+  const rh0 = o.rhythms.call.notes.length;
+  const moves = (c, k) => { const w = c.slice(0, Math.max(2, Math.min(k, c.length))); return Math.max(...w) - Math.min(...w) >= 2; };
+  const pool = CONTOURS.filter((c) => moves(c, rh0));
+  const cA = r.pick(pool.length ? pool : CONTOURS);
+  const cB = r.pick(CONTOURS.filter((c) => c !== cA && moves(c, rh0)).concat([CONTOURS[1]]));
   const resp = cA.slice(0, 4).concat(cB.slice(4));
   const end = cA.slice(0, 3).concat([2, 1, 0, -1, 0]);
   const rh = o.rhythms;
@@ -293,7 +319,14 @@ export function makeMelody(o) {
       const pcs = chordPcs(ch, keyPc);
       const strong = s % 4 === 0 || n.len >= 3 || n.acc;
       let m = stepFrom(anchor, contour[i % contour.length]);
+      const want = m;
       if (strong && !pcs.includes(pcOf(m))) m = nearestPc(pcs, m);
+      if (i > 0 && m === prev && want !== prev) { // snapping erased the move: take the next chord tone that way
+        const dir = want > prev ? 1 : -1;
+        let k = prev + dir;
+        while (Math.abs(k - prev) < 12 && !(strong ? pcs : scale).includes(pcOf(k))) k += dir;
+        m = k;
+      }
       if (last && i === rr.notes.length - 1) {
         m = nearestPc([(keyPc + ch.root) % 12, (keyPc + ch.root + ch.iv[1]) % 12], prev);
       }

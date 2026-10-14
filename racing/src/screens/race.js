@@ -1,47 +1,226 @@
-// The race screen: loads a RaceSession behind a "please stand by" card, then
-// runs it and draws the HUD.  Dev: ?screen=race&track=downtown&car=lancet
-import { registerScreen, game } from '../main.js';
+// The race screen: "please stand by" while the world builds, then the race
+// with HUD, a VCR-style pause menu, and the results board.
+// Params: { trackDef|track, spec|car, look, upgrades, opponents:[{spec,look,upgrades,name,skill}|carId],
+//           type, laps, playerGrid, rubber, onDone(results) → handled by caller, back }
+// Dev: ?screen=race&track=downtown&car=lancet&opponents=kaze,suprano,m3
+import { registerScreen, game, go } from '../main.js';
 import { RaceSession } from '../race/session.js';
+import { HUD } from '../race/hud.js';
 import { TRACK_BY_ID, TRACKS } from '../track/tracks.js';
 import { CAR_BY_ID, CARS } from '../car/cars.js';
-import { C, vText, text } from '../core/ui.js';
+import { C, vText, text, panel, hints, osd } from '../core/ui.js';
+import { Menu, uiSound } from '../core/menu.js';
+import { input } from '../core/input.js';
 import { settings } from '../core/settings.js';
+import { fmtTime, ordinal } from '../core/util.js';
+import { audio } from '../audio/audio.js';
+import { music } from '../audio/music.js';
+
+const AI_NAMES = ['DEZ', 'MIKA', 'RAVEN', 'KAITO', 'VEX', 'NOVA', 'JUNO', 'BISHOP', 'TANK', 'SPOOK', 'LUCKY', 'ROSA', 'HALO', 'DRIFTER', 'ZERO', 'CASS'];
 
 registerScreen('race', () => {
   let session = null;
+  let hud = null;
+  let params = {};
   let loading = { f: 0, label: 'PLEASE STAND BY' };
-  const scr = {
-    async enter(params = {}) {
-      const def = params.trackDef || TRACK_BY_ID[params.track] || TRACKS[0];
-      const spec = params.spec || CAR_BY_ID[params.car] || CAR_BY_ID.lancet;
-      const oppIds = params.opponents ?? [];
-      session = new RaceSession({
-        track: def,
-        type: params.type || def.type,
-        laps: params.laps ? Number(params.laps) : def.laps,
-        player: { spec, look: params.look || {}, upgrades: params.upgrades || {}, name: 'YOU' },
-        opponents: oppIds.map((o) => (typeof o === 'string' ? { spec: CAR_BY_ID[o] } : o)),
+  let pauseMenu = null;
+  let resultsMenu = null;
+  let resultsT = 0;
+  let results = null;
+
+  const buildOpponents = (p, spec) => {
+    if (p.opponents) {
+      return p.opponents.map((o, k) => {
+        if (typeof o === 'string') return { spec: CAR_BY_ID[o], name: AI_NAMES[k % AI_NAMES.length], skill: 0.75 };
+        return { name: AI_NAMES[k % AI_NAMES.length], skill: 0.75, ...o };
       });
-      session.renderer = game.renderer.gl;
-      await session.load((f, label) => { loading = { f, label }; });
-      game.renderer.setPost(session.world.at.post || {});
-      scr.session = session;
+    }
+    // dev default: 5 rivals in the same class
+    const pool = CARS.filter((c) => c.cls === spec.cls && c.id !== spec.id);
+    const list = [];
+    for (let k = 0; k < 5; k++) list.push({ spec: pool[k % pool.length] || spec, name: AI_NAMES[k], skill: 0.62 + k * 0.07 });
+    return list;
+  };
+
+  const makePause = () => new Menu([
+    { label: 'RESUME', id: 'resume' },
+    { label: 'RESTART RACE', id: 'restart' },
+    {
+      label: 'TRANSMISSION', type: 'choice', options: [{ value: 'auto', label: 'AUTO' }, { value: 'manual', label: 'MANUAL' }],
+      get: () => settings.get('transmission'), set: (v) => { settings.set('transmission', v); if (session) session.sim.opts.auto = v !== 'manual'; },
     },
-    exit() { session?.dispose(); session = null; },
-    update(dt) { if (session && session.state !== 'loading') session.update(dt); },
-    view() { return session && session.state !== 'loading' ? session.view() : null; },
-    draw(ctx) {
-      if (!session || session.state === 'loading') {
-        vText(ctx, 'PLEASE STAND BY', 512, 380, 34, { align: 'center', color: C.text });
-        text(ctx, loading.label, 512, 420, { size: 16, align: 'center', color: C.dim });
+    {
+      label: 'CAMERA', type: 'choice', options: [{ value: 0, label: 'CHASE FAR' }, { value: 1, label: 'CHASE' }, { value: 2, label: 'BUMPER' }, { value: 3, label: 'HOOD' }],
+      get: () => session?.camera.mode ?? 1, set: (v) => { session?.camera.setMode(v); settings.set('camera', v); },
+    },
+    {
+      label: 'MUSIC', type: 'slider', step: 0.1, min: 0, max: 1,
+      get: () => settings.get('volMusic'), set: (v) => { settings.set('volMusic', v); audio.setVolumes({ music: v }); },
+    },
+    { label: params.quitLabel || 'QUIT RACE', id: 'quit' },
+  ], { id: 'pause' });
+
+  const finishResults = () => {
+    const sim = session.sim;
+    results = {
+      track: session.def.id, type: session.type,
+      place: session.player.out ? null : session.player.place,
+      out: !!session.player.out,
+      time: session.player.finishTime,
+      bestLap: session.player.bestLap,
+      order: sim.finishOrder.map((r) => ({ name: r.name, car: r.spec.id, time: r.finishTime, best: r.bestLap, player: r.isPlayer, estimated: r.estimated, out: r.out })),
+      racers: sim.racers.length,
+    };
+    const items = [];
+    if (params.onDone) items.push({ label: 'CONTINUE', id: 'continue' });
+    items.push({ label: 'RACE AGAIN', id: 'restart' });
+    if (!params.onDone) items.push({ label: 'CHANGE CAR / TRACK', id: 'setup' }, { label: 'MAIN MENU', id: 'menu' });
+    resultsMenu = new Menu(items, { id: 'results' });
+    try { music.play(results.place === 1 ? 'results_win' : 'results_lose', { fade: 2.5 }); } catch { /* */ }
+  };
+
+  const leave = (where) => {
+    if (where === 'restart') { go('race', params); return; }
+    if (params.onDone) { params.onDone(where === 'continue' ? results : null, where); return; }
+    if (where === 'setup') { go(params.back || 'radio', { station: 'quick', resume: 'setup' }); return; }
+    go(params.back || 'radio', { station: 'quick' });
+  };
+
+  const scr = {
+    async enter(p = {}) {
+      params = p;
+      const def = p.trackDef || TRACK_BY_ID[p.track] || TRACKS[0];
+      const spec = p.spec || CAR_BY_ID[p.car] || CAR_BY_ID.lancet;
+      if (typeof p.opponents === 'string') p.opponents = p.opponents.split(',').filter(Boolean);
+      session = new RaceSession({
+        track: def, type: p.type || def.type, laps: p.laps ? Number(p.laps) : def.laps,
+        player: { spec, look: p.look || {}, upgrades: p.upgrades || {}, name: p.playerName || 'YOU' },
+        opponents: (p.type || def.type) === 'timeattack' ? [] : buildOpponents(p, spec),
+        playerGrid: p.playerGrid, rubber: p.rubber, musicTheme: p.musicTheme,
+      });
+      await session.load(game.renderer.gl, (f, label) => { loading = { f, label }; });
+      game.renderer.setPost(session.world.at.post || {}, true);
+      hud = new HUD(session);
+      scr.session = session;
+      window.__race = session;
+    },
+    exit() {
+      session?.dispose();
+      session = null;
+      game.fx.radialBlur = 0;
+      try { audio.duck(0); } catch { /* */ }
+    },
+    update(dt) {
+      if (!session || session.state === 'loading') return;
+      // pause
+      if (pauseMenu) {
+        const it = pauseMenu.update(dt);
+        if (input.pressed('pause') || input.pressed('back') || it?.id === 'resume') {
+          pauseMenu = null; session.pause(false); uiSound('back');
+          return;
+        }
+        if (it?.id === 'restart') leave('restart');
+        if (it?.id === 'quit') leave('quit');
         return;
       }
-      const v = session.player.vehicle;
-      const mph = settings.get('units') === 'kmh' ? v.speed * 3.6 : v.speed * 2.23694;
-      vText(ctx, String(Math.round(mph)), 900, 700, 48, { align: 'right', color: C.text, outline: 3 });
-      text(ctx, `GEAR ${v.gear < 0 ? 'R' : v.gear}  RPM ${Math.round(v.rpm)}  ${session.state.toUpperCase()}  ${v.surface}`, 40, 740, { size: 14, color: C.dim });
-      if (session.state === 'countdown') vText(ctx, String(Math.ceil(session.countdown)), 512, 300, 90, { align: 'center', color: C.accent, outline: 4 });
+      if (input.pressed('pause') && session.state !== 'done') {
+        pauseMenu = makePause();
+        session.pause(true);
+        uiSound('select');
+        return;
+      }
+      // QA: ?sim=N runs N simulation steps per frame, ?autopilot=1 lets the AI drive you
+      const reps = Number(game.query.get('sim') || 1);
+      for (let k = 0; k < reps; k++) {
+        if (game.query.get('autopilot') && session.player && !session.player.ai && session.sim) {
+          import('../race/ai.js').then(({ AIDriver }) => { session.player.ai = session.player.ai || new AIDriver(session.player, session.track, { skill: 0.9, rubber: 0 }); });
+        }
+        session.update(dt);
+        if (session.state === 'intro' && game.query.get('autopilot')) session.startCountdown();
+      }
+      Object.assign(game.fx, session.fx || {});
+      if (session.state === 'done') {
+        resultsT += dt;
+        if (!results && session.doneT > 2.5) finishResults();
+        if (resultsMenu) {
+          const it = resultsMenu.update(dt);
+          if (it) leave(it.id);
+        }
+      }
+    },
+    view() { return session && session.state !== 'loading' ? session.view() : null; },
+    draw(ctx, dt) {
+      if (!session || session.state === 'loading') {
+        drawStandBy(ctx, loading, game.time);
+        return;
+      }
+      hud.draw(ctx, dt);
+      if (results) drawResults(ctx, results, resultsMenu, resultsT, session);
+      if (pauseMenu) drawPause(ctx, pauseMenu, session);
     },
   };
   return scr;
 });
+
+function drawStandBy(ctx, loading, t) {
+  // SMPTE-ish test card under the static
+  const bars = ['#c0c0c0', '#c0c000', '#00c0c0', '#00c000', '#c000c0', '#c00000', '#0000c0'];
+  for (let k = 0; k < 7; k++) { ctx.fillStyle = bars[k]; ctx.fillRect(k * 1024 / 7, 0, 1024 / 7 + 1, 470); }
+  const low = ['#0000c0', '#131313', '#c000c0', '#131313', '#00c0c0', '#131313', '#c0c0c0'];
+  for (let k = 0; k < 7; k++) { ctx.fillStyle = low[k]; ctx.fillRect(k * 1024 / 7, 470, 1024 / 7 + 1, 70); }
+  ctx.fillStyle = '#0a0a0a';
+  ctx.fillRect(0, 540, 1024, 228);
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(212, 300, 600, 140);
+  vText(ctx, 'PLEASE STAND BY', 512, 368, 40, { align: 'center', color: '#ffffff', outline: 3 });
+  text(ctx, loading.label, 512, 408, { size: 17, align: 'center', color: '#e8e8e8', weight: 700, spacing: 3 });
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.fillRect(312, 600, 400, 10);
+  ctx.fillStyle = '#ffb21e';
+  ctx.fillRect(312, 600, 400 * loading.f, 10);
+  osd(ctx, 'CH 03', 60, 80, 30);
+  void t;
+}
+
+function drawPause(ctx, menu, session) {
+  ctx.fillStyle = 'rgba(0,10,40,0.55)';
+  ctx.fillRect(0, 0, 1024, 768);
+  osd(ctx, '❚❚ PAUSE', 60, 84, 34);
+  osd(ctx, session.def.name, 60, 124, 18, '#bfffbf');
+  panel(ctx, 300, 190, 440, 340, { accent: C.accent });
+  menu.draw(ctx, 340, 250, 370, { rowH: 46, size: 21 });
+  hints(ctx, [['confirm', 'SELECT'], ['lr', 'ADJUST'], ['pause', 'RESUME']]);
+}
+
+function drawResults(ctx, res, menu, t, session) {
+  const a = Math.min(1, t / 0.4);
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.fillStyle = 'rgba(2,4,10,0.72)';
+  ctx.fillRect(0, 0, 1024, 768);
+  const title = res.out ? 'KNOCKED OUT' : res.place === 1 ? 'VICTORY' : `${ordinal(res.place)} PLACE`;
+  vText(ctx, title, 70, 110, 52, { color: res.place === 1 ? '#4dff8b' : res.out ? '#ff3d52' : C.accent, outline: 3, outlineColor: '#000' });
+  text(ctx, `${session.def.name}  ·  ${res.type.toUpperCase()}`, 74, 142, { size: 16, color: C.dim, weight: 700, spacing: 2 });
+  panel(ctx, 60, 170, 600, 46 + res.order.length * 34, { accent: C.cyan });
+  text(ctx, 'POS', 90, 200, { size: 12, color: C.dim, weight: 800 });
+  text(ctx, 'DRIVER', 150, 200, { size: 12, color: C.dim, weight: 800 });
+  text(ctx, 'CAR', 300, 200, { size: 12, color: C.dim, weight: 800 });
+  text(ctx, 'TIME', 520, 200, { size: 12, color: C.dim, weight: 800 });
+  text(ctx, 'BEST', 610, 200, { size: 12, color: C.dim, weight: 800, align: 'right' });
+  res.order.forEach((r, k) => {
+    const y = 236 + k * 34;
+    const col = r.player ? C.cyan : '#e6ebf3';
+    vText(ctx, r.out ? '-' : String(k + 1), 92, y, 18, { color: col });
+    text(ctx, r.name, 150, y, { size: 16, color: col, weight: r.player ? 900 : 600 });
+    const spec = session.sim.racers.find((x) => x.spec.id === r.car)?.spec;
+    text(ctx, spec ? `${spec.make} ${spec.model}` : r.car, 300, y, { size: 13, color: C.dim, weight: 600 });
+    text(ctx, r.out ? 'OUT' : fmtTime(r.time) + (r.estimated ? '*' : ''), 520, y, { size: 16, color: col, weight: 700 });
+    text(ctx, r.best ? fmtTime(r.best) : '', 640, y, { size: 13, color: C.dim, weight: 600, align: 'right' });
+  });
+  if (menu) {
+    panel(ctx, 690, 170, 290, 60 + menu.items.length * 46, { accent: C.accent });
+    menu.draw(ctx, 730, 226, 220, { rowH: 46, size: 19 });
+  }
+  ctx.restore();
+  hints(ctx, [['confirm', 'SELECT']]);
+}

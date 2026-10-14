@@ -65,7 +65,7 @@ export class Underground extends Song {
       'x-----x---------' + 'x-------..x-----',
       '..x-------x-----' + '..x---------x---',
     ]);
-    this.mel = this.hook({ bars: 4, lo: 67, hi: 84, call: 'x.....x...x.....', resp: 'x---x-------x---', end: 'x-------x-------', leap: 0.4 });
+    this.mel = this.hook({ bars: 4, lo: 67, hi: 84, call: 'x.....x...x.x...', resp: 'x---x-----x-x---', end: 'x-----x-x-------', leap: 0.4 });
     this.mix = {
       kick: { v: 0.2 }, snare: { v: 0.24, rev: 0.12 }, hats: { v: 0.14 }, perc: { v: 0.12 }, cym: { v: 0.2 },
       bass: { v: 0.5 }, pad: { v: 0.55, rev: 0.3 }, chords: { v: 0.9, rev: 0.18 }, lead: { v: 0.6, rev: 0.35, dly: 0.3 },

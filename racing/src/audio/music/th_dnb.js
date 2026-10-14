@@ -55,19 +55,24 @@ const LEAD_SAW = {
   glide: 0.05, level: 0.26, drive: 1.4,
 };
 
-const RACE_FORM = () => [
-  { type: 'intro', bars: 8 },
-  { type: 'A', bars: 16 },
-  { type: 'B', bars: 16 },
-  { type: 'break', bars: 8 },
-  { type: 'build', bars: 8 },
-  { type: 'drop', bars: 16 },
-  { type: 'A', bars: 16, var: 1 },
-  { type: 'B', bars: 16, var: 1 },
-  { type: 'break', bars: 8, var: 1 },
-  { type: 'build', bars: 4 },
-  { type: 'drop', bars: 16, var: 1 },
-];
+// race arrangement; the seed varies section lengths and adds an extra groove pass
+export const RACE_FORM = (r) => {
+  const f = [
+    { type: 'intro', bars: 8 },
+    { type: 'A', bars: r.pick([8, 16, 16]) },
+    { type: 'B', bars: 16 },
+    { type: 'break', bars: r.pick([4, 8, 8]) },
+    { type: 'build', bars: r.pick([4, 8]) },
+    { type: 'drop', bars: 16 },
+    { type: 'A', bars: 16, var: 1 },
+    { type: 'B', bars: r.pick([8, 16]), var: 1 },
+    { type: 'break', bars: 8, var: 1 },
+    { type: 'build', bars: 4 },
+    { type: 'drop', bars: 16, var: 1 },
+  ];
+  if (r.chance(0.5)) f.splice(7, 0, { type: 'drop', bars: 8, var: 1 });
+  return f;
+};
 
 // ============================================================================
 export class Nitro extends Song {
@@ -198,7 +203,7 @@ export class City extends Song {
       'i:2 bVI:2 iv:2 v:2',
     ]));
     this.progs.countdown = this.P('V');
-    this.form = RACE_FORM();
+    this.form = RACE_FORM(r);
     this.loopFrom = 1;
     this.drums = TWOSTEP;
     this.introLP = 900;
@@ -269,10 +274,7 @@ export class City extends Song {
       else if (this.leading) this.melodyPlay(this.leadI, this.mel, s, t, { vel: 0.85 });
       else this.melodyPlay(this.leadI, this.chase, s, t, { vel: 0.6, gate: 0.6 });
     }
-    if (this.on('extra')) {
-      this.padPlay(this.choir, s, t, { n: 3, lo: 64, hi: 82, key: 'choir', vel: 0.5 });
-      if (s & 1) this.hit('hat2', this.sw(s, t), 0.35, { layer: 'perc' });
-    }
+    if (this.on('extra')) this.padPlay(this.choir, s, t, { n: 3, lo: 64, hi: 82, key: 'choir', vel: 0.5 });
     if (this.on('perc') && s === 6 && (this.barInSec & 1)) this.hit('rim', this.sw(s, t), 0.5);
   }
 
@@ -312,7 +314,7 @@ export class Boss extends Song {
     this.scale = r.chance(0.5) ? 'harmonic' : 'phrygian';
     this.progs.main = this.P(r.pick(['i:2 bII:2 bVI:2 V:2', 'i:2 bVI:2 bII:2 V:2', 'i:2 iv:2 bII:2 V:2', 'i:4 bII:2 V:2']));
     this.progs.countdown = this.P('V');
-    this.form = RACE_FORM();
+    this.form = RACE_FORM(r);
     this.form[0] = { type: 'intro', bars: 4 };
     this.loopFrom = 1;
     this.drums = BOSS_DRUMS;
@@ -385,10 +387,7 @@ export class Boss extends Song {
       if (this.leading) this.melodyPlay(this.leadI, this.mel, s, t, { vel: 0.85 });
       else if (ty !== 'break') this.melodyPlay(this.leadI, this.chase, s, t, { vel: 0.7, gate: 0.55 });
     }
-    if (this.on('extra')) {
-      this.padPlay(this.choir, s, t, { n: 3, lo: 62, hi: 80, key: 'choir', vel: 0.5 });
-      if (s & 1) this.hit('hat2', T, 0.35, { layer: 'perc' });
-    }
+    if (this.on('extra')) this.padPlay(this.choir, s, t, { n: 3, lo: 62, hi: 80, key: 'choir', vel: 0.5 });
   }
 
   stab(t, ch, vel) { this.stabChord(this.fxStab, t, ch, vel, 50, 72, 0.6); }
