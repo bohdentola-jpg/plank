@@ -2,7 +2,7 @@
 // wheels (tires, rims, discs, calipers), mirrors, spoiler, exhausts, pop-ups,
 // underglow, contact shadow. Returns a handle the race code animates.
 import * as THREE from 'three';
-import { shapeOf, buildLowerBody, buildCabin, projectedPatch } from './hull.js';
+import { shapeOf, buildLowerBody, buildCabin, projectedPatch, topSurfaceY } from './hull.js';
 import { paintLight } from './lights.js';
 import { paintBody, paintCap, paintCabin, tireCanvas, exhaustLayout, FINISHES } from './paint.js';
 import { mergeGeos, place } from './geom.js';
@@ -30,7 +30,7 @@ function paintMaterial(layers, lights, opts = {}) {
     transparent: !!opts.transparent,
     alphaTest: opts.alphaTest || 0,
     depthWrite: true,
-    side: THREE.FrontSide,
+    side: opts.side ?? THREE.FrontSide,
   });
   if (opts.iridescence) {
     mat.iridescence = opts.iridescence;
@@ -311,30 +311,67 @@ function buildSpoiler(S, kind, rearZ) {
   return mergeGeos(parts);
 }
 
+/** Open-top cockpit: dash under the screen, two rounded buckets, wheel, and
+ *  the folded hood under its boot behind the seats. */
+function buildRoadsterInterior(S) {
+  const b = S.b;
+  const u0 = b.header ?? (b.cowl + 0.4), u1 = b.deck;
+  const belt = S.topF((u0 + u1) / 2);
+  const floor = belt - (b.tubDepth ?? 0.4);
+  const hw = S.beltHalf((u0 + u1) / 2);
+  const parts = [];
+  const dash = new THREE.BoxGeometry(hw * 1.8, 0.14, 0.34);
+  place(dash, 0, belt - 0.06, S.z(u0 + 0.06));
+  parts.push(dash);
+  const seatU = u1 - 0.3;
+  for (const s of [-1, 1]) {
+    const sx = s * hw * 0.47;
+    const cushion = new THREE.CapsuleGeometry(0.2, 0.08, 3, 8);
+    cushion.rotateZ(Math.PI / 2);
+    cushion.scale(1, 0.32, 1.1);
+    place(cushion, sx, floor + 0.12, S.z(seatU - 0.2));
+    parts.push(cushion);
+    const back = new THREE.CapsuleGeometry(0.2, 0.22, 3, 8);
+    back.scale(1, 1, 0.3);
+    place(back, sx, floor + 0.38, S.z(seatU) + 0.03, -0.24, 0, 0);
+    parts.push(back);
+    const head = new THREE.SphereGeometry(1, 10, 6);
+    head.scale(0.12, 0.085, 0.055);
+    place(head, sx, floor + 0.7, S.z(seatU) - 0.05, -0.2, 0, 0);
+    parts.push(head);
+  }
+  const wheel = new THREE.TorusGeometry(0.17, 0.022, 6, 18);
+  place(wheel, hw * 0.47, belt + 0.02, S.z(u0 + 0.36), -0.6, 0, 0);
+  parts.push(wheel);
+  // folded soft top under its boot, across the back of the cockpit
+  const boot = new THREE.CapsuleGeometry(0.06, hw * 1.7, 3, 8);
+  boot.rotateZ(Math.PI / 2);
+  boot.scale(1, 0.75, 2.0);
+  place(boot, 0, belt + 0.005, S.z(u1 - 0.1));
+  parts.push(boot);
+  return mergeGeos(parts);
+}
+
 function buildInterior(S) {
   const b = S.b;
+  if (b.roadster) return buildRoadsterInterior(S);
   const u0 = b.cowl, u1 = b.deck;
   const belt = S.topF((u0 + u1) / 2);
   const hw = S.beltHalf((u0 + u1) / 2) * 0.92;
   const parts = [];
-  const tEnd = b.roadster ? b.cowl + 1.35 : u1;
-  const tubLen = (tEnd - u0) * 0.92;
+  const tubLen = (u1 - u0) * 0.92;
   const tub = new THREE.BoxGeometry(hw * 2, 0.36, tubLen);
-  place(tub, 0, belt - 0.2, S.z((u0 + tEnd) / 2));
+  place(tub, 0, belt - 0.2, S.z((u0 + u1) / 2));
   parts.push(tub);
-  if (b.roadster) {
-    // roll hoops behind the seats
-    for (const s of [-1, 1]) {
-      const hoop = new THREE.TorusGeometry(0.2, 0.025, 6, 12, Math.PI);
-      place(hoop, s * hw * 0.48, belt + 0.12, S.z(b.cowl + 1.12), 0, 0, 0);
-      parts.push(hoop);
-    }
-  }
+  // dash: slide it back until its top clears the raked screen (it used to
+  // poke out through the glass at the cowl)
+  let uDash = u0 + 0.07;
+  while (uDash < u0 + 0.6 && S.roofF(uDash) - S.topF(uDash) < 0.13) uDash += 0.02;
   const dash = new THREE.BoxGeometry(hw * 2, 0.16, 0.42);
-  place(dash, 0, belt + 0.02, S.z(u0 + 0.28));
+  place(dash, 0, belt + 0.02, S.z(uDash + 0.21));
   parts.push(dash);
-  const seatU = b.roadster ? b.cowl + 0.95 : b.roof[1][0] + (b.roof[b.roof.length - 2][0] - b.roof[1][0]) * (b.seats2 ? 0.38 : 0.5);
-  const room = b.roadster ? 0.62 : Math.max(0.2, S.roofF(seatU) - S.topF(seatU));
+  const seatU = b.roof[1][0] + (b.roof[b.roof.length - 2][0] - b.roof[1][0]) * (b.seats2 ? 0.38 : 0.5);
+  const room = Math.max(0.2, S.roofF(seatU) - S.topF(seatU));
   const backH = Math.min(0.6, room + 0.0);
   for (const s of [-1, 1]) {
     const sx = s * hw * 0.48;
@@ -442,7 +479,10 @@ export function buildCarModel(spec, lookIn = {}, opts = {}) {
   // cabin
   const cab = buildCabin(S);
   const cabLayers = paintCabin(S, look, cab.vs, opts.hiRes ? 512 : 256);
-  const cabMat = paintMaterial(cabLayers, lights, { transparent: true });
+  // roadsters: an open screen frame, visible from behind, side cut-outs discarded
+  const cabMat = paintMaterial(cabLayers, lights, b.roadster
+    ? { transparent: true, alphaTest: 0.04, side: THREE.DoubleSide }
+    : { transparent: true });
   const cabMesh = new THREE.Mesh(cab.geometry, cabMat);
   cabMesh.renderOrder = 2;
   cabMesh.castShadow = true;
@@ -469,7 +509,8 @@ export function buildCarModel(spec, lookIn = {}, opts = {}) {
   // interior
   if (opts.interior !== false) {
     const ig = buildInterior(S);
-    const im = new THREE.MeshStandardMaterial({ color: 0x17181b, roughness: 0.85, metalness: 0 });
+    // open cockpits get charcoal leather so the seats read as seats
+    const im = new THREE.MeshStandardMaterial({ color: b.roadster ? 0x2a2b2f : 0x17181b, roughness: b.roadster ? 0.7 : 0.85, metalness: 0 });
     body.add(new THREE.Mesh(ig, im));
     disposables.push(ig, im);
   }
@@ -538,7 +579,8 @@ export function buildCarModel(spec, lookIn = {}, opts = {}) {
   }
 
   // spoiler
-  const spoilerKind = look.spoiler === 'stock' ? (b.wing || 'none') : look.spoiler;
+  let spoilerKind = look.spoiler === 'stock' ? (b.wing || 'none') : look.spoiler;
+  if (b.roadster && spoilerKind === 'roof') spoilerKind = 'ducktail';
   const sg = buildSpoiler(S, spoilerKind);
   if (sg) {
     const sm = new THREE.Mesh(sg, look.wingCarbon ? carbonMat : solid);
@@ -596,23 +638,44 @@ export function buildCarModel(spec, lookIn = {}, opts = {}) {
     }
   }
 
-  // pop-up headlights
+  // pop-up headlights: lids flush with the hood when closed, hinged at their
+  // rear edge; opening swings the pod up so the lamp (on the pod's underside
+  // when closed) faces forward and the lid becomes its back
   const popups = [];
   if (b.head === 'popup') {
-    const u = 0.32;
-    const y = S.topF(u) + (b.section?.crown ?? 0.025) * 0.5;
+    const pu = b.popup || {};
+    const uC = pu.u ?? 0.34, len = pu.len ?? 0.26, wid = pu.w ?? 0.36, dep = pu.d ?? 0.1;
+    const uRear = uC + len / 2, uFront = uC - len / 2;
     const lampMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, emissive: 0xfff2d8, emissiveIntensity: 0, roughness: 0.1 });
-    disposables.push(lampMat);
+    const podG = new THREE.BoxGeometry(wid, dep, len);
+    podG.translate(0, -dep / 2, len / 2);
+    const faceG = new THREE.PlaneGeometry(wid * 0.86, len * 0.62);
+    faceG.rotateX(Math.PI / 2);
+    faceG.translate(0, -dep - 0.002, len / 2);
+    disposables.push(lampMat, podG, faceG);
     for (const s of [-1, 1]) {
+      const x = s * (S.hwTopAt(uC) - (pu.inset ?? 0.27));
+      const yR = topSurfaceY(S, uRear, x), yF = topSurfaceY(S, uFront, x);
+      const tilt = Math.atan2(yR - yF, len);
+      // the hood is convex (crown + profile): lift the flat lid by the most
+      // the surface rises above its plane anywhere under the footprint
+      let lift = 0;
+      for (const fu of [0, 0.25, 0.5, 0.75, 1]) {
+        for (const fx of [-0.5, 0, 0.5]) {
+          const uu = uRear - len * fu;
+          const plane = yR - (yR - yF) * fu;
+          lift = Math.max(lift, topSurfaceY(S, uu, Math.abs(x) + fx * wid) - plane);
+        }
+      }
+      const base = new THREE.Group();
+      base.position.set(x, yR + lift + 0.003, S.z(uRear));
+      base.rotation.x = tilt;
       const pivot = new THREE.Group();
-      pivot.position.set(s * (S.hwTopAt(u) - 0.27), y - 0.035, S.z(u - 0.14));
-      const box = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.11, 0.28), solid);
-      box.position.set(0, 0.0, -0.14);
-      pivot.add(box);
-      const face = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.085), lampMat);
-      face.position.set(0, 0, 0.002);
-      pivot.add(face);
-      body.add(pivot);
+      pivot.add(new THREE.Mesh(podG, solid));
+      pivot.add(new THREE.Mesh(faceG, lampMat));
+      pivot.userData.open = Math.PI / 2 + tilt;
+      base.add(pivot);
+      body.add(base);
       popups.push(pivot);
     }
     popups.lampMat = lampMat;
@@ -727,7 +790,7 @@ export function buildCarModel(spec, lookIn = {}, opts = {}) {
       body.position.y = -lower + heave;
       if (popups.length) {
         state.popup += ((state.popupTarget || 0) - state.popup) * Math.min(1, dt * 5);
-        for (const p of popups) p.rotation.x = -state.popup * 0.95;
+        for (const p of popups) p.rotation.x = -state.popup * p.userData.open;
       }
     },
     dispose() {

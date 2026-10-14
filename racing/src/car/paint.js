@@ -4,7 +4,7 @@
 //   orm     (R clearcoat, G roughness, B metalness)
 //   emissive(R headlight, G tail-light, B brake-light) — masks the light
 //            shader multiplies by live intensities.
-import { IDX, CIDX, CAB_GLASS_IDX } from './hull.js';
+import { IDX, CIDX, CAB_GLASS_IDX, topIndexAt } from './hull.js';
 
 export const FINISHES = {
   gloss: { metal: 0.0, rough: 0.32, coat: 1.0 },
@@ -291,6 +291,34 @@ export function paintBody(S, look, vs, res = 1024) {
   }
   // top-surface vinyl (stripes) last so they cross seams like real vinyl
   drawTopVinyl(P, S, look, X, Y, vL, vR, W, H, paintO);
+  const vf = (fi, right) => {
+    const i = right ? 46 - fi : fi;
+    const i0 = Math.max(0, Math.min(45, Math.floor(i)));
+    return vs[i0] + (vs[i0 + 1] - vs[i0]) * (i - i0);
+  };
+  // roadster cockpit tub: dark trim/carpet inside the rolled door tops
+  if (b.roadster && b.header) {
+    const u0 = b.header - 0.03, u1 = b.deck + 0.01;
+    const yl = Y(vf(IDX.shoulderEnd + 0.35, false)), yr = Y(vf(IDX.shoulderEnd + 0.35, true));
+    P.fill((c) => rrect(c, X(u0), yr, X(u1) - X(u0), yl - yr, 10), { a: '#1d1e22', o: [0, 0.8, 0] });
+    const g = P.a.createLinearGradient(0, yr, 0, yl);
+    g.addColorStop(0, 'rgba(0,0,0,0.1)');
+    g.addColorStop(0.5, 'rgba(0,0,0,0.45)');
+    g.addColorStop(1, 'rgba(0,0,0,0.1)');
+    P.a.fillStyle = g;
+    P.a.fillRect(X(u0) + 4, yr, X(u1) - X(u0) - 8, yl - yr);
+  }
+  // pop-up headlamp wells (dark; read as shut lines around the closed lids)
+  if (b.head === 'popup') {
+    const pu = b.popup || {};
+    const uC = pu.u ?? 0.34, len = pu.len ?? 0.26, wid = pu.w ?? 0.36;
+    const x = S.hwTopAt(uC) - (pu.inset ?? 0.27);
+    const i0 = topIndexAt(S, uC, x + wid / 2 + 0.006), i1 = topIndexAt(S, uC, Math.max(0, x - wid / 2 - 0.006));
+    for (const right of [false, true]) {
+      const ya = Y(vf(i0, right)), yb = Y(vf(i1, right));
+      P.fill((c) => rrect(c, X(uC - len / 2 - 0.006), Math.min(ya, yb), X(len + 0.012), Math.abs(yb - ya), 3), { a: '#070708', o: [0, 0.9, 0] });
+    }
+  }
   return P;
 }
 
@@ -744,19 +772,65 @@ export function paintCabin(S, look, vs, res = 512) {
   const b = S.b;
   const fin = FINISHES[look.finish] || FINISHES.metallic;
   const paintO = [fin.coat, fin.rough, fin.metal];
-  const span = b.deck - b.cowl;
+  const uEnd = b.roadster ? (b.header ?? b.deck) : b.deck;
+  const span = uEnd - b.cowl;
   const U = (u) => ((u - b.cowl) / span) * W; // u in meters from the front
   const Y = (v) => (1 - v) * H;
   const vi = (i) => vs[i];
+  // fractional ring index → v (left half 0..14, right half mirrored)
+  const vf = (fi, right) => {
+    const i = right ? 28 - fi : fi;
+    const i0 = Math.max(0, Math.min(27, Math.floor(i)));
+    return vs[i0] + (vs[i0 + 1] - vs[i0]) * (i - i0);
+  };
   const win = { a: 0.06, b: 0.52, c: 0.86, ...(b.win || {}) };
   const roofF = b.roof[1][0], roofR = b.roof[b.roof.length - 2][0];
   const tintA = [0.62, 0.74, 0.85, 0.93][look.tint ?? 1];
-  const glassA = `rgba(18,22,28,${tintA})`;
   const glassO = [1, 0.04, 0.0];
   const trimO = [0.2, 0.45, 0.1];
+  const frameS = { a: '#0c0d0f', o: [0.6, 0.3, 0.1] };
+
+  /**
+   * Real glass: punch the area out of the opaque paint, then refill it with a
+   * translucent dark tint (alpha = tint) that carries a faint sky reflection
+   * toward its upper edge (gradient from (x0,y0) = top to (x1,y1) = bottom).
+   */
+  const glassFill = (path, x0, y0, x1, y1, alpha = tintA) => {
+    P.a.save();
+    P.a.globalCompositeOperation = 'destination-out';
+    P.a.fillStyle = '#000';
+    path(P.a);
+    P.a.fill();
+    P.a.restore();
+    const g = P.a.createLinearGradient(x0, y0, x1, y1);
+    g.addColorStop(0, `rgba(86,98,114,${alpha})`);
+    g.addColorStop(0.3, `rgba(30,36,44,${alpha})`);
+    g.addColorStop(1, `rgba(9,11,14,${alpha})`);
+    P.fill(path, { a: g, o: glassO });
+  };
 
   // everything starts as paint
   P.fill((c) => { c.beginPath(); c.rect(0, 0, W, H); }, { a: look.paint, o: paintO });
+
+  if (b.roadster) {
+    // open windshield frame: the side triangles under the A-pillars are cut
+    // away (alpha 0, discarded by alphaTest), thin black A-pillars + header,
+    // see-through screen between them
+    P.a.clearRect(0, 0, W, H);
+    const aIn = 8.4, aOut = 5.3;
+    const screen = (c) => {
+      c.beginPath();
+      c.rect(U(b.cowl) + 1, Y(vf(aIn, false)), U(uEnd - 0.035) - U(b.cowl) - 1, Y(vf(aIn, true)) - Y(vf(aIn, false)));
+    };
+    glassFill(screen, U(uEnd), 0, U(b.cowl), 0, Math.min(0.42, tintA * 0.6));
+    for (const right of [false, true]) {
+      P.fill((c) => { c.beginPath(); c.rect(0, Y(vf(aOut, right)), W, Y(vf(aIn, right)) - Y(vf(aOut, right))); }, frameS);
+    }
+    P.fill((c) => { c.beginPath(); c.rect(U(uEnd - 0.035), Y(vf(aOut, true)), W - U(uEnd - 0.035), Y(vf(aOut, false)) - Y(vf(aOut, true))); }, frameS);
+    P.fill((c) => { c.beginPath(); c.rect(0, Y(vf(aOut, true)), U(b.cowl + 0.02), Y(vf(aOut, false)) - Y(vf(aOut, true))); }, frameS);
+    return P;
+  }
+
   if (look.roof === 'black' || b.blackRoof) P.fill((c) => { c.beginPath(); c.rect(U(roofF), Y(vi(20)), U(roofR) - U(roofF), Y(vi(8)) - Y(vi(20))); }, { a: '#121316', o: [1, 0.2, 0.2] });
   if (look.vinyl === 'stripes') {
     const half = H * 0.03, gap = H * 0.016;
@@ -766,12 +840,10 @@ export function paintCabin(S, look, vs, res = 512) {
   }
 
   // glass areas (paths in px)
-  // the glass runs from the belt right up into the roof corner (thin roof rail)
+  // the glass runs from just above the foot fillet up into the roof corner
   const topIdx = CIDX.sideEnd + 2;
   const sideTop = (right) => Y(right ? vi(28 - topIdx) : vi(topIdx));
-  // glass starts just above the greenhouse foot fillet
   const beltY = (right) => Y(right ? vi(28 - CAB_GLASS_IDX) : vi(CAB_GLASS_IDX));
-  const pillarIn = (right) => Y(right ? vi(28 - 7) : vi(7));
   const windshield = (c) => {
     c.beginPath();
     c.moveTo(U(b.cowl) + 2, Y(vi(8)));
@@ -788,44 +860,55 @@ export function paintCabin(S, look, vs, res = 512) {
     c.lineTo(U(roofR) + 3, Y(vi(19)));
     c.closePath();
   };
+  // side DLO. win.c = rear end of the top edge (fraction cowl→deck), cSlant =
+  // how far further back (px) the bottom corner runs. win.arc > 0 bows the
+  // top edge down toward a pointed rear tip (350Z / 996 teardrop windows).
   const sideWin = (right) => (c) => {
-    const yt = sideTop(right) + (right ? -2 : 2);
     const yb = beltY(right) + (right ? 3 : -3);
     const uc = b.cowl + span * win.c;
+    const x0 = U(b.cowl) + 1;
     c.beginPath();
-    c.moveTo(U(b.cowl) + 1, yb);
-    c.lineTo(U(b.cowl) + 1, yt);
-    c.lineTo(U(uc) - 10, yt);
-    c.quadraticCurveTo(U(uc) + 2, yt, U(uc) + (win.cSlant ?? 14), yb);
+    c.moveTo(x0, yb);
+    if (win.arc) {
+      const tip = U(uc) + (win.cSlant ?? 14);
+      const xa = U(b.cowl + span * (win.arcFrom ?? 0.45));
+      const n = 14;
+      c.lineTo(x0, Y(vf(topIdx, right)) + (right ? -2 : 2));
+      for (let k = 0; k <= n; k++) {
+        const x = xa + (tip - xa) * (k / n);
+        const t = Math.pow(k / n, 1.6);
+        const fi = topIdx - (topIdx - CAB_GLASS_IDX - 0.4) * Math.min(1, t * (1 + win.arc) - win.arc * t * t);
+        c.lineTo(x, Y(vf(Math.max(CAB_GLASS_IDX + 0.25, fi), right)) + (right ? -2 : 2));
+      }
+      c.lineTo(tip, yb);
+    } else {
+      const yt = sideTop(right) + (right ? -2 : 2);
+      c.lineTo(x0, yt);
+      c.lineTo(U(uc) - 10, yt);
+      c.quadraticCurveTo(U(uc) + 2, yt, U(uc) + (win.cSlant ?? 14), yb);
+    }
     c.closePath();
   };
-  const glass = { a: glassA, o: glassO };
-  if (b.roadster) {
-    // just a framed windshield: all glass, black frame + header
-    P.fill((c) => { c.beginPath(); c.rect(0, 0, W, H); }, { a: `rgba(18,22,28,${Math.min(0.55, tintA)})`, o: glassO });
-    P.stroke((c) => { c.beginPath(); c.rect(2, 2, W - 4, H - 4); }, { a: '#0b0b0c', o: trimO }, 10);
-    P.fill((c) => { c.beginPath(); c.rect(W * 0.86, 0, W * 0.14, H); }, { a: '#0b0b0c', o: trimO });
-    return P;
-  }
-  P.fill(windshield, glass);
+  // windshield: sky toward the header; rear glass: sky toward the roof
+  glassFill(windshield, U(roofF), 0, U(b.cowl), 0);
   if (b.engineCover) {
     // mid-engine: a painted cover with louvers behind a small upright rear glass
     const r0 = U(roofR) + 3, r1 = U(b.deck) - 2;
-    P.fill((c) => { c.beginPath(); c.rect(r0, Y(vi(9)), (r1 - r0) * 0.18, Y(vi(19)) - Y(vi(9))); }, glass);
+    glassFill((c) => { c.beginPath(); c.rect(r0, Y(vi(9)), (r1 - r0) * 0.18, Y(vi(19)) - Y(vi(9))); }, r0, 0, r1, 0);
     for (let k = 0; k < 7; k++) {
       const x = r0 + (r1 - r0) * (0.28 + k * 0.095);
       P.fill((c) => { c.beginPath(); c.rect(x, Y(vi(10)), (r1 - r0) * 0.05, Y(vi(18)) - Y(vi(10))); }, { a: '#0a0a0b', o: [0, 0.8, 0] });
     }
-  } else P.fill(rearWin, glass);
+  } else glassFill(rearWin, U(roofR), 0, U(b.deck), 0);
   for (const right of [false, true]) {
-    P.fill(sideWin(right), glass);
+    glassFill(sideWin(right), 0, sideTop(right), 0, beltY(right));
     // B-pillar (black)
-    const ub = U(b.cowl + span * win.b);
-    P.fill((c) => { c.beginPath(); c.rect(ub - W * 0.018, Math.min(sideTop(right), beltY(right)), W * 0.036, Math.abs(beltY(right) - sideTop(right))); }, { a: '#0c0d0f', o: [0.6, 0.25, 0.1] });
-    // window trim (black rubber) along the belt and top
+    if (win.b < 0.98) {
+      const ub = U(b.cowl + span * win.b);
+      P.fill((c) => { c.beginPath(); c.rect(ub - W * 0.018, Math.min(sideTop(right), beltY(right)), W * 0.036, Math.abs(beltY(right) - sideTop(right))); }, frameS);
+    }
+    // window trim (black rubber) along the belt
     P.fill((c) => { c.beginPath(); c.rect(U(b.cowl), Math.min(beltY(right) - 3, beltY(right) + 3), U(b.cowl + span * win.c) - U(b.cowl) + 14, 6); }, { a: '#0b0b0c', o: trimO });
-    // A-pillar band
-    void pillarIn;
   }
   // black frit + wipers on the windshield
   P.stroke(windshield, { a: 'rgba(5,5,6,0.95)', o: trimO }, 6);
@@ -837,7 +920,7 @@ export function paintCabin(S, look, vs, res = 512) {
   // rear defroster lines
   for (let k = 1; k < 7 && !b.engineCover; k++) {
     const x = U(roofR) + (U(b.deck) - U(roofR)) * k / 7;
-    P.a.strokeStyle = 'rgba(120,60,30,0.35)';
+    P.a.strokeStyle = `rgba(120,60,30,${0.3 * tintA})`;
     P.a.lineWidth = 1;
     P.a.beginPath();
     P.a.moveTo(x, Y(vi(10)));

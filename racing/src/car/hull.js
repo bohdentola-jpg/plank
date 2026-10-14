@@ -45,7 +45,8 @@ export function shapeOf(b) {
   if (b.roof) {
     b.roof = b.roof.map((p) => p.slice());
     b.roof[0] = [b.cowl, topF(b.cowl)];
-    b.roof[b.roof.length - 1] = [b.deck, topF(b.deck)];
+    // roadsters: the screen ends at its header (open behind), not on the deck
+    if (!b.roadster) b.roof[b.roof.length - 1] = [b.deck, topF(b.deck)];
   }
   const roofF = b.roof ? monotone(b.roof) : null;
   const wellD = Math.min(0.42, b.tireW + 0.1);
@@ -170,6 +171,24 @@ function halfSection(S, u) {
     for (let i = IDX.sideEnd - 2; i < pts.length; i++) {
       const p = pts[i];
       p[1] += lift * smooth01(0.3 * hw, 0.86 * hw, p[0]);
+    }
+  }
+  // roadster cockpit: between the screen header and the rear deck the top
+  // drops into a tub (rolled door tops, near-vertical door cards, floor,
+  // transmission tunnel)
+  if (S.b.roadster && S.b.header) {
+    const k = smooth01(S.b.header - 0.06, S.b.header + 0.08, u) * smooth01(S.b.deck + 0.02, S.b.deck - 0.12, u);
+    if (k > 0) {
+      const xt = pts[IDX.shoulderEnd][0];
+      const yIn = pts[IDX.shoulderEnd][1];
+      const floor = yt - (S.b.tubDepth ?? 0.4);
+      const xw = xt - 0.05;
+      const tgt = [[xt - 0.022, yIn - 0.035], [xw, floor + 0.05], [xw * 0.45, floor], [0, floor + 0.08]];
+      for (let j = 0; j < 4; j++) {
+        const p = pts[IDX.shoulderEnd + 1 + j];
+        p[0] = lerp(p[0], tgt[j][0], k);
+        p[1] = lerp(p[1], tgt[j][1], k);
+      }
     }
   }
   // wheel arches: clamp everything outboard of the well up to the arch
@@ -336,7 +355,7 @@ function cabinHalf(S, u) {
   // the roof narrows toward the rear glass (and a little toward the
   // windshield header), so the C-pillars lean in like real ones
   const uRf = b.roof[1][0], uRe = b.roof[b.roof.length - 2][0];
-  const taper = (cab.rearTaper ?? 0.05) * smooth01(uRf + (uRe - uRf) * 0.45, b.deck, u)
+  const taper = (b.roadster ? 0 : (cab.rearTaper ?? 0.05) * smooth01(uRf + (uRe - uRf) * 0.45, b.deck, u))
     + (cab.frontTaper ?? 0.025) * smooth01(uRf + 0.25, b.cowl, u);
   const hwR = hwB - (cab.tumble + taper) * k;
   const rr = Math.min(cab.rr, h * 0.45);
@@ -346,7 +365,7 @@ function cabinHalf(S, u) {
   const hwTop = body[IDX.sideEnd + 1][0];
   const rsU = hwTop - body[IDX.shoulderEnd][0];
   const xMax = hwTop - rsU * 0.3;
-  const sail = (cab.sail ?? 0.13) * smooth01(uRe - 0.45, b.deck - 0.05, u);
+  const sail = b.roadster ? 0 : (cab.sail ?? 0.13) * smooth01(uRe - 0.45, b.deck - 0.05, u);
   const aSw = (cab.aSweep ?? 0.025) * smooth01(uRf, b.cowl + 0.05, u);
   const fil = cab.fillet ?? 0.028;
   const sweep = sail + aSw;
@@ -382,7 +401,7 @@ function cabinHalf(S, u) {
 
 export function buildCabin(S) {
   const b = S.b;
-  const u0 = b.cowl, u1 = b.deck;
+  const u0 = b.cowl, u1 = b.roadster ? (b.header ?? b.deck) : b.deck;
   const st = [];
   for (let u = u0; u <= u1 + 1e-6; u += 0.045) st.push(u);
   // extra density where the roof bends
@@ -407,7 +426,7 @@ export function buildCabin(S) {
     tex.push((u - u0) / (u1 - u0));
   }
   // v by arc length at the roof's widest ring
-  const mid = cabinHalf(S, (b.roof[2]?.[0] ?? (u0 + u1) / 2) + 0.15);
+  const mid = cabinHalf(S, Math.min(u1 - 0.01, (b.roof[2]?.[0] ?? (u0 + u1) / 2) + 0.15));
   const ringPts = [];
   for (let i = 0; i < CHALF; i++) ringPts.push(mid[i]);
   for (let i = CHALF - 2; i >= 0; i--) ringPts.push([-mid[i][0], mid[i][1]]);
@@ -418,6 +437,22 @@ export function buildCabin(S) {
   const roofU = (b.roof[2]?.[0] ?? (u0 + u1) / 2) + 0.1;
   fixWinding(g, new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 5, S.z(roofU)));
   return { geometry: g, vs, us: tex };
+}
+
+/** Lower body's top-surface height at lateral |x| (for flush parts). */
+export function topSurfaceY(S, u, x) {
+  return bodyTopY(halfSection(S, u), Math.abs(x));
+}
+
+/** Fractional half-ring index (shoulder → centre) where the top surface is at |x|. */
+export function topIndexAt(S, u, x) {
+  const half = halfSection(S, u);
+  x = Math.abs(x);
+  for (let i = IDX.sideEnd + 1; i < IDX.top; i++) {
+    const a = half[i][0], c = half[i + 1][0];
+    if ((a - x) * (c - x) <= 0 && a !== c) return i + (a - x) / (a - c);
+  }
+  return x > half[IDX.sideEnd + 1][0] ? IDX.sideEnd + 1 : IDX.top;
 }
 
 /** Surface point helpers for placing parts. */
