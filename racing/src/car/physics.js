@@ -180,8 +180,16 @@ export class Vehicle {
     const surf = SURFACES[gq.surface] || SURFACES.road;
     this.surface = gq.surface;
     this.landing = 0;
-    const groundVy = (gq.h - this.prevGroundH) / dt;
+    // how fast the ground rises under the car comes from the slope it is
+    // driving along; the change since the last step is only believed within a
+    // little of that. A kerb or a seam is a step the tires roll over and the
+    // springs soak up (the body dips), never a ramp that throws the car up.
+    const dh = gq.h - this.prevGroundH;
     this.prevGroundH = gq.h;
+    const ny = Math.max(0.3, gq.n[1]);
+    const slopeVy = -(gq.n[0] * this.vx + gq.n[2] * this.vz) / ny;
+    const groundVy = clamp(dh / dt, slopeVy - 1.5, slopeVy + 1.5);
+    const stepH = dh - groundVy * dt;
     if (this.airborne) {
       this.vy -= G * dt;
       this.y += this.vy * dt;
@@ -198,14 +206,20 @@ export class Vehicle {
         this.vx *= scrub; this.vz *= scrub;
       }
     } else {
-      // leave the ground when the surface drops away faster than gravity follows
+      // leave the ground when the surface drops away faster than gravity
+      // follows (a crest, a jump) — judged on the smooth surface, so dropping
+      // off a kerb just lets the wheels down
       const predicted = this.y + this.vy * dt - 0.5 * G * dt * dt;
-      if (gq.h < predicted - 0.02 && this.vy > groundVy + 1.2 && speed > 12) {
+      if (gq.h - stepH < predicted - 0.02 && this.vy > groundVy + 1.2 && speed > 12) {
         this.airborne = true;
         this.airTime = 0;
         this.y = predicted;
         this.vy -= G * dt;
       } else {
+        if (Math.abs(stepH) > 0.01) {
+          // the body lags the wheels over the step (clamped: a big one bottoms out)
+          this.heave -= clamp(stepH, -0.3, 0.3) * 0.75;
+        }
         this.vy = groundVy;
         this.y = gq.h;
         this.airTime = 0;
