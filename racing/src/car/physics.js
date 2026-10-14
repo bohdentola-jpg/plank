@@ -145,6 +145,7 @@ export class Vehicle {
     this.driftAngle = 0;
     this.escCut = 0;      // stability-control power trim (0..1)
     this.lastFyF = 0; this.lastFyR = 0;
+    this.tcActive = false; this.escActive = false; // assist warning lights
     this.speed = 0;
     this.vF = 0; this.vL = 0;
   }
@@ -372,8 +373,12 @@ export class Vehicle {
         // side force) out of what the throttle may take
         const room = (fy, cap) => Math.sqrt(Math.max(0.1, 1 - Math.pow(Math.min(1, Math.abs(fy) / Math.max(1, cap)), 2) * assists));
         const tcF = capF * tcl * room(this.lastFyF || 0, capF), tcR = capR * tcl * room(this.lastFyR || 0, capR);
-        if (reqF > tcF) reqF = tcF;
-        if (reqR > tcR && !hand) reqR = tcR;
+        let tc = false;
+        if (reqF > tcF) { reqF = tcF; tc = true; }
+        if (reqR > tcR && !hand) { reqR = tcR; tc = true; }
+        this.tcActive = tc && drivePedal > 0.15;
+      } else {
+        this.tcActive = false;
       }
       // driven-wheel spin state
       const drivenCap = (P.split > 0 ? capF * P.split : 0) + (P.split < 1 ? capR * (1 - P.split) : 0);
@@ -462,6 +467,7 @@ export class Vehicle {
         const beta = Math.atan2(vL, Math.max(1, vAbs));
         const over = Math.abs(beta) - 0.12;
         if (over > 0 && Math.sign(beta) === -Math.sign(this.yawRate)) corr += Math.sign(this.yawRate) * over * 1.5;
+        this.escActive = Math.abs(corr) > 0.06;
         if (corr) {
           const gain = assists * (0.6 + 4 * brakePedal + (P.split < 1 ? 1.5 : 0.4) * drivePedal) * P.inertia;
           torque -= corr * gain * Math.min(1, (speed - 8) / 10);
@@ -470,6 +476,7 @@ export class Vehicle {
         this.escCut += (cut - this.escCut) * Math.min(1, dt * (cut > this.escCut ? 20 : 4));
       } else {
         this.escCut = 0;
+        this.escActive = false;
       }
       // drift sustain: holding throttle in a slide keeps the angle
       if (Math.abs(this.slipR) > 0.12 && drivePedal > 0.5 && P.split < 0.7 && !hand) {

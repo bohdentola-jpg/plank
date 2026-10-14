@@ -94,12 +94,17 @@ Erase story save.
   drift (angle × speed scoring with a multiplier chain that a crash wipes out),
   and time attack (a pro drives your exact car first; you chase the ghost and
   the target time).
-- **Physics:** a 120 Hz tire model with load transfer, a friction ellipse, ABS
-  and brake bias, traction control (assists), wheelspin, clutch launches, a
-  real gearbox in auto or manual, turbo lag and blow-off, nitrous, drafting,
-  jumps and landings, and car-to-car contact.
-- **AI:** drives the racing line on the same physics, overtakes and defends, uses
-  nitrous, makes the occasional mistake, and has optional catch-up.
+- **Physics:** a 120 Hz tire model with load transfer, load-sensitive
+  cornering stiffness, combined slip (a braking or driving tire has less left
+  for cornering), ABS and brake balance, traction control and stability control
+  (assists on; off means you own every slide, and drift events always run
+  loose), wheelspin, clutch launches, a real gearbox in auto or manual, turbo
+  lag and blow-off, nitrous, drafting, jumps and landings, and car-to-car
+  contact.
+- **AI:** drives the racing line on the same physics, overtakes and defends,
+  picks gaps in traffic by time to collision, catches its own slides, backs out
+  of walls, uses nitrous, makes the occasional mistake, and has optional
+  catch-up.
 - **Traffic:** two-way city traffic, freeway traffic with trucks, near-miss
   nitrous bonuses, and wrecked civilians that recover.
 - **HUD:** tach, digital speed, gear, boost and nitrous, radar minimap, live
@@ -171,3 +176,4 @@ turbo whistle, blow-off, backfires and pops.
   - `tour.mjs`: contact sheet of camera stops along each track.
   - `carviews.mjs`: car model grid from any set of camera angles.
   - `e2e_story.mjs`, `e2e_flow.mjs`: story-mode and menu-flow end-to-end tests.
+  - `typesweep.mjs`: every race type driven to the results and replay.

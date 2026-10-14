@@ -254,6 +254,23 @@ export class HUD {
     ctx.lineWidth = 1.5;
     ctx.strokeRect(gx - 15, gy - 26, 30, 32);
     vText(ctx, gtxt, gx, gy, 24, { align: 'center', color: hot && manual ? '#ff4a4a' : C.accent, weight: 0.2, glow: hot && manual ? 10 : 0, glowColor: '#ff3030', skew: 0 });
+    // assist warning lights: flicker amber while traction / stability control step in
+    const now = this.t;
+    if (v.tcActive) this._tcT = now;
+    if (v.escActive) this._escT = now;
+    const lamp = (last, label, ly) => {
+      // dark until lit, like the real thing
+      if (last === undefined || now - last > 0.35 || Math.floor(now * 12) % 3 === 0) return;
+      const lx = cx - R * 0.4;
+      ctx.fillStyle = 'rgba(255,168,24,0.95)';
+      ctx.shadowColor = '#ffa818';
+      ctx.shadowBlur = 10;
+      ctx.fillRect(lx - 15, ly - 9, 30, 15);
+      ctx.shadowBlur = 0;
+      text(ctx, label, lx, ly + 3, { size: 9, weight: 900, align: 'center', color: '#1a1206', spacing: 1 });
+    };
+    lamp(this._tcT, 'TCS', cy - 13);
+    lamp(this._escT, 'ESC', cy + 7);
     // digital speed (bottom of the dial)
     const kmh = settings.get('units') === 'kmh';
     const spd = Math.round(v.speed * (kmh ? 3.6 : 2.23694));
