@@ -471,7 +471,7 @@ export class HUD {
         this.lamp(ctx, 512 + (k - 1) * 46, 210, lit ? '#ff2a1a' : '#2a0a0a', lit);
       }
       if (n <= 3) text(ctx, settings.get('transmission') === 'manual' ? 'REV IT UP — HOLD THE REVS IN THE GREEN FOR A PERFECT START' : 'HOLD THE GAS FOR A LAUNCH — WATCH THE REVS', 512, 268, { size: 13, color: C.dim, align: 'center', weight: 700, spacing: 1 });
-      if (n <= 3) text(ctx, 'DRIFT: TAP THE BRAKE WHILE YOU TURN, THEN KEEP STEERING INTO IT', 512, 290, { size: 13, color: C.cyan, align: 'center', weight: 700, spacing: 1 });
+      if (n <= 3) text(ctx, 'DRIFT: TAP THE BRAKE WHILE YOU TURN, THEN KEEP STEERING INTO IT', 512, 462, { size: 14, color: C.cyan, align: 'center', weight: 800, spacing: 1, glow: 6 });
     }
     // GO flash
     const go = s.hudEvents.find((e) => e.type === 'go');
