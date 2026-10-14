@@ -19,13 +19,13 @@ export const ATMOS = {
   },
   dusk: {
     sky: ['#121a3e', '#3b3a6a', '#d9786a'], glowHorizon: '#ff9a6a', fog: '#4a4058', fogD: 0.0019,
-    sun: { color: '#ffb48a', i: 0.9, el: 0.08, az: 2.4 }, hemi: ['#6a6aa0', '#2a2020', 0.6], amb: 0.1,
+    sun: { color: '#ffb48a', i: 0.9, el: 0.08, az: 2.4 }, hemi: ['#6a6aa0', '#2a2020', 0.8], amb: 0.13,
     env: 'dusk', stars: false, moon: false, lamps: true, headlights: true,
     post: { exposure: 1.05, bloomStrength: 0.85, bloomThreshold: 1.0, saturation: 1.1, contrast: 1.04, lift: [0.01, 0.0, 0.02], gain: [1.04, 0.98, 1.0] },
   },
   sunset: {
     sky: ['#2a3a7a', '#a86a8a', '#ffb070'], glowHorizon: '#ffcf8a', fog: '#c08870', fogD: 0.0012,
-    sun: { color: '#ffc58a', i: 2.3, el: 0.12, az: 2.0 }, hemi: ['#a0a8d8', '#5a3a2a', 0.7], amb: 0.12,
+    sun: { color: '#ffc58a', i: 2.3, el: 0.12, az: 2.0 }, hemi: ['#a0a8d8', '#5a3a2a', 0.92], amb: 0.15,
     env: 'sunset', stars: false, moon: false, lamps: false, headlights: false,
     post: { exposure: 1.0, bloomStrength: 0.8, bloomThreshold: 1.1, saturation: 1.12, contrast: 1.05, lift: [0.01, 0.0, 0.0], gain: [1.06, 1.0, 0.94] },
   },
@@ -507,7 +507,7 @@ export async function buildWorld(def, renderer, onProgress = () => {}) {
   const rt = roadTextures(Math.round(maxW), roadStyle);
   const roadMat = glowMaterial(new THREE.MeshStandardMaterial({
     map: rt.map, roughnessMap: rt.rough, roughness: 1, metalness: 0,
-    envMapIntensity: roadStyle.wet ? 1.5 : 0.35,
+    envMapIntensity: roadStyle.wet ? 1.5 : def.time === 'night' ? 0.35 : 0.6,
   }), 3.2);
   const cols = [];
   for (const f of [-1, -0.5, 0, 0.5, 1]) {

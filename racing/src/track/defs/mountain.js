@@ -67,7 +67,7 @@ export default [
     // hazy moonlit night: no stars, blue-gray fog that the sky fades into
     atmos: {
       sky: ['#06080f', '#111725', '#2a3242'], glowHorizon: '#3c4456', fog: '#252c3a', stars: false,
-      sun: { color: '#9fb4ff', i: 0.24, el: 0.62, az: 2.5 },
+      sun: { color: '#9fb4ff', i: 0.5, el: 0.62, az: 2.5 }, hemi: ['#3a4c80', '#0e0e14', 0.85], amb: 0.1,
     },
     land: {
       center: [0, 0], tilt: [0, -1, 0.11], snow: 960, seed: 11,

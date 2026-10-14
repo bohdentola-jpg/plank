@@ -189,7 +189,7 @@ registerScreen('race', () => {
         drawStandBy(ctx, loading, game.time);
         return;
       }
-      hud.draw(ctx, dt);
+      if (!window.__noHud) hud.draw(ctx, dt);
       if (results) drawResults(ctx, results, resultsMenu, resultsT, session);
       if (pauseMenu) drawPause(ctx, pauseMenu, session);
     },

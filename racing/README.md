@@ -159,4 +159,6 @@ turbo whistle, blow-off, backfires and pops.
   - `shot.mjs`: screenshots.
   - `sheet.mjs`: car contact sheet.
   - `perf.mjs`: track build and draw-call report.
-  - `e2e_story.mjs`: story-mode end-to-end test.
+  - `tour.mjs`: contact sheet of camera stops along each track.
+  - `carviews.mjs`: car model grid from any set of camera angles.
+  - `e2e_story.mjs`, `e2e_flow.mjs`: story-mode and menu-flow end-to-end tests.

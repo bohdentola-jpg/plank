@@ -17,6 +17,8 @@ import { EngineSound } from '../audio/engine.js';
 import { sfx } from '../audio/sfx.js';
 import { music } from '../audio/music.js';
 
+const HEAD_I = 70;   // player headlight intensity (cd)
+
 const _e = new THREE.Euler(0, 0, 0, 'YXZ');
 const _v = new THREE.Vector3();
 
@@ -130,13 +132,41 @@ export class RaceSession {
 
   addHeadlights(r) {
     const g = r.model.group;
+    this.headSpots = [];
+    this.hlK = null;
     for (const sd of [-1, 1]) {
-      const sp = new THREE.SpotLight(0xfff1dc, 55, 75, 0.45, 0.6, 1.4);
+      const sp = new THREE.SpotLight(0xfff1dc, HEAD_I, 75, 0.5, 0.85, 1.4);
       sp.position.set(sd * 0.6, 0.7, r.dims.L / 2 - 0.1);
       sp.target.position.set(sd * 1.1, -0.8, r.dims.L / 2 + 20);
       g.add(sp);
       g.add(sp.target);
+      this.headSpots.push(sp);
     }
+  }
+
+  /** Dip the beams when a car sits right in front of ours. Spot falloff is
+   *  steep, so at a few metres the car ahead would otherwise blow out to
+   *  white in the bloom (most visible on the grid at night). */
+  dimHeadlights(dt) {
+    if (!this.headSpots) return;
+    const P = this.player;
+    const v = P.vehicle;
+    const [fx, fz] = v.fwd;
+    const [lx, lz] = v.left;
+    let near = Infinity;
+    const check = (x, z, halfL) => {
+      const dx = x - v.x, dz = z - v.z;
+      const f = dx * fx + dz * fz - halfL;
+      if (f <= 0 || f > 14) return;
+      if (Math.abs(dx * lx + dz * lz) < 1.2 + f * 0.15) near = Math.min(near, f);
+    };
+    for (const r of this.sim.racers) if (r !== P && !(r.out && r.parked)) check(r.vehicle.x, r.vehicle.z, r.dims.L / 2);
+    if (this.sim.traffic) for (const c of this.sim.traffic.cars) check(c.x, c.z, c.dims.L / 2);
+    const gap = Math.max(0.5, near - P.dims.L / 2);
+    // full beams from 11 m out, dipped hard when nose to tail
+    const k = clamp(Math.pow(gap / 11, 1.8), 0.08, 1);
+    this.hlK = this.hlK === null ? k : damp(this.hlK, k, 5, dt);
+    for (const sp of this.headSpots) sp.intensity = HEAD_I * this.hlK;
   }
 
   /** Cheap fake headlight pool on the road ahead of AI cars at night. */
@@ -179,6 +209,7 @@ export class RaceSession {
 
     this.handleEvents();
     this.syncModels(dt);
+    this.dimHeadlights(dt);
     this.updateGhost(dt);
     this.trafficRender?.update(this.camera.cam);
     this.updateEffects(dt);

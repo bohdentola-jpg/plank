@@ -121,7 +121,7 @@ export class TrafficSim {
         if (c.t > 6 && this.rng() < dt * 0.06) {
           const options = this.lanes.filter((l) => l.dir === c.dir && Math.abs(l.lat - c.lat) > 1 && Math.abs(l.lat - c.lat) < 5.5);
           const l = options[Math.floor(this.rng() * options.length)];
-          if (l && this.laneFree(c, l.lat)) { c.latTarget = l.lat; c.blink = Math.sign(l.lat - c.lat); c.t = 0; }
+          if (l && this.laneFree(c, l.lat, sim)) { c.latTarget = l.lat; c.blink = Math.sign(l.lat - c.lat); c.t = 0; }
         }
         const dl = c.latTarget - c.lat;
         c.lat += clamp(dl, -1.1 * dt, 1.1 * dt);
@@ -140,6 +140,9 @@ export class TrafficSim {
         const pr = T.project(c.x, c.z, c.hint, c._pp || (c._pp = {}));
         c.hint = pr.i;
         c.y = T.roadY ? T.roadY(pr.i, 0, pr.lat) : c.y;
+        // keep road coordinates current so racers can see where the wreck is
+        c.s = pr.s;
+        c.lat = pr.lat;
         if (c.speed < 1.2 && c.t > 2.5) {
           // back on its way from where it stopped
           let best = this.lanes[0];
@@ -167,10 +170,19 @@ export class TrafficSim {
     this.nearMiss(sim, dt);
   }
 
-  laneFree(c, lat) {
+  laneFree(c, lat, sim) {
     for (const o of this.cars) {
       if (o === c || Math.abs(o.lat - lat) > 2) continue;
       if (Math.abs(this.T.deltaS(c.s, o.s)) < 22) return false;
+    }
+    // don't pull out in front of a racer closing in (mirrors, at least)
+    if (sim) {
+      for (const r of sim.racers) {
+        if (Math.abs((r.lat ?? 0) - lat) > 2.4) continue;
+        const ds = this.T.deltaS(c.s, r.s) * c.dir; // − = racer behind us
+        const closing = r.vehicle.speed - c.v;
+        if (ds > -Math.max(20, closing * 3.5) && ds < 12) return false;
+      }
     }
     return true;
   }
