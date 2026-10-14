@@ -112,6 +112,7 @@ const perf = bool('perf');
 const [out = 'views.png', carsArg = 'all', viewsArg = '0.7:1.45:6.6', env = 'studio', look = '{}'] = args;
 const views = viewsArg.split(',').map((v) => v.split(':').map(Number));
 await mkdir(join(root, 'qa', 'cells'), { recursive: true });
+await mkdir(join(root, 'qa', out, '..'), { recursive: true });
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--enable-webgl', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: w, height: h } });
 page.on('pageerror', (e) => console.log('[pageerror]', e.message));

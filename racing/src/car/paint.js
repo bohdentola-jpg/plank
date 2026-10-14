@@ -479,9 +479,34 @@ export function paintCap(S, cap, look, which, res = 512) {
   P.setTransform(sx, 0, 0, -sy, cw / 2, ch + minY * sy);
   const m = { w, h, minY, maxY, top: maxY, bot: minY, hw: w / 2 };
   const b = S.b;
+  // relief layer: every shape the fascia paints can also set how far proud
+  // (+) or recessed (−) of the cap surface it sits, in mm (R = 128 + mm). The
+  // hull re-meshes the cap from it, so geometry and paint line up exactly.
+  const dw = 176, dh = 88;
+  const D = canvas(dw, dh);
+  const dc = D.getContext('2d', { willReadFrequently: true });
+  dc.fillStyle = 'rgb(128,0,0)';
+  dc.fillRect(0, 0, dw, dh);
+  dc.setTransform(dw / w, 0, 0, -dh / h, dw / 2, dh + minY * (dh / h));
+  const col = (mm) => `rgb(${Math.max(0, Math.min(255, Math.round(128 + mm)))},0,0)`;
+  P.R = {
+    set(path, mm) { dc.fillStyle = col(mm); path(dc); dc.fill(); },
+    rim(path, mm, lw) { dc.strokeStyle = col(mm); dc.lineWidth = lw; path(dc); dc.stroke(); },
+  };
   if (which === 'front') drawFront(P, m, b, look, paintO);
   else drawRear(P, m, b, look, paintO);
   P.restore();
+  // (bilinear sampling on the ~2.4 cm cap grid softens the steps into walls)
+  const img = dc.getImageData(0, 0, dw, dh).data;
+  /** relief (m) at painter x (front: world x; rear: −world x), world y */
+  P.reliefAt = (xp, y) => {
+    const fx = dw / 2 + xp * (dw / w) - 0.5, fy = dh + (minY - y) * (dh / h) - 0.5;
+    const x0 = Math.max(0, Math.min(dw - 2, Math.floor(fx))), y0 = Math.max(0, Math.min(dh - 2, Math.floor(fy)));
+    const tx = Math.max(0, Math.min(1, fx - x0)), ty = Math.max(0, Math.min(1, fy - y0));
+    const at = (xx, yy) => img[(yy * dw + xx) * 4];
+    const v = (at(x0, y0) * (1 - tx) + at(x0 + 1, y0) * tx) * (1 - ty) + (at(x0, y0 + 1) * (1 - tx) + at(x0 + 1, y0 + 1) * tx) * ty;
+    return (v - 128) / 1000;
+  };
   // vinyl stripes continue over the fascia
   if (look.vinyl === 'stripes') {
     const half = cw * 0.035, gap = cw * 0.018;
@@ -527,11 +552,24 @@ function drawFront(P, m, b, look, paintO) {
   // --- lower bumper: intakes (style per car; race kits open the mouth up)
   const lowY = bot + H * 0.1;
   const intakeH = H * (kit === 'race' ? 0.42 : 0.36);
+  // relief: the bumper stands proud of the lamp line, with a lip at its foot
+  const R = P.R;
+  const BUMP = 14;
+  const yBump = Math.min(top - H * 0.3, lowY + intakeH + H * 0.12);
+  R.set((c) => { c.beginPath(); c.rect(-hw * 1.2, bot - 0.1, hw * 2.4, yBump - bot + 0.1); }, BUMP);
+  R.set((c) => { c.beginPath(); c.rect(-hw * 1.2, yBump, hw * 2.4, 0.012); }, BUMP * 0.5);
+  R.set((c) => { c.beginPath(); c.rect(-hw * 1.2, bot - 0.1, hw * 2.4, 0.145); }, 26);
+  // an opening is recessed into whatever surface it cuts, with a slim rim
+  const relOpen = (path, deep = 42, rimH = 6) => {
+    R.rim(path, BUMP + rimH, 0.018);
+    R.set(path, -deep);
+  };
   let intake = b.intake || 'center';
   if (kit === 'race' && (intake === 'center' || intake === 'slot' || intake === 'wide')) intake = 'mouth';
   let fogs = [[-hw * 0.74, lowY + intakeH * 0.35], [hw * 0.74, lowY + intakeH * 0.35]];
   const trap = (x0, x1, y0, y1, k = 0.85) => (c) => poly(c, [[x0, y1], [x1, y1], [x1 - (x1 - x0) * (1 - k) / 2, y0], [x0 + (x1 - x0) * (1 - k) / 2, y0]]);
   const opening = (path, style = mesh()) => {
+    relOpen(path, style === black ? 26 : 42);
     P.fill(path, frame);
     P.save();
     P.clip(path);
@@ -585,17 +623,24 @@ function drawFront(P, m, b, look, paintO) {
       ? [[hw * 0.42, lowY], [hw * 0.98, lowY], [hw * 0.98, lowY + intakeH * 1.15], [hw * 0.58, lowY + intakeH * 0.75]]
       : [[-hw * 0.42, lowY], [-hw * 0.98, lowY], [-hw * 0.98, lowY + intakeH * 1.15], [-hw * 0.58, lowY + intakeH * 0.75]]));
   } else if (intake === 'slot') {
+    relOpen((c) => rrectPath(c, -hw * 0.7, lowY + intakeH * 0.2, hw * 1.4, intakeH * 0.35, 0.03), 24);
     P.fill((c) => rrectPath(c, -hw * 0.7, lowY + intakeH * 0.2, hw * 1.4, intakeH * 0.35, 0.03), black);
   }
   // fog lights
   if (b.fog !== false) {
     for (const [fx, fy] of fogs) {
+      R.set((c) => ellipsePath(c, fx, fy, 0.05, 0.038), -14);
       P.fill((c) => ellipsePath(c, fx, fy, 0.05, 0.038), { a: '#0b0c0e', o: [0.2, 0.4, 0] });
       P.fill((c) => ellipsePath(c, fx, fy, 0.042, 0.031), { a: LENS(P.a, fx - 0.05, fy + 0.04, fx + 0.05, fy - 0.04, '#e9e4c8'), o: glass, e: [0.35, 0, 0] });
     }
   }
   // splitter lip
-  if (kit !== 'stock') P.fill((c) => rrectPath(c, -hw * 0.98, bot - 0.01, hw * 1.96, 0.035, 0.01), { a: kit === 'race' ? carbonPattern(P.a) : '#111214', o: [0.3, 0.45, 0.1] });
+  if (kit !== 'stock') {
+    R.set((c) => rrectPath(c, -hw * 0.98, bot - 0.05, hw * 1.96, 0.075, 0.01), 36);
+    P.fill((c) => rrectPath(c, -hw * 0.98, bot - 0.01, hw * 1.96, 0.035, 0.01), { a: kit === 'race' ? carbonPattern(P.a) : '#111214', o: [0.3, 0.45, 0.1] });
+  }
+  // grilles above the bumper line are recessed into the nose
+  const relGrille = (path, deep = 26, rimH = 5) => { R.rim(path, rimH, 0.016); R.set(path, -deep); };
 
   // --- grille
   const gs = b.grille || 'mesh';
@@ -603,11 +648,13 @@ function drawFront(P, m, b, look, paintO) {
   let badgeY = (gy0 + gy1) / 2 + 0.01;
   if (gs === 'mesh' || gs === 'evo') {
     const gw = gs === 'evo' ? hw * 0.55 : hw * 0.42;
+    relGrille((c) => poly(c, [[-gw, gy1], [gw, gy1], [gw * 0.82, gy0], [-gw * 0.82, gy0]]));
     P.fill((c) => poly(c, [[-gw, gy1], [gw, gy1], [gw * 0.82, gy0], [-gw * 0.82, gy0]]), mesh());
     P.stroke((c) => poly(c, [[-gw, gy1], [gw, gy1], [gw * 0.82, gy0], [-gw * 0.82, gy0]]), { a: '#9ea3ab', o: [0.5, 0.2, 1] }, 0.012);
   } else if (gs === 'gtr') {
     // wide, shallow mesh between the lamps, badge on the left
     const gw = hw * 0.5, y0 = top - H * 0.36, y1 = top - H * 0.08;
+    relGrille((c) => poly(c, [[-gw, y1], [gw, y1], [gw * 0.9, y0], [-gw * 0.9, y0]]), 30);
     P.fill((c) => poly(c, [[-gw, y1], [gw, y1], [gw * 0.9, y0], [-gw * 0.9, y0]]), mesh());
     P.stroke((c) => poly(c, [[-gw, y1], [gw, y1], [gw * 0.9, y0], [-gw * 0.9, y0]]), { a: '#2a2c30', o: [0.4, 0.3, 0.5] }, 0.014);
     P.fill((c) => rrectPath(c, gw * 0.35, (y0 + y1) / 2 - 0.016, 0.11, 0.032, 0.008), { a: '#b3141c', o: [0.8, 0.2, 0.3] });
@@ -615,6 +662,7 @@ function drawFront(P, m, b, look, paintO) {
   } else if (gs === 'golf') {
     // narrow horizontal grille spanning between the headlamps, chrome bar + roundel
     const gw = hw * 0.48, y0 = top - H * 0.34, y1 = top - H * 0.1;
+    relGrille((c) => rrectPath(c, -gw, y0, gw * 2, y1 - y0, 0.02), 20);
     P.fill((c) => rrectPath(c, -gw, y0, gw * 2, y1 - y0, 0.02), black);
     for (let k = 1; k < 4; k++) P.fill((c) => rrectPath(c, -gw * 0.96, y0 + (y1 - y0) * k / 4 - 0.004, gw * 1.92, 0.008, 0.003), { a: '#2b2d31', o: [0.3, 0.4, 0.2] });
     P.fill((c) => rrectPath(c, -gw, (y0 + y1) / 2 - 0.007, gw * 2, 0.014, 0.004), chromeS);
@@ -622,11 +670,13 @@ function drawFront(P, m, b, look, paintO) {
   } else if (gs === 'sti') {
     const gw = hw * 0.36, y0 = top - H * 0.46, y1 = top - H * 0.12;
     const hex = (c) => poly(c, [[-gw, y1], [gw, y1], [gw * 1.08, (y0 + y1) / 2], [gw * 0.75, y0], [-gw * 0.75, y0], [-gw * 1.08, (y0 + y1) / 2]]);
+    relGrille(hex, 28, 7);
     P.fill(hex, mesh());
     P.stroke(hex, chromeS, 0.012);
     P.fill((c) => rrectPath(c, -gw * 1.05, (y0 + y1) / 2 - 0.009, gw * 2.1, 0.018, 0.006), chromeS);
   } else if (gs === 'bars') {
     const gw = hw * 0.4;
+    relGrille((c) => rrectPath(c, -gw, gy0, gw * 2, gy1 - gy0, 0.03), 18);
     P.fill((c) => rrectPath(c, -gw, gy0, gw * 2, gy1 - gy0, 0.03), black);
     for (let k = 1; k < 4; k++) {
       const y = gy0 + (gy1 - gy0) * k / 4;
@@ -638,6 +688,7 @@ function drawFront(P, m, b, look, paintO) {
     for (const s of [-1, 1]) {
       const x0 = s > 0 ? 0.018 : -0.168;
       const path = (c) => rrectPath(c, x0, ky, 0.15, kh, 0.045);
+      relGrille(path, 32, 9);
       P.fill(path, black);
       for (let k = 1; k < 6; k++) P.fill((c) => { c.beginPath(); c.rect(x0 + 0.15 * k / 6 - 0.003, ky + 0.01, 0.006, kh - 0.02); }, { a: '#3a3c40', o: [0.4, 0.3, 0.6] });
       P.stroke(path, chromeS, 0.014);
@@ -647,6 +698,7 @@ function drawFront(P, m, b, look, paintO) {
     // upright pony-car grille: dark trapezoid, round fog lamps in its corners
     const gw = hw * 0.66, y0 = gy0 - H * 0.06, y1 = gy1 + H * 0.02;
     const path = (c) => poly(c, [[-gw, y1], [gw, y1], [gw * 0.92, y0], [-gw * 0.92, y0]]);
+    relGrille(path, 34, 6);
     P.fill(path, mesh());
     P.stroke(path, { a: '#2a2c30', o: [0.4, 0.3, 0.5] }, 0.016);
     for (const s of [-1, 1]) {
@@ -669,8 +721,12 @@ function drawFront(P, m, b, look, paintO) {
       P.fill((c) => rrectPath(c, s > 0 ? hw * 0.52 : -hw * 0.52 - 0.18, lowY + intakeH + 0.03, 0.18, 0.05, 0.015), { a: LENS(P.a, 0, 0, 0.1, 0.05, '#f0c070'), o: glass, e: [0.3, 0, 0] });
     }
   }
-  // front plate (JDM cars carry one)
-  if (b.frontPlate) drawPlate(P, 0, b.frontPlateY ?? (lowY + intakeH + 0.06), look, 0.38, 0.1);
+  // front plate (JDM cars carry one), bolted proud of the bumper
+  if (b.frontPlate) {
+    const py = b.frontPlateY ?? (lowY + intakeH + 0.06);
+    R.set((c) => rrectPath(c, -0.19, py, 0.38, 0.1, 0.012), BUMP + 6);
+    drawPlate(P, 0, py, look, 0.38, 0.1);
+  }
 }
 
 function drawRear(P, m, b, look, paintO) {
@@ -685,6 +741,20 @@ function drawRear(P, m, b, look, paintO) {
     g.addColorStop(1, 'rgba(0,0,0,0)');
     P.a.fillStyle = g;
     P.a.fillRect(-hw * 1.2, bot - 0.05, hw * 2.4, (top - bot) * 0.35 + 0.05);
+  }
+  // relief: rear bumper proud of the lamp panel, valance/diffuser stepped
+  // back under it, exhausts in deep cut-outs, plate in a shallow pocket
+  const R = P.R;
+  const BUMP = 12;
+  const diffH0 = (top - bot) * (kit === 'race' ? 0.32 : 0.2);
+  const yBump = bot + diffH0 + (top - bot) * 0.36;
+  R.set((c) => { c.beginPath(); c.rect(-hw * 1.2, bot - 0.1, hw * 2.4, yBump - bot + 0.1); }, BUMP);
+  R.set((c) => { c.beginPath(); c.rect(-hw * 1.2, yBump, hw * 2.4, 0.012); }, BUMP * 0.5);
+  R.set((c) => rrectPath(c, -hw * 0.86, bot - 0.1, hw * 1.72, diffH0 + 0.1, 0.04), -16);
+  // tail lamps sunk into the panel (per car), patches follow the surface
+  if (b.tailMount === 'recessed' && b.tailBox) {
+    const t = b.tailBox;
+    for (const sg of [-1, 1]) R.set((c) => rrectPath(c, sg > 0 ? t.x0 - 0.01 : -t.x1 - 0.01, t.y0 - 0.01, t.x1 - t.x0 + 0.02, t.y1 - t.y0 + 0.02, 0.02), -12);
   }
   // lights garnish: a dark panel joining the tail lamps (AE86, 996, Viper…)
   if (b.garnish) {
@@ -704,10 +774,16 @@ function drawRear(P, m, b, look, paintO) {
   const ex = b.exhaust || 'single';
   const exY = bot + diffH * 0.55;
   const exhausts = exhaustLayout(ex, hw);
-  for (const x of exhausts) P.fill((c) => ellipsePath(c, x, exY, 0.065, 0.055), { a: '#020202', o: [0, 0.9, 0] });
+  for (const x of exhausts) {
+    R.rim((c) => ellipsePath(c, x, exY, 0.068, 0.058), BUMP, 0.014);
+    R.set((c) => ellipsePath(c, x, exY, 0.065, 0.055), -70);
+    P.fill((c) => ellipsePath(c, x, exY, 0.065, 0.055), { a: '#020202', o: [0, 0.9, 0] });
+  }
 
   // plate
   const plateY = bot + diffH + (top - bot) * 0.14;
+  R.set((c) => rrectPath(c, -0.2, plateY - 0.02, 0.4, 0.17, 0.02), BUMP - 10);
+  R.set((c) => rrectPath(c, -0.18, plateY, 0.36, 0.12, 0.012), BUMP - 6);
   drawPlate(P, 0, plateY, look, 0.36, 0.12, true);
   // plate lights
   P.fill((c) => rrectPath(c, -0.06, plateY + 0.135, 0.12, 0.015, 0.005), { a: '#dfe6f0', o: glass, e: [0.35, 0, 0] });

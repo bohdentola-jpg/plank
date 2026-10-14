@@ -149,5 +149,17 @@ export function paintLight(kind, style, w, h, opts = {}) {
   L.a.globalCompositeOperation = 'destination-in';
   L.a.drawImage(mask, 0, 0);
   L.a.restore();
+  // white-on-black shape mask (alphaMap for a clear lens cover over the unit)
+  const M = document.createElement('canvas');
+  M.width = cw;
+  M.height = ch;
+  const mc = M.getContext('2d');
+  mc.fillStyle = '#000';
+  mc.fillRect(0, 0, cw, ch);
+  mc.setTransform(cw / w, 0, 0, -ch / h, 0, ch);
+  mc.fillStyle = '#fff';
+  path(mc);
+  mc.fill();
+  L.M = M;
   return L;
 }

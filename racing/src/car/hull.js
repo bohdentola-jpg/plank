@@ -296,7 +296,71 @@ function makeCap(outline, dir, push, mirrorU) {
   fixWinding(g, dir, outline[0].clone().addScaledVector(dir, 5));
   // outline in cap texture space (0..1), for the painter to clip to
   const shape = outline.map((p) => uvFn(p));
-  return { geometry: g, shape, w: maxX - minX, h: maxY - minY, minY, maxY };
+  const uvXY = (x, y) => uvFn({ x, y });
+  return { geometry: g, shape, w: maxX - minX, h: maxY - minY, minY, maxY, outline, push, uvXY };
+}
+
+// cap relief falls to zero right at the outline so the seam with the body
+// rings stays closed (shared by the cap grid and projectZ)
+const capFall = (d) => smooth01(0.002, 0.016, d);
+
+/**
+ * A fascia with real depth: the flat fan cap re-meshed as a fine grid whose
+ * depth follows relief(x, y) (metres proud of the cap surface; world x/y),
+ * which the painter rasterises from the very shapes it paints, so intakes,
+ * grilles, lips and cut-outs line up with the colour layer exactly. Rings
+ * shrink from the outline toward a centre segment (not a point), so the grid
+ * stays roughly uniform on a wide, short face; the outer ring is the body's
+ * own ring subdivided, so the seam stays closed.
+ */
+export function buildCapRelief(cap, relief, front) {
+  const out = cap.outline, n = out.length;
+  // every body-ring vertex is kept (closed seam); long edges — the ring has
+  // few points across its flat bottom — are split to ~2 cm so the mouth and
+  // lip edges don't alias into waves
+  const step = front ? 0.024 : 0.032, K = front ? 11 : 8;
+  const R0 = [];
+  for (let i = 0; i < n; i++) {
+    const a = out[i], c = out[(i + 1) % n];
+    const sub = Math.max(1, Math.ceil(Math.hypot(c.x - a.x, c.y - a.y) / step));
+    for (let k = 0; k < sub; k++) R0.push([a.x + (c.x - a.x) * k / sub, a.y + (c.y - a.y) * k / sub]);
+  }
+  const M = R0.length;
+  const cy = (cap.minY + cap.maxY) / 2;
+  const hwc = Math.max(0, (cap.w - cap.h) / 2);
+  const z0 = out[0].z, dir = front ? 1 : -1;
+  const pos = new Float32Array((K + 1) * M * 3), uv = new Float32Array((K + 1) * M * 2);
+  for (let r = 0; r <= K; r++) {
+    const t = r / K;
+    for (let i = 0; i < M; i++) {
+      const [px, py] = R0[i];
+      const cx = Math.max(-hwc, Math.min(hwc, px));
+      const x = px + (cx - px) * t, y = py + (cy - py) * t;
+      const d = Math.hypot(px - cx, py - cy) * t;
+      const k = r * M + i;
+      pos[k * 3] = x;
+      pos[k * 3 + 1] = y;
+      pos[k * 3 + 2] = z0 + dir * (cap.push * Math.min(1, d / 0.25) + relief(x, y) * capFall(d));
+      const [uu, vv] = cap.uvXY(x, y);
+      uv[k * 2] = uu;
+      uv[k * 2 + 1] = vv;
+    }
+  }
+  const idx = [];
+  for (let r = 0; r < K; r++) {
+    for (let i = 0; i < M; i++) {
+      const a = r * M + i, b = r * M + (i + 1) % M;
+      idx.push(a, b, a + M, b, b + M, a + M);
+    }
+  }
+  // the outline runs counter-clockwise seen from the front: flip for the rear
+  if (!front) for (let i = 0; i < idx.length; i += 3) { const t = idx[i + 1]; idx[i + 1] = idx[i + 2]; idx[i + 2] = t; }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
 }
 
 /** Make sure the face nearest `probe` has a normal agreeing with `want`; flip all if not. */
@@ -497,9 +561,10 @@ export function projectZ(S, x, y, front = true) {
     const z = ring[0].z;
     if (d <= 0) {
       if (prevD === null) {
-        // on the fascia cap: slight bulge toward the center
+        // on the fascia cap: slight bulge toward the center, plus its relief
         const bul = front ? (S.b.capBulge ?? 0.025) : -(S.b.capBulgeRear ?? 0.02);
-        return z + bul * Math.min(1, -d / 0.25);
+        const rel = S.capRelief && (front ? S.capRelief.front : S.capRelief.rear);
+        return z + bul * Math.min(1, -d / 0.25) + (rel ? (front ? 1 : -1) * rel(x, y) * capFall(-d) : 0);
       }
       const t = prevD / (prevD - d);
       return prevZ + (z - prevZ) * t;
@@ -515,15 +580,17 @@ export function projectZ(S, x, y, front = true) {
  * (car's +x side; mirror for the other). UVs follow the box so the light
  * graphic is drawn in plain front-view coordinates.
  */
-export function projectedPatch(S, x0, x1, y0, y1, front = true, side = 1, nx = 12, ny = 7, lift = 0.006) {
+export function projectedPatch(S, x0, x1, y0, y1, front = true, side = 1, nx = 12, ny = 7, lift = 0.006, pillow = 0) {
   const pos = [], uv = [], idx = [];
   const dir = front ? 1 : -1;
+  const pil = [];
   for (let j = 0; j <= ny; j++) {
     for (let i = 0; i <= nx; i++) {
       const fx = i / nx, fy = j / ny;
       const ax = x0 + (x1 - x0) * fx, y = y0 + (y1 - y0) * fy;
-      let z = projectZ(S, ax, y, front);
-      if (z === null) z = projectZ(S, ax * 0.96, y, front) ?? (front ? S.L / 2 : -S.L / 2);
+      let z = projectZ(S, side * ax, y, front);
+      if (z === null) z = projectZ(S, side * ax * 0.96, y, front) ?? (front ? S.L / 2 : -S.L / 2);
+      pil.push(pillow * Math.sin(Math.PI * fx) * Math.sin(Math.PI * fy));
       pos.push(side * ax, y, z);
       uv.push(fx, fy);
     }
@@ -543,7 +610,9 @@ export function projectedPatch(S, x0, x1, y0, y1, front = true, side = 1, nx = 1
   // nudge every vertex out along its normal so lights sit proud of the paint
   const p = g.attributes.position, nrm = g.attributes.normal;
   for (let i = 0; i < p.count; i++) {
-    p.setXYZ(i, p.getX(i) + nrm.getX(i) * lift, p.getY(i) + nrm.getY(i) * lift, p.getZ(i) + nrm.getZ(i) * lift);
+    const l = lift + pil[i];
+    p.setXYZ(i, p.getX(i) + nrm.getX(i) * l, p.getY(i) + nrm.getY(i) * l, p.getZ(i) + nrm.getZ(i) * l);
   }
+  if (pillow) g.computeVertexNormals();
   return g;
 }

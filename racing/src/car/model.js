@@ -2,7 +2,7 @@
 // wheels (tires, rims, discs, calipers), mirrors, spoiler, exhausts, pop-ups,
 // underglow, contact shadow. Returns a handle the race code animates.
 import * as THREE from 'three';
-import { shapeOf, buildLowerBody, buildCabin, projectedPatch, topSurfaceY } from './hull.js';
+import { shapeOf, buildLowerBody, buildCabin, projectedPatch, topSurfaceY, buildCapRelief } from './hull.js';
 import { paintLight } from './lights.js';
 import { paintBody, paintCap, paintCabin, tireCanvas, exhaustLayout, FINISHES } from './paint.js';
 import { mergeGeos, place } from './geom.js';
@@ -446,11 +446,21 @@ export function buildCarModel(spec, lookIn = {}, opts = {}) {
   bodyMesh.castShadow = true;
   body.add(bodyMesh);
   const capRes = opts.hiRes ? 512 : 256;
-  const frontMat = paintMaterial(paintCap(S, hull.capFront, look, 'front', capRes), lights);
-  const rearMat = paintMaterial(paintCap(S, hull.capRear, look, 'rear', capRes), lights);
-  body.add(new THREE.Mesh(hull.capFront.geometry, frontMat));
-  body.add(new THREE.Mesh(hull.capRear.geometry, rearMat));
-  disposables.push(hull.geometry, hull.capFront.geometry, hull.capRear.geometry, bodyMat, frontMat, rearMat);
+  // fascias: the painter also rasterises a relief map from the shapes it
+  // paints (bumper, lip, recessed intakes/grilles, diffuser step, exhaust
+  // cut-outs); the caps are re-meshed from it, then the lamps project onto it
+  const frontL = paintCap(S, hull.capFront, look, 'front', capRes);
+  const rearL = paintCap(S, hull.capRear, look, 'rear', capRes);
+  S.capRelief = { front: (x, y) => frontL.reliefAt(x, y), rear: (x, y) => rearL.reliefAt(-x, y) };
+  hull.capFront.geometry.dispose();
+  hull.capRear.geometry.dispose();
+  const capFG = buildCapRelief(hull.capFront, S.capRelief.front, true);
+  const capRG = buildCapRelief(hull.capRear, S.capRelief.rear, false);
+  const frontMat = paintMaterial(frontL, lights);
+  const rearMat = paintMaterial(rearL, lights);
+  body.add(new THREE.Mesh(capFG, frontMat));
+  body.add(new THREE.Mesh(capRG, rearMat));
+  disposables.push(hull.geometry, capFG, capRG, bodyMat, frontMat, rearMat);
 
   // light units projected onto the nose/tail
   {
@@ -460,21 +470,38 @@ export function buildCarModel(spec, lookIn = {}, opts = {}) {
     const yR = S.topF(S.L - 0.04);
     const tb = { x0: hwR * 0.5, x1: hwR * 0.985, y0: yR - 0.15, y1: yR - 0.02, ...(b.tailBox || {}) };
     if (b.head !== 'popup') {
-      const hm = paintMaterial(paintLight('head', b.head || 'rect', hb.x1 - hb.x0, hb.y1 - hb.y0), lights, { alphaTest: 0.5 });
-      disposables.push(hm);
-      for (const side of [1, -1]) {
-        const g = projectedPatch(S, hb.x0, hb.x1, hb.y0, hb.y1, true, side);
-        body.add(new THREE.Mesh(g, hm));
-        disposables.push(g);
+      // lamp unit set a touch into its housing, a clear cover proud of it
+      const hl = paintLight('head', b.head || 'rect', hb.x1 - hb.x0, hb.y1 - hb.y0);
+      const hm = paintMaterial(hl, lights, { alphaTest: 0.5 });
+      const hg = mergeGeos([1, -1].map((side) => projectedPatch(S, hb.x0, hb.x1, hb.y0, hb.y1, true, side, 12, 7, 0.004)));
+      body.add(new THREE.Mesh(hg, hm));
+      // the cover is the unit pushed out along its normals, domed a little
+      // (12x7 grid per side, so the dome comes from the uv)
+      const cg = hg.clone();
+      {
+        const cp = cg.attributes.position, cn = cg.attributes.normal, cu = cg.attributes.uv;
+        for (let i = 0; i < cp.count; i++) {
+          const l = 0.01 + 0.006 * Math.sin(Math.PI * cu.getX(i)) * Math.sin(Math.PI * cu.getY(i));
+          cp.setXYZ(i, cp.getX(i) + cn.getX(i) * l, cp.getY(i) + cn.getY(i) * l, cp.getZ(i) + cn.getZ(i) * l);
+        }
+        cg.computeVertexNormals();
       }
+      const coverMap = canvasTex(hl.M, false);
+      const cm = new THREE.MeshStandardMaterial({
+        color: 0x34383e, metalness: 1, roughness: 0.04, envMapIntensity: 1.5, alphaMap: coverMap,
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      });
+      const cover = new THREE.Mesh(cg, cm);
+      cover.renderOrder = 3;
+      body.add(cover);
+      disposables.push(hm, hg, cg, cm, coverMap);
     }
+    // tail lamps: a lens bulging proud of the panel, or sunk into it
     const tm = paintMaterial(paintLight('tail', b.tail || 'bar', tb.x1 - tb.x0, tb.y1 - tb.y0), lights, { alphaTest: 0.5 });
-    disposables.push(tm);
-    for (const side of [1, -1]) {
-      const g = projectedPatch(S, tb.x0, tb.x1, tb.y0, tb.y1, false, side);
-      body.add(new THREE.Mesh(g, tm));
-      disposables.push(g);
-    }
+    const sunk = b.tailMount === 'recessed';
+    const tg = mergeGeos([1, -1].map((side) => projectedPatch(S, tb.x0, tb.x1, tb.y0, tb.y1, false, side, 12, 7, 0.006, sunk ? 0.002 : 0.009)));
+    body.add(new THREE.Mesh(tg, tm));
+    disposables.push(tm, tg);
   }
 
   // cabin
@@ -614,7 +641,7 @@ export function buildCarModel(spec, lookIn = {}, opts = {}) {
   {
     const ex = look.exhaust || b.exhaust || 'single';
     const capR = hull.capRear;
-    const diffH = (capR.maxY - capR.minY) * 0.2;
+    const diffH = (capR.maxY - capR.minY) * (look.kit === 'race' ? 0.32 : 0.2);
     const exY = capR.minY + diffH * 0.55;
     const tipR = look.bigExhaust ? 0.055 : 0.042;
     for (const xl of exhaustLayout(ex, capR.w / 2)) {
@@ -622,11 +649,11 @@ export function buildCarModel(spec, lookIn = {}, opts = {}) {
       exhaustPos.push([x, exY]);
       const tube = new THREE.Mesh(new THREE.CylinderGeometry(tipR, tipR * 0.92, 0.14, 16, 1, true), chrome);
       tube.rotation.x = Math.PI / 2;
-      tube.position.set(x, exY, -S.L / 2 - 0.035);
+      tube.position.set(x, exY, -S.L / 2 - 0.012);
       body.add(tube);
       const inner = new THREE.Mesh(new THREE.CircleGeometry(tipR * 0.85, 14), trimMat);
       inner.rotation.y = Math.PI;
-      inner.position.set(x, exY, -S.L / 2 - 0.08);
+      inner.position.set(x, exY, -S.L / 2 - 0.05);
       body.add(inner);
     }
     if (ex === 'side') {
