@@ -132,6 +132,11 @@ function loop(now) {
     if (pt.t > 3.2) game.padToast = null;
     else if (Math.floor(pt.t * 4) % 2 === 0 || pt.t > 0.8) osd(ctx, pt.text, 980, 60, 20, pt.text.includes('DIS') ? '#ffb0a0' : '#d8ffd8', 'right');
   }
+  // some browsers don't count a controller button as permission to play
+  // sound: if the TV is on but audio is still blocked, say how to fix it
+  if (audio.ctx && audio.ctx.state !== 'running' && game.screen?.name !== 'boot' && game.time > 4) {
+    if (Math.floor(game.time * 1.5) % 3 !== 0) osd(ctx, 'NO SOUND? CLICK THE TV OR PRESS ANY KEY', 512, 30, 16, '#ffe8a0', 'center');
+  }
 
   const view = scr?.view ? scr.view() : null;
   r.render(view?.scene || null, view?.camera || null, dt, game.fx);
@@ -180,6 +185,10 @@ async function boot() {
   if (start !== 'boot') game.renderer.power = 1;
   await swapScreen(start, Object.fromEntries(game.query.entries()));
   requestAnimationFrame((t) => { last = t; loop(t); });
+
+  // resume sound from inside a real click/key event: that always counts as
+  // the user's permission, unlike a controller button on some browsers
+  for (const ev of ['pointerdown', 'keydown']) window.addEventListener(ev, () => audio.unlock(), { capture: true });
 
   // hide the mouse pointer while a pad is driving things
   let hideTimer = null;
