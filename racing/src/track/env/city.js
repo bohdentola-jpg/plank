@@ -104,6 +104,41 @@ export async function build(world, def, track, progress) {
   };
   const cx0 = (b.minX + b.maxX) / 2, cz0 = (b.minZ + b.maxZ) / 2;
   const spanR = Math.max(b.maxX - b.minX, b.maxZ - b.minZ) / 2;
+
+  // ---- cross streets: side roads every block or two on the straights, closed
+  // off with barricades (the race stays on the main drag)
+  const crossings = [];
+  const XLEN = 75;
+  {
+    let s = 70 + rng() * 50;
+    while (s < track.length - 50) {
+      let ok = Math.abs(track.deltaS(track.startS, s)) > 80;
+      for (let d = -30; d <= 30 && ok; d += 5) if (Math.abs(track.Ks[track.posAt(s + d).i]) > 1 / 500) ok = false;
+      if (!ok) { s += 15; continue; }
+      const i = track.posAt(s).i;
+      const sides = rng() < 0.55 ? [1, -1] : [rng() < 0.5 ? 1 : -1];
+      const w = 11 + rng() * 3;
+      for (const side of sides) {
+        const tx = track.TX[i], tz = track.TZ[i];
+        const lx = track.LX[i] * side, lz = track.LZ[i] * side;
+        const off = track.W[i] + SIDEWALK;
+        const bx = track.X[i] + lx * off, bz = track.Z[i] + lz * off;
+        // the corridor must not run into another leg of the circuit
+        let clear = true;
+        for (let d = 10; d <= XLEN && clear; d += 10) {
+          const x = bx + lx * d, z = bz + lz * d;
+          const ri = track.nearestIndex(x, z, 1);
+          if (ri >= 0 && Math.abs(track.deltaS(ri * track.step, s)) > 60 && track.distToRoad(x, z) < track.W[ri] + SIDEWALK + 6) clear = false;
+        }
+        if (!clear) continue;
+        crossings.push({ s, i, side, w, tx, tz, lx, lz, bx, bz });
+        for (let a = -w / 2 - 1.5; a <= w / 2 + 1.5; a += 2) {
+          for (let d = 0; d <= XLEN; d += 2) occ.add(occKey(bx + tx * a + lx * d, bz + tz * a + lz * d));
+        }
+      }
+      s += 150 + rng() * 130;
+    }
+  }
   const blades = [];
   const antennas = [];
   let placed = 0;
@@ -169,6 +204,37 @@ export async function build(world, def, track, progress) {
       s += fw + 0.5 + (rng() < 0.15 ? 6 + rng() * 10 : 0); // alleys
     }
   }
+  // side-street blocks: buildings line the corridors and close off the view
+  for (const c of crossings) {
+    const ryC = Math.atan2(c.lx, c.lz) + Math.PI / 2; // local x along the side street
+    for (const flank of [1, -1]) {
+      let d = 26 + rng() * 6;
+      while (d < XLEN - 6) {
+        const fw = 14 + rng() * 14, fd = 12 + rng() * 10;
+        const a = flank * (c.w / 2 + 1.8 + fd / 2);
+        const x = c.bx + c.tx * a + c.lx * (d + fw / 2), z = c.bz + c.tz * a + c.lz * (d + fw / 2);
+        const cells = footprintFree(x, z, c.lx, c.lz, c.tx * flank, c.tz * flank, fw, fd);
+        if (cells) {
+          for (const k of cells) occ.add(k);
+          const h = 9 + rng() * 26;
+          const st = rng() < 0.5 ? 'brick' : rng() < 0.5 ? 'stucco' : 'concrete';
+          builders[`${st}${rng() < 0.5 ? 0 : 1}`].box(x, -0.3, z, fw, h + 0.25, fd, ryC, { uw: 14, uh: 40, top: false, v0: Math.floor(rng() * 4) * 0.25 });
+          roofB.box(x, h - 0.05, z, fw + 0.4, 0.9, fd + 0.4, ryC, { uw: 8, uh: 8 });
+        }
+        d += fw + 1 + rng() * 3;
+      }
+    }
+    // a tall block at the far end so the street doesn't open onto nothing
+    const ex = c.bx + c.lx * (XLEN + 9), ez = c.bz + c.lz * (XLEN + 9);
+    const ew = c.w + 24, h = 22 + rng() * 40;
+    const cells = footprintFree(ex, ez, c.tx, c.tz, c.lx, c.lz, ew, 16);
+    if (cells) {
+      for (const k of cells) occ.add(k);
+      const st = rng() < 0.5 ? 'concrete' : 'glass';
+      builders[`${st}${rng() < 0.5 ? 0 : 1}`].box(ex, -0.3, ez, ew, h + 0.25, 16, Math.atan2(c.tx, c.tz) + Math.PI / 2, { uw: st === 'glass' ? 16 : 14, uh: st === 'glass' ? 48 : 40, top: false });
+      roofB.box(ex, h - 0.05, ez, ew + 0.4, 0.9, 16.4, Math.atan2(c.tx, c.tz) + Math.PI / 2, { uw: 8, uh: 8 });
+    }
+  }
   for (const [key, gb] of Object.entries(builders)) {
     if (!gb.count) continue;
     const m = new THREE.Mesh(gb.build(), mats[key]);
@@ -182,10 +248,12 @@ export async function build(world, def, track, progress) {
   for (let k = 0; k < 3; k++) {
     if (!shopB[k].count) continue;
     const t = shopfrontTextures(`${def.id}${k}`);
-    const m = new THREE.Mesh(shopB[k].build(), new THREE.MeshStandardMaterial({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, emissiveIntensity: night ? 1.6 : 0.1, roughness: 0.5 }));
+    const m = new THREE.Mesh(shopB[k].build(), new THREE.MeshStandardMaterial({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, emissiveIntensity: night ? 1.05 : 0.08, roughness: 0.5 }));
     world.add(m);
   }
   if (awningB.count) world.add(new THREE.Mesh(awningB.build(true), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 })));
+  if (crossings.length) buildSideStreets(world, track, crossings, XLEN, night, rng);
+  world.crossings = crossings.map((c) => ({ s: c.s, side: c.side }));
   progress(0.55, 'RAISING THE SKYLINE');
   await nextFrame();
 
@@ -260,50 +328,68 @@ export async function build(world, def, track, progress) {
         signals.push({ x: track.X[j] + track.LX[j] * lat, z: track.Z[j] + track.LZ[j] * lat, ry: Math.atan2(track.TX[j], track.TZ[j]), i: j, sd });
       }
     }
-    const grp = new THREE.Group();
-    const pole = new THREE.MeshStandardMaterial({ color: 0x2f3236, roughness: 0.6, metalness: 0.5 });
-    const red = new THREE.MeshBasicMaterial({ color: new THREE.Color('#ff2a1a').multiplyScalar(5) });
-    const amber = new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffb21a').multiplyScalar(5) });
-    const green = new THREE.MeshBasicMaterial({ color: new THREE.Color('#2aff8a').multiplyScalar(5) });
-    const off = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.4 });
-    const lamps = [];
-    for (const sg of signals) {
-      const g = new THREE.Group();
-      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 6, 6), pole);
-      post.position.y = 3;
-      g.add(post);
-      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 5), pole);
-      arm.position.set(0, 5.8, 0);
-      g.add(arm);
-      const head = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.25, 0.35), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }));
-      head.position.set(0, 5.3, 2.2);
-      g.add(head);
-      const bulbs = [];
-      for (let k = 0; k < 3; k++) {
-        const bulb = new THREE.Mesh(new THREE.CircleGeometry(0.13, 10), off);
-        bulb.position.set(0, 5.68 - k * 0.38, 2.2 - 0.18);
-        bulb.rotation.y = Math.PI;
-        g.add(bulb);
-        bulbs.push(bulb);
-      }
-      g.position.set(sg.x, track.Y[sg.i] + CURB_H, sg.z);
-      // arm reaches over the road: rotate so local +z points toward the centerline
-      g.rotation.y = Math.atan2(-track.LX[sg.i] * sg.sd, -track.LZ[sg.i] * sg.sd);
-      grp.add(g);
-      lamps.push({ bulbs, phase: rng() * 12 });
+    for (const c of crossings) {
+      const j = track.idx(c.i - 5);
+      const lat = c.side * (track.W[j] + 1.4);
+      signals.push({ x: track.X[j] + track.LX[j] * lat, z: track.Z[j] + track.LZ[j] * lat, ry: 0, i: j, sd: c.side });
     }
-    world.add(grp);
+    // batched: one static mesh for every pole/arm/head, one instanced mesh per
+    // bulb color (lit bulbs are scaled to zero when off)
+    const gb = new GeoBuilder();
+    const o3 = new THREE.Object3D();
+    const bulbM = [];
+    for (const sg of signals) {
+      o3.position.set(sg.x, track.Y[sg.i] + CURB_H, sg.z);
+      o3.rotation.set(0, Math.atan2(-track.LX[sg.i] * sg.sd, -track.LZ[sg.i] * sg.sd), 0);
+      o3.updateMatrix();
+      const ry = o3.rotation.y;
+      const L = (lx, ly, lz) => new THREE.Vector3(lx, ly, lz).applyMatrix4(o3.matrix);
+      gb.setColor(0.18, 0.19, 0.21);
+      const base = L(0, 0, 0);
+      gb.cylinder(base.x, base.y, base.z, 0.14, 6, 8, 0.12);
+      const arm = L(0, 5.8, 2.5);
+      gb.box(arm.x, arm.y - 0.06, arm.z, 0.12, 0.12, 5, ry);
+      gb.setColor(0.08, 0.08, 0.09);
+      const head = L(0, 4.67, 2.2);
+      gb.box(head.x, head.y, head.z, 0.45, 1.25, 0.35, ry);
+      // lamps face the traffic coming down the road
+      const tx = track.TX[sg.i], tz = track.TZ[sg.i];
+      const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.atan2(-tx, -tz), 0));
+      for (let k = 0; k < 3; k++) {
+        const bp = L(0, 5.68 - k * 0.38, 2.2).add(new THREE.Vector3(-tx * 0.19, 0, -tz * 0.19));
+        bulbM.push(new THREE.Matrix4().compose(bp, q, new THREE.Vector3(1, 1, 1)));
+      }
+    }
+    world.add(new THREE.Mesh(gb.build(true), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.4 })));
+    const n = signals.length;
+    const disc = new THREE.CircleGeometry(0.13, 10);
+    const offIM = new THREE.InstancedMesh(disc, new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.4 }), n * 3);
+    bulbM.forEach((m, k) => offIM.setMatrixAt(k, m));
+    world.add(offIM);
+    const cols = ['#ff2a1a', '#ffb21a', '#2aff8a'];
+    const litIM = cols.map((c) => {
+      const im = new THREE.InstancedMesh(disc, new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(5) }), n);
+      im.frustumCulled = false;
+      world.add(im);
+      return im;
+    });
+    const phases = signals.map(() => rng() * 12);
+    const zero = new THREE.Matrix4().makeScale(0, 0, 0);
+    const lift = new THREE.Matrix4().makeTranslation(0, 0, 0);
     let t = 0;
     world.animators.push((dt) => {
       t += dt;
-      for (const L of lamps) {
-        const ph = (t + L.phase) % 12;
+      for (let k = 0; k < n; k++) {
+        const ph = (t + phases[k]) % 12;
         const st = ph < 5 ? 2 : ph < 6.5 ? 1 : 0; // green, amber, red
-        L.bulbs[0].material = st === 0 ? red : off;
-        L.bulbs[1].material = st === 1 ? amber : off;
-        L.bulbs[2].material = st === 2 ? green : off;
+        for (let c = 0; c < 3; c++) {
+          // bulb order top→bottom is red, amber, green
+          litIM[c].setMatrixAt(k, c === st ? bulbM[k * 3 + c].clone().multiply(lift) : zero);
+        }
       }
+      for (const im of litIM) im.instanceMatrix.needsUpdate = true;
     });
+    void lift;
   }
 
   // ---- gantry signs on the long straights
@@ -374,6 +460,78 @@ export async function build(world, def, track, progress) {
   skyline(world, cx0, cz0, spanR + 700, 70, { tex: sk, maxH: 260 });
   progress(1, 'CITY READY');
   void placed;
+}
+
+/** Side-street pavement (crosswalk, stop line, center line) and the barricades. */
+function buildSideStreets(world, track, crossings, len, night, rng) {
+  const wet = world.def.weather !== 'dry';
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 1024;
+  const x = c.getContext('2d');
+  x.fillStyle = '#2b2c2f';
+  x.fillRect(0, 0, 256, 1024);
+  for (let i = 0; i < 9000; i++) {
+    x.fillStyle = rng() < 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.12)';
+    x.fillRect(rng() * 256, rng() * 1024, 2, 2);
+  }
+  // v = 0 at the main road: zebra crosswalk, stop line, then the center line
+  x.fillStyle = 'rgba(232,230,220,0.85)';
+  for (let k = 0; k < 7; k++) x.fillRect(14 + k * 34, 1024 - 70, 20, 56);
+  x.fillRect(128, 1024 - 98, 118, 10);
+  x.fillStyle = 'rgba(230,180,40,0.8)';
+  x.fillRect(122, 0, 5, 1024 - 110);
+  x.fillRect(131, 0, 5, 1024 - 110);
+  const tex = toTex(c, { repeat: false });
+  const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: wet ? 0.38 : 0.85, envMapIntensity: wet ? 0.9 : 0.3 });
+  const gb = new GeoBuilder();
+  const bar = new GeoBuilder();
+  const lamps = [];
+  for (const cr of crossings) {
+    const y = track.Y[cr.i] + 0.02;
+    const hw = cr.w / 2;
+    const P = (a, d) => new THREE.Vector3(cr.bx + cr.tx * a + cr.lx * d, y, cr.bz + cr.tz * a + cr.lz * d);
+    // winding: normal must point up whichever side we're on
+    const A = P(-hw, 0), B = P(hw, 0), C2 = P(hw, len), D = P(-hw, len);
+    const up = new THREE.Vector3().subVectors(B, A).cross(new THREE.Vector3().subVectors(D, A)).y > 0;
+    if (up) gb.quad(A, B, C2, D, [0, 0, 1, 1]); else gb.quad(B, A, D, C2, [1, 0, 0, 1]);
+    // barricades: three striped sawhorses across the mouth, amber lamps on top
+    const ry = Math.atan2(cr.tx, cr.tz) + Math.PI / 2;
+    for (let k = 0; k < 3; k++) {
+      const a = -hw + 1.6 + k * ((cr.w - 3.2) / 2) + (rng() - 0.5) * 0.6;
+      const d = 1.2 + (rng() - 0.5) * 0.5;
+      const bx = cr.bx + cr.tx * a + cr.lx * d, bz = cr.bz + cr.tz * a + cr.lz * d;
+      const yb = track.Y[cr.i] + 0.15;
+      bar.setColor(1, 1, 1);
+      bar.box(bx, yb + 0.62, bz, 2.0, 0.3, 0.07, ry, { uFit: true, uh: 0.3, topUv: [0, 0, 0.01, 0.01] });
+      bar.setColor(0.85, 0.85, 0.85);
+      for (const e of [-0.8, 0.8]) bar.box(bx + cr.tx * e, yb, bz + cr.tz * e, 0.08, 0.92, 0.5, ry, { uw: 1, uh: 1, topUv: [0.99, 0.99, 1, 1] });
+      lamps.push({ x: bx + cr.tx * 0.85, y: yb + 0.92, z: bz + cr.tz * 0.85 });
+    }
+  }
+  world.add(new THREE.Mesh(gb.build(), mat));
+  // striped board texture (orange/white diagonals with ROAD CLOSED)
+  const bc = document.createElement('canvas');
+  bc.width = 256; bc.height = 40;
+  const bx2 = bc.getContext('2d');
+  bx2.fillStyle = '#f2f2ee';
+  bx2.fillRect(0, 0, 256, 40);
+  bx2.fillStyle = '#ff6a14';
+  for (let k = -2; k < 16; k++) { bx2.beginPath(); bx2.moveTo(k * 24, 40); bx2.lineTo(k * 24 + 12, 40); bx2.lineTo(k * 24 + 32, 0); bx2.lineTo(k * 24 + 20, 0); bx2.fill(); }
+  bx2.fillStyle = '#f2f2ee';
+  bx2.fillRect(78, 6, 100, 28);
+  bx2.fillStyle = '#111';
+  bx2.font = 'bold 15px Arial';
+  bx2.textAlign = 'center';
+  bx2.fillText('ROAD CLOSED', 128, 26);
+  const bt = toTex(bc, { repeat: false });
+  world.add(new THREE.Mesh(bar.build(true), new THREE.MeshStandardMaterial({ map: bt, vertexColors: true, roughness: 0.6 })));
+  if (night && lamps.length) {
+    const lm = new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffb21a').multiplyScalar(5) });
+    const im = instanced(new THREE.SphereGeometry(0.11, 8, 6), lm, lamps);
+    world.add(im);
+    let t = 0;
+    world.animators.push((dt) => { t += dt; im.visible = (t % 1.0) < 0.5; });
+  }
 }
 
 export default { terrain: false, build };

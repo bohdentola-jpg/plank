@@ -31,7 +31,7 @@ registerScreen('trackview', () => {
       world = await buildWorld(def, game.renderer.gl, (f, l) => { label = l; });
       game.renderer.setPost(world.at.post || {}, true);
       place();
-      window.__trackview = { set(s, h, lat, look, yaw) { Object.assign(cfg, { s, h: h ?? cfg.h, lat: lat ?? 0, look: look ?? 40, yaw: yaw ?? 0 }); place(); }, length: world.track.length, def };
+      window.__trackview = { set(s, h, lat, look, yaw) { Object.assign(cfg, { s, h: h ?? cfg.h, lat: lat ?? 0, look: look ?? 40, yaw: yaw ?? 0 }); place(); }, length: world.track.length, def, world };
     },
     exit() { world?.dispose(); },
     update(dt) {

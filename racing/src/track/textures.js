@@ -420,7 +420,7 @@ export function shopfrontTextures(seed) {
         ex.globalAlpha = T.glow;
         ex.fillStyle = g;
         ex.fillRect(ax, wy0, aw, wy1 - wy0);
-        ex.globalAlpha = T.glow * 0.5;
+        ex.globalAlpha = T.glow * 0.22;
         ex.fillStyle = T.light;
         ex.fillRect(ax, wy0, aw, wy1 - wy0);
         ex.globalAlpha = 1;
