@@ -11,7 +11,7 @@ const CIV_CARS = ['lancet', 'kaze', 'golfo', 'civica', 'm3', 'nx350', 'stallion'
 const CIV_PAINT = ['#2a2d33', '#6e737b', '#a9aeb5', '#1d2a44', '#5a1a1a', '#c9c2a6', '#20302a', '#e8e8e8', '#3b2414', '#6a8fb3'];
 
 /** Merge a model's meshes by material into a few big ones (static: no wheel spin). */
-function mergeByMaterial(group) {
+export function mergeByMaterial(group) {
   group.updateMatrixWorld(true);
   const inv = new THREE.Matrix4().copy(group.matrixWorld).invert();
   const buckets = new Map();

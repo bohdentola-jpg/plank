@@ -9,9 +9,11 @@ import * as THREE from 'three';
 import { getEnvMap } from '../core/envmap.js';
 import { roadTextures, concreteTexture, facadeTextures, shopfrontTextures, glowTexture, streakTexture, toTex, groundTexture } from '../track/textures.js';
 import { buildCarModel } from '../car/model.js';
+import { mergeByMaterial } from '../race/trafficModels.js';
 import { CAR_BY_ID } from '../car/cars.js';
 import { vText } from '../core/ui.js';
 import { makeRng } from '../core/util.js';
+import { GeoBuilder } from '../track/env/common.js';
 
 const EYE = new THREE.Vector3(0.37, 1.17, -0.05);
 
@@ -490,17 +492,14 @@ function buildStreet(scene, rng) {
   street.add(new THREE.Mesh(crossG, crossMat));
   // crosswalk stripes
   const cw = new THREE.MeshStandardMaterial({ color: 0xd8d8d0, roughness: 0.5, polygonOffset: true, polygonOffsetFactor: -2 });
-  for (let k = -7; k <= 7; k++) {
-    const s = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 3), cw);
-    s.rotation.x = -Math.PI / 2;
-    s.position.set(k * 1.0, 0.012, 16.3);
-    street.add(s);
-  }
-  // stop line
-  const sl = new THREE.Mesh(new THREE.PlaneGeometry(7.5, 0.45), cw);
-  sl.rotation.x = -Math.PI / 2;
-  sl.position.set(-3.8, 0.012, 14.2);
-  street.add(sl);
+  const flat = (gb, cx, cz, w, d, y = 0.012) => {
+    const V = (x, z) => new THREE.Vector3(x, y, z);
+    gb.quad(V(cx - w / 2, cz + d / 2), V(cx + w / 2, cz + d / 2), V(cx + w / 2, cz - d / 2), V(cx - w / 2, cz - d / 2));
+  };
+  const cwB = new GeoBuilder();
+  for (let k = -7; k <= 7; k++) flat(cwB, k * 1.0, 16.3, 0.6, 3);
+  flat(cwB, -3.8, 14.2, 7.5, 0.45); // stop line
+  street.add(new THREE.Mesh(cwB.build(), cw));
 
   // sidewalks + ground
   const walkMat = glowMat(new THREE.MeshStandardMaterial({ map: concreteTexture('#76756f', 'menu'), roughness: 0.5, envMapIntensity: 0.8 }), 1.2);
@@ -522,6 +521,8 @@ function buildStreet(scene, rng) {
 
   // buildings: both sides, gap for the cross street
   const styles = ['brick', 'concrete', 'glass', 'stucco', 'dark'];
+  const bB = {};
+  const shopB = [new GeoBuilder(), new GeoBuilder(), new GeoBuilder()];
   for (const sx of [1, -1]) {
     let z = -40;
     while (z < 300) {
@@ -530,59 +531,71 @@ function buildStreet(scene, rng) {
       const d = 18 + rng() * 14;
       const h = z > 60 ? 18 + rng() * 70 : 9 + rng() * 22;
       const st = styles[Math.floor(rng() * styles.length)];
-      const tx = facadeTextures(st, 'menu' + Math.floor(rng() * 2));
-      const mat = new THREE.MeshStandardMaterial({ map: tx.map.clone(), emissive: 0xffffff, emissiveMap: tx.emi.clone(), emissiveIntensity: 0.9, roughness: st === 'glass' ? 0.3 : 0.85 });
-      mat.map.repeat.set(w / 14, h / 40);
-      mat.emissiveMap.repeat.copy(mat.map.repeat);
-      mat.map.needsUpdate = mat.emissiveMap.needsUpdate = true;
-      const b = new THREE.Mesh(new THREE.BoxGeometry(d, h, w), mat);
-      b.position.set(sx * (13 + d / 2), h / 2 - 0.3, z + w / 2);
-      street.add(b);
-      // shopfront on the street face
+      const key = st + Math.floor(rng() * 2);
+      (bB[key] = bB[key] || new GeoBuilder()).box(sx * (13 + d / 2), -0.3, z + w / 2, d, h, w, 0, { uw: 14, uh: 40, top: false });
+      // shopfront on the street face (normal toward the road)
       if (z + w < 300) {
-        const shop = shopfrontTextures('menu' + Math.floor(rng() * 3));
-        const sm = new THREE.MeshStandardMaterial({ map: shop.map, emissive: 0xffffff, emissiveMap: shop.emi, emissiveIntensity: 1.7, roughness: 0.4 });
-        const sf = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.6, 4.2), sm);
-        sf.position.set(sx * 12.98, 2.25, z + w / 2);
-        sf.rotation.y = sx > 0 ? -Math.PI / 2 : Math.PI / 2;
-        street.add(sf);
+        const fx = sx * 12.98, y0 = 0.15, y1 = 4.35, za = z + 0.3, zb = z + w - 0.3;
+        const A = new THREE.Vector3(fx, y0, sx > 0 ? za : zb), B = new THREE.Vector3(fx, y0, sx > 0 ? zb : za);
+        shopB[Math.floor(rng() * 3)].quad(A, B, new THREE.Vector3(B.x, y1, B.z), new THREE.Vector3(A.x, y1, A.z), [0, 0, Math.max(1, Math.round(w / 10)), 1]);
       }
       z += w + 0.5;
     }
   }
+  for (const [key, gb] of Object.entries(bB)) {
+    const st = key.slice(0, -1);
+    const tx = facadeTextures(st, 'menu' + key.slice(-1));
+    street.add(new THREE.Mesh(gb.build(), new THREE.MeshStandardMaterial({ map: tx.map, emissive: 0xffffff, emissiveMap: tx.emi, emissiveIntensity: 0.9, roughness: st === 'glass' ? 0.3 : 0.85 })));
+  }
+  shopB.forEach((gb, k) => {
+    if (!gb.count) return;
+    const shop = shopfrontTextures('menu' + k);
+    street.add(new THREE.Mesh(gb.build(), new THREE.MeshStandardMaterial({ map: shop.map, emissive: 0xffffff, emissiveMap: shop.emi, emissiveIntensity: 1.2, roughness: 0.4 })));
+  });
   // street lamp posts + heads
   const poleMat = new THREE.MeshStandardMaterial({ color: 0x33363b, roughness: 0.6, metalness: 0.6 });
   const headMat = new THREE.MeshStandardMaterial({ color: 0x222222, emissive: 0xffab52, emissiveIntensity: 3.5 });
   const halo = new THREE.SpriteMaterial({ map: glowTexture(), color: new THREE.Color('#ffab52').multiplyScalar(0.8), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true });
+  const poleB = new GeoBuilder(), headB = new GeoBuilder(), haloB = new GeoBuilder();
+  // the menu camera never moves: halos are flat cards turned toward the eye
+  const card = (gb, cx, cy, cz, size) => {
+    const toEye = new THREE.Vector3(EYE.x - cx, 0, EYE.z - cz).normalize();
+    const side = new THREE.Vector3(toEye.z, 0, -toEye.x).multiplyScalar(size / 2);
+    const up = new THREE.Vector3(0, size / 2, 0);
+    const c = new THREE.Vector3(cx, cy, cz);
+    gb.quad(c.clone().sub(side).sub(up), c.clone().add(side).sub(up), c.clone().add(side).add(up), c.clone().sub(side).add(up));
+  };
   for (const [x, z, sx] of lampHeads) {
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, 8.4, 6), poleMat);
-    pole.position.set(x, 4.2, z);
-    street.add(pole);
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.1, 0.1), poleMat);
-    arm.position.set(x - sx * 1.2, 8.3, z);
-    street.add(arm);
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.18, 0.5), headMat);
-    head.position.set(x - sx * 2.2, 8.2, z);
-    street.add(head);
-    const sp = new THREE.Sprite(halo);
-    sp.position.set(x - sx * 2.2, 8.0, z);
-    sp.scale.setScalar(3);
-    street.add(sp);
+    poleB.cylinder(x, 0, z, 0.14, 8.4, 6, 0.1);
+    poleB.box(x - sx * 1.2, 8.25, z, 2.4, 0.1, 0.1, 0);
+    headB.box(x - sx * 2.2, 8.11, z, 0.9, 0.18, 0.5, 0);
+    card(haloB, x - sx * 2.2, 8.0, z, 3);
   }
-  // wet-road light streaks pointing at the (static) camera
-  const streakMat = new THREE.MeshBasicMaterial({ map: streakTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  street.add(new THREE.Mesh(poleB.build(), poleMat));
+  street.add(new THREE.Mesh(headB.build(), headMat));
+  const haloMesh = new THREE.Mesh(haloB.build(), new THREE.MeshBasicMaterial({ map: halo.map, color: halo.color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+  haloMesh.renderOrder = 4;
+  street.add(haloMesh);
+  // wet-road light streaks pointing at the (static) camera, one mesh
+  const stB = new GeoBuilder();
   for (const L of lamps) {
     if (Math.abs(L.x) > 9.5) continue;
     const dz = L.z - EYE.z, dx = L.x - EYE.x;
-    const len = Math.min(26, Math.hypot(dx, dz) * 0.55);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(1.4, len), streakMat.clone());
-    m.material.color = L.c.clone().multiplyScalar(1.6);
-    m.rotation.x = -Math.PI / 2;
-    m.rotation.z = Math.atan2(dx, dz);
-    m.position.set(L.x - dx / Math.hypot(dx, dz) * len / 2, 0.03, L.z - dz / Math.hypot(dx, dz) * len / 2);
-    m.renderOrder = 3;
-    street.add(m);
+    const dist = Math.hypot(dx, dz);
+    const len = Math.min(26, dist * 0.55);
+    const fx = -dx / dist, fz = -dz / dist;           // toward the eye
+    const sxv = fz * 0.7, szv = -fx * 0.7;              // half width sideways
+    const y = 0.03;
+    // v = 0 under the lamp, 1 toward the viewer (the texture's convention)
+    stB.setColor(L.c.r * 1.6, L.c.g * 1.6, L.c.b * 1.6);
+    const A = new THREE.Vector3(L.x - sxv, y, L.z - szv), B = new THREE.Vector3(L.x + sxv, y, L.z + szv);
+    const C2 = new THREE.Vector3(B.x + fx * len, y, B.z + fz * len), D = new THREE.Vector3(A.x + fx * len, y, A.z + fz * len);
+    const up = new THREE.Vector3().subVectors(B, A).cross(new THREE.Vector3().subVectors(D, A)).y > 0;
+    if (up) stB.quad(A, B, C2, D, [0, 0, 1, 1]); else stB.quad(B, A, D, C2, [1, 0, 0, 1]);
   }
+  const streaks = new THREE.Mesh(stB.build(true), new THREE.MeshBasicMaterial({ map: streakTexture(), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  streaks.renderOrder = 3;
+  street.add(streaks);
 
   // traffic light on a mast arm over our lanes
   const sig = new THREE.Group();
@@ -649,17 +662,22 @@ export function buildRadioScene(renderer) {
   ambientCab.position.set(0.2, 1.4, 1.6);
   car.add(ambientCab);
 
-  // parked cars along the far curb (real models)
-  const parked = [];
-  const parkSpecs = ['m3', 'golfo', 'stallion'];
-  parkSpecs.forEach((id, k) => {
+  // parked cars along the far curb (real models, merged into a few meshes)
+  const parkSrc = new THREE.Group();
+  const parkHandles = [];
+  ['m3', 'golfo', 'stallion'].forEach((id, k) => {
     const m = buildCarModel(CAR_BY_ID[id], { paint: ['#2a2f3a', '#7a1a1a', '#c8c8c0'][k] }, { interior: true });
     m.group.position.set(6.3, 0, 40 + k * 9);
     m.group.rotation.y = Math.PI;
     m.setLights(0, 0, 0);
-    scene.add(m.group);
-    parked.push(m);
+    parkSrc.add(m.group);
+    parkHandles.push(m);
   });
+  const parkedGroup = new THREE.Group();
+  for (const p of mergeByMaterial(parkSrc)) parkedGroup.add(new THREE.Mesh(p.geometry, p.material));
+  for (const m of parkHandles) m.group.traverse((o) => { if (o.isMesh) o.geometry.dispose(); });
+  scene.add(parkedGroup);
+  const parked = [{ group: parkedGroup }];
 
   const camera = new THREE.PerspectiveCamera(62, 4 / 3, 0.05, 900);
   camera.position.copy(EYE);
