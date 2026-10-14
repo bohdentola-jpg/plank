@@ -89,7 +89,9 @@ export class AIDriver {
     const f = dx * fx + dz * fz, l = dx * lx + dz * lz;
     const d2 = f * f + l * l;
     const kappa = 2 * l / Math.max(1, d2);
-    let delta = Math.atan(kappa * v.P.wb);
+    // (plus what the tires' slip costs at speed: the car understeers, so a
+    // purely geometric aim runs wide on a fast bend)
+    let delta = Math.atan(kappa * (v.P.wb + 0.0008 * speed * speed));
     if (f < 0) delta = Math.sign(l || 1) * 0.6; // target behind: turn around
     const lock = v.P.steerLock / (1 + Math.max(0, Math.abs(v.vF) - 6) / 24);
     let steer = -delta / Math.max(0.05, lock);
@@ -138,10 +140,12 @@ export class AIDriver {
       const floor = v.P.drive === 'RWD' ? 0.35 : v.P.drive === 'AWD' ? 0.5 : 0.7;
       if (bend && line.curv[i0] > 1 / 1200 && wide > 0.7) ctl.throttle *= clamp(1 - (wide - 0.7) * 0.22, floor, 1);
     }
-    // friction circle: hard on the brakes and hard into a turn don't mix
-    if (ctl.brake > 0) {
+    // friction circle: hard on the brakes (or the power) and hard into a
+    // turn don't mix
+    {
       const latUse = (speed * speed * line.curv[i0]) / (v.P.mu * 9.81);
-      ctl.brake = Math.min(ctl.brake, clamp(1.2 - latUse, 0.15, 1));
+      if (ctl.brake > 0) ctl.brake = Math.min(ctl.brake, clamp(1.2 - latUse, 0.15, 1));
+      if (ctl.throttle > 0) ctl.throttle = Math.min(ctl.throttle, clamp(1.3 - latUse, 0.35, 1));
     }
     // the tail is stepping out: catch it (countersteer, off the brakes, and
     // the throttle that settles this drivetrain: a breath for a rear driver,

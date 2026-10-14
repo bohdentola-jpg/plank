@@ -199,6 +199,12 @@ export class RaceSim {
           v.lastShift = 0;
         }
         if (v.landing > 0.15) this.emit('landing', { id: r.id, strength: v.landing });
+        // kart-style drift: the hop in, each mini-turbo level, the boost out
+        if (v.hopped) { v.hopped = false; this.emit('drifthop', { id: r.id }); }
+        const lvl = v.driftLevel;
+        if (lvl > (r.driftLevel || 0)) this.emit('driftlevel', { id: r.id, level: lvl });
+        r.driftLevel = lvl;
+        if (v.boostFired) { this.emit('miniturbo', { id: r.id, level: v.boostFired }); v.boostFired = 0; }
         this.walls(r);
       }
       const R = this.racers;

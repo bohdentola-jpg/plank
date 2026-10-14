@@ -1526,6 +1526,19 @@ class Sfx {
 
   checkpoint() { if (this._ok()) this._play('checkpoint', { gain: 0.5, rev: 0.15 }); }
 
+  /** Kart-style drift: the mini-turbo charging up a level, and firing. */
+  driftCharge(level = 1) {
+    if (!this._ok()) return;
+    this._play('nitroPuff', { gain: 0.18 + 0.06 * level, rate: 1.25 + 0.25 * level });
+  }
+
+  miniTurbo(level = 1) {
+    if (!this._ok()) return;
+    const k = clamp(level / 3, 0, 1);
+    this._play('nitroStart', { gain: 0.35 + 0.3 * k, rate: 1.15 - 0.15 * k, rev: 0.06 });
+    this._play('whoosh', { gain: 0.25 + 0.3 * k, rate: 1.1 + 0.2 * k, rev: 0.06 });
+  }
+
   horn(kind = 'car') {
     if (!this._ok()) return;
     this._play(kind === 'truck' ? 'horn:truck' : 'horn:car', { gain: 0.45, rate: 0.98 + Math.random() * 0.04, rev: 0.2 });

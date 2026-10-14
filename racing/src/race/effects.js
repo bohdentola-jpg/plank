@@ -77,16 +77,17 @@ class ParticleSystem {
     this.mat = new THREE.ShaderMaterial({
       transparent: true, depthWrite: false,
       blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
-      uniforms: { map: { value: texture } },
+      uniforms: { map: { value: texture }, nearFade: { value: additive ? 0 : 1 } },
       vertexShader: `
         attribute vec3 ipos; attribute float isize; attribute vec4 icol; attribute float irot;
+        uniform float nearFade;
         varying vec2 vUv; varying vec4 vCol;
         void main(){
           vUv = uv; vCol = icol;
           vec4 mv = modelViewMatrix * vec4(ipos, 1.0);
-          // thin out right in front of the lens: driving through a cloud
-          // shouldn't white out the screen
-          vCol.a *= smoothstep(1.5, 6.0, -mv.z);
+          // smoke thins out right in front of the lens: driving through a
+          // cloud shouldn't white out the screen (sparks and flames don't)
+          vCol.a *= mix(1.0, smoothstep(2.0, 9.0, -mv.z), nearFade);
           float c = cos(irot), s = sin(irot);
           vec2 q = vec2(position.x * c - position.y * s, position.x * s + position.y * c) * isize;
           mv.xy += q;
@@ -284,6 +285,16 @@ export class Effects {
         nx * sp * 0.5 + (Math.random() - 0.5) * sp, 1 + Math.random() * 3, nz * sp * 0.5 + (Math.random() - 0.5) * sp,
         0.25 + Math.random() * 0.35, 0.12, 0.05, 2.6, 1.5, 0.5, 1, 0.6, 9.8);
     }
+  }
+
+  /** Mini-turbo sparks off the rear tires in a drift: 1 blue, 2 orange, 3 purple. */
+  driftSparks(x, y, z, vx, vz, level) {
+    // small hot points low at the tire, not a glow over the car
+    const c = level >= 3 ? [2.2, 0.65, 3.4] : level === 2 ? [3.4, 1.45, 0.25] : [0.5, 1.3, 3.4];
+    // they ride along with the car: a crackling cluster at the wheel, not a trail
+    this.glow.emit(x + (Math.random() - 0.5) * 0.3, y + 0.1, z + (Math.random() - 0.5) * 0.3,
+      vx * 0.85 + (Math.random() - 0.5) * 3, 1.0 + Math.random() * 2.2, vz * 0.85 + (Math.random() - 0.5) * 3,
+      0.16 + Math.random() * 0.18, 0.32 + level * 0.07, 0.1, c[0], c[1], c[2], 1, 0.8, 7);
   }
 
   flame(x, y, z, vx, vy, vz, nitro) {

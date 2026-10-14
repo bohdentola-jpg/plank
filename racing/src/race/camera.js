@@ -67,7 +67,7 @@ export class ChaseCamera {
     else this.yaw += d * (1 - Math.exp(-yawRate * dt));
     const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
 
-    const speedK = clamp(speed / 62, 0, 1);
+    const speedK = clamp(speed / 60, 0, 1);
     let dist = M.dist * (1 + speedK * 0.12);
     let height = M.height;
     if (opts.lookBack && !M.mounted) { dist = M.dist * 0.9; }
@@ -92,7 +92,7 @@ export class ChaseCamera {
     cam.position.copy(this.pos);
     // shake: speed rumble + impacts
     this.shake = damp(this.shake, 0, 3.5, dt);
-    const sh = this.shake * 0.12 + (opts.rumble || 0) * 0.025 + speedK * speedK * 0.009 + (car.nitroOn ? 0.012 : 0);
+    const sh = this.shake * 0.12 + (opts.rumble || 0) * 0.025 + speedK * speedK * 0.012 + (car.nitroOn ? 0.014 : 0);
     if (sh > 0.0005) {
       cam.position.x += (Math.sin(this.time * 61) + Math.sin(this.time * 37.3)) * sh;
       cam.position.y += (Math.sin(this.time * 53.7) + Math.cos(this.time * 29.1)) * sh * 0.7;
@@ -100,7 +100,7 @@ export class ChaseCamera {
     cam.lookAt(this.look);
     // FOV: speed + nitro kick
     this.kick = damp(this.kick, car.nitroOn ? 1 : 0, 3, dt);
-    const fov = M.fov + speedK * 14 + this.kick * 9;
+    const fov = M.fov + speedK * 18 + this.kick * 10;
     cam.fov = damp(cam.fov, fov, 5, dt);
     cam.updateProjectionMatrix();
   }

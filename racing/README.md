@@ -26,7 +26,7 @@ Xbox and other standard pads work too, and so do keyboard and mouse.
 |---|---|---|
 | Steer | Left stick | A / D or ← → |
 | Gas / Brake–reverse | R2 / L2 | W / S or ↑ ↓ |
-| Drift | L2 + steer at speed | S + A / D |
+| Drift (hold) | L2 or □ + steer at speed | S or Space + A / D |
 | Handbrake | □ | Space |
 | Nitrous | ✕ | Shift |
 | Shift up / down (manual) | R1 / L1 | E / Q |
@@ -95,15 +95,20 @@ Erase story save.
   drift (angle × speed scoring with a multiplier chain that a crash wipes out),
   and time attack (a pro drives your exact car first; you chase the ghost and
   the target time).
-- **Handling:** steering on the gas or coasting grips. The car corners at
-  the limit, and pushed too hard it runs wide instead of swapping ends. A
-  steering limiter means a full-lock stab on keys or the stick still corners
-  at peak grip. **Brake while you turn at speed and the tail comes out:** that's
-  a drift. Go back to the gas to hold it, steer into the turn for more angle
-  (up to about 40°) or out of it to straighten up, and flick the other way to
-  link the next corner. Stay on the brakes through the slide, or let the angle
-  run away, and you spin. Drifts carry their speed, and the chase camera
-  swings to show where the car is going.
+- **Handling:** the cars are tuned arcade-fast: they pull, grip and stop
+  harder than their brochures say, and the AI drives the same numbers.
+  Steering on the gas or coasting grips. The car corners at the limit, and
+  pushed too hard it runs wide instead of swapping ends. A steering limiter
+  means a full-lock stab on keys or the stick still corners at peak grip.
+- **Drifting, kart style:** brake (or pull the handbrake) while you turn at
+  speed and the car hops into a drift. The nose swings 20-30° into the turn
+  and the car carves a grippy arc that keeps its speed. Steer into the turn
+  to tighten the arc, or away from it to widen it. Hold the brake or
+  handbrake and the drift holds whatever the wheel does. The foot brake
+  scrubs speed as you go, and the handbrake doesn't. Let go (of the wheel
+  too) or steer the other way to straighten out. The longer the drift, the
+  bigger the mini-turbo you fire on the way out: blue sparks, then orange,
+  then purple. The chase camera swings to show where the car is going.
 - **Physics:** a 120 Hz tire model with load transfer, load-sensitive
   cornering stiffness, combined slip (a braking or driving tire has less left
   for cornering), ABS and brake balance, traction control and stability control
