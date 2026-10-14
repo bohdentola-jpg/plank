@@ -57,7 +57,7 @@ export const EVENTS = [
   { id: 'c1e1', ch: 0, name: 'FRIDAY NIGHT LIGHTS', track: 'downtown', type: 'circuit', laps: 2, rivals: 3, pr: 500, prize: 1500, flavor: 'Easy money. Four cars, two laps, the whole boulevard watching.' },
   { id: 'c1e2', ch: 0, name: 'UPTOWN RUN', track: 'uptown', type: 'sprint', rivals: 3, pr: 510, prize: 1800, traffic: true, flavor: 'Bridge to the hill, every light red, cabs in both directions. Nobody brakes first.' },
   { id: 'c1e3', ch: 0, name: 'LAST ONE OUT', track: 'oldtown', type: 'knockout', rivals: 3, pr: 520, prize: 2200, flavor: 'Old Town is tight and the Kings play rough. Last car each lap goes home.' },
-  { id: 'c1e4', ch: 0, name: 'RAIN CHECK', track: 'uptown', type: 'timeattack', tt: 1.03, prize: 1600, flavor: 'Tina set the uptown record in the rain. Beat her number.' },
+  { id: 'c1e4', ch: 0, name: 'RAIN CHECK', track: 'uptown', type: 'timeattack', tt: 1.05, prize: 1600, flavor: 'Tina set the uptown record in the rain. Beat her number.' },
   { id: 'c1e5', ch: 0, name: 'MAIN EVENT', track: 'oldtown', type: 'circuit', laps: 3, rivals: 5, pr: 535, prize: 2600, flavor: 'Full grid on the narrow streets. Win this and Dez has to answer.' },
   { id: 'c1b', ch: 0, boss: true, name: 'DEZ: KING OF MAIN', track: 'downtown', type: 'circuit', laps: 3, rivals: 1, pr: 0, prize: 5000, flavor: 'One on one with the King. His S15 has never lost on Main.' },
   // ch 2 — THE DOCKS
@@ -70,7 +70,7 @@ export const EVENTS = [
   // ch 3 — THE PASS
   { id: 'c3e1', ch: 2, name: 'DOWNHILL', track: 'kaido', type: 'sprint', rivals: 3, pr: 640, prize: 5500, flavor: 'Five kilometers of pass road, top to bottom. Respect the guardrail.' },
   { id: 'c3e2', ch: 2, name: 'FOG LINE', track: 'summit', type: 'circuit', laps: 3, rivals: 4, pr: 650, prize: 6000, flavor: 'Switchbacks up, a plunge down, fog everywhere in between.' },
-  { id: 'c3e3', ch: 2, name: 'GHOST LAP', track: 'kaido', type: 'timeattack', tt: 1.02, prize: 5000, flavor: 'The Ghosts keep a time carved into the summit sign. Beat it.' },
+  { id: 'c3e3', ch: 2, name: 'GHOST LAP', track: 'kaido', type: 'timeattack', tt: 1.03, prize: 5000, flavor: 'The Ghosts keep a time carved into the summit sign. Beat it.' },
   { id: 'c3e4', ch: 2, name: 'SUMMIT KNOCKOUT', track: 'summit', type: 'knockout', rivals: 4, pr: 665, prize: 7000, flavor: 'Four laps of the peak, one less car every time past the shrine.' },
   { id: 'c3e5', ch: 2, name: 'GOLDEN HOUR', track: 'crestwood', type: 'circuit', laps: 3, rivals: 5, pr: 675, prize: 7500, flavor: 'The Ghosts borrow the old hill circuit at sundown. Blind crest, corkscrew, carousel.' },
   { id: 'c3b', ch: 2, boss: true, name: 'KAITO: THE GHOST', track: 'kaido', type: 'sprint', rivals: 1, pr: 0, prize: 15000, flavor: 'A twenty-year-old Trueno that nobody has beaten downhill. Ever.' },
@@ -86,7 +86,7 @@ export const EVENTS = [
   { id: 'c5e2', ch: 4, name: 'SKYLINE', track: 'skyline', type: 'circuit', laps: 3, rivals: 5, pr: 800, prize: 16000, flavor: 'Elevated expressway loop above the city lights.' },
   { id: 'c5e3', ch: 4, name: 'AFTER HOURS', track: 'redwood', type: 'circuit', laps: 3, rivals: 5, pr: 810, prize: 17000, flavor: 'Someone cut the lock on the raceway gate. Grand-prix rules, no marshals.' },
   { id: 'c5e4', ch: 4, name: 'SIGNAL LOSS', track: 'crestwood', type: 'knockout', rivals: 4, pr: 820, prize: 18000, flavor: 'Five cars, five laps of the hills. The Frequency wants to see who breaks.' },
-  { id: 'c5e5', ch: 4, name: 'DEAD AIR', track: 'skyline', type: 'timeattack', tt: 1.0, prize: 15000, flavor: 'One lap of the skyline. They want a pro\'s time. Exactly a pro\'s time.' },
+  { id: 'c5e5', ch: 4, name: 'DEAD AIR', track: 'skyline', type: 'timeattack', tt: 1.02, prize: 15000, flavor: 'One lap of the skyline. They want a pro\'s time. Exactly a pro\'s time.' },
   { id: 'c5b', ch: 4, boss: true, name: 'ZERO', track: 'redwood', type: 'circuit', laps: 3, rivals: 1, pr: 0, prize: 50000, flavor: 'Midnight at Redwood. The last race you will ever need to win.' },
 ];
 

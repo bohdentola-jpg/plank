@@ -30,9 +30,9 @@ export class AIDriver {
     const P = racer.vehicle.P;
     // corner speeds scale with how much grip this car really has vs the line's
     // assumption. Steady-state cornering only gets part of the tires' peak mu
-    // (the skidpad says ~86% for RWD, ~90% AWD, ~99% FWD: the driven rear
-    // spends grip holding speed), so plan on that, not the peak.
-    const eff = P.drive === 'RWD' ? 0.87 : P.drive === 'AWD' ? 0.89 : 0.92;
+    // (the driven axle spends grip holding speed against drag, most of all
+    // with the power at the rear), so plan on that, not the peak.
+    const eff = P.drive === 'RWD' ? 0.9 : P.drive === 'AWD' ? 0.91 : 0.94;
     this.gripScale = Math.sqrt((P.mu * eff) / 1.12) * 0.99 * (1 + P.clA * 0.1);
     this.rubber = opts.rubber ?? 1;
   }

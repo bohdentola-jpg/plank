@@ -456,7 +456,10 @@ export class Vehicle {
     const [lx2, lz2] = this.left;
     const nvF = this.vx * fx2 + this.vz * fz2;
     const nvL = this.vx * lx2 + this.vz * lz2;
-    const aF = (nvF - vF) / dt;
+    // body-frame accelerations: remove the frame's own rotation (u' = ax + r·v,
+    // v' = ay − r·u). Without the r·v term a slide reads as hard braking, the
+    // load transfer then empties the rear axle and every slide becomes a spin.
+    const aF = (nvF - vF) / dt - this.yawRate * nvL;
     const aL = (nvL - vL) / dt + this.yawRate * nvF;
     this.axF += (clamp(aF, -15, 15) - this.axF) * Math.min(1, dt * 8);
     this.ayL += (clamp(aL, -15, 15) - this.ayL) * Math.min(1, dt * 8);
