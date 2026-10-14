@@ -148,7 +148,7 @@ class Story {
     if (!ev.rivals || ev.type === 'timeattack') return [];
     const rng = makeRng(ev.id + ':' + tries);
     const names = ch.members.slice().sort(() => rng() - 0.5);
-    const baseSkill = [0.66, 0.72, 0.78, 0.83, 0.87][ev.ch] ?? 0.8;
+    const baseSkill = [0.55, 0.64, 0.72, 0.8, 0.86][ev.ch] ?? 0.8;
     const out = [];
     for (let k = 0; k < ev.rivals; k++) {
       const target = ev.pr + (rng() - 0.5) * 30;

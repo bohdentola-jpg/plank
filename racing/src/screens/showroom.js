@@ -47,7 +47,7 @@ const TYPE_DESC = {
 };
 export const typesFor = (def) => (def.type === 'drag' ? ['drag'] : def.type === 'sprint' ? ['sprint', 'timeattack'] : ['circuit', 'knockout', 'drift', 'timeattack']);
 export const SKILLS = [
-  { label: 'ROOKIE', v: 0.5 }, { label: 'STREET', v: 0.68 }, { label: 'PRO', v: 0.82 }, { label: 'LEGEND', v: 0.95 },
+  { label: 'ROOKIE', v: 0.35 }, { label: 'STREET', v: 0.6 }, { label: 'PRO', v: 0.8 }, { label: 'LEGEND', v: 0.95 },
 ];
 const TIME_NAMES = { night: 'NIGHT', dusk: 'DUSK', sunset: 'SUNSET', day: 'DAY', overcast: 'OVERCAST' };
 const WEATHER_NAMES = { dry: 'DRY', wet: 'WET ROADS', rain: 'RAIN' };
