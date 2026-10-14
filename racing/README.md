@@ -88,7 +88,7 @@ Erase story save.
 
 ## Racing
 
-- **Race types:** circuit, sprint, lap knockout, drag (lane start, launch control),
+- **Race types:** circuit, sprint, lap knockout, drag (manual shifting on a shift light, graded launches and upshifts),
   drift (angle × speed scoring with a multiplier chain that a crash wipes out),
   and time attack (a pro drives your exact car first; you chase the ghost and
   the target time).
@@ -103,13 +103,15 @@ Erase story save.
 - **HUD:** tach, digital speed, gear, boost and nitrous, radar minimap, live
   standings with gaps, lap and best times, and a countdown with launch grading.
 
-## Tracks (14)
+## Tracks (16)
 
 | Region | Track | Type | Time / weather |
 |---|---|---|---|
 | City | Downtown Loop | circuit | night, wet |
 | City | Uptown Run | sprint | night, rain |
 | City | Old Town | circuit | dusk |
+| City | Downtown Reverse | circuit | night |
+| City | Old Town Reverse | circuit | night, rain |
 | Docks | Harbor Docks | circuit | night, wet |
 | Docks | Pier 9 | circuit | night |
 | Highway | Interstate 9 | sprint | night, wet |

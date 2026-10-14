@@ -39,5 +39,19 @@ const CITY = [
   },
 ];
 
+// reversed city circuits: same streets, the other way round, different night
+const byId = Object.fromEntries(CITY.map((d) => [d.id, d]));
+const rev = (d, extra) => ({ ...d, ...extra, id: `${d.id}_r`, reverseOf: d.id, points: d.points.slice().reverse() });
+CITY.push(
+  rev(byId.downtown, {
+    name: 'DOWNTOWN REVERSE', weather: 'dry', startS: 3500,
+    blurb: 'The financial district loop run backwards on a dry night. The long boulevard comes at the end.',
+  }),
+  rev(byId.oldtown, {
+    name: 'OLD TOWN REVERSE', time: 'night', weather: 'rain', startS: 2010,
+    blurb: 'Old Town the wrong way round, in the pouring rain. Brick walls, no run-off, no mercy.',
+  }),
+);
+
 export const TRACKS = [...CITY, ...DOCKS, ...HIGHWAY, ...CIRCUIT, ...MOUNTAIN, ...DESERT];
 export const TRACK_BY_ID = Object.fromEntries(TRACKS.map((t) => [t.id, t]));
