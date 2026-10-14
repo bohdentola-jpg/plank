@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { getEnvMap } from '../core/envmap.js';
 import { toTex, concreteTexture } from '../track/textures.js';
-import { makeRng } from '../core/util.js';
+import { makeRng, disposeTree } from '../core/util.js';
 
 export const BAY = 4.4;
 const WALL_Z = -3.9;
@@ -489,11 +489,7 @@ export function buildLotScene(gl, cars) {
     flickerBay: fixtures[flicker.index]?.k ?? -99,
     flickerOn: () => flicker.on,
     dispose() {
-      scene.traverse((o) => {
-        o.geometry?.dispose?.();
-        const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
-        for (const m of mats) { m.map?.dispose?.(); m.roughnessMap?.dispose?.(); m.dispose?.(); }
-      });
+      disposeTree(scene);
     },
   };
 }

@@ -157,3 +157,36 @@ export function shade(hex, f) {
 }
 
 export const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
+
+/**
+ * Free the GPU memory behind a scene-graph subtree: every geometry, material
+ * and texture under `root`, plus any `extra` disposables. three.js materials
+ * don't free their own textures, so this does. Render-target textures (the
+ * cached environment maps) and textures marked userData.keep are left alone;
+ * a texture that is still used elsewhere just gets re-uploaded on next use.
+ */
+export function disposeTree(root, extra = []) {
+  const geos = new Set(), mats = new Set(), texs = new Set();
+  const addMat = (m) => { if (m) mats.add(m); };
+  root?.traverse?.((o) => {
+    if (o.geometry) geos.add(o.geometry);
+    if (Array.isArray(o.material)) o.material.forEach(addMat); else addMat(o.material);
+    if (o.isInstancedMesh) o.dispose?.();
+  });
+  const rest = [];
+  for (const d of extra) {
+    if (!d) continue;
+    if (d.isTexture) texs.add(d);
+    else if (d.isMaterial) mats.add(d);
+    else if (d.isBufferGeometry) geos.add(d);
+    else rest.push(d);
+  }
+  for (const m of mats) {
+    for (const k in m) { const v = m[k]; if (v && v.isTexture) texs.add(v); }
+    if (m.uniforms) for (const k in m.uniforms) { const v = m.uniforms[k] && m.uniforms[k].value; if (v && v.isTexture) texs.add(v); }
+  }
+  for (const g of geos) g.dispose();
+  for (const m of mats) m.dispose();
+  for (const t of texs) if (!t.isRenderTargetTexture && !(t.userData && t.userData.keep)) t.dispose();
+  for (const d of rest) d.dispose?.();
+}

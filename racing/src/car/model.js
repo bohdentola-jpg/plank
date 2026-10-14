@@ -7,6 +7,7 @@ import { paintLight } from './lights.js';
 import { paintBody, paintCap, paintCabin, tireCanvas, exhaustLayout, FINISHES } from './paint.js';
 import { mergeGeos, place } from './geom.js';
 import { applyLook } from './kits.js';
+import { disposeTree } from '../core/util.js';
 
 const texCache = new Map();
 
@@ -794,10 +795,8 @@ export function buildCarModel(spec, lookIn = {}, opts = {}) {
       }
     },
     dispose() {
-      for (const d of disposables) d.dispose?.();
-      for (const m of [bodyMat, frontMat, rearMat, cabMat]) {
-        for (const k of ['map', 'roughnessMap', 'emissiveMap']) m[k]?.dispose?.();
-      }
+      // everything under the car, textures included (materials don't free them)
+      disposeTree(group, [...disposables, bodyMat, frontMat, rearMat, cabMat]);
     },
   };
   void fin;

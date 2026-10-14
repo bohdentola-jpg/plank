@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { Track } from './track.js';
 import { roadTextures, curbTexture, concreteTexture, groundTexture, glowTexture, streakTexture, toTex } from './textures.js';
-import { makeNoise2D, makeRng, clamp, smoothstep, nextFrame } from '../core/util.js';
+import { makeNoise2D, makeRng, clamp, smoothstep, nextFrame, disposeTree } from '../core/util.js';
 import { getEnvMap } from '../core/envmap.js';
 
 // ------------------------------------------------------------------ atmosphere
@@ -440,14 +440,7 @@ export class World {
   }
 
   dispose() {
-    this.scene.traverse((o) => {
-      if (o.geometry) o.geometry.dispose();
-      if (o.material) {
-        const ms = Array.isArray(o.material) ? o.material : [o.material];
-        for (const m of ms) m.dispose();
-      }
-    });
-    for (const d of this.disposables) d.dispose?.();
+    disposeTree(this.scene, this.disposables);
   }
 }
 

@@ -8,7 +8,7 @@ import { buildCarModel } from '../car/model.js';
 import { CARS, CAR_BY_ID } from '../car/cars.js';
 import { C, vText, text, panel, hints, hit, usingPad, padGlyph, keyCap, paragraph } from '../core/ui.js';
 import { input } from '../core/input.js';
-import { clamp, damp, fmtTime } from '../core/util.js';
+import { clamp, damp, fmtTime, disposeTree } from '../core/util.js';
 import { store } from '../core/settings.js';
 import { music } from '../audio/music.js';
 import { sfx } from '../audio/sfx.js';
@@ -127,7 +127,7 @@ registerScreen('radio', () => {
     },
     exit() {
       try { sfx.radioStatic(0); sfx.rain(0); sfx.ambience(null); ownEngine?.stop(); rivalEngine?.stop(); } catch { /* */ }
-      S?.scene.traverse((o) => { o.geometry?.dispose?.(); });
+      disposeTree(S?.scene);
       S = null;
     },
     update(dt, busy) {
