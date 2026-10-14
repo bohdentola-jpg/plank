@@ -2,7 +2,7 @@
 // the real physics on a flat test pad (0-60, 0-100, 60-0, skidpad g) plus an
 // analytic top speed from the torque curve, gearing and drag. Memoized per
 // car + upgrade set.
-import { Vehicle, PHYS_DT, derivePerf } from './physics.js';
+import { Vehicle, PHYS_DT, derivePerf, ARCADE, BROCHURE } from './physics.js';
 
 const cache = new Map();
 const pad = () => ({ h: 0, n: [0, 1, 0], surface: 'road' });
@@ -28,13 +28,25 @@ function topSpeed(P) {
   return best;
 }
 
+// The menus show what the car does in the game (arcade-tuned); the
+// performance rating (PR) the story matches rivals by is taken from the car
+// as its brochure has it, so the PR scale stays put.
 export function carStats(spec, up = {}) {
   const key = spec.id + JSON.stringify(up);
   if (cache.has(key)) return cache.get(key);
-  const P = derivePerf(spec, up);
+  const r = measure(spec, up, ARCADE);
+  const b = measure(spec, up, BROCHURE);
+  r.rating = b.rating;
+  r.bars = b.bars; // (the bars compare cars, so they use the same scale)
+  cache.set(key, r);
+  return r;
+}
+
+function measure(spec, up, arcade) {
+  const P = derivePerf(spec, up, arcade);
 
   // standing start
-  const v = new Vehicle(spec, up);
+  const v = new Vehicle(spec, up, arcade);
   v.reset(0, 0, 0, 0);
   let t = 0, t60 = null, t100 = null, dist = 0, tq = null;
   while (t < 25 && (t100 === null || tq === null)) {
@@ -48,7 +60,7 @@ export function carStats(spec, up = {}) {
   }
 
   // 60-0
-  const b = new Vehicle(spec, up);
+  const b = new Vehicle(spec, up, arcade);
   b.reset(0, 0, 0, 0);
   b.vz = 60 / MPH;
   b.speed = b.vz;
@@ -62,7 +74,7 @@ export function carStats(spec, up = {}) {
 
   // skidpad: hold ~80 km/h and wind the wheel in slowly; keep the best
   // lateral g the car actually sustains before it lets go
-  const s = new Vehicle(spec, up);
+  const s = new Vehicle(spec, up, arcade);
   s.reset(0, 0, 0, 0);
   s.vz = 22;
   let lat = 0;
@@ -93,7 +105,6 @@ export function carStats(spec, up = {}) {
     braking: n(150 - r.brake60, 0, 70),
   };
   r.rating = (r.bars.speed + r.bars.accel * 1.3 + r.bars.handling + r.bars.braking * 0.7) / 4;
-  cache.set(key, r);
   return r;
 }
 

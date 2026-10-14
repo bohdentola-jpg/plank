@@ -38,9 +38,11 @@ function tireCurve(alpha, B = 9.5, Cc = 1.45, E = -0.6) {
 // grips harder and stops harder than its brochure says, so the racing
 // feels fast (the AI drives the same numbers, so the field stays even).
 export const ARCADE = { power: 1.55, grip: 1.2, brake: 1.2, shift: 0.7 };
+/** The cars as their brochures have them (no arcade tuning). */
+export const BROCHURE = { power: 1, grip: 1, brake: 1, shift: 1 };
 
 /** Build derived performance numbers from a car spec + upgrade multipliers. */
-export function derivePerf(spec, up = {}) {
+export function derivePerf(spec, up = {}, arcade = ARCADE) {
   const p = spec.perf;
   const b = spec.body;
   const m = {
@@ -68,7 +70,7 @@ export function derivePerf(spec, up = {}) {
   };
   let pmax = 0;
   for (let r = idle; r <= redline; r += 50) pmax = Math.max(pmax, shape(r) * r);
-  const targetW = p.hp * 745.7 * m.power * ARCADE.power;
+  const targetW = p.hp * 745.7 * m.power * arcade.power;
   const tScale = targetW / (pmax * (2 * Math.PI / 60)); // Nm at shape==1
   const mass = p.mass * m.mass + 75; // + driver
   const wb = b.wb;
@@ -92,10 +94,10 @@ export function derivePerf(spec, up = {}) {
     split: p.drive === 'AWD' ? (p.split ?? 0.4) : p.drive === 'FWD' ? 1 : 0,
     cdA: p.cd * p.area * (1 - (up.aero || 0) * 0.08),
     clA: 0.12 + (up.aero || 0) * 0.35 + (b.wing && b.wing !== 'none' ? 0.08 : 0),
-    mu: 1.18 * ARCADE.grip * (p.grip || 1) * m.grip,
-    brakeG: 1.25 * ARCADE.brake * (p.brake || 1) * m.brake,
+    mu: 1.18 * arcade.grip * (p.grip || 1) * m.grip,
+    brakeG: 1.25 * arcade.brake * (p.brake || 1) * m.brake,
     steerLock: 0.56,
-    shiftTime: 0.26 * ARCADE.shift * m.shift,
+    shiftTime: 0.26 * arcade.shift * m.shift,
     turbo: Math.max(spec.sound?.turbo || 0, up.turbo || 0),
     nitroPower: m.nitro,
     handling: m.handling,
@@ -104,15 +106,16 @@ export function derivePerf(spec, up = {}) {
 }
 
 export class Vehicle {
-  constructor(spec, upgrades = {}) {
+  constructor(spec, upgrades = {}, arcade = ARCADE) {
     this.spec = spec;
+    this.arcade = arcade;
     this.setUpgrades(upgrades);
     this.reset(0, 0, 0, 0);
   }
 
   setUpgrades(up) {
     this.up = up || {};
-    this.P = derivePerf(this.spec, this.up);
+    this.P = derivePerf(this.spec, this.up, this.arcade);
   }
 
   reset(x, z, heading, y = 0) {
