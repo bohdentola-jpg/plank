@@ -51,7 +51,6 @@ export class HUD {
     this.drawCountdown(ctx);
     this.drawMessages(ctx);
     this.drawWarnings(ctx);
-    this.drawDriftMeter(ctx);
     if (st === 'finished' && this.t % 1.2 < 0.85) text(ctx, 'PRESS ✕ / ENTER FOR RESULTS', 512, 596, { size: 14, color: C.dim, align: 'center', weight: 800, spacing: 2 });
   }
 
@@ -471,7 +470,7 @@ export class HUD {
         this.lamp(ctx, 512 + (k - 1) * 46, 210, lit ? '#ff2a1a' : '#2a0a0a', lit);
       }
       if (n <= 3) text(ctx, settings.get('transmission') === 'manual' ? 'REV IT UP — HOLD THE REVS IN THE GREEN FOR A PERFECT START' : 'HOLD THE GAS FOR A LAUNCH — WATCH THE REVS', 512, 268, { size: 13, color: C.dim, align: 'center', weight: 700, spacing: 1 });
-      if (n <= 3) text(ctx, 'DRIFT: TAP THE BRAKE WHILE YOU TURN, THEN KEEP STEERING INTO IT', 512, 462, { size: 14, color: C.cyan, align: 'center', weight: 800, spacing: 1, glow: 6 });
+      if (n <= 3) text(ctx, 'DRIFT: HOLD THE BRAKE WHILE YOU TURN, LET GO TO STRAIGHTEN UP', 512, 462, { size: 14, color: C.cyan, align: 'center', weight: 800, spacing: 1, glow: 6 });
     }
     // GO flash
     const go = s.hudEvents.find((e) => e.type === 'go');
@@ -525,51 +524,6 @@ export class HUD {
     if (v.nitro < 0.02 && v.nitroOn === false && s.inputNitro) {
       text(ctx, 'NITROUS EMPTY', 908, 520, { size: 12, color: '#ff8a8a', align: 'center', weight: 800 });
     }
-  }
-
-  // ------------------------------------------------------------------ drift meter
-  /** While you drift: the angle, and the mini-turbo charging through blue,
-   *  orange and purple; then the turbo firing as you come out. */
-  drawDriftMeter(ctx) {
-    const s = this.s;
-    const v = s.player.vehicle;
-    const on = v.driftState === 1;
-    this.driftShow = clamp((this.driftShow || 0) + (on ? 8 : -3) * (this.dt || 0.016), 0, 1);
-    if (on) { this.driftCharge = v.driftCharge; this.driftDeg = Math.abs(v.driftAngle) * 57.3; }
-    const turbo = s.hudEvents.findLast?.((e) => e.type === 'miniturbo');
-    const turboAge = turbo ? s.time - turbo.t : 99;
-    const a = this.driftShow;
-    if (a <= 0.01 && turboAge > 1.1) return;
-    const COLS = ['#46b4ff', '#ffa21e', '#c46bff'];
-    const cx = 512, y0 = 664;
-    ctx.save();
-    if (a > 0.01) {
-      ctx.globalAlpha = a;
-      panel(ctx, cx - 132, y0, 264, 58, { accent: C.cyan, accentLen: 90, alpha: 0.8 });
-      text(ctx, 'DRIFT', cx - 112, y0 + 24, { size: 13, color: C.dim, weight: 900, spacing: 3 });
-      vText(ctx, `${Math.round(this.driftDeg || 0)}°`, cx + 112, y0 + 30, 26, { align: 'right', color: '#fff', outline: 2, outlineColor: '#000' });
-      // three segments, one per mini-turbo level
-      const lv = [0, 1.0, 2.2, 3.6];
-      const c = this.driftCharge || 0;
-      for (let k = 0; k < 3; k++) {
-        const x = cx - 112 + k * 76, w = 70, y = y0 + 38;
-        const f = clamp((c - lv[k]) / (lv[k + 1] - lv[k]), 0, 1);
-        ctx.fillStyle = 'rgba(0,0,0,0.55)';
-        ctx.fillRect(x, y, w, 8);
-        ctx.fillStyle = COLS[k];
-        if (f >= 1) { ctx.shadowColor = COLS[k]; ctx.shadowBlur = 10; }
-        ctx.fillRect(x, y, w * f, 8);
-        ctx.shadowBlur = 0;
-      }
-    }
-    if (turboAge < 1.1) {
-      const lvl = turbo.level;
-      ctx.globalAlpha = clamp(1.4 - turboAge * 1.3, 0, 1);
-      const word = ['', 'MINI-TURBO', 'SUPER MINI-TURBO', 'ULTRA MINI-TURBO'][lvl] || 'MINI-TURBO';
-      const sc = 1 + Math.max(0, 0.25 - turboAge) * 1.2;
-      vText(ctx, word, cx, y0 - 14, 24 * sc, { align: 'center', color: COLS[lvl - 1] || COLS[0], outline: 3, outlineColor: '#000', glow: 12, glowColor: COLS[lvl - 1] || COLS[0] });
-    }
-    ctx.restore();
   }
 
   /** Rival name tags: small arrow + name above cars ahead within range. */

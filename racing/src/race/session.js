@@ -338,17 +338,6 @@ export class RaceSession {
         case 'drifthop':
           if (e.id === P.id) { try { sfx.landing(0.12); } catch { /* */ } input.rumble(0.15, 0.3, 70); }
           break;
-        case 'driftlevel':
-          if (e.id === P.id) { try { sfx.driftCharge(e.level); } catch { /* */ } input.rumble(0.1 + 0.1 * e.level, 0.2, 60); }
-          break;
-        case 'miniturbo':
-          if (e.id === P.id) {
-            this.hudEvents.push({ type: 'miniturbo', level: e.level, t: this.time });
-            try { sfx.miniTurbo(e.level); P.engine?.blowOff(); } catch { /* */ }
-            this.camera.addShake(0.15 + 0.1 * e.level);
-            input.rumble(0.3 + 0.15 * e.level, 0.6, 220);
-          }
-          break;
         case 'airtime':
           if (e.t > 0.8) this.message('AIR TIME', `${e.t.toFixed(1)}s  + NITROUS`, { slot: 'top', dur: 1.6, color: '#46e8ff' });
           break;
@@ -369,7 +358,7 @@ export class RaceSession {
           input.rumble(0.15, 0.4, 90);
           break;
         case 'driftbonus':
-          // (the drift meter tells the rest; say once that drifting pays nitrous)
+          // (say once that drifting pays nitrous)
           if (this.type !== 'drift' && !this.driftTold) { this.driftTold = true; this.message('DRIFT', '+ NITROUS', { slot: 'top', dur: 1.4, color: '#46e8ff' }); }
           break;
         case 'shift':
@@ -465,22 +454,10 @@ export class RaceSession {
         if (!v.airborne && (amount > 0.25 || (loose && v.speed > 8))) {
           if (!loose && amount > 0.25) fx.skids.add(key, wx, v.y, wz, lX, lZ, clamp(amount, 0, 1));
           else fx.skids.break(key);
-          // mini-turbo sparks once the drift has charged a level
-          if (v.driftState === 1 && near) {
-            const lvl = v.driftLevel;
-            if (lvl > 0) {
-              const sa = r.sparkAcc || (r.sparkAcc = [0, 0]);
-              sa[side > 0 ? 0 : 1] += dt * (45 + 15 * lvl);
-              // (thrown out just behind and outside the rear tire, where the
-              // camera can see them past the body)
-              const sx = v.x - fX * (L * 0.5) + lX * side * Wd * 0.52, sz = v.z - fZ * (L * 0.5) + lZ * side * Wd * 0.52;
-              while (sa[side > 0 ? 0 : 1] >= 1) { sa[side > 0 ? 0 : 1] -= 1; fx.driftSparks(sx, v.y, sz, v.vx, v.vz, lvl); }
-            }
-          }
           // puffs per second (not per frame, so a fast PC isn't foggier)
           const acc = r.smokeAcc || (r.smokeAcc = [0, 0]);
           const si = side > 0 ? 0 : 1;
-          // (a kart-style drift is mostly sparks and squeal: a light haze)
+          // (an arcade drift is mostly squeal and skid marks: a light haze)
           acc[si] += dt * (loose ? 8 + Math.min(10, v.speed / 3) : clamp(amount, 0, 1.2) * (v.driftState === 1 ? 5 : 13));
           while (acc[si] >= 1) {
             acc[si] -= 1;
@@ -493,12 +470,12 @@ export class RaceSession {
         fx.sparks(r.scrapePoint[0], v.y, r.scrapePoint[1], -v.vx * 0.05, -v.vz * 0.05, 2, v.speed * 0.25);
       }
       // exhaust flames: nitrous (blue) + backfire pops (orange)
-      if ((v.nitroOn || r.flameT > 0 || v.boostT > 0) && near) {
+      if ((v.nitroOn || r.flameT > 0) && near) {
         const exs = r.model.exhausts || [[0.4, 0.32]];
         for (const [ex, ey] of exs) {
           const px = v.x - fX * (L / 2 + 0.1) + lX * ex;
           const pz = v.z - fZ * (L / 2 + 0.1) + lZ * ex;
-          fx.flame(px, v.y + ey, pz, -fX * 6 + v.vx * 0.9, 0, -fZ * 6 + v.vz * 0.9, v.nitroOn || (v.boostT > 0 && v.boostLevel !== 2));
+          fx.flame(px, v.y + ey, pz, -fX * 6 + v.vx * 0.9, 0, -fZ * 6 + v.vz * 0.9, v.nitroOn);
         }
       }
       if (r.flameT > 0) r.flameT -= dt;
@@ -516,15 +493,15 @@ export class RaceSession {
 
   updateCamera(dt) {
     const v = this.player.vehicle;
-    const car = { x: v.x, y: v.y, z: v.z, heading: v.heading, vF: v.vF, vx: v.vx, vz: v.vz, nitroOn: v.nitroOn || v.boostT > 0 };
+    const car = { x: v.x, y: v.y, z: v.z, heading: v.heading, vF: v.vF, vx: v.vx, vz: v.vz, nitroOn: v.nitroOn };
     const surfR = { curb: 0.6, grass: 0.4, dirt: 0.5, sand: 0.5, gravel: 0.9, sidewalk: 0.3 }[v.surface] || 0;
     this.camera.update(dt, car, { lookBack: this.lookBack, rumble: surfR * clamp(v.speed / 20, 0, 1) });
     if (this.world.sun) this.world.sunFollow = _v.set(v.x, v.y, v.z);
     // radial speed blur + nitro kick for the renderer
     const k = clamp((v.speed - 22) / 42, 0, 1);
-    this.fx = { radialBlur: k * 0.45 + (v.nitroOn ? 0.35 : v.boostT > 0 ? 0.25 : 0), blurCenter: [0.5, 0.56] };
+    this.fx = { radialBlur: k * 0.45 + (v.nitroOn ? 0.35 : 0), blurCenter: [0.5, 0.56] };
     if (surfR > 0 && v.speed > 4) input.rumble(surfR * 0.25, surfR * 0.5, 60);
-    else if (v.driftState === 1) input.rumble(0.06 + 0.22 * Math.min(1, Math.abs(v.driftAngle)), 0.12 + 0.1 * v.driftLevel, 60);
+    else if (v.driftState === 1) input.rumble(0.06 + 0.22 * Math.min(1, Math.abs(v.driftAngle)), 0.12, 60);
   }
 
   updateAudio(dt) {

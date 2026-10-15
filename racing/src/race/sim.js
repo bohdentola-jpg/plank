@@ -199,12 +199,8 @@ export class RaceSim {
           v.lastShift = 0;
         }
         if (v.landing > 0.15) this.emit('landing', { id: r.id, strength: v.landing });
-        // kart-style drift: the hop in, each mini-turbo level, the boost out
+        // the weight shifting as a drift kicks in (or swings across)
         if (v.hopped) { v.hopped = false; this.emit('drifthop', { id: r.id }); }
-        const lvl = v.driftLevel;
-        if (lvl > (r.driftLevel || 0)) this.emit('driftlevel', { id: r.id, level: lvl });
-        r.driftLevel = lvl;
-        if (v.boostFired) { this.emit('miniturbo', { id: r.id, level: v.boostFired }); v.boostFired = 0; }
         this.walls(r);
       }
       const R = this.racers;
@@ -293,7 +289,7 @@ export class RaceSim {
       if (r.isPlayer && !r.finished) {
         let gain = 0.006;
         const slide = Math.abs(v.driftAngle);
-        if (slide > 0.22 && v.speed > 14 && !v.airborne) { gain += 0.05 + slide * 0.06; r.driftT += dt; } else r.driftT = 0;
+        if (slide > 0.18 && v.speed > 14 && !v.airborne) { gain += 0.05 + slide * 0.06; r.driftT += dt; } else r.driftT = 0;
         if (draft > 0.3) gain += 0.045 * draft;
         if (v.airborne) { gain += 0.09; r.airborneT += dt; } else if (r.airborneT > 0) { if (r.airborneT > 0.6) this.emit('airtime', { t: r.airborneT }); r.airborneT = 0; }
         if (!v.nitroOn) v.nitro = Math.min(1, v.nitro + gain * dt);
@@ -329,8 +325,10 @@ export class RaceSim {
       D.cur = 0; D.t = 0; D.mult = 1; D.calm = 0;
       return;
     }
-    if (ang > 14 && v.speed > 9 && onRoad && !v.airborne) {
-      D.cur += (ang - 10) * v.speed * 0.6 * dt;
+    // (drifts run at up to ~25°: the scale starts low enough that a neat,
+    // shallow one still scores)
+    if (ang > 8 && v.speed > 9 && onRoad && !v.airborne) {
+      D.cur += (ang - 5) * v.speed * dt;
       D.t += dt;
       D.calm = 0;
       const m = 1 + Math.min(4, Math.floor(D.t / 1.6));

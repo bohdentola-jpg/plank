@@ -157,10 +157,9 @@ export class Vehicle {
     this.driftState = 0;  // 0 grip, 1 drifting, 2 spinning out
     this.driftDir = 0;    // + = drifting left
     this.driftK = 0;      // 0..1 blend into the drift handling
-    this.driftT = 0; this.driftArm = 0; this.driftCalm = 0; this.pedalPrev = false; this.flipArmed = 0;
+    this.driftHeld = false; // the brake/handbrake still held (else it's on the way out)
+    this.driftT = 0; this.driftArm = 0; this.driftCalm = 0; this.flipHold = 0; this.driftBlock = 0; this.driftOut = 0;
     this.driftBetaRate = 0; this.driftLat = 0; this.driftWant = 0;
-    this.driftCharge = 0; // mini-turbo charge (s of drifting, weighted)
-    this.boostT = 0; this.boostLevel = 0; this.boostFired = 0; // mini-turbo out of a drift
     this.hopped = false;
     this.speed = 0;
     this.vF = 0; this.vL = 0;
@@ -269,44 +268,54 @@ export class Vehicle {
 
     // -------------------------------------------------- drifting
     // Arcade drifting, for the human driver's car only (env.human; the AI
-    // drives the raw chassis and never drifts). Tap the brake (or pull the
-    // handbrake) while you turn at speed and the tail swings out. From there
-    // the stick drives it:
-    //   - steer into the turn and the car hangs its tail out (up to ~45°)
-    //     and carves a tighter line; keep steering into it and the drift
-    //     holds as long as you like, the gas holding your speed
-    //   - ease off the steering and it swings back in line and grips again
-    //     (steering the other way straightens it quicker)
-    //   - steer the other way and tap the brake or handbrake again and the
-    //     tail swings across into a drift the other way (S-bends)
-    //   - the brake mid-drift scrubs speed and tightens the line; the
-    //     handbrake tightens it more
-    // The deeper and longer the drift, the bigger the mini-turbo it fires on
-    // the way out (blue, orange, purple sparks).
+    // drives the raw chassis and never drifts). The brake is the drift
+    // button: hold it (or the handbrake) while you turn at speed and the tail
+    // steps out; keep holding it and the car stays in the drift; let go and
+    // it swings back in line and grips again. While it's held the stick
+    // drives it:
+    //   - steer into the turn: more angle (up to ~25°) and a tighter line
+    //   - ease the stick back: less angle and a wider line
+    //   - steer the other way and hold it there: the tail swings across into
+    //     a drift the other way (S-bends)
+    // The gas holds your speed through it (the brake then only scrubs a
+    // touch); off the gas, the brake slows the car as it drifts.
     const steerIn = clamp(ctl.steer || 0, -1, 1);
     const slip = Math.atan2(vL, Math.max(1, Math.abs(vF))); // body slip (+ = sliding left)
     const human = !!env.human;
-    const kick = (brake > 0.25 || hand) && Math.abs(steerIn) > 0.3 && !this.airborne && this.gear > 0 && vF > 9;
-    // a fresh press of the brake or handbrake arms a swing to the other side
-    // while it's held and for a moment after (a keyboard takes a beat to
-    // swing the wheel across)
-    const pedal = brake > 0.25 || hand;
-    if (pedal && !this.pedalPrev) this.flipArmed = 0.4;
-    else if (pedal && this.flipArmed > 0) this.flipArmed = 0.4;
-    else this.flipArmed = Math.max(0, this.flipArmed - dt);
-    this.pedalPrev = pedal;
+    const pedal = brake > 0.2 || hand;
+    const turning = Math.abs(steerIn) > 0.3;
+    if (this.driftBlock > 0) this.driftBlock -= dt;
     if (!human || this.gear < 0) {
+      if (this.driftState === 1) this.endDrift();
       this.driftState = 0;
     } else if (this.driftState === 0) {
       // (a brush of the wheel while braking in a straight line stays a
       // correction: the turn has to be held for a few hundredths)
+      const kick = pedal && turning && !this.airborne && this.gear > 0 && vF > 9 && this.driftBlock <= 0;
       this.driftArm = kick ? this.driftArm + dt : 0;
       if (this.driftArm > 0.05 || (kick && hand)) this.startDrift(-Math.sign(steerIn));
     } else if (this.driftState === 1) {
       this.driftT += dt;
-      // a fresh tap with the wheel the other way: swing it across
-      if (this.flipArmed > 0 && this.driftT > 0.25 && -Math.sign(steerIn) !== this.driftDir && Math.abs(steerIn) > 0.3) { this.flipDrift(); this.flipArmed = 0; }
-      if (this.airborne) this.endDrift(false);
+      const dirIn = -Math.sign(steerIn);
+      if (!pedal) {
+        this.driftHeld = false; // let go: it straightens up (see drift())
+      } else if (!this.driftHeld) {
+        // pressed again on the way out: straight back into it (and across,
+        // if the stick has gone the other way)
+        if (turning && !this.airborne) {
+          this.driftHeld = true;
+          this.driftT = 0;
+          if (dirIn !== this.driftDir) this.flipDrift();
+          else { this.driftBetaRate += this.driftDir * 0.6; this.hopped = true; }
+        }
+      } else {
+        // the stick held over the other way swings the tail across
+        this.flipHold = Math.abs(steerIn) > 0.5 && dirIn !== this.driftDir ? this.flipHold + dt : 0;
+        if (this.flipHold > 0.1 && this.driftT > 0.2) this.flipDrift();
+      }
+      // over a crest the drift carries on in the air and picks up again on
+      // landing (its swing is whatever the car is doing up there)
+      if (this.airborne) { this.driftBetaRate = this.yawRate; this.driftLat = 0; }
     } else if (this.driftState === 2) {
       // spinning: let it run its course
       if (speed < 4 || Math.abs(slip) < 0.3) this.driftState = 0;
@@ -315,7 +324,6 @@ export class Vehicle {
     this.driftK += (driftTgt - this.driftK) * Math.min(1, dt * (driftTgt > this.driftK ? 12 : 3.5));
     if (this.driftK < 0.002) this.driftK = 0;
     const dk = this.driftK;
-    if (this.boostT > 0) this.boostT = Math.max(0, this.boostT - dt);
 
     // steering: speed-sensitive lock + rate limit + countersteer assist
     const lock = P.steerLock / (1 + Math.max(0, Math.abs(vF) - 6) / 24) * (1 + P.handling * 0.1);
@@ -355,7 +363,9 @@ export class Vehicle {
         const upAt = P.redline * 0.95;
         const onLimit = this.rpm > P.redline * 0.985 && groundRpm > P.redline * 0.82;
         if (this.gear < nG && (groundRpm > upAt || onLimit) && drivePedal > 0.2) this.shift(+1);
-        else if (this.gear > 1 && (this.sinceShift ?? 9) > 1.1 && !this.driftState) {
+        // (held in gear through a drift, unless a braking drift has run the
+        // revs right down)
+        else if (this.gear > 1 && (this.sinceShift ?? 9) > 1.1 && (!this.driftState || groundRpm < P.redline * 0.38)) {
           const lower = this.wheelRpm(this.gear - 1, false);
           const downAt = drivePedal > 0.6 ? P.redline * 0.58 : P.redline * 0.4;
           if (groundRpm < downAt && lower < P.redline * 0.86) this.shift(-1);
@@ -544,8 +554,6 @@ export class Vehicle {
       let Fwd = FxF * cosD - FyF * sinD + FxR + rrF;
       let Lat = FxF * sinD + FyF * cosD + FyR;
       let torque = P.a * (FxF * sinD + FyF * cosD) - P.b * FyR;
-      // the mini-turbo out of a drift
-      if (this.boostT > 0 && !this.airborne && this.gear > 0) Fwd += P.mass * this.boostAcc;
 
       // slope: gravity along the surface
       const n = this.groundN;
@@ -655,50 +663,37 @@ export class Vehicle {
   /** Throw the tail out into a drift toward dir (+1 = left). */
   startDrift(dir) {
     this.driftState = 1;
+    this.driftHeld = true;
     this.driftDir = dir;
     this.driftT = 0;
     this.driftArm = 0;
     this.driftCalm = 0;
-    this.driftCharge = 0;
-    this.driftBetaRate = dir * 1.8; // the kick
+    this.driftOut = 0;
+    this.flipHold = 0;
+    this.driftBetaRate = dir * 1.0; // the kick
     this.driftLat = clamp(this.ayL, -20, 20); // the line starts where the car was turning
-    this.flipArmed = 0;
-    this.heaveV += 0.6; // the weight shifting as it goes
+    this.heaveV += 0.5; // the weight shifting as it goes
     this.hopped = true;
   }
 
   /** Swing the tail across into a drift the other way (linking S-bends). */
   flipDrift() {
     this.driftDir = -this.driftDir;
+    this.driftT = 0;
     this.driftCalm = 0;
-    this.driftBetaRate += this.driftDir * 1.2;
-    this.heaveV += 0.4;
+    this.flipHold = 0;
+    this.driftBetaRate += this.driftDir * 0.8;
+    this.heaveV += 0.35;
     this.hopped = true;
   }
 
-  /** Mini-turbo level the drift has charged: 0 none, 1 blue, 2 orange, 3 purple. */
-  get driftLevel() {
-    if (this.driftState !== 1) return 0;
-    const c = this.driftCharge;
-    return c > 3.6 ? 3 : c > 2.2 ? 2 : c > 1.0 ? 1 : 0;
-  }
-
-  /** Hand the car back to its tires, firing the mini-turbo if it charged. */
-  endDrift(boost = true) {
-    const lvl = boost ? this.driftLevel : 0;
-    if (lvl) {
-      this.boostLevel = lvl;
-      this.boostT = [0, 0.6, 0.9, 1.3][lvl];
-      this.boostFired = lvl;
-    }
+  /** Hand the car back to its tires. */
+  endDrift() {
     this.driftState = 0;
+    this.driftHeld = false;
     this.driftT = 0;
+    this.driftOut = 0;
     this.driftBetaRate = 0;
-  }
-
-  /** Extra push (m/s²) from a firing mini-turbo. */
-  get boostAcc() {
-    return this.boostT > 0 ? [0, 4.5, 5.5, 7][this.boostLevel] || 0 : 0;
   }
 
   /**
@@ -706,17 +701,17 @@ export class Vehicle {
    * directly. The line the car travels bends at a share of the tires' grip
    * set by the stick: tighter steering in, wider steering out, and the tires
    * bite harder than in a real slide. The car's angle to that line swings
-   * toward the angle the stick and the gas ask for, on a spring, so it
-   * snaps in, overshoots a touch and settles with some weight. When the angle
-   * has come back to nothing and the stick isn't asking for one, the tires
-   * take over again.
+   * toward the angle the stick asks for, on a spring, so it snaps in,
+   * overshoots a touch and settles with some weight. Let go of the brake and
+   * the angle swings back to nothing while the line eases to what the tires
+   * would hold; once the car is straight the tires take over again.
    */
   drift(dt, o) {
     const P = this.P;
     const d = this.driftDir;
+    const held = this.driftHeld;
     const into = clamp(-o.steerIn * d, -1, 1);
     const sIn = Math.max(0, into);
-    const braking = o.brake > 0.25;
     let sp = Math.hypot(this.vx, this.vz);
     const path = Math.atan2(this.vx, this.vz);
     let beta = this.heading - path;
@@ -727,25 +722,41 @@ export class Vehicle {
     const rwd = P.split === 0, fwd = P.split === 1;
     const angK = rwd ? 1 : fwd ? 0.78 : 0.86;
     const grip = rwd ? 1 : fwd ? 1 : 1.05;
-    // the angle asked for
-    let want = (0.08 + 0.56 * sIn + 0.08 * o.drivePedal * sIn * (rwd ? 1 : 0.5)) * angK + (braking ? 0.06 : 0) + (o.hand ? 0.14 : 0);
-    if (into < 0) want = Math.max(0.02, 0.08 + 0.1 * into);
-    want = Math.min(0.95, want);
+    // the angle asked for (none once the brake is let go)
+    let want = 0;
+    if (held) {
+      want = into < 0
+        ? Math.max(0.05, (0.17 + 0.12 * into) * angK)
+        : (0.17 + 0.19 * sIn + 0.04 * o.drivePedal * sIn) * angK + (o.hand ? 0.07 : 0);
+      want = Math.min(0.5, want);
+    }
     this.driftWant = want;
-    const wn = 7.5 * Math.pow(1400 / P.mass, 0.35), zeta = 0.55;
+    const wn0 = 7.5 * Math.pow(1400 / P.mass, 0.35);
+    const wn = held ? wn0 : wn0 * 1.25, zeta = held ? 0.62 : 0.95;
     this.driftBetaRate += (wn * wn * (d * want - beta) - 2 * zeta * wn * this.driftBetaRate) * dt;
     // the line
     const mu = o.muS * 1.08 * grip;
-    const k = lerp(0.3, 0.9, (into + 1) / 2) + 0.35 * sIn + (o.hand ? 0.12 : 0) + (braking ? 0.06 : 0);
-    this.driftLat += (d * k * mu * G - this.driftLat) * Math.min(1, dt * 9);
+    let latT;
+    if (held) {
+      const k = lerp(0.3, 0.9, (into + 1) / 2) + 0.35 * sIn + (o.hand ? 0.12 : 0);
+      latT = d * k * mu * G;
+    } else {
+      // on the way out: what the tires will hold for the stick as it is
+      const lock = P.steerLock / (1 + Math.max(0, sp - 6) / 24) * (1 + P.handling * 0.1);
+      const gLat = o.muS * G * 0.95;
+      latT = clamp(sp * sp * (-o.steerIn * lock) / (P.wb + 0.0022 * sp * sp), -gLat, gLat);
+    }
+    this.driftLat += (latT - this.driftLat) * Math.min(1, dt * 9);
     const pathRate = clamp(this.driftLat / Math.max(sp, 5), -2.2, 2.2);
-    // speed: the power goes down along the line (some of it into wheelspin),
-    // a deep angle scrubs a little, the brakes scrub more
+    // speed: the power goes down along the line (some of it into wheelspin)
+    // and a deep angle scrubs a little. The held brake slows the car off the
+    // gas (a braking drift into a corner); on the gas it's just the drift
+    // button and only scrubs a touch. On the way out the brake is a brake.
     const eff = P.split === 1 ? 0.38 : P.split === 0 ? 0.46 : 0.43;
-    const aDrive = clamp(o.driveForce / P.mass * eff, -4, mu * G * 0.55) + this.boostAcc;
+    const aDrive = clamp(o.driveForce / P.mass * eff, -4, mu * G * 0.55);
     const sb = Math.sin(beta);
     const aScrub = mu * G * 0.1 * sb * sb + o.surf.drag * 0.25;
-    const aBrake = (braking ? o.brake * 0.3 : 0) * G + (o.hand ? 0.12 * G : 0);
+    const aBrake = held ? o.brake * (0.05 + 0.3 * (1 - o.drivePedal)) * G + (o.hand ? 0.12 * G : 0) : o.brake * 0.5 * G;
     const aDrag = 0.5 * RHO * P.cdA * (1 - 0.4 * clamp(o.draft || 0, 0, 1)) * sp * sp / P.mass;
     sp = Math.max(0, sp + (aDrive - aScrub - aBrake - aDrag) * dt);
     const path2 = path + pathRate * dt;
@@ -759,8 +770,6 @@ export class Vehicle {
     this.heading += dh;
     this.x += this.vx * dt;
     this.z += this.vz * dt;
-    // the mini-turbo charges with angle and time
-    if (sp > 10) this.driftCharge += dt * clamp(Math.abs(beta2) / 0.45, 0, 1.4);
     // front wheels catch the slide (they point down the line), plus the stick
     this.steer = clamp(-beta2 * 0.85 - o.steerIn * 0.12, -0.75, 0.75);
     // what the tires would be doing, for the squeal, smoke and skid marks
@@ -772,9 +781,12 @@ export class Vehicle {
     this.escActive = false;
     this.escCut = 0;
     this.lastFyF = this.lastFyR = 0;
-    // straight again and not asking for angle: back to the tires
-    if (Math.abs(beta2) < 0.1 && want < 0.2) this.driftCalm += dt; else this.driftCalm = 0;
-    if (this.driftCalm > 0.1 || sp < 6) this.endDrift(sp >= 6);
+    // let go and straight again: back to the tires (and never more than a
+    // moment after letting go)
+    if (held) this.driftOut = 0;
+    else this.driftOut += dt;
+    if (!held && Math.abs(beta2) < 0.035 && Math.abs(this.driftBetaRate) < 0.5) this.driftCalm += dt; else this.driftCalm = 0;
+    if (this.driftCalm > 0.02 || this.driftOut > 0.6 || sp < 6) this.endDrift();
   }
 
   shift(dir) {
@@ -822,8 +834,9 @@ export class Vehicle {
         }
       }
       this.yawRate *= 0.85;
-      // a real thump knocks you out of a drift (no mini-turbo)
-      if (this.driftState === 1 && impact > 6) this.endDrift(false);
+      // a real thump knocks you out of a drift (and it takes a moment to
+      // set up another)
+      if (this.driftState === 1 && impact > 6) { this.endDrift(); this.driftBlock = 0.5; }
     }
     return impact;
   }
