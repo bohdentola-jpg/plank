@@ -37,7 +37,7 @@ function tireCurve(alpha, B = 9.5, Cc = 1.45, E = -0.6) {
 // Arcade tuning on top of the real-world specs: every car pulls harder,
 // grips harder and stops harder than its brochure says, so the racing
 // feels fast (the AI drives the same numbers, so the field stays even).
-export const ARCADE = { power: 1.55, grip: 1.2, brake: 1.2, shift: 0.7 };
+export const ARCADE = { power: 1.55, grip: 1.3, brake: 1.2, shift: 0.7 };
 /** The cars as their brochures have them (no arcade tuning). */
 export const BROCHURE = { power: 1, grip: 1, brake: 1, shift: 1 };
 
@@ -670,7 +670,7 @@ export class Vehicle {
     this.driftCalm = 0;
     this.driftOut = 0;
     this.flipHold = 0;
-    this.driftBetaRate = dir * 1.0; // the kick
+    this.driftBetaRate = dir * 1.15; // the kick
     this.driftLat = clamp(this.ayL, -20, 20); // the line starts where the car was turning
     this.heaveV += 0.5; // the weight shifting as it goes
     this.hopped = true;
@@ -698,13 +698,15 @@ export class Vehicle {
 
   /**
    * One step of a drift. Instead of the tire model, two things are steered
-   * directly. The line the car travels bends at a share of the tires' grip
-   * set by the stick: tighter steering in, wider steering out, and the tires
-   * bite harder than in a real slide. The car's angle to that line swings
-   * toward the angle the stick asks for, on a spring, so it snaps in,
-   * overshoots a touch and settles with some weight. Let go of the brake and
-   * the angle swings back to nothing while the line eases to what the tires
-   * would hold; once the car is straight the tires take over again.
+   * directly: the line the car travels, which bends at a share of the
+   * tires' grip set by the stick (and bites harder than a real slide), and
+   * the car's angle to that line, which swings toward the angle the stick
+   * asks for on a spring, so it snaps in and settles with some weight.
+   * The nose never swings back: when the angle has to come down (easing the
+   * stick, or letting go of the brake) the car stops rotating and its line
+   * bends round to where the nose points, the way a car's tail comes back
+   * in line when the rear tires bite. Once it's straight, the tires take
+   * over again.
    */
   drift(dt, o) {
     const P = this.P;
@@ -720,34 +722,52 @@ export class Vehicle {
     // four-wheel drives drift flatter and bite harder (rally style), front
     // drivers hang the least; light cars swing in quicker than heavy ones
     const rwd = P.split === 0, fwd = P.split === 1;
-    const angK = rwd ? 1 : fwd ? 0.78 : 0.86;
+    const angK = rwd ? 1 : fwd ? 0.8 : 0.88;
     const grip = rwd ? 1 : fwd ? 1 : 1.05;
+    const mu = o.muS * 1.08 * grip;
+    const spL = Math.max(sp, 5);
     // the angle asked for (none once the brake is let go)
     let want = 0;
     if (held) {
       want = into < 0
-        ? Math.max(0.05, (0.17 + 0.12 * into) * angK)
-        : (0.17 + 0.19 * sIn + 0.04 * o.drivePedal * sIn) * angK + (o.hand ? 0.07 : 0);
-      want = Math.min(0.5, want);
+        ? Math.max(0.05, (0.2 + 0.13 * into) * angK)
+        : (0.2 + 0.2 * sIn + 0.04 * o.drivePedal * sIn) * angK + (o.hand ? 0.06 : 0);
+      want = Math.min(0.52, want);
     }
     this.driftWant = want;
     const wn0 = 7.5 * Math.pow(1400 / P.mass, 0.35);
-    const wn = held ? wn0 : wn0 * 1.25, zeta = held ? 0.62 : 0.95;
+    const wn = held ? wn0 : wn0 * 1.2, zeta = held ? 0.65 : 0.9;
     this.driftBetaRate += (wn * wn * (d * want - beta) - 2 * zeta * wn * this.driftBetaRate) * dt;
-    // the line
-    const mu = o.muS * 1.08 * grip;
+    // the line: in the drift, a tight one set by the stick; on the way out,
+    // what the tires will hold for the stick as it is
     let latT;
+    let rGrip = 0;
+    {
+      const lock = P.steerLock / (1 + Math.max(0, sp - 6) / 24) * (1 + P.handling * 0.1);
+      const gLat = o.muS * G;
+      rGrip = clamp(sp * (-o.steerIn * lock) / (P.wb + 0.0022 * sp * sp), -gLat / spL, gLat / spL);
+    }
     if (held) {
-      const k = lerp(0.3, 0.9, (into + 1) / 2) + 0.35 * sIn + (o.hand ? 0.12 : 0);
+      const k = lerp(0.35, 1.0, (into + 1) / 2) + 0.55 * sIn + (o.hand ? 0.15 : 0);
       latT = d * k * mu * G;
     } else {
-      // on the way out: what the tires will hold for the stick as it is
-      const lock = P.steerLock / (1 + Math.max(0, sp - 6) / 24) * (1 + P.handling * 0.1);
-      const gLat = o.muS * G * 0.95;
-      latT = clamp(sp * sp * (-o.steerIn * lock) / (P.wb + 0.0022 * sp * sp), -gLat, gLat);
+      latT = rGrip * sp;
     }
     this.driftLat += (latT - this.driftLat) * Math.min(1, dt * 9);
-    const pathRate = clamp(this.driftLat / Math.max(sp, 5), -2.2, 2.2);
+    let pathRate = clamp(this.driftLat / spL, -2.4, 2.4);
+    // no swinging back: the nose keeps turning the way the drift goes (or
+    // the way the stick says, once it's let go); whatever the angle has to
+    // lose beyond that comes off the line bending round toward the nose
+    let r = pathRate + this.driftBetaRate;
+    // (let go with the stick still in, it keeps turning a little; steered
+    // away, it may turn that way)
+    const floor = held ? 0 : rGrip * d * (rGrip * d > 0 ? 0.45 : 0.6);
+    if (r * d < floor) {
+      const wMax = Math.max(Math.abs(pathRate), 2.0 * mu * G / spL);
+      r = floor * d;
+      pathRate = clamp(r - this.driftBetaRate, -wMax, wMax);
+      this.driftBetaRate = r - pathRate;
+    }
     // speed: the power goes down along the line (some of it into wheelspin)
     // and a deep angle scrubs a little. The held brake slows the car off the
     // gas (a braking drift into a corner); on the gas it's just the drift
@@ -759,10 +779,13 @@ export class Vehicle {
     const aBrake = held ? o.brake * (0.05 + 0.3 * (1 - o.drivePedal)) * G + (o.hand ? 0.12 * G : 0) : o.brake * 0.5 * G;
     const aDrag = 0.5 * RHO * P.cdA * (1 - 0.4 * clamp(o.draft || 0, 0, 1)) * sp * sp / P.mass;
     sp = Math.max(0, sp + (aDrive - aScrub - aBrake - aDrag) * dt);
+    // (the tail coming back in line costs a little of the sideways speed)
+    const dBeta = this.driftBetaRate * dt;
+    if (dBeta * beta < 0) sp *= 1 - 0.35 * Math.abs(Math.sin(beta)) * Math.abs(dBeta);
     const path2 = path + pathRate * dt;
     this.vx = Math.sin(path2) * sp;
     this.vz = Math.cos(path2) * sp;
-    const beta2 = beta + this.driftBetaRate * dt;
+    const beta2 = beta + dBeta;
     const h2 = path2 + beta2;
     let dh = h2 - this.heading;
     dh = Math.atan2(Math.sin(dh), Math.cos(dh));
@@ -785,8 +808,8 @@ export class Vehicle {
     // moment after letting go)
     if (held) this.driftOut = 0;
     else this.driftOut += dt;
-    if (!held && Math.abs(beta2) < 0.035 && Math.abs(this.driftBetaRate) < 0.5) this.driftCalm += dt; else this.driftCalm = 0;
-    if (this.driftCalm > 0.02 || this.driftOut > 0.6 || sp < 6) this.endDrift();
+    if (!held && Math.abs(beta2) < 0.03) this.driftCalm += dt; else this.driftCalm = 0;
+    if (this.driftCalm > 0.02 || this.driftOut > 1.0 || sp < 6) this.endDrift();
   }
 
   shift(dir) {
