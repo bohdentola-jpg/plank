@@ -92,9 +92,9 @@ Erase story save.
 ## Racing
 
 - **Race length:** every race is over in one to two minutes: circuits are
-  short (three laps of about half a minute), sprints run a minute or so, and
-  a lap knockout lasts three laps at most (a big field loses more than one car
-  a lap, so it's down to two for the last lap).
+  short (three laps of about half a minute), sprints run about a minute and
+  a quarter, and a lap knockout lasts three laps at most (a big field loses
+  more than one car a lap, so it's down to two for the last lap).
 - **Race types:** circuit, sprint, lap knockout, drag (manual shifting on a shift light, graded launches and upshifts),
   drift (angle × speed scoring with a multiplier chain that a crash wipes out),
   and time attack (a pro drives your exact car first; you chase the ghost and
@@ -151,24 +151,27 @@ Erase story save.
 
 ## Tracks (16)
 
-| Region | Track | Type | Time / weather |
-|---|---|---|---|
-| City | Downtown Loop | circuit | night, wet |
-| City | Uptown Run | sprint | night, rain |
-| City | Old Town | circuit | dusk |
-| City | Downtown Reverse | circuit | night |
-| City | Old Town Reverse | circuit | night, rain |
-| Docks | Harbor Docks | circuit | night, wet |
-| Docks | Pier 9 | circuit | night |
-| Highway | Interstate 9 | sprint | night, wet |
-| Highway | Skyline Expressway | circuit | dusk |
-| Raceway | Redwood Raceway | circuit | day |
-| Raceway | Crestwood Hills | circuit | sunset |
-| Mountain | Kaido Pass | sprint | dusk |
-| Mountain | Summit Loop | circuit | night, fog |
-| Desert | Route 99 | sprint | day |
-| Desert | Red Rock Canyon | circuit | sunset |
-| Desert | Dry Lake Drag | drag | sunset |
+Every race is over in one to two minutes: circuits run three short laps,
+sprints about a minute and a quarter.
+
+| Region | Track | Type | Lap / run | Time / weather |
+|---|---|---|---|---|
+| City | Downtown Loop | circuit | 0.89 km | night, wet |
+| City | Uptown Run | sprint | 2.2 km | night, rain |
+| City | Old Town | circuit | 0.74 km | dusk |
+| City | Downtown Reverse | circuit | 0.89 km | night |
+| City | Old Town Reverse | circuit | 0.74 km | night, rain |
+| Docks | Harbor Docks | circuit | 0.92 km | night, wet |
+| Docks | Pier 9 | circuit | 0.86 km | night |
+| Highway | Interstate 9 | sprint | 4.6 km | night, wet |
+| Highway | Skyline Expressway | circuit | 1.63 km | dusk |
+| Raceway | Redwood Raceway | circuit | 1.04 km | day |
+| Raceway | Crestwood Hills | circuit | 0.93 km | sunset |
+| Mountain | Kaido Pass | sprint | 2.7 km | dusk |
+| Mountain | Summit Loop | circuit | 0.91 km | night, fog |
+| Desert | Route 99 | sprint | 4.0 km | day |
+| Desert | Red Rock Canyon | circuit | 1.24 km | sunset |
+| Desert | Dry Lake Drag | drag | 402 m | sunset |
 
 ## Cars (16)
 
