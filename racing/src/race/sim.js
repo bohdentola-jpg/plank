@@ -325,7 +325,7 @@ export class RaceSim {
       // laps / finish
       if (!r.finished) {
         const lapNow = Math.floor(r.total / T.length);
-        const target = this.type === 'sprint' || this.type === 'drag' ? T.finishS - T.startS : T.length * this.laps;
+        const target = !T.closed ? T.finishS - T.startS : T.length * this.laps; // (a point-to-point road ends at its line, whatever the race)
         if (T.closed && lapNow > r.lap && r.total > 0) {
           for (let L = r.lap + 1; L <= lapNow; L++) this.completeLap(r, L);
         }
@@ -444,7 +444,7 @@ export class RaceSim {
   end() {
     if (this.state === 'done') return;
     const T = this.T;
-    const target = this.type === 'sprint' || this.type === 'drag' ? T.finishS - T.startS : T.length * this.laps;
+    const target = !T.closed ? T.finishS - T.startS : T.length * this.laps; // (a point-to-point road ends at its line, whatever the race)
     const pending = this.racers.filter((r) => !r.finished && !r.out);
     pending.sort((a, b) => b.total - a.total);
     for (const r of pending) {

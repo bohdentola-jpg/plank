@@ -114,7 +114,7 @@ registerScreen('race', () => {
     if (res.place === 1 && res.racers > 1) r.wins = (r.wins || 0) + 1;
     const car = `${P.spec.make} ${P.spec.model}`;
     if (res.bestLap && (!r.bestLap || res.bestLap < r.bestLap)) { r.bestLap = res.bestLap; r.bestLapCar = car; r.newLap = true; } else r.newLap = false;
-    if (res.time && !res.out && (session.type === 'sprint' || session.type === 'drag') && (!r.bestTime || res.time < r.bestTime)) { r.bestTime = res.time; r.bestTimeCar = car; }
+    if (res.time && !res.out && !session.track.closed && (!r.bestTime || res.time < r.bestTime)) { r.bestTime = res.time; r.bestTimeCar = car; }
     r.date = Date.now();
     all[res.track] = r;
     store.save('records', all);

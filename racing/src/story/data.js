@@ -68,7 +68,7 @@ export const EVENTS = [
   { id: 'c2e5', ch: 1, name: 'DOWNTOWN DELIVERY', track: 'downtown', type: 'circuit', laps: 3, rivals: 5, pr: 605, prize: 4200, traffic: true, flavor: 'The Rats come uptown to settle a debt. Six cars, wet streets, rush-hour traffic.' },
   { id: 'c2b', ch: 1, boss: true, name: 'TANK: HARBOR MASTER', track: 'harbor', type: 'circuit', laps: 3, rivals: 1, pr: 0, prize: 10000, flavor: 'Tank\'s Stallion weighs as much as a forklift and drives like one. A fast one.' },
   // ch 3 — THE PASS
-  { id: 'c3e1', ch: 2, name: 'DOWNHILL', track: 'kaido', type: 'sprint', rivals: 3, pr: 640, prize: 5500, flavor: 'Five kilometers of pass road, top to bottom. Respect the guardrail.' },
+  { id: 'c3e1', ch: 2, name: 'DOWNHILL', track: 'kaido', type: 'sprint', rivals: 3, pr: 640, prize: 5500, flavor: 'Three kilometers of pass road, ridge to valley, four hairpins stacked down the face. Respect the guardrail.' },
   { id: 'c3e2', ch: 2, name: 'FOG LINE', track: 'summit', type: 'circuit', laps: 3, rivals: 4, pr: 650, prize: 6000, flavor: 'Switchbacks up, a plunge down, fog everywhere in between.' },
   { id: 'c3e3', ch: 2, name: 'GHOST LAP', track: 'kaido', type: 'timeattack', tt: 1.03, prize: 5000, flavor: 'The Ghosts keep a time carved into the summit sign. Beat it.' },
   { id: 'c3e4', ch: 2, name: 'SUMMIT KNOCKOUT', track: 'summit', type: 'knockout', rivals: 4, pr: 665, prize: 7000, flavor: 'Three laps of the peak. Every time past the shrine, the back of the pack goes home.' },
