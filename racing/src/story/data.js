@@ -75,7 +75,7 @@ export const EVENTS = [
   { id: 'c3e5', ch: 2, name: 'GOLDEN HOUR', track: 'crestwood', type: 'circuit', laps: 3, rivals: 5, pr: 675, prize: 7500, flavor: 'The Ghosts borrow the old hill circuit at sundown. Blind crest, corkscrew, carousel.' },
   { id: 'c3b', ch: 2, boss: true, name: 'KAITO: THE GHOST', track: 'kaido', type: 'sprint', rivals: 1, pr: 0, prize: 15000, flavor: 'A twenty-year-old Trueno that nobody has beaten downhill. Ever.' },
   // ch 4 — ROUTE 99
-  { id: 'c4e1', ch: 3, name: 'HEAT SHIMMER', track: 'route99', type: 'sprint', rivals: 4, pr: 715, prize: 9000, flavor: 'Seven kilometers of two-lane through the Mojave. Watch the whoops.' },
+  { id: 'c4e1', ch: 3, name: 'HEAT SHIMMER', track: 'route99', type: 'sprint', rivals: 4, pr: 715, prize: 9000, flavor: 'Four kilometers of two-lane through the Mojave, past the truck stop and into the slot canyon. Watch the whoops.' },
   { id: 'c4e2', ch: 3, name: 'QUARTER MILE', track: 'drylake', type: 'drag', rivals: 1, pr: 725, prize: 8000, flavor: 'Salt flat, chalk lines, a tree of lights. Launch and shift. That\'s it.' },
   { id: 'c4e3', ch: 3, name: 'RED ROCK', track: 'redrock', type: 'circuit', laps: 3, rivals: 5, pr: 730, prize: 10000, flavor: 'Sunset loop between the buttes. Through the slot canyon, flat out.' },
   { id: 'c4e4', ch: 3, name: 'BAKED', track: 'redrock', type: 'knockout', rivals: 4, pr: 740, prize: 11000, flavor: 'Three laps of heat. The Syndicate bets on who drops first.' },

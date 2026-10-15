@@ -1164,6 +1164,14 @@ function placeForms(P) {
         if (q.d < fence + 10) bad = true;
       }
       if (bad || out.some((f) => Math.hypot(f.x - x, f.z - z) < (f.reach + reach) * 0.9)) continue;
+      // (the nearest-road lookup only sees ~175 m round a point, and a big
+      // mesa reaches much further: on a short loop the far side of the road
+      // can be inside it, so check its whole footprint against the road)
+      if (reach > 150) {
+        let dd = Infinity;
+        for (let k = 0; k < T.N; k += 3) { const ex = T.X[k] - x, ez = T.Z[k] - z; dd = Math.min(dd, ex * ex + ez * ez); }
+        if (Math.sqrt(dd) < reach + fence + 12) continue;
+      }
       const H = kind === 'mesa' ? 45 + rng() * 70 : kind === 'butte' ? 40 + rng() * 60 : 30 + rng() * 50;
       out.push({ kind, x, z, r, ex, rot: rng() * Math.PI, H, reach, seed: rng() * 1000 });
       made++;

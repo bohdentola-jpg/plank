@@ -182,6 +182,9 @@ export class RaceSim {
           if (v.gear < 1) v.gear = 1;
         } else {
           v.step(PHYS_DT, ctl, env);
+          // across the line on a sprint the car is pulled up before the road
+          // runs out, however fast it finished
+          if (r.finished && !T.closed) this.pullUp(r, PHYS_DT);
         }
         ctl.shiftUp = false;
         ctl.shiftDown = false;
@@ -251,11 +254,27 @@ export class RaceSim {
     }
   }
 
+  /** Slow a finished sprint car so it stops short of the end of the road. */
+  pullUp(r, dt) {
+    const v = r.vehicle;
+    const sp = Math.hypot(v.vx, v.vz);
+    if (sp < 1) return;
+    const room = Math.max(1, this.T.length - 25 - (r.s ?? 0));
+    const need = (sp * sp) / (2 * room); // deceleration that stops it in time
+    if (need > 7) {
+      const k = Math.max(0, 1 - ((need - 7) * dt) / sp);
+      v.vx *= k; v.vz *= k;
+    }
+  }
+
   progress(dt) {
     const T = this.T;
     const racing = this.state === 'racing' || this.state === 'finished';
     for (const r of this.racers) {
       const v = r.vehicle;
+      // a knocked-out car pulls off: after a moment it leaves the track
+      // (hidden, no contact) instead of circling in everyone's way
+      if (r.out && !r.parked && !r.isPlayer && this.raceTime - (r.outT ?? this.raceTime) > 2.5) r.parked = true;
       const p = T.project(v.x, v.z, r.hint, r._pp || (r._pp = {}));
       const prevS = r.s;
       r.s = p.s;
@@ -376,6 +395,7 @@ export class RaceSim {
       done.push(r);
       if (done.length > done.alive - done.cut) {
         r.out = true;
+        r.outT = this.raceTime;
         r.finished = true;
         r.finishTime = null;
         this.emit('knockout', { id: r.id, name: r.name, player: r.isPlayer });
