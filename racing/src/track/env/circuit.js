@@ -40,18 +40,18 @@ const styleFor = (def) => STYLE[def.scenery] || STYLE[def.id] || (def.time === '
 // walls: [s0, s1, side, runoff past the road edge, kind (2 concrete)]; stands: [s0, s1, side, tiers]
 const PLAN = {
   redwood: {
-    walls: [[150, 1170, -1, 3.6, 2], [195, 1090, 1, 7.5, 2]],
-    pits: { lane: [182, 1010], garages: [330, 706], tower: 432 },
-    stands: [[236, 724, 1, 12], [1150, 1262, 1, 9], [3380, 3545, 1, 9], [2860, 2990, -1, 8]],
-    banks: [[1600, 1760, 1], [2040, 2200, -1]],
-    bridge: 2620, parking: [[480, 1, 220, 80]],
+    walls: [[100, 330, -1, 3.6, 2], [125, 300, 1, 7.5, 2]],
+    pits: { lane: [80, 330], garages: [150, 258], tower: 192 },
+    stands: [[140, 320, 1, 12], [962, 1030, 1, 9]],
+    banks: [[500, 590, 1], [650, 735, 1], [800, 930, 1]],
+    bridge: 750, parking: [[215, 1, 160, 70]],
   },
   crestwood: {
-    walls: [[150, 470, -1, 3.4, 2], [175, 462, 1, 6.5, 2]],
-    pits: { lane: [172, 470], garages: [205, 425], tower: 270 },
-    stands: [[182, 452, 1, 10], [790, 905, -1, 8], [3175, 3335, -1, 9]],
-    banks: [[1550, 1760, -1], [2975, 3160, -1], [600, 800, 1], [2120, 2260, 1]],
-    bridge: 2700, parking: [[300, -1, 160, 70]],
+    walls: [[80, 270, -1, 3.4, 2], [100, 260, 1, 6.5, 2]],
+    pits: { lane: [40, 300], garages: [110, 230], tower: 162 },
+    stands: [[110, 250, 1, 10], [800, 900, -1, 8]],
+    banks: [[500, 580, -1], [630, 770, -1], [790, 880, 1]],
+    bridge: 850, parking: [[170, -1, 140, 60]],
   },
 };
 const rgb = (hex) => { const c = new THREE.Color(hex); return [c.r, c.g, c.b]; };
