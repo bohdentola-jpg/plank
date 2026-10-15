@@ -50,12 +50,21 @@ export class TrafficSim {
     this.lanes = lanes.map((lat) => ({ lat, dir: twoWay && lat > 0.01 ? -1 : 1 }));
     const city = def.env === 'city' || def.env === 'docks';
     this.speedRange = def.trafficSpeed || (city ? [11, 16] : [21, 31]);
-    const count = opts.count ?? def.trafficCount ?? (city ? 14 : 16);
+    // traffic lives in a window round the player: 260 m back, 1100 m ahead
+    // (on a short loop, a share of the lap instead, with fewer cars so the
+    // roads are as busy as on a long one)
+    this.windowBack = 260;
+    this.windowAhead = 1100;
+    let count = opts.count ?? def.trafficCount ?? (city ? 14 : 16);
+    if (track.closed && track.length < 2.4 * (this.windowBack + this.windowAhead)) {
+      const L = track.length;
+      this.windowBack = Math.min(260, L * 0.16);
+      this.windowAhead = Math.min(1100, L * 0.42);
+      if (opts.count === undefined) count = Math.max(5, Math.round(count * (this.windowBack + this.windowAhead) / 1360));
+    }
     this.cars = [];
     for (let k = 0; k < count; k++) this.cars.push(new TrafficCar(k, this.rng() < (city ? 0.1 : 0.2) ? 'truck' : 'car'));
     this.events = [];
-    this.windowBack = 260;
-    this.windowAhead = 1100;
   }
 
   /** Spread the cars along the road ahead of the grid (never on it). */
@@ -163,7 +172,7 @@ export class TrafficSim {
           const lane = this.lanes[Math.floor(this.rng() * this.lanes.length)];
           let s = refS + this.windowAhead * (0.55 + this.rng() * 0.45);
           if (!T.closed && s > T.length - 30) s = refS - this.windowBack + 40; // past the finish: leave it
-          if (this.spotFree(s, lane.lat)) this.spawn(c, s, lane);
+          if (this.spotFree(s, lane.lat, sim)) this.spawn(c, s, lane);
         }
       }
     }
@@ -187,8 +196,10 @@ export class TrafficSim {
     return true;
   }
 
-  spotFree(s, lat) {
+  spotFree(s, lat, sim) {
     for (const o of this.cars) if (Math.abs(o.lat - lat) < 2 && Math.abs(this.T.deltaS(s, o.s)) < 30) return false;
+    // never out of thin air next to a racer
+    if (sim) for (const r of sim.racers) if (!(r.out && r.parked) && Math.abs(this.T.deltaS(s, r.s)) < 60) return false;
     return true;
   }
 
