@@ -6,7 +6,7 @@ import { Renderer } from './core/renderer.js';
 import { input } from './core/input.js';
 import { hit, osd } from './core/ui.js';
 import { audio } from './audio/audio.js';
-import { settings } from './core/settings.js';
+import { settings, store } from './core/settings.js';
 
 export const game = {
   renderer: null,
@@ -200,6 +200,23 @@ async function boot() {
   audio.setVolumes({
     master: settings.get('volMaster'), music: settings.get('volMusic'), sfx: settings.get('volSfx'),
   });
+
+  // the tracks were redrawn shorter (layout 2): best laps and times set on the
+  // old layouts don't compare, so they go (races and wins stay); the drag
+  // strip didn't change
+  try {
+    if (store.load('recordsLayout') !== 2) {
+      const recs = store.load('records');
+      if (recs) {
+        for (const [id, r] of Object.entries(recs)) {
+          if (id === 'drylake' || !r || typeof r !== 'object') continue;
+          delete r.bestLap; delete r.bestLapCar; delete r.bestTime; delete r.bestTimeCar; delete r.newLap;
+        }
+        store.save('records', recs);
+      }
+      store.save('recordsLayout', 2);
+    }
+  } catch { /* storage unavailable: nothing to clean */ }
 
   // screens register themselves on import
   await import('./screens/index.js');
