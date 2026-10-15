@@ -123,7 +123,11 @@ export class AIDriver {
     let vTarget = vLine * this.gripScale * skillMul * band;
     vTarget = Math.min(vTarget, 120);
     if (this.blocked) vTarget = Math.min(vTarget, this.blockedSpeed);
-    if (r.finished || r.out) vTarget = Math.min(vTarget, 16);
+    if (r.finished || r.out) {
+      vTarget = Math.min(vTarget, 16);
+      // a sprint's road runs out past the line: pull up before the end of it
+      if (!T.closed) vTarget = Math.min(vTarget, Math.sqrt(Math.max(0, 2 * 5 * (T.length - 20 - (r.s ?? 0)))));
+    }
 
     const err = vTarget - speed;
     if (err > 1.0) { ctl.throttle = clamp(0.6 + err * 0.12, 0, 1); ctl.brake = 0; }
