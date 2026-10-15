@@ -19,6 +19,7 @@ import { music } from '../audio/music.js';
 import { sfx } from '../audio/sfx.js';
 import { EngineSound } from '../audio/engine.js';
 import { engineProfile } from '../race/session.js';
+import { knockLaps } from '../race/sim.js';
 
 export const PALETTE = [
   ['#c8102e', 'RALLY RED'], ['#f2f1ec', 'CHAMPIONSHIP WHITE'], ['#0e0f12', 'MIDNIGHT BLACK'], ['#a9aeb5', 'ARCTIC SILVER'],
@@ -201,7 +202,7 @@ registerScreen('showroom', () => {
         label: 'LAPS', type: 'choice', id: 'laps',
         get options() {
           if (cfg.type === 'sprint' || cfg.type === 'drag') return [{ value: cfg.laps, label: '—' }];
-          if (cfg.type === 'knockout') return [{ value: cfg.laps, label: `${Math.max(1, cfg.opp)} (AUTO)` }];
+          if (cfg.type === 'knockout') return [{ value: cfg.laps, label: `${knockLaps(cfg.opp)} (AUTO)` }];
           return Array.from({ length: 10 }, (_, k) => ({ value: k + 1, label: String(k + 1) }));
         },
         get: () => cfg.laps, set: (v) => { cfg.laps = v; },
@@ -271,7 +272,7 @@ registerScreen('showroom', () => {
     const skill = SKILLS[cfg.skill].v;
     const params = {
       track: def.id, car: sp.id, look: { paint: paintOf(idx) }, type,
-      laps: type === 'knockout' ? Math.max(1, opp) : cfg.laps,
+      laps: type === 'knockout' ? knockLaps(opp) : cfg.laps,
       opponents: pickRivals(sp, opp, skill, paintOf(idx), def.id + type),
       rubber: cfg.catchup ? 1 : 0,
       traffic: trafficOK() ? (cfg.traffic ?? !!def.traffic) : false,

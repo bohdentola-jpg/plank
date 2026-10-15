@@ -7,6 +7,10 @@ import { AIDriver } from './ai.js';
 import { TrafficSim } from './traffic.js';
 import { clamp } from '../core/util.js';
 
+/** Laps for a lap knockout with this many rivals: two or three, whatever the
+ *  field (a big field loses more than one car a lap), so it stays short. */
+export const knockLaps = (rivals) => Math.min(3, Math.max(2, rivals | 0));
+
 export class RaceSim {
   /**
    * track: Track (with racing line computed). opts: { type, laps, racers:
@@ -359,12 +363,18 @@ export class RaceSim {
       this.emit('lap', { lap: L, time: t, best, final: L === this.laps - 1 });
       if (L === this.laps - 1) this.emit('finallap');
     }
-    // knockout: the last remaining racer to complete each lap is eliminated
+    // knockout: the last racers to complete each lap are eliminated — one a
+    // lap, or more in a big field, so it's down to two for the final lap
+    // (races stay three laps at most)
     if (this.type === 'knockout' && L < this.laps) {
       const done = (this.knockLap[L] = this.knockLap[L] || []);
+      if (!done.length) {
+        const alive = this.racers.filter((o) => !o.out).length;
+        done.alive = alive;
+        done.cut = Math.min(alive - 2, Math.ceil((alive - 2) / (this.laps - L)));
+      }
       done.push(r);
-      const alive = this.racers.filter((o) => !o.out);
-      if (done.length === alive.length) {
+      if (done.length > done.alive - done.cut) {
         r.out = true;
         r.finished = true;
         r.finishTime = null;

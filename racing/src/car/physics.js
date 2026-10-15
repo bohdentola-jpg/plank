@@ -37,7 +37,7 @@ function tireCurve(alpha, B = 9.5, Cc = 1.45, E = -0.6) {
 // Arcade tuning on top of the real-world specs: every car pulls harder,
 // grips harder and stops harder than its brochure says, so the racing
 // feels fast (the AI drives the same numbers, so the field stays even).
-export const ARCADE = { power: 1.55, grip: 1.3, brake: 1.2, shift: 0.7 };
+export const ARCADE = { power: 1.55, grip: 1.4, brake: 1.2, shift: 0.7 };
 /** The cars as their brochures have them (no arcade tuning). */
 export const BROCHURE = { power: 1, grip: 1, brake: 1, shift: 1 };
 
@@ -269,11 +269,13 @@ export class Vehicle {
     // -------------------------------------------------- drifting
     // Arcade drifting, for the human driver's car only (env.human; the AI
     // drives the raw chassis and never drifts). The brake is the drift
-    // button: hold it (or the handbrake) while you turn at speed and the tail
-    // steps out; keep holding it and the car stays in the drift; let go and
-    // it swings back in line and grips again. While it's held the stick
-    // drives it:
-    //   - steer into the turn: more angle (up to ~25°) and a tighter line
+    // button: hold it (or the handbrake) while you turn at speed and the car
+    // rotates into the corner with its tail out; keep holding it and it
+    // stays in the drift; let go and it stops rotating, its line comes round
+    // to where the nose points, and it grips again (no swinging back). While
+    // it's held the stick drives it:
+    //   - steer into the turn: more angle (up to ~27°) and a much tighter
+    //     line than the tires could hold
     //   - ease the stick back: less angle and a wider line
     //   - steer the other way and hold it there: the tail swings across into
     //     a drift the other way (S-bends)
@@ -748,7 +750,7 @@ export class Vehicle {
       rGrip = clamp(sp * (-o.steerIn * lock) / (P.wb + 0.0022 * sp * sp), -gLat / spL, gLat / spL);
     }
     if (held) {
-      const k = lerp(0.35, 1.0, (into + 1) / 2) + 0.55 * sIn + (o.hand ? 0.15 : 0);
+      const k = lerp(0.2, 0.85, (into + 1) / 2) + 0.7 * sIn + (o.hand ? 0.15 : 0);
       latT = d * k * mu * G;
     } else {
       latT = rGrip * sp;
@@ -763,7 +765,7 @@ export class Vehicle {
     // away, it may turn that way)
     const floor = held ? 0 : rGrip * d * (rGrip * d > 0 ? 0.45 : 0.6);
     if (r * d < floor) {
-      const wMax = Math.max(Math.abs(pathRate), 2.0 * mu * G / spL);
+      const wMax = Math.max(Math.abs(pathRate), 1.5 * mu * G / spL);
       r = floor * d;
       pathRate = clamp(r - this.driftBetaRate, -wMax, wMax);
       this.driftBetaRate = r - pathRate;

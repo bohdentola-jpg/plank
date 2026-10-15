@@ -91,21 +91,29 @@ Erase story save.
 
 ## Racing
 
+- **Race length:** every race is over in one to two minutes: circuits are
+  short (three laps of about half a minute), sprints run a minute or so, and
+  a lap knockout lasts three laps at most (a big field loses more than one car
+  a lap, so it's down to two for the last lap).
 - **Race types:** circuit, sprint, lap knockout, drag (manual shifting on a shift light, graded launches and upshifts),
   drift (angle × speed scoring with a multiplier chain that a crash wipes out),
   and time attack (a pro drives your exact car first; you chase the ghost and
   the target time).
-- **Handling:** the cars are tuned arcade-fast: they pull, grip and stop
-  harder than their brochures say, and the AI drives the same numbers.
+- **Handling:** the cars are tuned arcade-fast: they pull, grip (about 1.6 g
+  in a corner) and stop harder than their brochures say, and the AI drives the
+  same numbers.
   Steering on the gas or coasting grips. The car corners at the limit, and
   pushed too hard it runs wide instead of swapping ends. A steering limiter
   means a full-lock stab on keys or the stick still corners at peak grip.
-- **Drifting:** the brake is the drift button. Hold it (or the handbrake)
-  while you turn at speed and the tail steps out; keep holding it and the
-  car stays in the drift; let go and it swings back in line and grips
-  again. While you hold it, the stick drives it:
-  - Steer into the turn and the car hangs its tail out (up to about 25°)
-    and carves a tighter line.
+- **Drifting:** the brake is the drift button, the way brake-to-drift works
+  in the modern arcade racers. Hold it (or the handbrake) while you turn at
+  speed and the car rotates into the corner with its tail out; keep holding
+  it and the car stays in the drift. Let go and it stops rotating: its line
+  comes round to where the nose points and the tires bite again, with no
+  swinging back, so point it down the exit and let go. While you hold it, the
+  stick drives it:
+  - Steer into the turn and the car hangs its tail out (up to about 27°)
+    and carves a far tighter line than grip alone could.
   - Ease the stick back and the angle and the line open up.
   - Steer the other way and hold it there and the tail swings across into
     a drift the other way, linking S-bends.

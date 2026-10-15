@@ -23,6 +23,7 @@ import { settings } from '../core/settings.js';
 import { clamp, damp, fmtTime, makeRng } from '../core/util.js';
 import { music } from '../audio/music.js';
 import { sfx } from '../audio/sfx.js';
+import { knockLaps } from '../race/sim.js';
 
 const money = (n) => '$' + Math.round(n).toLocaleString();
 const DISTRICTS = {
@@ -134,7 +135,7 @@ registerScreen('story', () => {
     const def = TRACK_BY_ID[ev.track];
     if (!def) { say('TRACK STILL UNDER CONSTRUCTION', C.red); return; }
     const spec = story.spec();
-    const laps = ev.type === 'knockout' ? Math.max(2, ev.rivals) : ev.type === 'timeattack' ? (def.type === 'sprint' ? 1 : 3) : ev.laps || def.laps || 3;
+    const laps = ev.type === 'knockout' ? knockLaps(ev.rivals) : ev.type === 'timeattack' ? (def.type === 'sprint' ? 1 : 3) : ev.laps || def.laps || 3;
     go('race', {
       trackDef: def, spec, look: story.look(), upgrades: story.up(), type: ev.type, laps,
       opponents: story.rivals(ev), rubber: ev.boss ? 0.4 : 0.75, ttFactor: ev.tt, traffic: ev.traffic,
@@ -612,7 +613,7 @@ registerScreen('story', () => {
     const units = settings.get('units');
     const facts = [
       ['TYPE', TYPE_NAMES[ev.type] || ev.type.toUpperCase()],
-      ['LAPS', ev.type === 'sprint' || ev.type === 'drag' ? '—' : ev.type === 'knockout' ? String(Math.max(2, ev.rivals)) : ev.type === 'timeattack' ? (def?.type === 'sprint' ? '1 RUN' : 'BEST OF 3') : String(ev.laps || def?.laps || 3)],
+      ['LAPS', ev.type === 'sprint' || ev.type === 'drag' ? '—' : ev.type === 'knockout' ? String(knockLaps(ev.rivals)) : ev.type === 'timeattack' ? (def?.type === 'sprint' ? '1 RUN' : 'BEST OF 3') : String(ev.laps || def?.laps || 3)],
       ['LENGTH', def ? fmtDistance(trackInfo(def).length, units) : '—'],
       ['RIVALS', ev.type === 'timeattack' ? 'THE CLOCK' : ev.type === 'drift' ? 'POSTED SCORES' : ev.boss ? ch.boss.name : String(ev.rivals)],
     ];
