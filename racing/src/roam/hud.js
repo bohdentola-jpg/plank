@@ -155,6 +155,8 @@ export function drawWorldMap(ctx, current, sel, t) {
   ctx.stroke();
   ctx.restore();
   // regions
+  const cx0 = R.reduce((a, id) => a + (MAP_POS[id]?.[0] ?? 0.5), 0) / R.length;
+  const cy0 = R.reduce((a, id) => a + (MAP_POS[id]?.[1] ?? 0.5), 0) / R.length;
   R.forEach((id, k) => {
     const def = TRACK_BY_ID[id];
     const p = MAP_POS[id];
@@ -177,8 +179,13 @@ export function drawWorldMap(ctx, current, sel, t) {
       ctx.strokeStyle = `rgba(255,255,255,${0.6 - ((t * 20) % 10) / 18})`;
       ctx.stroke();
     }
-    const below = p[1] > 0.5;
-    text(ctx, def.name, x, y + (below ? 26 : -16), { size: on ? 13 : 11, color: on ? '#fff' : here ? '#fff' : '#c8d0dc', weight: on || here ? 900 : 700, align: 'center' });
+    // label on the outside of the ring, away from its middle
+    let dx = p[0] - cx0, dy = (p[1] - cy0) * 0.6;
+    const dl = Math.hypot(dx, dy) || 1;
+    dx /= dl; dy /= dl;
+    const lx = x + dx * 16, ly = y + dy * 16 + (dy > 0.3 ? 10 : dy < -0.3 ? -2 : 4);
+    const align = dx > 0.45 ? 'left' : dx < -0.45 ? 'right' : 'center';
+    text(ctx, def.name, lx, ly, { size: on ? 13 : 11, color: on || here ? '#fff' : '#c8d0dc', weight: on || here ? 900 : 700, align });
   });
   // the highlighted region's card
   const id = R[sel];

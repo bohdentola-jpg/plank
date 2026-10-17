@@ -46,7 +46,7 @@ const TYPE_DESC = {
   drag: 'Quarter mile. Launch, shift on the light, don\'t blink.',
   timeattack: 'Just you and the clock — chase the pro\'s ghost.',
   drift: 'Score attack. Angle times speed, chain it for multipliers, don\'t touch anything.',
-  roam: 'No clock, no rivals. Start here and drive anywhere: the tunnels join every road in town.',
+  roam: 'No clock, no rivals: drive anywhere. Tunnels join every road in town.',
 };
 export const typesFor = (def) => (def.type === 'drag' ? ['drag'] : def.type === 'sprint' ? ['sprint', 'timeattack'] : ['circuit', 'knockout', 'drift', 'timeattack']);
 /** Quick-race choices for a road: its race types, and free roam from there. */
@@ -207,7 +207,7 @@ registerScreen('showroom', () => {
       {
         label: 'LAPS', type: 'choice', id: 'laps',
         get options() {
-          if (cfg.type === 'sprint' || cfg.type === 'drag' || cfg.type === 'roam') return [{ value: cfg.laps, label: '—' }];
+          if (cfg.type === 'sprint' || cfg.type === 'drag' || cfg.type === 'roam') return [{ value: cfg.laps, label: '-' }];
           if (cfg.type === 'knockout') return [{ value: cfg.laps, label: `${knockLaps(cfg.opp)} (AUTO)` }];
           return Array.from({ length: 10 }, (_, k) => ({ value: k + 1, label: String(k + 1) }));
         },
@@ -225,12 +225,12 @@ registerScreen('showroom', () => {
       },
       {
         label: 'SKILL', type: 'choice', id: 'skill',
-        options: SKILLS.map((s, k) => ({ value: k, label: s.label })),
+        get options() { return cfg.type === 'roam' ? [{ value: cfg.skill, label: '-' }] : SKILLS.map((s, k) => ({ value: k, label: s.label })); },
         get: () => cfg.skill, set: (v) => { cfg.skill = v; },
       },
       {
         label: 'CATCH-UP', type: 'choice', id: 'catchup',
-        options: [{ value: true, label: 'ON' }, { value: false, label: 'OFF' }],
+        get options() { return cfg.type === 'roam' ? [{ value: cfg.catchup, label: '-' }] : [{ value: true, label: 'ON' }, { value: false, label: 'OFF' }]; },
         get: () => cfg.catchup, set: (v) => { cfg.catchup = v; },
       },
       {
@@ -464,7 +464,7 @@ registerScreen('showroom', () => {
     ctx.save();
     ctx.globalAlpha = a;
     // title strip
-    text(ctx, 'NITRO 88.1  ·  QUICK RACE', 48, 40, { size: 13, color: C.cyan, weight: 800, spacing: 3 });
+    text(ctx, station === 'cruise' ? 'CRUISE 101.1  ·  FREE ROAM' : 'NITRO 88.1  ·  QUICK RACE', 48, 40, { size: 13, color: C.cyan, weight: 800, spacing: 3 });
     vText(ctx, 'THE LOT', 46, 92, 38, { color: '#fff', outline: 3, outlineColor: 'rgba(0,0,0,0.7)', shadow: [3, 3, 'rgba(0,0,0,0.5)'] });
     text(ctx, 'LEVEL P2  ·  FRIDAY 11:48 PM', 62 + vWidth('THE LOT', 38), 90, { size: 13, color: C.dim, weight: 700, spacing: 2 });
 
@@ -552,7 +552,7 @@ registerScreen('showroom', () => {
     const a = clamp(phaseT / 0.35, 0, 1);
     ctx.save();
     ctx.globalAlpha = a;
-    text(ctx, 'NITRO 88.1  ·  QUICK RACE', 48, 40, { size: 13, color: C.cyan, weight: 800, spacing: 3 });
+    text(ctx, station === 'cruise' ? 'CRUISE 101.1  ·  FREE ROAM' : 'NITRO 88.1  ·  QUICK RACE', 48, 40, { size: 13, color: C.cyan, weight: 800, spacing: 3 });
     vText(ctx, 'THE ROUTE', 46, 92, 38, { color: '#fff', outline: 3, outlineColor: 'rgba(0,0,0,0.7)', shadow: [3, 3, 'rgba(0,0,0,0.5)'] });
     const sp = spec();
     text(ctx, `${sp.make} ${sp.model}`, 62 + vWidth('THE ROUTE', 38), 90, { size: 13, color: C.dim, weight: 700, spacing: 2 });
@@ -611,9 +611,10 @@ registerScreen('showroom', () => {
     menu.draw(ctx, ox + 42, oy + 48, ow - 60, { rowH: 39, size: 17, hints: false });
     text(ctx, TYPE_DESC[cfg.type] || '', ox + 24, oy + oh + 26, { size: 13, color: C.dim, weight: 600 });
     const rc = racers();
-    text(ctx, `${rc} CAR${rc > 1 ? 'S' : ''} ON THE GRID  ·  ${SKILLS[cfg.skill].label} RIVALS`, ox + 24, oy + oh + 48, { size: 12, color: '#8fa0b8', weight: 700, spacing: 1 });
+    const sub = cfg.type === 'roam' ? `OPEN ROADS  ·  TRAFFIC ${cfg.roamTraffic !== false ? 'ON' : 'OFF'}  ·  M / TOUCHPAD FOR THE MAP` : `${rc} CAR${rc > 1 ? 'S' : ''} ON THE GRID  ·  ${SKILLS[cfg.skill].label} RIVALS`;
+    text(ctx, sub, ox + 24, oy + oh + 48, { size: 12, color: '#8fa0b8', weight: 700, spacing: 1 });
     ctx.restore();
-    hints(ctx, [['tabR', 'REGION'], ['ud', 'OPTION'], ['lr', 'CHANGE'], ['confirm', 'RACE'], ['back', 'CAR']], { y: 740 });
+    hints(ctx, [['tabR', 'REGION'], ['ud', 'OPTION'], ['lr', 'CHANGE'], ['confirm', cfg.type === 'roam' ? 'CRUISE' : 'RACE'], ['back', 'CAR']], { y: 740 });
   }
 
   function recordFor(id) {
