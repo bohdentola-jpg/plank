@@ -30,37 +30,53 @@ function profile(len, knots, step = 12) {
 export default [
   {
     id: 'redwood', name: 'REDWOOD RACEWAY', env: 'circuit', time: 'day', weather: 'dry', type: 'circuit', laps: 3,
-    blurb: 'A tight grand prix loop in the redwoods: brutal hairpin, esses down into the valley, a long sweeper home.',
-    width: 14, lanes: 1, center: 'none', edge: 'white', startS: 180, wall: 10, shoulder: 1.6, worn: 0.25, asphalt: '#36373b',
+    blurb: 'Grand prix racing in the redwoods: a long pit straight, a brutal hairpin, the esses down into the valley and a climb back to the sweepers.',
+    width: 14, lanes: 1, center: 'none', edge: 'white', startS: 160, wall: 10, shoulder: 1.6, worn: 0.25, asphalt: '#36373b',
     scenery: 'redwood', fogD: 0.0006,
-    // pit straight E -> hairpin -> downhill left -> esses (R/L) through the valley -> crest right
-    // -> back straight -> double-apex sweeper -> final right
+    // pit straight E -> brutal hairpin -> downhill left -> esses (R/L/R/L) through the redwoods -> valley right
+    // -> level back straight W on the valley floor -> heavy right -> climb through a left-right flick
+    // -> double-apex sweeper onto the pit straight
     points: [
-      [0, 0, 68], [340, 0, 22], [340, 46, 22], [270, 65, 50], [264, 140, 68],
-      [205, 182, 68], [195, 261, 42], [55, 262, 100], [-12, 195, 100],
+      [0, 0, 70], [400, 0, 22], [400, 46, 22], [292, 65, 50], [285, 140, 60], [225, 175, 55], [225, 245, 60],
+      [171, 290, 70], [155, 378, 45], [-137, 300, 32], [-111, 204, 45], [-124, 155, 45], [-90, 63, 90],
     ],
-    elevation: profile(1037, [
-      [130, 0], [253, 0], [363, 1], [422, 0.6], [477, -2.6], [546, -5.5], [614, -2], [675, 2.4], [715, 2.7],
-      [756, 1.2], [816, 0.2], [906, -0.4],
+    elevation: profile(1508.5, [
+      [20, 0], [300, 0.5], [430, 2], [500, 1.2], [580, -1.5], [690, -5], [790, -7.2], [870, -8], [1165, -8],
+      [1250, -4.2], [1320, -0.6], [1365, 0.4], [1440, 0],
     ]),
   },
   {
     id: 'crestwood', name: 'CRESTWOOD HILLS', env: 'circuit', time: 'sunset', weather: 'dry', type: 'circuit', laps: 3,
-    blurb: 'Golden hills at sundown: a blind crest, a hairpin, the corkscrew plunge and a banked carousel.',
-    width: 12, lanes: 1, center: 'none', edge: 'white', startS: 150, wall: 8, shoulder: 1.4, worn: 0.5, asphalt: '#424247',
+    blurb: 'Golden hills at sundown: a blind crest, the hairpin, a long climb to the corkscrew plunge and the banked carousel.',
+    width: 12, lanes: 1, center: 'none', edge: 'white', startS: 140, wall: 8, shoulder: 1.4, worn: 0.5, asphalt: '#424247',
     scenery: 'crestwood', fogD: 0.001,
     // extra banking through the carousel: [sFrom, sTo, radians] (applied by env/circuit.js)
-    bankBoost: [[625, 770, 0.07]],
-    // main straight N up to the blind crest kink -> hairpin -> right -> climb -> corkscrew (L/R plunge)
-    // -> banked carousel -> bottom straight -> final left
+    bankBoost: [[915, 1095, 0.07]],
+    // main straight N up to the blind crest kink -> hairpin -> tight right -> back straight -> left-right sweepers
+    // -> climb -> corkscrew (L/R plunge) -> banked carousel -> kink -> bottom straight -> final left
     points: [
-      [0, 0, 48], [0, -265, 150], [-37, -334, 22], [-78, -320, 22], [-81, -240, 40],
-      [-171, -240, 26], [-173, -188, 28], [-253, -184, 45], [-263, -105, 45],
+      [0, 0, 48], [0, -300, 150], [-56, -420, 22], [-97, -405, 22], [-79, -338, 45], [-229, -325, 70], [-266, -260, 50],
+      [-366, -260, 26], [-375, -210, 28], [-438, -194, 50], [-458, -137, 50], [-420, -91, 50], [-360, -96, 120],
     ],
-    elevation: profile(933, [
-      [46, -5], [130, -4.5], [200, -2.6], [256, 1], [296, 3.2], [336, 2.2], [372, 0.4], [399, -0.4], [440, 1.4],
-      [480, 4.4], [515, 7.2], [538, 8.4], [552, 8.2], [588, 3.8], [635, 1], [690, -0.2], [750, -1.2], [860, -4],
-      [920, -4.9],
+    elevation: profile(1431.2, [
+      [40, -6], [140, -5], [230, -1.5], [315, 3.5], [380, 1.8], [470, 0.5], [550, 1], [640, 2.5], [750, 6], [835, 12],
+      [868, 11], [950, 3], [1010, 0.2], [1080, -1.5], [1200, -6],
+    ]),
+  },
+  {
+    id: 'ironwood', name: 'IRONWOOD PARK', env: 'circuit', time: 'overcast', weather: 'wet', type: 'circuit', laps: 3,
+    blurb: 'Parkland grand prix on a wet, grey afternoon: fast sweepers, a long back straight, a flat-out kink over the crest, then a hairpin into the stadium.',
+    width: 13, lanes: 1, center: 'none', edge: 'white', startS: 140, wall: 9, shoulder: 1.5, worn: 0.35, asphalt: '#3a3b3f',
+    scenery: 'redwood', fogD: 0.0011,
+    // main straight E -> fast right -> left -> long double-apex right -> level back straight W -> flat-out kink
+    // over a crest -> downhill into the hairpin -> stadium: left, right-left, final right in front of the stands
+    points: [
+      [0, 0, 40], [340, 0, 70], [374, 94, 90], [456, 132, 70], [477, 250, 55], [97, 250, 260], [-96, 302, 22],
+      [-108, 258, 22], [-35, 225, 30], [-35, 165, 35], [0, 129, 35],
+    ],
+    elevation: profile(1500.7, [
+      [30, 0], [200, 0], [355, -2], [450, -3.5], [540, -2], [650, 0], [960, 0], [1010, 2.4], [1060, 2.6], [1150, 0.4],
+      [1200, 0], [1300, 0.2], [1420, 0],
     ]),
   },
 ];
