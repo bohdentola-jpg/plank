@@ -1,9 +1,10 @@
 # MIDNIGHT FREQUENCY
 
 An early-2000s street racer that runs in the browser, on a CRT TV in a dark room.
-It has a free-race mode where you pick a real-ish car and a road, and a story
+It has a free-race mode where you pick a real-ish car and a road, a story
 mode where you buy a beater from the classifieds, build it up in a borrowed
-garage, and take Port Halcyon crew by crew. It has full 3D, a dynamic soundtrack
+garage, and take Port Halcyon crew by crew, and a free roam where you drive
+the whole map, every road in town joined up by tunnels. It has full 3D, a dynamic soundtrack
 and real driving physics. There is no install and no build step.
 
 ## Run it
@@ -33,6 +34,7 @@ Xbox and other standard pads work too, and so do keyboard and mouse.
 | Camera (4 views) | △ | C |
 | Look back | ◯ | B |
 | Reset car | CREATE | R |
+| Map (free roam) | touchpad | M |
 | Pause | OPTIONS | Esc / P |
 | Menus | D-pad / stick, ✕ select, ◯ back, L1/R1 tabs | arrows, Enter, Esc, Q/E |
 
@@ -52,6 +54,9 @@ station is a mode with its own music:
 - **THE UNDERGROUND 92.7 — Story.**
 - **HALL OF FAME 97.9 — Records.** Brass plaques with your best lap per road,
   the car that set it, and wins and races.
+- **CRUISE 101.1 — Free Roam.** The same row of cars, then pick where to start
+  and drive anywhere (see below). Free roam is also a choice of race type in
+  Quick Race.
 - **TALK 104.5 — Options.** This is the TV's own on-screen menu: CRT strength,
   sharpness (internal resolution), auto quality, volumes, units, gearbox,
   assists, camera, vibration, and the full control list.
@@ -88,6 +93,27 @@ In the garage you can:
 
 Progress saves itself in your browser. To start over, use Options › Game ›
 Erase story save.
+
+## Free roam
+
+No clock, no rivals: just you, the city at night and every road in the game.
+Each road is a region with its own time of day and weather, and they hang
+together in one big ring round Port Halcyon (city, docks, the bay, the
+highways, the desert, the mountains, the raceways and back into town):
+
+- A **circuit** has a side road off one of its straights, running to a
+  tunnel portal with two bores. The signs over them say where each goes:
+  back along the ring or on to the next region.
+- A **point-to-point road** runs on into a tunnel at each end.
+- Drive deep enough into a bore and the picture fades while the next region
+  builds; you come out of its tunnel at the speed you went in. Go back the
+  way you came and you're back where you were.
+- The radar shows the side roads and the tunnel mouths, coloured by where
+  they lead, with an arrow on the rim when they're off the edge.
+- **M** / the touchpad opens the map of the whole ring, where you can fast
+  travel to any region. The pause menu has the map too, traffic on/off,
+  gearbox, camera and "back on the road".
+- Traffic runs in the city, at the docks and on the highways.
 
 ## Racing
 
@@ -132,10 +158,17 @@ Erase story save.
   lag and blow-off, nitrous, drafting, jumps and landings, and car-to-car
   contact. Kerbs and sidewalks are bumps the springs soak up, not ramps, and a
   glancing hit on a wall slides you along it instead of stopping you dead.
-- **AI:** drives the racing line on the same physics, overtakes and defends,
-  picks gaps in traffic by time to collision, catches its own slides, backs out
-  of walls, uses nitrous, makes the occasional mistake, and has optional
-  catch-up.
+- **AI:** drives the racing line on the same physics, with its own speed plan
+  from its car's grip (more cautious in fast bends when someone's alongside,
+  since the room to run wide isn't theirs). It picks gaps in traffic by time
+  to collision, leaves a car's width when side by side and backs out when
+  there's no room for two, catches its own slides, backs out of walls, uses
+  nitrous, makes the occasional mistake, and has optional catch-up. Every
+  rival has a temperament: the aggressive ones brake later, run closer, pull
+  out to pass sooner, slip up more and cover the inside when you're right
+  behind (one move per corner, never weaving). And they drift the hairpins
+  now and then, an aggressive rear-driver most of all: brake, turn in, hold
+  the line on the angle, let go on the way out.
 - **Traffic:** two-way city traffic, freeway traffic with trucks, near-miss
   nitrous bonuses, and wrecked civilians that recover.
 - **HUD:** tach, digital speed, gear, boost and nitrous, a heading-up radar
@@ -200,6 +233,7 @@ turbo whistle, blow-off, backfires and pops.
   rock). The music reacts to the countdown, position, final lap, nitrous, air
   time and crashes.
 - **Dev URL params:** `?screen=race&track=downtown&car=lancet&type=drift&traffic=1`,
+  `?screen=roam&track=harbor&car=m3` (free roam from a region),
   `?autopilot=1&sim=4` (the AI drives you, four times faster),
   `?screen=carlab&car=m3`, `?screen=trackview&track=kaido`.
 - **Headless tools** (`racing/tools`):
