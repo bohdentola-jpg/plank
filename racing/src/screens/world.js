@@ -9,6 +9,8 @@ import { registerScreen, game, go } from '../main.js';
 import { WorldSession } from '../world/session.js';
 import { WorldHUD } from '../world/hud.js';
 import { roamGarage } from '../world/garagesave.js';
+import { allPlaces, discover } from '../world/discover.js';
+import { GARAGE } from '../world/map/base.js';
 import { CARS, CAR_BY_ID } from '../car/cars.js';
 import { carStats } from '../car/stats.js';
 import { prFor } from '../story/state.js';
@@ -38,6 +40,8 @@ registerScreen('world', () => {
   let toast = null;
   let uiA = 1;                  // garage UI fade
   let t = 0;
+  let mapV = null;              // the map open: { cx, cz, mpp, sel }
+  let travel = null;            // fast travelling: { name, f }
 
   const say = (s, color = C.accent) => { toast = { text: s, t: 0, color }; };
   const carId = () => session.player.spec.id;
@@ -45,7 +49,7 @@ registerScreen('world', () => {
 
   const makePause = () => new Menu([
     { label: 'RESUME', id: 'resume' },
-    ...(session?.inGarage ? [] : [{ label: 'BACK ON THE ROAD', id: 'reset' }, { label: 'BACK TO THE GARAGE', id: 'garage' }]),
+    ...(session?.inGarage ? [] : [{ label: 'MAP  ·  FAST TRAVEL', id: 'map' }, { label: 'BACK ON THE ROAD', id: 'reset' }, { label: 'BACK TO THE GARAGE', id: 'garage' }]),
     {
       label: 'CAMERA', type: 'choice', options: CAM_MODES.map((m, k) => ({ value: k, label: m.name })),
       get: () => session?.camera.mode ?? 1, set: (v) => { session?.camera.setMode(v); settings.set('camera', v); },
@@ -176,6 +180,72 @@ registerScreen('world', () => {
     }
   }
 
+  // ---------------------------------------------------------------- the map
+
+  function openMap() {
+    if (!session.map) { say('THE MAP IS STILL BEING DRAWN…', C.dim); return; }
+    const v = session.player.vehicle;
+    const places = allPlaces(session.districts);
+    mapV = { cx: v.x, cz: v.z, mpp: 5, sel: null, places, t: 0 };
+    session.pause(true);
+    uiSound('select');
+  }
+
+  function mapUpdate(dt) {
+    mapV.t += dt;
+    // pan (stick / arrows / WASD), zoom (L1 R1 / Q E)
+    const sy = Math.abs(input.axes[1] || 0) > 0.2 ? input.axes[1] : 0;
+    const px = input.steer || 0, pz = clamp((input.brake || 0) - (input.throttle || 0) + sy, -1, 1);
+    const sp = 520 * mapV.mpp * dt;
+    mapV.cx = clamp(mapV.cx + px * sp, -6200, 6200);
+    mapV.cz = clamp(mapV.cz + pz * sp, -5600, 4400);
+    if (input.pressed('tabR')) { mapV.mpp = Math.max(1.5, mapV.mpp / 1.6); uiSound('tab'); }
+    if (input.pressed('tabL')) { mapV.mpp = Math.min(13, mapV.mpp * 1.6); uiSound('tab'); }
+    // what's under the crosshair
+    let best = null, bd = 28 * mapV.mpp;
+    const consider = (p) => { const d = Math.hypot(p.x - mapV.cx, p.z - mapV.cz); if (d < bd) { bd = d; best = p; } };
+    for (const p of mapV.places) { p.found = discover.has(p.id); if (p.hidden && !p.found) continue; consider(p); }
+    consider({ x: GARAGE.x, z: GARAGE.z, garage: true, name: 'YOUR GARAGE', found: true });
+    mapV.sel = best;
+    if (input.pressed('confirm') && best) {
+      if (!best.found) { say('FIND IT FIRST: DRIVE THERE', C.dim); uiSound('error'); return; }
+      const target = best;
+      mapV = null;
+      session.pause(false);
+      uiSound('select');
+      if (target.garage) { session.travelTo(target); tab = 0; return; }
+      travel = { name: target.name, f: 0 };
+      session.travelTo(target, (f) => { if (travel) travel.f = f; }).then(() => { travel = null; });
+      return;
+    }
+    if (input.pressed('back') || input.pressed('map') || input.pressed('pause')) { mapV = null; session.pause(false); uiSound('back'); }
+  }
+
+  function drawMap(ctx) {
+    const v = session.player.vehicle;
+    session.map.draw(ctx, mapV, { car: { x: v.x, z: v.z, heading: v.heading }, places: mapV.places, sel: mapV.sel, t: mapV.t });
+    // crosshair
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(512 - 16, 384); ctx.lineTo(512 - 5, 384); ctx.moveTo(512 + 5, 384); ctx.lineTo(512 + 16, 384);
+    ctx.moveTo(512, 384 - 16); ctx.lineTo(512, 384 - 5); ctx.moveTo(512, 384 + 5); ctx.lineTo(512, 384 + 16);
+    ctx.stroke();
+    // top bar
+    ctx.fillStyle = 'rgba(4,8,14,0.78)';
+    ctx.fillRect(0, 0, 1024, 70);
+    vText(ctx, 'PORT HALCYON', 40, 46, 28, { color: '#fff' });
+    const all = mapV.places.length, got = mapV.places.filter((p) => discover.has(p.id)).length;
+    text(ctx, `PLACES FOUND  ${got} / ${all}`, 984, 42, { size: 13, color: C.cyan, weight: 900, spacing: 2, align: 'right' });
+    const sel = mapV.sel;
+    if (sel) {
+      ctx.fillStyle = 'rgba(4,8,14,0.8)';
+      ctx.fillRect(312, 640, 400, 54);
+      vText(ctx, sel.found ? sel.name : '???', 512, 674, 20, { align: 'center', color: sel.found ? '#fff' : C.dim });
+    }
+    hints(ctx, [['stick', 'MOVE'], ['tabL', 'ZOOM OUT'], ['tabR', 'ZOOM IN'], ...(sel && sel.found ? [['confirm', 'TRAVEL']] : []), ['back', 'CLOSE']], { y: 740 });
+  }
+
   // ---------------------------------------------------------------- the screen
 
   const scr = {
@@ -216,11 +286,14 @@ registerScreen('world', () => {
       if (!session || session.state === 'loading') return;
       t += dt;
       if (toast) { toast.t += dt; if (toast.t > 2.4) toast = null; }
+      if (travel) return;
+      if (mapV) { mapUpdate(dt); return; }
       if (pauseMenu) {
         const it = pauseMenu.update(dt);
         if (input.pressed('pause') || input.pressed('back') || it?.id === 'resume') { pauseMenu = null; session.pause(false); uiSound('back'); return; }
         if (it?.id === 'reset') { session.sim.resetRacer(session.player); pauseMenu = null; session.pause(false); }
         if (it?.id === 'garage') { pauseMenu = null; session.pause(false); session.teleportToGarage(); tab = 0; }
+        if (it?.id === 'map') { pauseMenu = null; session.pause(false); openMap(); }
         if (it?.id === 'quit') leave();
         return;
       }
@@ -237,13 +310,16 @@ registerScreen('world', () => {
         session.enterGarage();
         tab = 0;
         uiSound('select');
+      } else if (input.pressed('map')) {
+        openMap();
+        return;
       }
       uiA = clamp(uiA + (session.state === 'garage' ? dt * 4 : -dt * 5), 0, 1);
       const reps = Number(game.query.get('sim') || 1);
       for (let k = 0; k < reps; k++) session.update(dt);
       Object.assign(game.fx, session.fx || {});
     },
-    view() { return session && session.state !== 'loading' ? session.view() : null; },
+    view() { return session && session.state !== 'loading' && !travel && !mapV ? session.view() : null; },
     draw(ctx, dt) {
       if (!session || session.state === 'loading') {
         ctx.fillStyle = '#030406';
@@ -256,6 +332,18 @@ registerScreen('world', () => {
         text(ctx, loading.label || '', 512, 450, { size: 12, color: C.dim, weight: 800, spacing: 3, align: 'center' });
         return;
       }
+      if (travel) {
+        ctx.fillStyle = '#030406';
+        ctx.fillRect(0, 0, 1024, 768);
+        text(ctx, 'FAST TRAVEL', 512, 330, { size: 12, color: C.dim, weight: 900, spacing: 4, align: 'center' });
+        vText(ctx, travel.name, 512, 372, 34, { align: 'center', color: '#fff' });
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.fillRect(362, 410, 300, 4);
+        ctx.fillStyle = C.cyan;
+        ctx.fillRect(362, 410, 300 * Math.min(1, travel.f || 0), 4);
+        return;
+      }
+      if (mapV) { drawMap(ctx); return; }
       if (session.inGarage) {
         if (uiA > 0.01) { ctx.save(); ctx.globalAlpha = uiA; drawGarage(ctx); ctx.restore(); }
         hud.drawMessages(ctx);

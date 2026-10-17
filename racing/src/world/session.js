@@ -28,6 +28,8 @@ import { WorldSim } from './sim.js';
 import { districtAt } from './ground.js';
 import { Districts } from './districts/index.js';
 import { Garage } from './garage.js';
+import { Discoverer } from './discover.js';
+import { WorldMap } from './map2d.js';
 import { GARAGE } from './map/base.js';
 
 // the road network, the land and the plans are the same every time: made once a page
@@ -151,6 +153,7 @@ export class WorldSession extends RaceSession {
         if (this.disposed) return;
       }
     }
+    this.discoverer = new Discoverer(this.districts, this.net);
     set(0.25, 'SURVEYING');
     await this.world.buildFar((f, l) => set(0.25 + f * 0.3, l), sliceMs);
     if (this.disposed) return;
@@ -162,6 +165,38 @@ export class WorldSession extends RaceSession {
     this.world.live = true;
     this.ready = true;
     set(1, 'READY');
+    // the map (M), drawn while you drive
+    if (!SHARED.map) {
+      const map = new WorldMap(this.net, this.districts);
+      let t0 = performance.now();
+      for (const _ of map.build()) {
+        if (performance.now() - t0 > 6) { await tick(); t0 = performance.now(); }
+        if (this.disposed) return;
+      }
+      SHARED.map = map;
+    }
+    this.map = SHARED.map;
+  }
+
+  /**
+   * Fast travel (the one loading screen there is): to a place you've found
+   * (on the road nearest it) or into your garage (no wait: it's always there).
+   */
+  async travelTo(target, progress = () => {}) {
+    if (target.garage) { this.teleportToGarage(); return; }
+    const a = this.discoverer.arrival(target);
+    this.sim.frozen = true;
+    this.state = 'travel';
+    await this.world.ensureAsync(a.x, a.z, 300, (f) => progress(f), 60);
+    const P = this.player;
+    this.sim.placeAt(P, a.x, a.z, a.heading);
+    this.sim.frozen = false;
+    this.camera.first = true;
+    this.state = 'roam';
+    this.districtNow = null;
+    this.leftGarage = true;
+    this.syncModels(0);
+    this.updateCamera(0);
   }
 
   buildModel() {
@@ -377,7 +412,7 @@ export class WorldSession extends RaceSession {
   // ---------------------------------------------------------------- per frame
 
   update(dt) {
-    if (this.state === 'loading') return;
+    if (this.state === 'loading' || this.state === 'travel') return;
     this.time += dt;
     const sim = this.sim;
     sim.events.length = 0;
@@ -406,6 +441,11 @@ export class WorldSession extends RaceSession {
       this.updateAudio(dt);
       this.whereAmI();
       this.watchGarage(dt);
+      const found = this.discoverer?.tick(pv.x, pv.z, dt);
+      if (found) {
+        this.message(found.name, found.hidden ? 'SECRET SPOT FOUND' : 'DISCOVERED', { slot: 'center', dur: 3, color: found.hidden ? '#ff5ac8' : '#46e8ff' });
+        try { sfx.ui?.('buy'); } catch { /* */ }
+      }
     }
     // the garage's light and reflections while the car is in there, the city's out here
     const inside = this.garage.inside(pv.x, pv.z, -1.5);
