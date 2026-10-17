@@ -604,8 +604,11 @@ function sideSign(world, track, A, kit) {
     const q = S0.posAt(s, sd * (w + 1.6));
     gb.box(q.x, c.y, q.z, 0.35, 7.4, 0.35, heading);
   }
+  // the beam across the road between the posts, behind the sign, and the
+  // sign's back (what you see driving out of the side road)
   const beamL = (w + 1.6) * 2;
-  gb.box(c.x - A.ux * 0.15, c.y + 6.9, c.z - A.uz * 0.15, beamL, 0.3, 0.3, heading + Math.PI / 2);
+  gb.box(c.x + A.ux * 0.3, c.y + 6.75, c.z + A.uz * 0.3, beamL, 0.35, 0.3, heading);
+  gb.box(c.x + A.ux * 0.1, c.y + 6.1 - 1.125, c.z + A.uz * 0.1, 7.2, 2.25, 0.1, heading);
   const posts = new THREE.Mesh(gb.build(), new THREE.MeshStandardMaterial({ color: 0x8b9096, roughness: 0.5, metalness: 0.6 }));
   world.disposables.push(posts.material);
   g.add(posts);
