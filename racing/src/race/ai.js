@@ -210,6 +210,9 @@ export class AIDriver {
     }
     void kMin;
     let skillMul = 0.83 + 0.14 * this.skill;
+    // turn one with the whole field: a little caution for the opening seconds
+    const opening = race.state === 'racing' && race.raceTime < 12 && !T.def?.dragLanes ? 1 - race.raceTime / 12 : 0;
+    skillMul -= opening * 0.035;
     // the brave brake later (and the timid earlier) — into corners only
     if (vLine < speed - 2) skillMul += (this.aggr - 0.5) * 0.035;
     // mistakes: a lapse in concentration now and then (lower skill = more)
@@ -403,7 +406,7 @@ export class AIDriver {
       const i = o.hint >= 0 ? o.hint : T.posAt(o.s).i;
       const oSide = ov.vx * T.LX[i] + ov.vz * T.LZ[i];
       const oSoon = oLat + clamp(oSide, -3, 3) * 0.35;
-      const sep = (myW + o.dims.W) / 2 + 0.7 - this.aggr * 0.3;
+      const sep = (myW + o.dims.W) / 2 + 0.7 - this.aggr * 0.3 + (race.state === 'racing' && race.raceTime < 12 ? 0.35 : 0);
       if (dLat > 0) maxLat = Math.min(maxLat, Math.min(oLat, oSoon) - sep);
       else minLat = Math.max(minLat, Math.max(oLat, oSoon) + sep);
       const gap = Math.abs(dLat) - sep + 0.25;
