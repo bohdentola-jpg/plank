@@ -144,10 +144,10 @@ highways, the desert, the mountains, the raceways and back into town):
 
 ## Racing
 
-- **Race length:** every race is over in one to two minutes: circuits are
-  short (three laps of about half a minute), sprints run about a minute and
-  a quarter, and a lap knockout lasts three laps at most (a big field loses
-  more than one car a lap, so it's down to two for the last lap).
+- **Race length:** about two minutes a race: circuits run three laps of about
+  45 seconds, sprints about two minutes end to end, and a lap knockout lasts
+  three laps at most (a big field loses more than one car a lap, so it's down
+  to two for the last lap).
 - **Race types:** circuit, sprint, lap knockout, drag (manual shifting on a shift light, graded launches and upshifts),
   drift (angle × speed scoring with a multiplier chain that a crash wipes out),
   and time attack (a pro drives your exact car first; you chase the ghost and
@@ -209,28 +209,36 @@ highways, the desert, the mountains, the raceways and back into town):
   rewind and fast-forward with tracking noise, ← → to follow another car, △
   to pick the camera, ◯ to stop the tape.
 
-## Tracks (16)
+## Tracks (22)
 
-Every race is over in one to two minutes: circuits run three short laps,
-sprints about a minute and a quarter.
+Circuit races run three laps of about 45 seconds (about two and a quarter
+minutes in all); point-to-point runs take about two minutes. Six of the
+roads are new: Chinatown, Shipyard Run, Bayshore Route, Ironwood Park,
+Ridgeline Climb and Ghost Town.
 
 | Region | Track | Type | Lap / run | Time / weather |
 |---|---|---|---|---|
-| City | Downtown Loop | circuit | 0.89 km | night, wet |
-| City | Uptown Run | sprint | 2.2 km | night, rain |
-| City | Old Town | circuit | 0.74 km | dusk |
-| City | Downtown Reverse | circuit | 0.89 km | night |
-| City | Old Town Reverse | circuit | 0.74 km | night, rain |
-| Docks | Harbor Docks | circuit | 0.92 km | night, wet |
-| Docks | Pier 9 | circuit | 0.86 km | night |
-| Highway | Interstate 9 | sprint | 4.6 km | night, wet |
-| Highway | Skyline Expressway | circuit | 1.63 km | dusk |
-| Raceway | Redwood Raceway | circuit | 1.04 km | day |
-| Raceway | Crestwood Hills | circuit | 0.93 km | sunset |
-| Mountain | Kaido Pass | sprint | 2.7 km | dusk |
-| Mountain | Summit Loop | circuit | 0.91 km | night, fog |
-| Desert | Route 99 | sprint | 4.0 km | day |
-| Desert | Red Rock Canyon | circuit | 1.24 km | sunset |
+| City | Downtown Loop | circuit | 1.29 km | night, wet |
+| City | Uptown Run | sprint | 3.6 km | night, rain |
+| City | Old Town | circuit | 1.02 km | dusk |
+| City | Chinatown | circuit | 1.00 km | night |
+| City | Downtown Reverse | circuit | 1.29 km | night |
+| City | Old Town Reverse | circuit | 1.02 km | night, rain |
+| Docks | Harbor Docks | circuit | 1.41 km | night, wet |
+| Docks | Pier 9 | circuit | 1.27 km | night |
+| Docks | Shipyard Run | sprint | 3.7 km | dusk |
+| Highway | Interstate 9 | sprint | 7.3 km | night, wet |
+| Highway | Skyline Expressway | circuit | 2.21 km | dusk |
+| Highway | Bayshore Route | sprint | 7.6 km | night |
+| Raceway | Redwood Raceway | circuit | 1.51 km | day |
+| Raceway | Crestwood Hills | circuit | 1.43 km | sunset |
+| Raceway | Ironwood Park | circuit | 1.50 km | overcast, wet |
+| Mountain | Kaido Pass | sprint | 4.0 km | dusk |
+| Mountain | Summit Loop | circuit | 1.30 km | night, fog |
+| Mountain | Ridgeline Climb | sprint | 3.9 km | day |
+| Desert | Route 99 | sprint | 6.2 km | day |
+| Desert | Red Rock Canyon | circuit | 1.78 km | sunset |
+| Desert | Ghost Town | circuit | 1.81 km | sunset |
 | Desert | Dry Lake Drag | drag | 402 m | sunset |
 
 ## Cars (16)

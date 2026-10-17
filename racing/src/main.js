@@ -201,11 +201,11 @@ async function boot() {
     master: settings.get('volMaster'), music: settings.get('volMusic'), sfx: settings.get('volSfx'),
   });
 
-  // the tracks were redrawn shorter (layout 2): best laps and times set on the
-  // old layouts don't compare, so they go (races and wins stay); the drag
-  // strip didn't change
+  // the tracks were redrawn (layout 3: longer again, after layout 2's short
+  // ones): best laps and times set on the old layouts don't compare, so they
+  // go (races and wins stay); the drag strip didn't change
   try {
-    if (store.load('recordsLayout') !== 2) {
+    if (store.load('recordsLayout') !== 3) {
       const recs = store.load('records');
       if (recs) {
         for (const [id, r] of Object.entries(recs)) {
@@ -214,7 +214,7 @@ async function boot() {
         }
         store.save('records', recs);
       }
-      store.save('recordsLayout', 2);
+      store.save('recordsLayout', 3);
     }
   } catch { /* storage unavailable: nothing to clean */ }
 
