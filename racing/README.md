@@ -113,6 +113,10 @@ highways, the desert, the mountains, the raceways and back into town):
 - **M** / the touchpad opens the map of the whole ring, where you can fast
   travel to any region. The pause menu has the map too, traffic on/off,
   gearbox, camera and "back on the road".
+- **Race from anywhere:** a column of light stands over every road's start
+  line (a chequered square on the radar). Pull up in it and ✕ / Enter
+  races that road in the car you're cruising in: pick the type, rivals,
+  skill and traffic, and afterwards you're back on the road.
 - Traffic runs in the city, at the docks and on the highways.
 
 ## Racing
