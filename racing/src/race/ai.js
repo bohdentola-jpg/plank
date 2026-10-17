@@ -5,18 +5,54 @@
 //     backward braking pass), scaled by skill and the car's own grip
 //   • pick a side and overtake slower cars, give room alongside
 //   • modest rubber-banding, nitrous on straights, small human mistakes
+//   • a personality: aggression sets how late they brake, how close they'll
+//     run alongside, how readily they pull out to pass, whether they defend
+//     the inside against a faster car behind, and how often they slip up
 //   • recover from walls (reverse out) and respawn if truly stuck
 import { clamp, lerp, makeRng } from '../core/util.js';
 
 /** Distance needed to shed `closing` m/s of speed (with a reaction margin). */
 const stopDist = (closing) => (closing > 0 ? 4 + closing * 0.35 + (closing * closing) / 16 : 4);
 
+/**
+ * How much of the grip estimate a corner really gives at speed v. Measured
+ * with the AI's own driving on circles: all of it in slow and medium
+ * corners, ~95% at 42 m/s, ~87% at 52, ~77% at 65 (fast sweepers ran the
+ * AI wide, and side by side in a pack that meant the wall).
+ */
+const fastGrip = (v, k = 0.0072) => (v <= 32 ? 1 : Math.max(0.7, 1 - (v - 32) * k));
+
+/** This car's own speed plan along the racing line: corner limits from its
+ *  grip (less of it at high speed: k is how fast it fades), then the braking
+ *  passes. */
+function speedProfile(T, gripScale, k = 0.0072) {
+  const N = T.N, curv = T.line.curv;
+  const v = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const v0 = Math.min(95, Math.sqrt(1.12 * 9.81 / Math.max(1e-4, curv[i])) * gripScale);
+    let vv = v0;
+    for (let n = 0; n < 3; n++) vv = v0 * fastGrip(vv, k);
+    v[i] = vv;
+  }
+  const decel = 9.81 * 1.12 * 0.82 * gripScale * gripScale;
+  for (let pass = 0; pass < (T.closed ? 2 : 1); pass++) {
+    for (let i = N - 1; i >= 0; i--) {
+      if (!T.closed && i === N - 1) continue;
+      const j = T.idx(i + 1);
+      const grade = (T.Y[j] - T.Y[i]) / T.step;
+      const dec = Math.max(2.5, decel + 9.81 * grade);
+      v[i] = Math.min(v[i], Math.sqrt(v[j] * v[j] + 2 * dec * T.step));
+    }
+  }
+  return v;
+}
+
 export class AIDriver {
   constructor(racer, track, opts = {}) {
     this.r = racer;
     this.T = track;
     this.skill = clamp(opts.skill ?? 0.8, 0, 1.2);
-    this.aggr = opts.aggression ?? 0.5;
+    this.aggr = clamp(opts.aggression ?? 0.5, 0, 1);
     this.rng = makeRng('ai' + racer.id + (opts.seed || ''));
     this.offset = 0;          // current lateral offset from the racing line
     this.offsetTarget = 0;
@@ -35,6 +71,12 @@ export class AIDriver {
     const eff = P.drive === 'RWD' ? 0.9 : P.drive === 'AWD' ? 0.91 : 0.94;
     this.gripScale = Math.sqrt((P.mu * eff) / 1.12) * 0.99 * (1 + P.clA * 0.1);
     this.rubber = opts.rubber ?? 1;
+    // two plans: the steady-state limit (when someone's alongside and the
+    // road's width isn't ours to run wide on), and a bolder one when alone on
+    // the line, where a fast sweeper's short arc can be taken over the limit
+    // and the room on the outside soaks up the slide
+    this.vPlan = track.line ? speedProfile(track, this.gripScale) : null;
+    this.vPlanFree = track.line ? speedProfile(track, this.gripScale, 0.0012) : null;
   }
 
   /** Called every frame before physics. race: the RaceSession. */
@@ -78,7 +120,11 @@ export class AIDriver {
     this.planTraffic(race, i0, it);
     this.offset += clamp(this.offsetTarget - this.offset, -dt * 4.5, dt * 4.5);
     const wT = T.W[it];
-    const latT = clamp(line.off[it] + this.offset + wobble, -wT + 1.3, wT - 1.3);
+    let latT = clamp(line.off[it] + this.offset + wobble, -wT + 1.3, wT - 1.3);
+    // side by side: never aim into the car alongside (both are heading for
+    // the same apex). If there isn't room for two, whoever is behind backs out.
+    const room = this.sideRoom(race, latT, -wT + 1.3, wT - 1.3);
+    latT = room.lat;
     const tx = T.X[it] + T.LX[it] * latT;
     const tz = T.Z[it] + T.LZ[it] * latT;
 
@@ -97,18 +143,34 @@ export class AIDriver {
     let steer = -delta / Math.max(0.05, lock);
     // damp yaw oscillation
     steer += v.yawRate * 0.05;
+    // and a nudge away from a door that's closing on ours
+    steer += room.push;
     ctl.steer = clamp(steer, -1, 1);
 
     // ---------- speed plan
     const reactAhead = Math.round((6 + speed * 0.4) / T.step);
-    let vLine = Infinity;
-    for (let k = 0; k <= reactAhead; k += 2) vLine = Math.min(vLine, line.speed[T.idx(i0 + k)]);
+    if (!this.vPlan) { this.vPlan = speedProfile(T, this.gripScale); this.vPlanFree = speedProfile(T, this.gripScale, 0.0012); }
+    // free to use the whole road: nobody near and close to the racing line
+    this.crowd = Math.max(0, (this.crowd || 0) - dt);
+    const plan = this.crowd > 0 || Math.abs(this.offset) > 1.2 ? this.vPlan : this.vPlanFree;
+    let vLine = Infinity, kMin = i0;
+    for (let k = 0; k <= reactAhead; k += 2) {
+      const j = T.idx(i0 + k);
+      // off the racing line on the inside of a bend is a tighter radius
+      const inward = this.offset * Math.sign(T.Ks[j]);
+      const tight = inward > 0 ? Math.sqrt(Math.max(0.6, 1 - Math.abs(T.Ks[j]) * inward * 1.6)) : 1;
+      const vk = plan[j] * tight;
+      if (vk < vLine) { vLine = vk; kMin = j; }
+    }
+    void kMin;
     let skillMul = 0.83 + 0.14 * this.skill;
+    // the brave brake later (and the timid earlier) — into corners only
+    if (vLine < speed - 2) skillMul += (this.aggr - 0.5) * 0.035;
     // mistakes: a lapse in concentration now and then (lower skill = more)
     this.mistakeT -= dt;
     if (this.mistakeT <= 0) {
       this.mistakeT = 6 + this.rng() * 14 * (0.5 + this.skill);
-      this.mistake = this.rng() < (1 - this.skill) * 0.6 ? (this.rng() < 0.55 ? -0.12 : 0.045) : 0;
+      this.mistake = this.rng() < (1 - this.skill) * 0.6 * (0.7 + 0.6 * this.aggr) ? (this.rng() < 0.55 ? -0.12 : 0.045) : 0;
       this.mistakeDur = 1.2 + this.rng() * 1.5;
     }
     if (this.mistakeDur > 0) { this.mistakeDur -= dt; skillMul += this.mistake; }
@@ -120,9 +182,10 @@ export class AIDriver {
       if (gap > 160) band = 1 - clamp((gap - 160) / 1200, 0, 0.06) * this.rubber;
     }
     // drafting a car ahead lets it hold more speed; side-by-side caution
-    let vTarget = vLine * this.gripScale * skillMul * band;
+    let vTarget = vLine * skillMul * band;
     vTarget = Math.min(vTarget, 120);
     if (this.blocked) vTarget = Math.min(vTarget, this.blockedSpeed);
+    if (room.yield !== null) vTarget = Math.min(vTarget, room.yield);
     if (r.finished || r.out) {
       vTarget = Math.min(vTarget, 16);
       // a sprint's road runs out past the line: pull up before the end of it
@@ -140,9 +203,14 @@ export class AIDriver {
       const i1 = T.idx(i0 + 4);
       const bend = Math.sign(-T.LZ[i1] * T.LX[i0] + T.LX[i1] * T.LZ[i0]); // + = road bends left
       const wide = (line.off[i0] + this.offset - (r.lat ?? 0)) * bend;
-      // (front drivers only ease off a little: lifting hard swings their tail out)
-      const floor = v.P.drive === 'RWD' ? 0.35 : v.P.drive === 'AWD' ? 0.5 : 0.7;
+      // (front drivers only ease off a little: lifting hard swings their tail
+      // out — but flat out in a fast sweeper with the edge coming up, a full
+      // lift and a touch of brake are the only way back)
+      const room = T.W[i0] + bend * (r.lat ?? 0);   // to the outside edge
+      const edgeNear = clamp((3.5 - room) / 2.5, 0, 1);
+      const floor = (v.P.drive === 'RWD' ? 0.35 : v.P.drive === 'AWD' ? 0.5 : 0.7) * (1 - edgeNear * clamp((speed - 30) / 12, 0, 1));
       if (bend && line.curv[i0] > 1 / 1200 && wide > 0.7) ctl.throttle *= clamp(1 - (wide - 0.7) * 0.22, floor, 1);
+      if (bend && speed > 30 && wide > 1.5 && room < 2.2) { ctl.throttle = 0; ctl.brake = Math.max(ctl.brake, v.P.drive === 'RWD' ? 0.12 : 0.22); }
     }
     // friction circle: hard on the brakes (or the power) and hard into a
     // turn don't mix
@@ -187,10 +255,104 @@ export class AIDriver {
     v.nitro = Math.min(1, v.nitro + dt * 0.012 * (0.5 + this.skill));
   }
 
+  /**
+   * Cars alongside (overlapping or nearly, within a few metres sideways):
+   * keep the steering target a car's width plus a margin clear of each one,
+   * steer gently away from one that's too close, and when the road between
+   * them and the edge is too narrow for us, back out if we're the one
+   * behind. Returns { lat, push, yield }.
+   */
+  sideRoom(race, latT, lo, hi) {
+    const r = this.r, T = this.T, v = r.vehicle;
+    const out = this._room || (this._room = {});
+    out.push = 0;
+    out.yield = null;
+    const myLat = r.lat ?? 0;
+    const myW = r.dims.W;
+    let minLat = lo, maxLat = hi;
+    let squeeze = null;
+    for (const o of race.racers) {
+      if (o === r || o.out || o.parked) continue;
+      const ds = T.deltaS(r.s, o.s);                      // + = they're ahead
+      const reach = (r.dims.L + o.dims.L) / 2 + 1.5;
+      if (Math.abs(ds) > reach) continue;
+      const oLat = o.lat ?? 0;
+      const dLat = oLat - myLat;
+      if (Math.abs(dLat) > 4.5) continue;
+      // where they'll be in a moment (their sideways drift across the road)
+      const ov = o.vehicle;
+      const i = o.hint >= 0 ? o.hint : T.posAt(o.s).i;
+      const oSide = ov.vx * T.LX[i] + ov.vz * T.LZ[i];
+      const oSoon = oLat + clamp(oSide, -3, 3) * 0.35;
+      const sep = (myW + o.dims.W) / 2 + 0.7 - this.aggr * 0.3;
+      if (dLat > 0) maxLat = Math.min(maxLat, Math.min(oLat, oSoon) - sep);
+      else minLat = Math.max(minLat, Math.max(oLat, oSoon) + sep);
+      const gap = Math.abs(dLat) - sep + 0.25;
+      if (gap < 0) out.push += (dLat > 0 ? 1 : -1) * Math.min(0.18, -gap * 0.22);
+      if (ds > 0.8 && (!squeeze || ds > squeeze.ds)) squeeze = { ds, speed: ov.speed };
+    }
+    if (minLat <= maxLat) {
+      out.lat = clamp(latT, minLat, maxLat);
+    } else {
+      // no room for us beside them: tuck in behind whoever's ahead
+      out.lat = latT;
+      if (squeeze) out.yield = Math.max(0, squeeze.speed - 1.2);
+    }
+    void v;
+    return out;
+  }
+
   respawn(race) {
     race.resetRacer(this.r);
     this.stuckCount = 0; this.stuckT = 0; this.reverseT = 0;
     this.progS = this.r.total; this.progT = 0;
+  }
+
+  /**
+   * Covering the inside: a faster car right behind and a braking zone coming
+   * up → one move toward the inside of that corner, held until the corner,
+   * never weaving. How often depends on aggression. Returns the lateral to
+   * hold at the steering target, or null.
+   */
+  defence(race, i0, it, edge) {
+    const r = this.r, T = this.T, v = r.vehicle;
+    if (this.defT > 0) {
+      this.defT -= this._dt || 0.016;
+      if (this.defT > 0) return this.defLat;
+    }
+    this.defLat = null;
+    if (race.state !== 'racing' || this.aggr < 0.35 || r.finished) return null;
+    let threat = null;
+    for (const o of race.racers) {
+      if (o === r || o.out || o.finished) continue;
+      const ds = T.deltaS(r.s, o.s);
+      if (ds < -24 || ds > -4) continue;
+      if (o.vehicle.speed < v.speed - 0.5) continue;
+      if (Math.abs((o.lat ?? 0) - (r.lat ?? 0)) > 3.2) continue;   // already beside us: too late
+      threat = o;
+      break;
+    }
+    if (!threat) return null;
+    // a real braking zone 40-140 m ahead, and which way that corner goes
+    const plan = this.vPlan;
+    let corner = -1;
+    for (let d = 40; d <= 140; d += 6) {
+      const j = T.idx(i0 + Math.round(d / T.step));
+      if (plan[j] < v.speed * 0.78) { corner = j; break; }
+    }
+    if (corner < 0) return null;
+    // decide once per approach (the rng keeps it a personality, not a rule)
+    if (this.defCorner === corner) return null;
+    this.defCorner = corner;
+    if (this.rng() > (this.aggr - 0.25) * 1.4) return null;
+    let k = 0;
+    for (let d = 0; d < 60; d += 4) k += T.Ks[T.idx(corner + Math.round(d / T.step))];
+    const inside = Math.sign(k);
+    if (!inside) return null;
+    this.defLat = inside * Math.min(edge, 2.6);
+    this.defT = 2.2 + this.aggr;
+    void it;
+    return this.defLat;
   }
 
   /** Look for cars ahead/alongside and set offsetTarget / blocked speed.
@@ -220,15 +382,17 @@ export class AIDriver {
         // alongside: lean away
         lean += (dLat > 0 ? -1 : 1) * (2.6 - Math.abs(dLat)) * 0.9;
       }
+      if (ds > -4 && ds < 30 && Math.abs(dLat) < 7) this.crowd = 1.2;
       const oSpeed = o.vehicle.speed; // traffic: signed along the road (− = oncoming)
       const closing = v.speed - oSpeed;
       const reach = Math.max(18 + v.speed * 0.6, stopDist(closing) + 12);
       if (ds > 1.5 && ds < reach) near.push({ ds, lat: oLat, closing, speed: oSpeed });
     }
+    const defend = this.defence(race, i0, it, edge);
     if (!near.length) {
       this.passSide = 0;
       this.laneGoal = null;
-      this.offsetTarget = clamp(lean, -7, 7);
+      this.offsetTarget = clamp(lean + (defend === null ? 0 : defend - T.line.off[it]), -7, 7);
       return;
     }
     // time until we'd run into someone holding lateral position L
@@ -258,7 +422,8 @@ export class AIDriver {
         const [tx] = ttcAt(x);
         if (tx < move * (j / steps) + 0.4) { squeeze = 3; break; }
       }
-      const score = Math.min(t, 6) - 0.35 * move - 0.12 * Math.abs(L - lineLat) - squeeze;
+      const eager = 1.3 - 0.6 * this.aggr;
+      const score = Math.min(t, 6) - 0.35 * move * eager - 0.12 * Math.abs(L - lineLat) * eager - squeeze;
       if (score > bestScore) { bestScore = score; bestL = L; }
       if (this.laneGoal != null && Math.abs(L - this.laneGoal) < 0.5) prevScore = Math.max(prevScore, score);
     }
@@ -267,7 +432,7 @@ export class AIDriver {
       // the racing line is clear: no need to dodge
       this.laneGoal = null;
       this.passSide = 0;
-      this.offsetTarget = clamp(lean, -7, 7);
+      this.offsetTarget = clamp(lean + (defend === null ? 0 : defend - T.line.off[it]), -7, 7);
     } else {
       if (this.laneGoal != null && prevScore > bestScore - 0.35) bestL = this.laneGoal;
       this.laneGoal = bestL;

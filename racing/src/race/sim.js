@@ -11,6 +11,13 @@ import { clamp } from '../core/util.js';
  *  field (a big field loses more than one car a lap), so it stays short. */
 export const knockLaps = (rivals) => Math.min(3, Math.max(2, rivals | 0));
 
+/** A rival's temperament from their name: the same driver races the same way every time. */
+function personality(name) {
+  let h = 2166136261;
+  for (const c of String(name)) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return 0.2 + ((h >>> 0) % 1000) / 1000 * 0.65;
+}
+
 export class RaceSim {
   /**
    * track: Track (with racing line computed). opts: { type, laps, racers:
@@ -41,6 +48,8 @@ export class RaceSim {
       const veh = new Vehicle(rd.spec, rd.upgrades || {});
       return {
         id: k, name: rd.name || rd.spec.model, isPlayer: !!rd.isPlayer, spec: rd.spec, look: rd.look || {},
+        // driving personality 0..1 (given, or a steady one from the name)
+        aggression: rd.aggression ?? personality(rd.name || rd.spec.model),
         vehicle: veh, skill: rd.skill ?? 0.8, hint: -1, s: 0, lat: 0, lap: 0, total: 0,
         lapStart: 0, lapTimes: [], bestLap: null, lastLap: null, finished: false, finishTime: null,
         out: false, pos: k + 1, draft: 0, wrongT: 0, wrongWay: false, offT: 0, scraping: false,
@@ -51,7 +60,7 @@ export class RaceSim {
     });
     this.player = this.racers.find((r) => r.isPlayer) || null;
     for (const r of this.racers) {
-      if (!r.isPlayer) r.ai = new AIDriver(r, track, { skill: r.skill, rubber: opts.rubber ?? 1, seed: opts.seed || '' });
+      if (!r.isPlayer) r.ai = new AIDriver(r, track, { skill: r.skill, rubber: opts.rubber ?? 1, seed: opts.seed || '', aggression: r.aggression });
     }
     this.placeGrid();
     if (opts.traffic) {
