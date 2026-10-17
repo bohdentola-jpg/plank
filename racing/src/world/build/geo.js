@@ -101,7 +101,7 @@ export class Batch {
       if (!acc.idx.length) continue;
       const takesGlow = !!mat.customProgramCacheKey && mat.customProgramCacheKey().startsWith('world-glow');
       const m = new THREE.Mesh(acc.toGeometry(takesGlow), mat);
-      m.castShadow = shadow;
+      m.castShadow = shadow || !!mat.userData.castShadow;
       m.receiveShadow = receive;
       m.matrixAutoUpdate = false;
       m.updateMatrix();

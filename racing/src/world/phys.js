@@ -150,7 +150,7 @@ export class WorldPhys {
     }
     // ---- the districts' solid things
     if (this.districts) {
-      for (const c of this.districts.collidersNear(v.x, v.z, 12)) {
+      for (const c of this.districts.collidersNear(v.x, v.z, 12, this._cn || (this._cn = []))) {
         if (v.y > c.y1 || v.y + 1.5 < c.y0) continue;
         for (let k = 0; k < 6; k++) {
           if (c.kind === 'circle') circle(pts[k], c.x, c.z, c.r, k, consider);

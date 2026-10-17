@@ -17,6 +17,7 @@ import { WorldScene } from './scene.js';
 import { WorldPhys } from './phys.js';
 import { WorldSim } from './sim.js';
 import { districtAt } from './ground.js';
+import { Districts } from './districts/index.js';
 import { GARAGE } from './map/base.js';
 
 // the road network and the land are the same every time: built once a page
@@ -24,7 +25,8 @@ let SHARED = null;
 export function worldData() {
   if (!SHARED) {
     const net = buildNet();
-    SHARED = { net, terrain: new Terrain(net) };
+    const terrain = new Terrain(net);
+    SHARED = { net, terrain, districts: new Districts(net, terrain) };
   }
   return SHARED;
 }
@@ -54,10 +56,20 @@ export class WorldSession extends RaceSession {
     const D = worldData();
     this.net = D.net;
     this.terrain = D.terrain;
-    this.phys = new WorldPhys(this.net, this.terrain, null);
-    this.world = new WorldScene({ net: this.net, terrain: this.terrain }, renderer, { time: this.def.time, budget: this.opts.budget });
+    this.districts = D.districts;
+    // where everything stands (once a page), a slice at a time
+    if (!this.districts.planned) {
+      progress(0.03, 'DRAWING UP THE CITY');
+      let t0 = performance.now();
+      for (const _ of this.districts.planAll()) {
+        if (performance.now() - t0 > 30) { await new Promise((r) => setTimeout(r, 0)); t0 = performance.now(); }
+      }
+    }
+    this.phys = new WorldPhys(this.net, this.terrain, this.districts);
+    this.world = new WorldScene({ net: this.net, terrain: this.terrain, districts: this.districts }, renderer, { time: this.def.time, budget: this.opts.budget });
     this.scene = this.world.scene;
-    await this.world.buildFar((f, l) => progress(0.05 + f * 0.4, l));
+    await this.world.buildFar((f, l) => progress(0.05 + f * 0.35, l));
+    await this.world.warm(this.camera.cam, (f) => progress(0.4 + f * 0.1, 'MIXING THE PAINT'));
     // your car
     this.sim = new WorldSim(this.phys, {
       auto: settings.get('transmission') !== 'manual',

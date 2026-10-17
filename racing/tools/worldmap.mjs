@@ -3,6 +3,9 @@
 // type, junctions, course routes, landmarks. For checking the layout.
 //   node racing/tools/worldmap.mjs [out.png] [mPerPixel=8] [x0,z0,x1,z1]
 //   flags: --nat (natural ground, no roads) --courses --labels-off
+//          --plan (the districts' plans: footprints filled by pack, colliders,
+//          lamps, landmarks; plus each cell's scatter when the area is small)
+//          --district=<id> (frame that district; mPerPixel defaults to 2)
 import { writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 
@@ -11,14 +14,22 @@ const args = process.argv.slice(2);
 const flags = new Set(args.filter((a) => a.startsWith('--')));
 const pos = args.filter((a) => !a.startsWith('--'));
 const out = pos[0] || 'worldmap.png';
-const mpp = Number(pos[1] || 8);
+const mpp = Number(pos[1] || (args.some((a) => a.startsWith('--district=')) ? 2 : 8));
 const base = await import(`${ROOT}world/map/base.js`);
 const { natural, waterAt } = await import(`${ROOT}world/terrain.js`);
 let world = null;
 if (!flags.has('--nat')) {
   try { world = await import(`${ROOT}world/net.js`).then((m) => m.buildNet ? m : null); } catch (e) { console.warn('no road net yet:', e.message); }
 }
-const B = pos[2] ? (() => { const [x0, z0, x1, z1] = pos[2].split(',').map(Number); return { x0, z0, x1, z1 }; })() : base.BOUNDS;
+const distOpt = args.find((a) => a.startsWith('--district='))?.split('=')[1];
+const distBox = (() => {
+  if (!distOpt) return null;
+  const d = base.DISTRICTS.find((q) => q.id === distOpt);
+  if (!d) throw new Error('no district ' + distOpt);
+  const xs = d.poly.map((p) => p[0]), zs = d.poly.map((p) => p[1]);
+  return { x0: Math.min(...xs) - 60, z0: Math.min(...zs) - 60, x1: Math.max(...xs) + 60, z1: Math.max(...zs) + 60 };
+})();
+const B = pos[2] ? (() => { const [x0, z0, x1, z1] = pos[2].split(',').map(Number); return { x0, z0, x1, z1 }; })() : distBox || base.BOUNDS;
 const W = Math.round((B.x1 - B.x0) / mpp), H = Math.round((B.z1 - B.z0) / mpp);
 const img = new Uint8ClampedArray(W * H * 4);
 const t0 = Date.now();
@@ -121,6 +132,57 @@ if (net) {
       for (let i = 0; i < T.N - 1; i++) line(T.X[i], T.Z[i], T.X[i + 1], T.Z[i + 1], [255, 0, 200], 2, 0.6);
     }
   }
+}
+// ---- the districts' plans
+if (net && (flags.has('--plan') || distOpt)) {
+  const { Districts } = await import(`${ROOT}world/districts/index.js`);
+  const { CELL } = await import(`${ROOT}world/terrain.js`);
+  const D = new Districts(net, terrain || new (await import(`${ROOT}world/terrain.js`)).Terrain(net));
+  const t1 = Date.now();
+  D.planNow();
+  console.log(`plan: ${D.stats.items} items, ${D.stats.colliders} colliders, ${D.stats.lamps} lamps, ${D.stats.far} far shapes in ${Date.now() - t1} ms`);
+  const hue = (s) => { let h = 0; for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0; const a = (h % 360) / 60, f = a - Math.floor(a); const q = [[1, f, 0], [1 - f, 1, 0], [0, 1, f], [0, 1 - f, 1], [f, 0, 1], [1, 0, 1 - f]][Math.floor(a) % 6]; return q.map((v) => 90 + v * 165); };
+  const rect = (x, z, w, d, ry, c, fill = 0.35) => {
+    const cs = Math.cos(ry), sn = Math.sin(ry);
+    const P = (lx, lz) => [x + lx * cs + lz * sn, z - lx * sn + lz * cs];
+    const C4 = [P(-w / 2, d / 2), P(w / 2, d / 2), P(w / 2, -d / 2), P(-w / 2, -d / 2)];
+    // fill by scanning the box in pixel steps
+    if (fill > 0) {
+      const st = Math.max(0.5, mpp * 0.7);
+      for (let a = -w / 2; a <= w / 2; a += st) for (let b = -d / 2; b <= d / 2; b += st) { const p = P(a, b); dot(px(p[0]), pz(p[1]), c, fill); }
+    }
+    poly(C4, c, 0.95);
+    // a tick on the front (+z) side
+    const f = P(0, d / 2), f2 = P(0, d / 2 + Math.min(4, d * 0.2));
+    line(f[0], f[1], f2[0], f2[1], c, 1, 1);
+  };
+  let shown = 0;
+  for (const [k, items] of D.items) {
+    for (const it of items) {
+      if (it.x < B.x0 - 100 || it.x > B.x1 + 100 || it.z < B.z0 - 100 || it.z > B.z1 + 100) continue;
+      const c = hue(it.pack + ':' + it.type);
+      if (it.w && it.d) rect(it.x, it.z, it.w, it.d, it.ry || 0, c);
+      else if (it.r) { for (let a = 0; a < 6.3; a += 0.2) dot(px(it.x + Math.cos(a) * it.r), pz(it.z + Math.sin(a) * it.r), c); }
+      else for (let a = -1; a <= 1; a++) { dot(px(it.x) + a, pz(it.z), c); dot(px(it.x), pz(it.z) + a, c); }
+      shown++;
+    }
+    void k;
+  }
+  for (const a of D.lampGrid.values()) for (const L of a) dot(px(L.hx), pz(L.hz), [255, 230, 120]);
+  for (const m of D.landmarks) for (let a = -4; a <= 4; a++) { dot(px(m.x) + a, pz(m.z) + a, [255, 60, 255]); dot(px(m.x) + a, pz(m.z) - a, [255, 60, 255]); }
+  // the scatter, where the area is small enough to be worth it
+  const ncell = ((B.x1 - B.x0) / CELL) * ((B.z1 - B.z0) / CELL);
+  if (ncell <= 160) {
+    let sc = 0;
+    for (let cx = Math.floor(B.x0 / CELL); cx <= Math.floor(B.x1 / CELL); cx++) {
+      for (let cz = Math.floor(B.z0 / CELL); cz <= Math.floor(B.z1 / CELL); cz++) {
+        const S = D.scatterCell(cx, cz);
+        for (const it of S.items) { const c = hue(it.pack + ':' + it.type); if (it.w && it.d) rect(it.x, it.z, it.w, it.d, it.ry || 0, c, 0.2); else dot(px(it.x), pz(it.z), c, 0.9); sc++; }
+      }
+    }
+    console.log(`scatter: ${sc} items in view`);
+  }
+  console.log(`plan items in view: ${shown}`);
 }
 const g = base.GARAGE;
 for (let a = 0; a < 6.3; a += 0.3) dot(px(g.x) + Math.cos(a) * 4, pz(g.z) + Math.sin(a) * 4, [0, 255, 120]);

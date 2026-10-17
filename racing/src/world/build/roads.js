@@ -117,6 +117,26 @@ function wall(acc, r, idxs, lat, dy0, dy1, facing, vLen = 4) {
 
 // ------------------------------------------------------------------ the cell
 
+/**
+ * Make every material the roads will use (their textures are drawn on first
+ * use, which is slow): done while loading so driving into a new kind of
+ * road never stalls a frame.
+ */
+export function* warmRoads(net) {
+  const types = new Map();
+  for (const r of net.roads) types.set(r.rt.id, r.rt);
+  for (const rt of types.values()) {
+    K.roadMat(rt, false);
+    if (rt.shoulder > 0) { if (rt.shoulderSurface === 'curb') kerbMat(); else if (rt.shoulderSurface !== 'road') K.shoulderMat(rt.shoulderSurface); }
+    yield;
+  }
+  K.junctionMat(false); K.cobbleJunctionMat(); K.sidewalkMat(); K.curbMat(); K.medianMat(); K.shoulderMat('gravel');
+  yield;
+  K.concreteMat(); K.darkConcreteMat(); K.steelMat(); K.poleMat(); K.stoneMat(); K.woodMat(); K.haloMat(); K.terrainMat();
+  paintMat();
+  for (const r of net.roads) for (const L of roadLamps(r)) K.lampMat(`#${L.color.getHexString()}`);
+}
+
 /** Which samples of which roads this cell owns: Map road → sorted indices. */
 function owned(net, cx, cz) {
   const out = new Map();
@@ -433,7 +453,7 @@ function emitLamp(L, batch) {
   const hm = batch.get(K.lampMat(`#${L.color.getHexString()}`));
   const st = L.style;
   if (st === 'gas') {
-    pm.cyl(L.x, L.y, L.z, 0.09, L.h - 0.6, 6, 0.06);
+    pm.cyl(L.x, L.y, L.z, 0.09, L.hy - L.y - 0.6, 6, 0.06);
     hm.box(L.x, L.hy - 0.75, L.z, 0.42, 0.55, 0.42);
     return;
   }

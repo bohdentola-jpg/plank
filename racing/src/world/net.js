@@ -249,9 +249,7 @@ export class RoadNet {
           if (f === e) continue;
           const rf = f.road.rt;
           const wf = rf.hw + rf.shoulder + rf.walk;
-          const c = e.dx * f.dx + e.dz * f.dz;
-          const s = Math.sqrt(Math.max(0, 1 - c * c));
-          t = Math.max(t, (wf + wi * Math.abs(c)) / Math.max(s, 0.3) + 0.5);
+          t = Math.max(t, clearOf(e, f, wi, wf) + 0.5);
         }
         t = Math.min(t, 60, r.length * 0.45);
         e.trim = t;
@@ -438,6 +436,26 @@ export class RoadNet {
       }
     }
   }
+}
+
+/**
+ * How far out along end e before both its edges (wi either side) are clear
+ * of end f's corridor (wf either side, from the node outward). A road that
+ * carries straight on through the node never gets in the way; one meeting
+ * at a sharp angle does for a long way.
+ */
+function clearOf(e, f, wi, wf) {
+  const c = e.dx * f.dx + e.dz * f.dz;            // cos of the angle between them
+  const s = e.dx * f.dz - e.dz * f.dx;            // and its sine (signed)
+  const ok = (t) => {
+    for (const w of [wi, -wi]) {
+      if (t * c + w * s <= 0) continue;           // behind f's start: clear of it
+      if (Math.abs(t * s - w * c) < wf) return false;
+    }
+    return true;
+  };
+  for (let t = 0; t <= 80; t += 0.5) if (ok(t) && ok(t + 3) && ok(t + 8)) return t;
+  return 80;
 }
 
 function pointInConvex(poly, x, z) {

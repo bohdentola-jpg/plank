@@ -4,6 +4,9 @@
 //   flock -w 7200 /tmp/claude-browser.lock node racing/tools/worldshot.mjs \
 //     --out=/some/dir --time=night --car=silvio "x,z,heading[,name]" ...
 // Named spots: garage, plaza, oldtown, chinatown, harbor, kaido, summit, desert, lake, bridge.
+// A district's middle: "d:<district id>[:heading]" (the road nearest its centre).
+// Options: --views=4 (turn round: that many shots per spot), --aerial=120 (a
+// bird's-eye camera that high and that far back), --wait=ms, --cam=0..3.
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
@@ -19,6 +22,7 @@ const SPOTS = {
   bridge: '2900,2840,-2.1', skyline: '-360,0,3.14', pier: '1200,2000,0', farm: '-4600,250,-1.57',
 };
 const spots = args.filter((a) => !a.startsWith('--')).map((a) => SPOTS[a] ? [SPOTS[a], a] : [a, null]).map(([s, name]) => {
+  if (s.startsWith('d:')) { const [, id, h] = s.split(':'); return { district: id, h: h !== undefined ? Number(h) : null, name: id }; }
   const [x, z, h, n] = s.split(',');
   return { x: Number(x), z: Number(z), h: Number(h || 0), name: name || n || `${x}_${z}` };
 });
@@ -39,7 +43,7 @@ const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message + ' ' + (e.stack || '').split('\n').slice(1, 3).join(' / ')));
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') { const t = m.text().slice(0, 400); if (!errors.includes('console: ' + t)) errors.push('console: ' + t); } });
-const first = spots[0] || { x: 700, z: 780, h: 3.14 };
+const first = spots[0]?.district ? { x: 700, z: 736, h: 3.14 } : (spots[0] || { x: 700, z: 780, h: 3.14 });
 const t0 = Date.now();
 await page.goto(`http://127.0.0.1:${server.address().port}/racing/index.html?screen=world&car=${opt.car || 'silvio'}&time=${opt.time || 'night'}&budget=${opt.budget || 120}&x=${first.x}&z=${first.z}&heading=${first.h}`);
 await page.waitForFunction(() => window.__world && window.__world.state === 'roam', null, { timeout: 900000, polling: 500 });
@@ -50,12 +54,43 @@ await page.evaluate((cam) => {
   S.readPlayer = () => { const c = S.player.ctl; c.throttle = 0; c.brake = 0; c.steer = 0; c.handbrake = true; c.nitro = false; };
   if (cam) S.camera.setMode(Number(cam));
 }, opt.cam);
-for (const sp of spots) {
-  await page.evaluate((sp) => {
+const views = Number(opt.views || 1);
+const shots = [];
+for (const sp0 of spots) {
+  for (let k = 0; k < views; k++) shots.push({ ...sp0, view: k });
+}
+for (const sp of shots) {
+  const at = await page.evaluate((sp) => {
     const S = window.__world, P = S.player;
-    S.sim.placeAt(P, sp.x, sp.z, sp.h);
+    let { x, z, h } = sp;
+    if (sp.district) {
+      // the road sample nearest the district's centre
+      const d = (window.__districts || S.districts).byId.get(sp.district);
+      let cx = 0, cz = 0;
+      for (const p of d.poly) { cx += p[0]; cz += p[1]; }
+      cx /= d.poly.length; cz /= d.poly.length;
+      const n = S.net.nearest(cx, cz, 3000);
+      x = n.road.X[n.i]; z = n.road.Z[n.i];
+      h = sp.h ?? Math.atan2(n.road.TX[n.i], n.road.TZ[n.i]);
+    }
+    h += sp.view * Math.PI * 2 / Math.max(1, sp.views || 1);
+    S.sim.placeAt(P, x, z, h);
     S.camera.first = true;
-  }, sp);
+    return { x, z, h };
+  }, { ...sp, views });
+  if (opt.aerial) {
+    await page.evaluate(({ A }) => {
+      const S = window.__world;
+      S.updateCamera = function () {
+        const v = this.player.vehicle, cam = this.camera.cam;
+        const fx = Math.sin(v.heading), fz = Math.cos(v.heading);
+        cam.position.set(v.x - fx * A, v.y + A * 0.8, v.z - fz * A);
+        cam.lookAt(v.x + fx * A * 0.4, v.y, v.z + fz * A * 0.4);
+        cam.far = Math.max(cam.far, 6000);
+        cam.updateProjectionMatrix();
+      };
+    }, { A: Number(opt.aerial) });
+  }
   // let the streamer catch up (nothing queued or building near the car)
   const t1 = Date.now();
   await page.waitForFunction(() => {
@@ -70,9 +105,9 @@ for (const sp of spots) {
     const info = window.__game.renderer.gl.info;
     return { y: v.y.toFixed(1), surface: g.surface, road: g.road?.name || g.road?.spec?.id || '-', cells: W.cells.size, built: W.stats.built, avgMs: (W.stats.buildMs / Math.max(1, W.stats.built)).toFixed(1), calls: info.render.calls, tris: info.render.triangles, geo: info.memory.geometries, fps: window.__game.fps?.toFixed(1) };
   });
-  const file = `${out}/${sp.name}.png`;
+  const file = `${out}/${sp.name}${views > 1 ? '_' + sp.view : ''}.png`;
   await page.screenshot({ path: file });
-  console.log(`${sp.name}: ${file}  (${((Date.now() - t1) / 1000).toFixed(1)} s)  ${JSON.stringify(st)}`);
+  console.log(`${sp.name}: ${file}  at ${at.x.toFixed(0)},${at.z.toFixed(0)},${at.h.toFixed(2)}  (${((Date.now() - t1) / 1000).toFixed(1)} s)  ${JSON.stringify(st)}`);
 }
 console.log(errors.length ? `PAGE ERRORS (${errors.length}):\n  ${errors.slice(0, 8).join('\n  ')}` : 'no page errors');
 await browser.close();

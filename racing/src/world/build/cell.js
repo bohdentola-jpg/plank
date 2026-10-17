@@ -29,22 +29,24 @@ export function* buildCell(ctx, cx, cz) {
   const batch = new Batch();
   const rr = buildRoads(ctx.net, cx, cz, batch, { wet: ctx.wet });
   yield;
-  // the districts' buildings and props
-  const extra = { colliders: [], lamps: [] };
-  if (ctx.districts) {
-    const it = ctx.districts.buildCell(cx, cz, batch, group, extra);
-    if (it && it[Symbol.iterator]) yield* it;
-  }
+  // the districts' buildings, landmarks, props and trees (props close up only)
+  const out = { batch, nearBatch: new Batch(), group, colliders: [], lamps: [], anims: [] };
+  if (ctx.districts) yield* ctx.districts.buildCell(cx, cz, out);
   glowing.push(...batch.flush(group));
+  yield;
+  const near = new THREE.Group();
+  near.name = 'near';
+  glowing.push(...out.nearBatch.flush(near));
+  group.add(near);
   yield;
   // light: every lamp within reach of the cell (neighbours' too)
   const lamps = lampsInBox(ctx.net, x0 - 45, z0 - 45, x0 + CELL + 45, z0 + CELL + 45, _lamps).slice();
   if (ctx.districts) lamps.push(...ctx.districts.lampsInBox(x0 - 45, z0 - 45, x0 + CELL + 45, z0 + CELL + 45));
-  bake(glowing, lamps);
+  for (const m of glowing) { bake([m], lamps); yield; }
   // halos round the lamp heads standing in this cell
-  const own = [...rr.lamps, ...extra.lamps];
+  const own = [...rr.lamps, ...out.lamps];
   if (own.length) group.add(halos(own));
-  return { group, piers: rr.piers, colliders: extra.colliders, lamps: own };
+  return { group, near, piers: rr.piers, anims: out.anims, lamps: own };
 }
 
 /** Sum lamp light into the 'glow' attribute of every mesh that takes it. */

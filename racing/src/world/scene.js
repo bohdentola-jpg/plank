@@ -12,7 +12,10 @@ import { BOUNDS, LAKE, LAKE_Y, RIVER } from './map/base.js';
 import { groundColor } from './ground.js';
 import { buildCell } from './build/cell.js';
 import { roadLamps } from './build/roads.js';
-import { U, updateKit } from './kit.js';
+import { U, updateKit, allMaterials } from './kit.js';
+import { packMaterials } from './districts/builder.js';
+import { warmRoads } from './build/roads.js';
+import { buildFarSkyline } from './districts/far.js';
 import { disposeTree } from '../core/util.js';
 
 const CX0 = Math.floor(BOUNDS.x0 / CELL), CX1 = Math.ceil(BOUNDS.x1 / CELL);
@@ -33,6 +36,7 @@ export class WorldScene {
     this.near = opts.near ?? 600;
     this.keep = opts.keep ?? 860;
     this.budget = opts.budget ?? 6;
+    this.propsRange = opts.propsRange ?? 330;
     this.scene = new THREE.Scene();
     this.group = new THREE.Group();
     this.scene.add(this.group);
@@ -228,6 +232,12 @@ export class WorldScene {
     onProgress(0.9, 'LIGHTING THE STREETS');
     await new Promise((r) => setTimeout(r, 0));
     this.buildFarLamps();
+    if (this.ctx.districts?.farList.length) {
+      onProgress(0.95, 'RAISING THE SKYLINE');
+      await new Promise((r) => setTimeout(r, 0));
+      this.skyline = buildFarSkyline(this.ctx.districts.farList, (x, z) => cellIndex(Math.floor(x / CELL), Math.floor(z / CELL)), this.maskU);
+      this.scene.add(this.skyline);
+    }
     onProgress(1, 'READY');
   }
 
@@ -278,6 +288,46 @@ export class WorldScene {
     pts.renderOrder = 5;
     this.scene.add(pts);
     this.farLamps = pts;
+  }
+
+  // ---------------------------------------------------------------- warming up
+
+  /**
+   * Everything the streamer will need, made now (in slices): the roads' and
+   * districts' materials (their textures are drawn on first use), then every
+   * shader compiled, so a new part of town never stalls a frame.
+   */
+  async warm(camera, onProgress = () => {}, sliceMs = 20) {
+    let t0 = performance.now();
+    const slice = async () => { if (performance.now() - t0 > sliceMs) { await new Promise((r) => setTimeout(r, 0)); t0 = performance.now(); } };
+    for (const _ of warmRoads(this.ctx.net)) await slice();
+    onProgress(0.4);
+    if (this.ctx.districts) for (const _ of this.ctx.districts.warm()) await slice();
+    onProgress(0.7);
+    // a tiny mesh per material, compiled against the real scene (its lights and fog)
+    const g = new THREE.BufferGeometry();
+    const tri = (n, v) => new THREE.Float32BufferAttribute(new Array(n * 3).fill(0).map((_, i) => v[i % v.length]), n);
+    g.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 0, 1], 3));
+    g.setAttribute('normal', tri(3, [0, 1, 0]));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1], 2));
+    g.setAttribute('color', tri(3, [1, 1, 1]));
+    g.setAttribute('glow', tri(3, [0, 0, 0]));
+    const tmp = new THREE.Group();
+    for (const m of new Set([...allMaterials(), ...packMaterials()])) {
+      if (m.isShaderMaterial) continue;
+      const mesh = new THREE.Mesh(g, m);
+      mesh.frustumCulled = false;
+      tmp.add(mesh);
+    }
+    tmp.position.copy(camera.position);
+    this.scene.add(tmp);
+    try {
+      if (this.renderer.compileAsync) await this.renderer.compileAsync(this.scene, camera);
+      else this.renderer.compile(this.scene, camera);
+    } catch (e) { console.warn('world: compile', e); }
+    this.scene.remove(tmp);
+    g.dispose();
+    onProgress(1);
   }
 
   // ---------------------------------------------------------------- streaming
@@ -388,7 +438,7 @@ export class WorldScene {
 
   drop(c) {
     this.group.remove(c.out.group);
-    disposeTree(c.out.group);
+    freeGeometry(c.out.group);
     this.setMask(c.cx, c.cz, 0);
     this.stats.disposed++;
     this.onDrop?.(c);
@@ -416,13 +466,35 @@ export class WorldScene {
     if (this.waterTex) { this.waterTex.offset.x = this.time * 0.006; this.waterTex.offset.y = this.time * 0.004; }
     if (focus) this.stream(focus);
     updateKit(U.night.value, this.time);
+    // close-up props only close up; the districts' moving things while they're near
+    const cp = camera.position;
+    for (const c of this.cells.values()) {
+      if (c.state !== 'ready') continue;
+      const d = boxDist(c.cx, c.cz, cp.x, cp.z);
+      if (c.out.near) c.out.near.visible = d < this.propsRange;
+      if (c.out.anims?.length && d < 900) for (const fn of c.out.anims) fn(this.time, dt, d);
+    }
   }
 
   dispose() {
-    for (const c of this.cells.values()) if (c.state === 'ready') disposeTree(c.out.group);
+    for (const c of this.cells.values()) if (c.state === 'ready') freeGeometry(c.out.group);
     this.cells.clear();
+    // (the shared materials and their textures stay made for next time)
+    this.scene.remove(this.group);
     disposeTree(this.scene);
   }
+}
+
+/**
+ * Free a dropped cell's geometry. Not its materials: those are shared by
+ * every cell (freeing one would recompile its shader and re-upload its
+ * textures the next time anything used it).
+ */
+function freeGeometry(root) {
+  root.traverse((o) => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.isInstancedMesh) o.dispose();
+  });
 }
 
 function boxDist(cx, cz, x, z) {

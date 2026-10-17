@@ -13,6 +13,9 @@ import coast from './areas/coast.js';
 import west from './areas/west.js';
 import north from './areas/north.js';
 import east from './areas/east.js';
+import xCentral from './areas/x_central.js';
+import xOldtown from './areas/x_oldtown.js';
+import xWorks from './areas/x_works.js';
 
 function planarize(m) {
   const pos = (id) => m.nodes[id];
@@ -61,7 +64,7 @@ function planarize(m) {
 }
 
 function assemble() {
-  const m = merge(city, oldtown, uptown, highways, coast, west, north, east);
+  const m = merge(city, oldtown, uptown, highways, coast, west, north, east, xCentral, xOldtown, xWorks);
   planarize(m);
   // every road's nodes must exist
   for (const r of m.roads) {
