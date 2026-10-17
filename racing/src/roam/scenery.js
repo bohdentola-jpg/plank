@@ -11,7 +11,7 @@ import { G } from './plan.js';
 import { pastEnd } from './roadnet.js';
 
 /** buildWorld's decorate hook. */
-export async function decorateRegion(world, track, plan) {
+export async function decorateRegion(world, track, plan, opts = {}) {
   if (!plan) return;
   const terrainEnv = !!world.terrain;
   carveScenery(world, plan.carve);
@@ -21,6 +21,54 @@ export async function decorateRegion(world, track, plan) {
   for (const q of plan.portals) buildBore(world, q, kit);
   for (const f of plan.faces || []) buildFace(world, f, kit, terrainEnv);
   for (const m of kit.glow) world.glowMeshes.push(m);
+  if (!opts.noRaces) buildMarker(world, track, plan);
+}
+
+/**
+ * The race start: a column of light over the region's start line. Pull up
+ * in it and you can race this road from here.
+ */
+function buildMarker(world, track, plan) {
+  const p = track.posAt(track.startS, 0);
+  const w = track.W[p.i];
+  plan.marker = { x: p.x, z: p.z, y: p.y, heading: p.heading, s: track.startS, r: Math.max(5, w * 0.8) };
+  const R = plan.marker.r;
+  const c = document.createElement('canvas');
+  c.width = 4; c.height = 128;
+  const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, 128);
+  g.addColorStop(0, 'rgba(255,255,255,0)');
+  g.addColorStop(0.75, 'rgba(255,255,255,0.35)');
+  g.addColorStop(1, 'rgba(255,255,255,0.9)');
+  x.fillStyle = g;
+  x.fillRect(0, 0, 4, 128);
+  const tex = new THREE.CanvasTexture(c);
+  const col = new THREE.Color('#ffb21e');
+  // (outside faces only: from inside the column, i.e. parked in it with the
+  // chase camera, there's nothing in the way)
+  const mat = new THREE.MeshBasicMaterial({ map: tex, color: col, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.FrontSide, fog: false });
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(R, R, 26, 40, 1, true), mat);
+  beam.position.set(p.x, p.y + 13, p.z);
+  beam.userData.roam = true;
+  beam.renderOrder = 4;
+  world.add(beam);
+  const ringMat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+  const ring = new THREE.Mesh(new THREE.RingGeometry(R - 0.45, R, 48), ringMat);
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.set(p.x, p.y + 0.08, p.z);
+  ring.userData.roam = true;
+  world.add(ring);
+  world.disposables.push(tex, mat, ringMat);
+  let t = 0;
+  world.animators.push((dt, camera) => {
+    t += dt;
+    // a beacon from down the road, a glow up close
+    const d = camera ? Math.hypot(camera.position.x - p.x, camera.position.z - p.z) : 99;
+    const near = Math.min(1, Math.max(0, (d - R * 1.1) / (R * 3)));
+    mat.opacity = (0.6 + 0.25 * Math.sin(t * 2.6)) * (0.15 + 0.85 * near);
+    ringMat.opacity = 0.55 + 0.4 * Math.sin(t * 2.6 + 1);
+  });
+  void w;
 }
 
 // ---------------------------------------------------------------- carving

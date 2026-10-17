@@ -9,7 +9,9 @@ import { RoamHUD, drawRoamLoading, drawWorldMap } from '../roam/hud.js';
 import { ring } from '../roam/network.js';
 import { TRACK_BY_ID } from '../track/tracks.js';
 import { CAR_BY_ID } from '../car/cars.js';
-import { C, osd, panel, hints } from '../core/ui.js';
+import { C, osd, panel, hints, text, vText } from '../core/ui.js';
+import { typesFor, TYPE_NAMES, SKILLS, pickRivals } from './showroom.js';
+import { knockLaps } from '../race/sim.js';
 import { Menu, uiSound } from '../core/menu.js';
 import { input } from '../core/input.js';
 import { settings } from '../core/settings.js';
@@ -22,6 +24,62 @@ registerScreen('roam', () => {
   let pauseMenu = null;
   let map = null;           // { sel }
   let fade = 0;
+  let raceMenu = null;      // racing this road from the start-line light
+  const rcfg = { type: null, opp: 5, skill: 2, traffic: true };
+
+  const trafficRoad = (def) => ['city', 'highway', 'docks'].includes(def.env);
+  const makeRaceMenu = () => {
+    const def = session.def;
+    const types = typesFor(def);
+    if (!types.includes(rcfg.type)) rcfg.type = types[0];
+    if (rcfg.type === 'drag') rcfg.opp = Math.min(rcfg.opp, (def.dragLanes?.length || 2) - 1);
+    rcfg.traffic = !!def.traffic;
+    return new Menu([
+      {
+        label: 'RACE TYPE', type: 'choice',
+        get options() { return typesFor(session.def).map((v) => ({ value: v, label: TYPE_NAMES[v] })); },
+        get: () => rcfg.type, set: (v) => { rcfg.type = v; },
+      },
+      {
+        label: 'RIVALS', type: 'choice',
+        get options() {
+          if (rcfg.type === 'timeattack' || rcfg.type === 'drift') return [{ value: rcfg.opp, label: rcfg.type === 'drift' ? 'POSTED SCORES' : 'NONE' }];
+          const max = rcfg.type === 'drag' ? (session.def.dragLanes?.length || 2) - 1 : 7;
+          const min = rcfg.type === 'knockout' ? 2 : 1;
+          return Array.from({ length: max - min + 1 }, (_, k) => ({ value: k + min, label: String(k + min) }));
+        },
+        get: () => rcfg.opp, set: (v) => { rcfg.opp = v; },
+      },
+      {
+        label: 'SKILL', type: 'choice', options: SKILLS.map((x, k) => ({ value: k, label: x.label })),
+        get: () => rcfg.skill, set: (v) => { rcfg.skill = v; },
+      },
+      {
+        label: 'TRAFFIC', type: 'choice',
+        get options() { return trafficRoad(session.def) && rcfg.type !== 'drag' ? [{ value: true, label: 'ON' }, { value: false, label: 'OFF' }] : [{ value: false, label: 'CLOSED ROAD' }]; },
+        get: () => trafficRoad(session.def) && rcfg.type !== 'drag' && rcfg.traffic, set: (v) => { rcfg.traffic = v; },
+      },
+      { label: 'START RACE', id: 'go' },
+      { label: 'KEEP CRUISING', id: 'cancel' },
+    ], { id: 'roamrace' });
+  };
+
+  const startRace = () => {
+    const def = session.def;
+    const P = session.opts.player;
+    const type = rcfg.type;
+    const opp = type === 'timeattack' || type === 'drift' ? 0 : Math.max(type === 'knockout' ? 2 : 1, rcfg.opp);
+    // after the race: back on this road, just past the line
+    const back = { ...params, track: def.id, trackDef: undefined, start: { s: (session.track.startS || 0) + (session.track.closed ? 30 : 15) } };
+    go('race', {
+      trackDef: def, spec: P.spec, look: P.look, upgrades: P.upgrades, type,
+      laps: type === 'knockout' ? knockLaps(opp) : def.laps || 3,
+      opponents: pickRivals(P.spec, opp, SKILLS[rcfg.skill].v, P.look?.paint, def.id + type + Date.now() % 97),
+      rubber: 1, traffic: trafficRoad(def) && type !== 'drag' && rcfg.traffic,
+      quitLabel: 'BACK TO FREE ROAM', noRecords: false,
+      onDone: () => go('roam', back),
+    });
+  };
 
   const makePause = () => new Menu([
     { label: 'RESUME', id: 'resume' },
@@ -63,7 +121,7 @@ registerScreen('roam', () => {
       session = new RoamSession({
         track: def, traffic,
         player: { spec, look: p.look || {}, upgrades: p.upgrades || {}, name: p.playerName || 'YOU' },
-        start: p.start || null,
+        start: p.start || null, noRaces: !!p.noRaces,
       });
       await session.load(game.renderer.gl, () => {});
       game.renderer.setPost(session.world.at.post || {}, true);
@@ -93,6 +151,16 @@ registerScreen('roam', () => {
         if (input.pressed('back') || input.pressed('pause')) { map = null; uiSound('back'); }
         return;
       }
+      if (raceMenu) {
+        const it = raceMenu.update(dt);
+        if (it?.id === 'go') { uiSound('select'); raceMenu = null; startRace(); return; }
+        if (it?.id === 'cancel' || input.pressed('back') || input.pressed('pause') || !session.atMarker) {
+          raceMenu = null; uiSound('back');
+        }
+        session.update(dt);
+        Object.assign(game.fx, session.fx || {});
+        return;
+      }
       if (pauseMenu) {
         const it = pauseMenu.update(dt);
         if (input.pressed('pause') || input.pressed('back') || it?.id === 'resume') {
@@ -108,6 +176,11 @@ registerScreen('roam', () => {
       if ((input.pressed('pause') || padLost) && session.phase === 'drive') {
         pauseMenu = makePause();
         session.pause(true);
+        uiSound('select');
+        return;
+      }
+      if (session.atMarker && !params.noRaces && input.pressed('confirm')) {
+        raceMenu = makeRaceMenu();
         uiSound('select');
         return;
       }
@@ -134,11 +207,32 @@ registerScreen('roam', () => {
         ctx.fillRect(0, 0, 1024, 768);
       }
       if (map) { drawWorldMap(ctx, session.def.id, map.sel, game.time); hints(ctx, [['lr', 'REGION'], ['confirm', 'TRAVEL'], ['back', 'BACK']]); return; }
+      if (raceMenu) drawRaceMenu(ctx, raceMenu, session);
+      else if (session.atMarker && !params.noRaces && !pauseMenu) drawRacePrompt(ctx, session, game.time);
       if (pauseMenu) drawPause(ctx, pauseMenu, session);
     },
   };
   return scr;
 });
+
+function drawRacePrompt(ctx, session, t) {
+  const def = session.def;
+  const a = 0.75 + 0.25 * Math.sin(t * 5);
+  panel(ctx, 312, 520, 400, 64, { accent: C.accent, accentLen: 140, alpha: 0.88 });
+  vText(ctx, 'RACE HERE', 336, 556, 24, { color: '#fff' });
+  text(ctx, typesFor(def).map((v) => TYPE_NAMES[v]).join('  ·  '), 338, 574, { size: 11, color: C.dim, weight: 800, spacing: 1.5 });
+  text(ctx, '✕ / ENTER', 690, 556, { size: 14, color: C.accent, weight: 900, spacing: 2, align: 'right', alpha: a });
+}
+
+function drawRaceMenu(ctx, menu, session) {
+  ctx.fillStyle = 'rgba(0,6,20,0.5)';
+  ctx.fillRect(0, 0, 1024, 768);
+  panel(ctx, 290, 190, 460, 360, { accent: C.accent, accentLen: 200 });
+  vText(ctx, session.def.name, 320, 238, 26, { color: '#fff' });
+  text(ctx, 'RACE THIS ROAD', 322, 260, { size: 12, color: C.accent, weight: 900, spacing: 3 });
+  menu.draw(ctx, 330, 300, 390, { rowH: 40, size: 19 });
+  hints(ctx, [['confirm', 'SELECT'], ['lr', 'ADJUST'], ['back', 'KEEP CRUISING']]);
+}
 
 function drawPause(ctx, menu, session) {
   ctx.fillStyle = 'rgba(0,10,40,0.55)';

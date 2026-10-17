@@ -41,6 +41,7 @@ export class RoamHUD extends HUD {
     if (this.mapFor !== s.track) this.buildMap();
     this.drawMinimap(ctx, 108, 652, 82);
     this.drawPortals(ctx, 108, 652, 82);
+    this.drawStart(ctx, 108, 652, 82);
     this.drawTach(ctx, 908, 650, 96);
     this.drawMessages(ctx);
     this.drawWarnings(ctx);
@@ -79,6 +80,30 @@ export class RoamHUD extends HUD {
       ctx.restore();
       if (!out) text(ctx, m.name.split(' ')[0], cx + px, cy + py - 10, { size: 10, color: m.color, align: 'center', weight: 900 });
     }
+  }
+
+  /** The race start (the column of light) on the radar: a chequered square. */
+  drawStart(ctx, cx, cy, R) {
+    const s = this.s;
+    const mk = s.world?.roam?.marker;
+    if (!mk || s.noRaces) return;
+    const pv = s.player.vehicle;
+    const scale = R / (this.mapRange || 190);
+    const ch = Math.cos(pv.heading), sh = Math.sin(pv.heading);
+    const dx = mk.x - pv.x, dz = mk.z - pv.z;
+    let px = scale * (sh * dz - ch * dx), py = -scale * (sh * dx + ch * dz);
+    const d = Math.hypot(px, py);
+    if (d > R - 8) { px *= (R - 8) / d; py *= (R - 8) / d; }
+    ctx.save();
+    ctx.translate(cx + px, cy + py);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-6, -6, 12, 12);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(-5, -5, 5, 5); ctx.fillRect(0, 0, 5, 5);
+    ctx.strokeStyle = C.accent;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(-6, -6, 12, 12);
+    ctx.restore();
   }
 
   drawRegion(ctx) {

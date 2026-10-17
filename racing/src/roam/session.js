@@ -20,10 +20,11 @@ import { arrival } from './network.js';
 
 const FADE_OUT = 0.45, FADE_IN = 0.7;
 
-export const roamHooks = {
+/** buildWorld hooks for a free-roam region (opts.noRaces: no race-start light). */
+export const roamHooks = (opts = {}) => ({
   plan: (T) => planRegion(T),
-  decorate: (w, T, plan) => decorateRegion(w, T, plan),
-};
+  decorate: (w, T, plan) => decorateRegion(w, T, plan, opts),
+});
 
 export class RoamSession extends RaceSession {
   /**
@@ -37,6 +38,7 @@ export class RoamSession extends RaceSession {
     this.phase = 'loading';
     this.loading = { f: 0, label: 'PLEASE STAND BY', def: opts.track };
     this.visits = 0;
+    this.noRaces = !!opts.noRaces;
   }
 
   get trafficOn() { return this.opts.traffic !== false; }
@@ -63,7 +65,7 @@ export class RoamSession extends RaceSession {
   /** Build a region and move into it (the old one is gone by now). */
   async enterRegion(def, start, progress = () => {}) {
     this.loading = { f: 0, label: 'PLEASE STAND BY', def };
-    const world = await buildWorld(def, this.renderer, (f, l) => { this.loading = { f, label: l, def }; progress(f * 0.95, l); }, roamHooks);
+    const world = await buildWorld(def, this.renderer, (f, l) => { this.loading = { f, label: l, def }; progress(f * 0.95, l); }, roamHooks({ noRaces: this.noRaces }));
     this.def = def;
     this.world = world;
     this.track = world.track;
@@ -152,6 +154,10 @@ export class RoamSession extends RaceSession {
     for (const m of this.messages) m.t += dt;
     this.messages = this.messages.filter((m) => m.t < m.dur);
     this.arrivedT += dt;
+    // pulled up in the race start's light
+    const mk = this.world?.roam?.marker;
+    const pv = this.player.vehicle;
+    this.atMarker = !!(mk && this.phase === 'drive' && pv.speed < 9 && Math.hypot(pv.x - mk.x, pv.z - mk.z) < mk.r + 1.5);
     if (this.phase === 'out') {
       this.fade = Math.min(1, this.fade + dt / FADE_OUT);
       if (this.fade >= 1) this.travel(this.pending.def, this.pending.start);
