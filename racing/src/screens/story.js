@@ -1,35 +1,39 @@
 // STORY — "WHO RUNS PORT HALCYON?"  The hub is Santos Auto Body (garageScene):
-// the race board on the wall, the parts shop, the body shop, the dealer's
-// lot, and a flip phone that carries the plot. Races go through the normal
-// race screen with onResult/onDone callbacks back into the story.
+// the race board on the wall, THE LIST of every crew and rival, the parts
+// shop, the body shop, the dealer's lot, and a flip phone that carries the
+// plot. Races go through the normal race screen with onResult/onDone
+// callbacks back into the story; chapter cards, pink slips and texts follow
+// a race in that order (advance()). The map, flyer, list and cards are
+// drawn by the modules in ./story/.
 import * as THREE from 'three';
 import { registerScreen, game, go } from '../main.js';
 import { buildGarageScene } from './garageScene.js';
 import { buildCarModel } from '../car/model.js';
-import { CARS, CAR_BY_ID, CLASS_ORDER } from '../car/cars.js';
+import { CARS, CAR_BY_ID } from '../car/cars.js';
 import { carStats } from '../car/stats.js';
 import { TRACK_BY_ID } from '../track/tracks.js';
 import { story, EVENT_BY_ID, prFor } from '../story/state.js';
 import {
-  CHAPTERS, PERF_PARTS, TIER_NAMES, TIER_UNLOCK, BODY_PARTS, STARTERS, DEALER_CLASS_UNLOCK, GARAGE_SLOTS,
-  upgradesFor, BOSS_UNLOCK_WINS,
+  CHAPTERS, EVENTS, RIVALS, PERF_PARTS, TIER_NAMES, BODY_PARTS, STARTERS, DEALER_CLASS_UNLOCK, GARAGE_SLOTS,
+  V1_EVENTS, upgradesFor,
 } from '../story/data.js';
-import { drawTrackMap, trackInfo, fmtDistance } from './trackmap.js';
 import { CLASS_COLORS, TYPE_NAMES, engineLabel } from './showroom.js';
 import { C, vText, vWidth, text, paragraph, panel, hints, statBar, hit, roundRect } from '../core/ui.js';
 import { Menu, uiSound } from '../core/menu.js';
 import { input } from '../core/input.js';
 import { settings } from '../core/settings.js';
-import { clamp, damp, fmtTime, makeRng } from '../core/util.js';
+import { clamp } from '../core/util.js';
 import { music } from '../audio/music.js';
 import { sfx } from '../audio/sfx.js';
 import { knockLaps } from '../race/sim.js';
+import { money, wrap, drawRank } from './story/common.js';
+import { drawCityMap } from './story/map.js';
+import { drawFlyer } from './story/flyer.js';
+import { drawRivals, drawRivalCar, rivalRows, LIST_TABS } from './story/rivals.js';
+import { drawChapterCard, drawSlipPaper, drawResult } from './story/cards.js';
 
-const money = (n) => '$' + Math.round(n).toLocaleString();
-const DISTRICTS = {
-  city: { x: 0.53, y: 0.57 }, docks: { x: 0.22, y: 0.8 }, mountain: { x: 0.22, y: 0.24 },
-  desert: { x: 0.84, y: 0.6 }, highway: { x: 0.68, y: 0.2 },
-};
+const LAST = CHAPTERS.length - 1;
+const carName = (id) => { const sp = CAR_BY_ID[id]; return `${sp.make} ${sp.model}`; };
 
 registerScreen('story', () => {
   let G = null;
@@ -40,11 +44,13 @@ registerScreen('story', () => {
   let modelKey = '';
   let pendingModel = null;
   let toast = null;         // { text, t, color }
-  let afterPhone = 'hub';
+  let flowNext = 'hub';     // where advance() lands once the story has nothing to show
   let phoneScroll = 0;
   let hubMenu = null;
   // board
-  let boardCh = 0, boardSel = 0;
+  let boardCh = 0, boardSel = 0, quitArm = 0;
+  // the list
+  let rivTab = 1, rivSel = 0;
   // perf
   let perfSel = 0, perfTier = 0;
   // body
@@ -53,8 +59,10 @@ registerScreen('story', () => {
   let carsTab = 0, carsSel = 0, sellArm = 0;
   // classifieds
   let adSel = 0;
-  // result
+  // result, chapter card, pink slip
   let result = null;
+  let card = null;
+  let slipMenu = null, slipLater = false;
   const cam = { pos: new THREE.Vector3(3.9, 1.55, 5.6), tgt: new THREE.Vector3(-0.9, 0.55, -0.3) };
   const _p = new THREE.Vector3(), _t = new THREE.Vector3();
 
@@ -66,13 +74,50 @@ registerScreen('story', () => {
     if (p === 'hub') hubMenu = makeHub();
     if (p === 'perf') perfTier = story.car.levels[PERF_PARTS[perfSel].id] || 0;
     if (p === 'body') { bodyVal = currentBodyVal(); }
-    if (p === 'board') { boardCh = Math.min(story.s.chapter, CHAPTERS.length - 1); boardSel = firstOpen(boardCh); }
+    if (p === 'board') {
+      boardCh = Math.min(story.s.chapter, LAST);
+      if (story.s.cup) boardCh = EVENT_BY_ID[story.s.cup.id].ch;
+      boardSel = firstOpen(boardCh);
+      quitArm = 0;
+      story.queueWarm(boardCh);
+    }
+    if (p === 'rivals') {
+      rivTab = Math.min(story.s.chapter, LAST) + 1;
+      rivSel = 0;
+    }
     if (p === 'cars') { carsSel = 0; sellArm = 0; }
     if (p === 'phone') { phoneScroll = 0; }
+    if (p === 'slip') slipMenu = makeSlipMenu();
+  }
+
+  /** The story's next beat after a race, a card or the phone: a boss's
+   *  closing card, its pink slip, the texts, a new chapter's card, then
+   *  flowNext (or `next`). */
+  function advance(next) {
+    if (next) flowNext = next;
+    const s = story.s;
+    const out = story.pendingOutro();
+    if (out) { showCard(out); return; }
+    if (s.slips.length && !slipLater) { setPage('slip'); return; }
+    if (s.unread) { setPage('phone'); return; }
+    if (!s.cars.length) { setPage('classifieds'); return; }
+    const intro = story.pendingIntro();
+    if (intro) { showCard(intro); return; }
+    const to = flowNext;
+    flowNext = 'hub';
+    setPage(to);
+  }
+
+  function showCard(c) {
+    card = c;
+    setPage('card');
+    try { sfx.ui(c.kind === 'outro' ? 'buy' : 'select'); } catch { /* */ }
   }
 
   function firstOpen(ch) {
     const evs = story.events(ch);
+    const cup = evs.findIndex((e) => story.status(e) === 'cup');
+    if (cup >= 0) return cup;
     const k = evs.findIndex((e) => story.status(e) === 'open');
     if (k >= 0) return k;
     const b = evs.findIndex((e) => e.boss && story.status(e) !== 'locked' && story.status(e) !== 'won');
@@ -112,6 +157,12 @@ registerScreen('story', () => {
     } else if (page === 'body' && bodyVal !== null) {
       const part = BODY_PARTS[bodySel];
       showCar(story.spec(), { ...story.look(), [part.key]: bodyVal });
+    } else if (page === 'rivals' && rivalRows(rivTab)[rivSel]?.known) {
+      const r = rivalRows(rivTab)[rivSel];
+      showCar(CAR_BY_ID[r.R.car], { ...r.R.look });
+    } else if (page === 'slip' && story.s.slips[0]) {
+      const sl = story.s.slips[0];
+      showCar(CAR_BY_ID[sl.car], { ...sl.look });
     } else if (story.car) {
       showCar(story.spec(), story.look());
     }
@@ -120,34 +171,89 @@ registerScreen('story', () => {
   // ---------------------------------------------------------------- hub
   function makeHub() {
     const unread = story.s.unread;
-    return new Menu([
+    const slips = story.s.slips.length;
+    const items = [
       { label: 'THE BOARD', id: 'board', hint: 'Races, crews and the city map.' },
+      { label: 'THE LIST', id: 'rivals', hint: 'Every crew in the city: who they are, what they drive.' },
       { label: 'PERFORMANCE', id: 'perf', hint: 'Engine, turbo, suspension, tires, nitrous...' },
       { label: 'BODY SHOP', id: 'body', hint: 'Paint, vinyls, rims, kits, wings, glow.' },
       { label: 'CARS', id: 'cars', hint: 'Your garage and the dealer lot.' },
       { label: unread ? `PHONE  (${unread})` : 'PHONE', id: 'phone', hint: 'Messages.' },
-      { label: 'SAVE & EXIT', id: 'exit', hint: 'Back to the radio. Progress saves itself.' },
-    ], { id: 'hub', sel: hubMenu?.sel ?? 0 });
+    ];
+    if (slips) items.splice(5, 0, { label: `PINK SLIP  (${slips})`, id: 'slip', hint: 'A car you won off a boss. Keep it or sell it.' });
+    items.push({ label: 'SAVE & EXIT', id: 'exit', hint: 'Back to the radio. Progress saves itself.' });
+    return new Menu(items, { id: 'hub', sel: Math.min(hubMenu?.sel ?? 0, items.length - 1) });
+  }
+
+  function makeSlipMenu() {
+    const sl = story.s.slips[0];
+    if (!sl) return null;
+    const full = story.garageFull;
+    const items = [
+      { label: full ? 'KEEP IT  (GARAGE FULL)' : 'KEEP IT', id: 'keep', hint: full ? `All ${GARAGE_SLOTS} bays are taken. Sell a car first, or take the cash.` : 'Into the garage, with the parts it came with.' },
+      { label: `SELL IT  +${money(story.slipValue(sl))}`, id: 'sell', hint: 'The yard pays cash, no questions.' },
+    ];
+    if (full) items.push({ label: 'MY GARAGE', id: 'garage', hint: 'Make room: sell a car, then come back from the hub.' });
+    items.push({ label: 'DECIDE LATER', id: 'later', hint: 'It waits in the hub under PINK SLIP.' });
+    return new Menu(items, { id: 'slip' });
   }
 
   // ---------------------------------------------------------------- racing
+  function lapsFor(ev, def) {
+    if (ev.type === 'knockout') return knockLaps(ev.rivals);
+    if (ev.type === 'timeattack') return def.type === 'sprint' ? 1 : 3;
+    return ev.laps || def.laps || 3;
+  }
+
   function raceEvent(ev) {
+    if (ev.kind === 'cup') { raceCup(ev); return; }
     const def = TRACK_BY_ID[ev.track];
     if (!def) { say('TRACK STILL UNDER CONSTRUCTION', C.red); return; }
-    const spec = story.spec();
-    const laps = ev.type === 'knockout' ? knockLaps(ev.rivals) : ev.type === 'timeattack' ? (def.type === 'sprint' ? 1 : 3) : ev.laps || def.laps || 3;
+    const chap = CHAPTERS[ev.ch];
+    const grid = story.rivals(ev);
+    const laps = lapsFor(ev, def);
+    const opp = ev.boss ? chap.boss : ev.kind === 'duel' ? RIVALS[ev.vs] : null;
     go('race', {
-      trackDef: def, spec, look: story.look(), upgrades: story.up(), type: ev.type, laps,
-      opponents: story.rivals(ev), rubber: ev.boss ? 0.4 : 0.75, ttFactor: ev.tt, traffic: ev.traffic,
-      driftRivals: ev.type === 'drift' ? CHAPTERS[ev.ch].members.slice(0, 3).map((n, k) => [n, [2.3, 3.6, 4.8][k] * (1 + ev.ch * 0.15)]) : undefined,
-      musicTheme: ev.boss ? 'race_boss' : undefined, playerGrid: ev.boss ? 'back' : 'back',
+      trackDef: def, spec: story.spec(), look: story.look(), upgrades: story.up(), type: ev.type, laps,
+      opponents: grid, rubber: ev.boss ? 0.4 : ev.kind === 'duel' ? 0.55 : 0.75, ttFactor: ev.tt, traffic: ev.traffic,
+      driftRivals: ev.type === 'drift' ? story.driftRivals(ev) : undefined,
+      musicTheme: ev.boss ? 'race_boss' : undefined, playerGrid: 'back',
       quitLabel: 'QUIT TO GARAGE', story: ev.id,
       banner: {
-        title: ev.name, sub: `${CHAPTERS[ev.ch].crew}  ·  ${ev.boss ? 'BOSS RACE' : TYPE_NAMES[ev.type] || ''}`, color: CHAPTERS[ev.ch].color,
-        boss: ev.boss ? { name: CHAPTERS[ev.ch].boss.name, car: `${CAR_BY_ID[CHAPTERS[ev.ch].boss.car].make} ${CAR_BY_ID[CHAPTERS[ev.ch].boss.car].model}`, quote: CHAPTERS[ev.ch].boss.quote } : null,
+        title: ev.name, color: chap.color,
+        sub: `${chap.crew}  ·  ${ev.boss ? 'BOSS RACE  ·  PINK SLIP' : ev.kind === 'duel' ? `DUEL  ·  ${TYPE_NAMES[ev.type]}` : TYPE_NAMES[ev.type] || ''}`,
+        boss: opp ? { name: opp.name, car: carName(opp.car), quote: opp.quote } : null,
       },
-      onResult: (res) => story.applyResult(ev, res),
+      onResult: (res) => story.applyResult(ev, res, { grid, laps }),
       onDone: () => go('story', { from: 'race', event: ev.id }),
+    });
+  }
+
+  /** A cup: start it (or carry on with it) and race the next round. The
+   *  round only counts once you CONTINUE from its results, so RACE AGAIN
+   *  re-runs it. */
+  function raceCup(ev) {
+    const s = story.s;
+    if (s.cup && s.cup.id !== ev.id) { say(`FINISH THE ${EVENT_BY_ID[s.cup.id].name} FIRST`, C.red); uiSound('error'); return; }
+    const round = s.cup ? s.cup.round : 0;
+    const leg = ev.rounds[round];
+    const def = TRACK_BY_ID[leg.track];
+    if (!def) { say('TRACK STILL UNDER CONSTRUCTION', C.red); return; }
+    if (!s.cup) story.startCup(ev);
+    const chap = CHAPTERS[ev.ch];
+    const grid = story.rivals(ev);
+    const laps = leg.type === 'circuit' ? leg.laps || def.laps || 3 : 1;
+    go('race', {
+      trackDef: def, spec: story.spec(), look: story.look(), upgrades: story.up(), type: leg.type, laps,
+      opponents: grid, rubber: 0.75, traffic: leg.traffic, playerGrid: 'back',
+      quitLabel: 'QUIT TO GARAGE', story: ev.id,
+      banner: { title: ev.name, color: chap.color, sub: `${chap.crew}  ·  ROUND ${round + 1} OF ${ev.rounds.length}  ·  ${TYPE_NAMES[leg.type]}` },
+      onDone: (res, where) => {
+        if (res && where === 'continue') {
+          try { story.applyResult(ev, res, { grid, laps, round }); } catch (e) { console.warn('cup result', e); }
+        }
+        go('story', { from: 'race', event: ev.id });
+      },
     });
   }
 
@@ -181,26 +287,36 @@ registerScreen('story', () => {
         music.setTuning(0, true);
         sfx.rain(0.25);
       } catch { /* */ }
+      flowNext = 'hub';
+      slipLater = false;
+      result = null;
+      card = null;
       if (p.newGame || !story.load()) {
         story.start();
-        afterPhone = 'classifieds';
-        setPage('phone');
-      } else if (!story.s.cars.length) {
-        setPage('classifieds');
+        advance('hub');
       } else if (p.from === 'race' && story.lastSummary) {
         result = story.lastSummary;
         story.lastSummary = null;
         setPage('result');
       } else {
-        setPage('hub');
+        advance('hub');
       }
+      story.queueWarm(Math.min(story.s.chapter, LAST));
       const st = G.stations[stationFor(page)];
       cam.pos.fromArray(st[0]);
       cam.tgt.fromArray(st[1]);
       syncCar();
       if (pendingModel) pendingModel.at = 0;
       buildPending(0);
-      window.__story = { story, setPage, raceEvent, get page() { return page; } };
+      window.__story = {
+        story, setPage, raceEvent, advance, showCard,
+        showResult(r) { result = r; setPage('result'); },
+        get page() { return page; },
+        get card() { return card; },
+        set rivals(v) { rivTab = v.tab ?? rivTab; rivSel = v.sel ?? rivSel; },
+        set board(v) { boardCh = v.ch ?? boardCh; boardSel = v.sel ?? boardSel; },
+        EVENTS, CHAPTERS, RIVALS, V1_EVENTS,
+      };
     },
     exit() {
       if (model) model.dispose();
@@ -217,11 +333,14 @@ registerScreen('story', () => {
       try { music.update?.(); } catch { /* */ }
       if (toast) { toast.t += dt; if (toast.t > 2.6) toast = null; }
       if (sellArm > 0) sellArm -= dt;
+      if (quitArm > 0) quitArm -= dt;
       if (!busy) handleInput(dt);
       syncCar();
       buildPending(dt);
       if (model) model.animate(dt, 0, 0);
       updateCamera(dt);
+      // measure the rival cars the board is about to need, a slice a frame
+      if (!busy && (page === 'hub' || page === 'board' || page === 'rivals') && pageT > 0.4) story.warmStep();
     },
     view() { return G ? { scene: G.scene, camera: G.camera } : null; },
     draw(ctx) {
@@ -229,35 +348,44 @@ registerScreen('story', () => {
       const a = clamp(pageT / 0.3, 0, 1);
       ctx.save();
       ctx.globalAlpha = a;
-      if (page !== 'phone' && page !== 'result') drawTopBar(ctx);
+      if (page !== 'phone' && page !== 'result' && page !== 'card') drawTopBar(ctx);
       if (page === 'hub') drawHub(ctx);
       else if (page === 'board') drawBoard(ctx);
+      else if (page === 'rivals') drawList(ctx);
       else if (page === 'perf') drawPerf(ctx);
       else if (page === 'body') drawBody(ctx);
       else if (page === 'cars') drawCars(ctx);
       else if (page === 'classifieds') drawClassifieds(ctx);
       else if (page === 'phone') drawPhone(ctx);
-      else if (page === 'result') drawResult(ctx);
+      else if (page === 'slip') drawSlipPage(ctx);
+      else if (page === 'card' && card) {
+        drawChapterCard(ctx, card, clamp(pageT / 0.5, 0, 1));
+        if (pageT > 0.6) hints(ctx, [['confirm', 'CONTINUE']], { y: 740 });
+      } else if (page === 'result' && result) {
+        drawResult(ctx, result, pageT);
+        if (pageT > 0.8) hints(ctx, cupNext() ? [['confirm', 'NEXT ROUND'], ['back', 'LATER']] : [['confirm', 'CONTINUE']], { y: 740 });
+      }
       ctx.restore();
       if (toast) {
         const k = Math.min(1, toast.t * 6) * Math.min(1, (2.6 - toast.t) * 3);
         ctx.save();
         ctx.globalAlpha = k;
         panel(ctx, 312, 330, 400, 56, { accent: toast.color, accentLen: 400, alpha: 0.95 });
-        vText(ctx, toast.text, 512, 368, 20, { align: 'center', color: toast.color });
+        vText(ctx, toast.text, 512, 368, Math.min(20, 370 / Math.max(1, vWidth(toast.text, 1))), { align: 'center', color: toast.color });
         ctx.restore();
       }
     },
   };
 
   function stationFor(p) {
-    return { hub: 'hub', board: 'board', perf: 'perf', body: 'body', cars: 'dealer', classifieds: 'dealer', phone: 'phone', result: 'hub' }[p] || 'hub';
+    return { hub: 'hub', board: 'board', rivals: 'body', perf: 'perf', body: 'body', cars: 'dealer', classifieds: 'dealer', phone: 'phone', result: 'hub', card: 'hub', slip: 'hub' }[p] || 'hub';
   }
 
   function updateCamera(dt) {
     const st = G.stations[stationFor(page)];
     _p.fromArray(st[0]);
     _t.fromArray(st[1]);
+    const orbit = page === 'body' || page === 'rivals';
     if (page === 'body') {
       const rs = Math.abs(input.axes[2] || 0) > 0.15 ? input.axes[2] : 0;
       bodyOrbit += (rs ? rs * 1.8 : 0.18) * dt;
@@ -265,8 +393,13 @@ registerScreen('story', () => {
       const r = 6.0, a = bodyOrbit + 0.6;
       _p.set(Math.sin(a) * r, 1.35, Math.cos(a) * r);
       _t.set(-Math.cos(a) * 1.7, 0.5, Math.sin(a) * 1.7);
+    } else if (page === 'rivals') {
+      // a slow swing round the rival's car, never wider than the shop
+      const r = 6.0, a = 0.35 + Math.sin(t * 0.22) * 0.55;
+      _p.set(Math.sin(a) * r, 1.3, Math.cos(a) * r);
+      _t.set(-Math.cos(a) * 1.7, 0.5, Math.sin(a) * 1.7);
     }
-    G.lift.visible = page !== 'body';
+    G.lift.visible = !orbit;
     const k = 1 - Math.exp(-dt * 3.2);
     cam.pos.lerp(_p, k);
     cam.tgt.lerp(_t, k);
@@ -276,6 +409,8 @@ registerScreen('story', () => {
   }
 
   // ---------------------------------------------------------------- input per page
+  const cupNext = () => result && result.kind === 'cup' && !result.done && !result.practice && story.s.cup?.id === result.ev;
+
   function handleInput(dt) {
     const back = input.pressed('back');
     const ok = input.pressed('confirm');
@@ -284,31 +419,48 @@ registerScreen('story', () => {
       const it = hubMenu.update(dt);
       if (it) {
         if (it.id === 'exit') { story.save(); go('radio', { station: 'story' }); return; }
-        if (it.id === 'phone') { afterPhone = 'hub'; setPage('phone'); return; }
+        if (it.id === 'phone') { flowNext = 'hub'; setPage('phone'); return; }
+        if (it.id === 'slip') { slipLater = false; setPage('slip'); return; }
         setPage(it.id);
       }
       if (back) { story.save(); go('radio', { station: 'story' }); }
       return;
     }
     if (page === 'phone') {
-      if (input.pressed('up')) phoneScroll = Math.min(phoneScroll + 1, Math.max(0, story.inbox().length - 4));
+      const n = story.inbox().length;
+      if (input.pressed('up')) phoneScroll = Math.min(phoneScroll + 1, Math.max(0, n - 1));
       if (input.pressed('down')) phoneScroll = Math.max(0, phoneScroll - 1);
       if ((ok || back || click) && pageT > 0.4) {
         story.markRead();
         uiSound('back');
-        const next = afterPhone;
-        afterPhone = 'hub';
-        setPage(next);
+        advance();
+      }
+      return;
+    }
+    if (page === 'card') {
+      if ((ok || back || click) && pageT > 0.6) {
+        story.markSeen(card);
+        card = null;
+        uiSound('select');
+        advance();
       }
       return;
     }
     if (page === 'result') {
       if ((ok || back || click) && pageT > 0.8) {
-        if (result?.newMessages) { afterPhone = 'hub'; setPage('phone'); } else setPage(result?.won ? 'board' : 'hub');
+        const r = result;
+        // a cup carries straight on to its next round (back: later, from the board)
+        const nextRound = cupNext() && (ok || click);
         result = null;
+        if (nextRound) {
+          raceEvent(EVENT_BY_ID[r.ev]);
+          if (game._transition) return;
+        }
+        advance(r?.won || (r?.kind === 'cup' && !r?.done) ? 'board' : 'hub');
       }
       return;
     }
+    if (page === 'slip') { slipInput(dt); return; }
     if (page === 'classifieds') {
       if (input.pressed('right') || input.pressed('down')) { adSel = (adSel + 1) % STARTERS.length; uiSound('move'); }
       if (input.pressed('left') || input.pressed('up')) { adSel = (adSel + STARTERS.length - 1) % STARTERS.length; uiSound('move'); }
@@ -319,6 +471,7 @@ registerScreen('story', () => {
     }
     if (back) { uiSound('back'); setPage('hub'); return; }
     if (page === 'board') boardInput(ok, click);
+    else if (page === 'rivals') rivalsInput(click);
     else if (page === 'perf') perfInput(ok);
     else if (page === 'body') bodyInput(ok);
     else if (page === 'cars') carsInput(ok, click);
@@ -332,32 +485,76 @@ registerScreen('story', () => {
     story.message('starter');
     story.save();
     try { sfx.ui('buy'); sfx.engineStart(); } catch { /* */ }
-    afterPhone = 'hub';
-    setPage('phone');
+    advance('hub');
   }
 
   function boardInput(ok, click) {
     const evs = story.events(boardCh);
-    if (input.pressed('right') || input.pressed('down')) { boardSel = (boardSel + 1) % evs.length; uiSound('move'); }
-    if (input.pressed('left') || input.pressed('up')) { boardSel = (boardSel + evs.length - 1) % evs.length; uiSound('move'); }
-    const maxCh = Math.min(story.s.chapter, CHAPTERS.length - 1);
-    if (input.pressed('tabR') && boardCh < maxCh) { boardCh++; boardSel = firstOpen(boardCh); uiSound('tab'); }
-    if (input.pressed('tabL') && boardCh > 0) { boardCh--; boardSel = firstOpen(boardCh); uiSound('tab'); }
+    const pick = (k) => { boardSel = k; quitArm = 0; uiSound('move'); };
+    if (input.pressed('right') || input.pressed('down')) pick((boardSel + 1) % evs.length);
+    if (input.pressed('left') || input.pressed('up')) pick((boardSel + evs.length - 1) % evs.length);
+    const maxCh = Math.min(story.s.chapter, LAST);
+    const toCh = (ch) => { boardCh = ch; boardSel = firstOpen(ch); quitArm = 0; story.queueWarm(ch); uiSound('tab'); };
+    if (input.pressed('tabR') && boardCh < maxCh) toCh(boardCh + 1);
+    if (input.pressed('tabL') && boardCh > 0) toCh(boardCh - 1);
     if (click && hit.hover?.startsWith('pin:')) {
       const k = parseInt(hit.hover.slice(4), 10);
-      if (k === boardSel) ok = true; else { boardSel = k; uiSound('move'); }
+      if (k === boardSel) ok = true; else pick(k);
     }
     if (click && hit.hover?.startsWith('dist:')) {
       const ch = parseInt(hit.hover.slice(5), 10);
-      if (ch <= maxCh) { boardCh = ch; boardSel = firstOpen(ch); uiSound('tab'); }
+      if (ch <= maxCh && ch !== boardCh) toCh(ch);
+    }
+    const ev = evs[boardSel];
+    if (!ev) return;
+    const st = story.status(ev);
+    if (input.pressed('extra') && st === 'cup') {
+      if (quitArm > 0) { story.abandonCup(); quitArm = 0; say('CUP ABANDONED', C.dim); uiSound('back'); } else { quitArm = 2.5; say('QUIT THE CUP? PRESS AGAIN', C.accent); }
+      return;
     }
     if (ok) {
-      const ev = evs[boardSel];
-      const st = story.status(ev);
-      if (st === 'locked') { say(ev.boss ? `WIN ${BOSS_UNLOCK_WINS} RACES FIRST` : 'LOCKED', C.red); uiSound('error'); return; }
+      if (st === 'locked') { say(story.lockReason(ev), C.red); uiSound('error'); return; }
       uiSound('select');
       raceEvent(ev);
     }
+  }
+
+  function rivalsInput(click) {
+    const tab = (k) => { rivTab = (k + LIST_TABS) % LIST_TABS; rivSel = 0; uiSound('tab'); };
+    if (input.pressed('tabR')) tab(rivTab + 1);
+    if (input.pressed('tabL')) tab(rivTab - 1);
+    if (click && hit.hover?.startsWith('rtab:')) tab(parseInt(hit.hover.slice(5), 10));
+    const n = rivalRows(rivTab).length;
+    if (input.pressed('down') || input.pressed('right')) { rivSel = (rivSel + 1) % n; uiSound('move'); }
+    if (input.pressed('up') || input.pressed('left')) { rivSel = (rivSel + n - 1) % n; uiSound('move'); }
+    if (click && hit.hover?.startsWith('rrow:')) { rivSel = parseInt(hit.hover.slice(5), 10); uiSound('move'); }
+  }
+
+  function slipInput(dt) {
+    if (!slipMenu) { advance(); return; }
+    const it = slipMenu.update(dt);
+    if (input.pressed('back')) { slipLater = true; uiSound('back'); advance(); return; }
+    if (!it) return;
+    const sl = story.s.slips[0];
+    if (it.id === 'keep') {
+      const err = story.keepSlip(0);
+      if (err) { say(err === 'GARAGE FULL' ? 'GARAGE FULL: SELL A CAR FIRST' : err, C.red); uiSound('error'); return; }
+      say(`${CAR_BY_ID[sl.car].model} IS IN THE GARAGE`, C.green);
+      try { sfx.engineStart(); } catch { /* */ }
+    } else if (it.id === 'sell') {
+      const v = story.slipValue(sl);
+      story.sellSlip(0);
+      say(`SOLD TO THE YARD  +${money(v)}`, C.green);
+      try { sfx.ui('buy'); } catch { /* */ }
+    } else if (it.id === 'garage') {
+      slipLater = true;
+      setPage('cars');
+      return;
+    } else {
+      slipLater = true;
+    }
+    if (story.s.slips.length && !slipLater) { slipMenu = makeSlipMenu(); return; }
+    advance();
   }
 
   function perfInput(ok) {
@@ -414,8 +611,9 @@ registerScreen('story', () => {
       if (ok && car) { story.setActive(car.uid); say(`${CAR_BY_ID[car.id].model} IS YOUR RIDE`, C.green); uiSound('select'); }
       if (input.pressed('extra') && car) {
         if (sellArm > 0) {
+          const v = story.value(car);
           const err = story.sellCar(car.uid);
-          if (err) say(err, C.red); else { say(`SOLD  +${money(story.value(car))}`, C.green); carsSel = 0; }
+          if (err) say(err, C.red); else { say(`SOLD  +${money(v)}`, C.green); carsSel = 0; }
           sellArm = 0;
         } else { sellArm = 2.5; say(`SELL FOR ${money(story.value(car))}? PRESS AGAIN`, C.accent); }
       }
@@ -430,7 +628,7 @@ registerScreen('story', () => {
 
   // ---------------------------------------------------------------- drawing
   function drawTopBar(ctx) {
-    const ch = CHAPTERS[Math.min(story.s.chapter, CHAPTERS.length - 1)];
+    const ch = CHAPTERS[Math.min(story.s.chapter, LAST)];
     text(ctx, 'THE UNDERGROUND 92.7  ·  STORY', 40, 38, { size: 12, color: C.cyan, weight: 800, spacing: 3 });
     vText(ctx, 'SANTOS AUTO BODY', 38, 74, 30, { color: '#fff', outline: 3, outlineColor: 'rgba(0,0,0,0.7)', shadow: [3, 3, 'rgba(0,0,0,0.5)'] });
     // cash + chapter chip
@@ -451,210 +649,84 @@ registerScreen('story', () => {
     vText(ctx, String(story.pr()), x + 306, y + 56, 26, { align: 'right', color: C.accent });
   }
 
-  function drawHub(ctx) {
-    panel(ctx, 34, 120, 360, 330, { accent: C.accent, alpha: 0.9 });
-    hubMenu.draw(ctx, 76, 172, 290, { rowH: 46, size: 21, hintX: 60, hintY: 476 });
-    // chapter status
-    const chI = Math.min(story.s.chapter, CHAPTERS.length - 1);
+  /** The hub's line on the current chapter: what the boss still wants. */
+  function chapterLine(chI) {
+    const s = story.s;
     const ch = CHAPTERS[chI];
-    const wins = story.winsIn(chI);
-    panel(ctx, 34, 500, 360, 108, { accent: ch.color, accentLen: 140, alpha: 0.88 });
-    text(ctx, `CHAPTER ${chI + 1}  ·  ${ch.name}`, 58, 528, { size: 12, color: ch.color, weight: 900, spacing: 2 });
-    vText(ctx, ch.crew, 56, 558, 20, { color: '#fff' });
-    const bossDone = story.s.bosses[chI];
-    const line = story.s.finished ? 'Every crew in the city answers to you.'
-      : bossDone ? 'Crew beaten.'
-        : wins >= BOSS_UNLOCK_WINS ? `${ch.boss.name} is waiting for you. Check the board.`
-          : `Win ${BOSS_UNLOCK_WINS - wins} more race${BOSS_UNLOCK_WINS - wins === 1 ? '' : 's'} to call out ${ch.boss.name}.`;
-    text(ctx, line, 58, 586, { size: 13, color: '#c8d0dc', weight: 600 });
+    if (s.finished) return 'Every crew in the city answers to you. The rematches are still on the board.';
+    if (s.bosses[chI]) return 'Crew beaten.';
+    const cup = s.cup && EVENT_BY_ID[s.cup.id];
+    if (cup) return `${cup.name}: round ${s.cup.round + 1} of ${cup.rounds.length} is waiting on the board.`;
+    const need = story.bossNeeds(chI);
+    if (need.city) {
+      const left = CHAPTERS.filter((c, i) => i !== chI && !s.bosses[i]).map((c) => c.crew);
+      return `ZERO only calls once every crew is down. Still standing: ${left.join(', ')}.`;
+    }
+    if (story.bossOpen(chI)) return `${ch.boss.name} is waiting for you. Check the board.`;
+    const parts = [];
+    if (need.wins) parts.push(`win ${need.wins} more race${need.wins === 1 ? '' : 's'}`);
+    if (need.rep) parts.push(`earn ${need.rep.toLocaleString()} more REP`);
+    const txt = parts.join(' and ');
+    return `${txt.charAt(0).toUpperCase()}${txt.slice(1)} to call out ${ch.boss.name}.`;
+  }
+
+  function drawHub(ctx) {
+    const n = hubMenu.items.length;
+    const rowH = 40;
+    const mh = 30 + n * rowH;
+    panel(ctx, 34, 108, 360, mh, { accent: C.accent, alpha: 0.9 });
+    hubMenu.draw(ctx, 76, 152, 290, { rowH, size: 20, hintX: 60, hintY: 108 + mh + 24 });
+    // chapter status
+    const chI = Math.min(story.s.chapter, LAST);
+    const ch = CHAPTERS[chI];
+    const py = Math.max(500, 108 + mh + 46);
+    panel(ctx, 34, py, 360, 124, { accent: ch.color, accentLen: 140, alpha: 0.88 });
+    text(ctx, `CHAPTER ${chI + 1}  ·  ${ch.name}`, 58, py + 28, { size: 12, color: ch.color, weight: 900, spacing: 2 });
+    vText(ctx, ch.crew, 56, py + 58, Math.min(20, 300 / Math.max(1, vWidth(ch.crew, 1))), { color: '#fff' });
+    paragraph(ctx, chapterLine(chI), 58, py + 84, 316, { size: 13, color: '#c8d0dc', weight: 600, lineHeight: 17 });
+    // street rank
+    panel(ctx, 640, 104, 360, 104, { accent: C.cyan, accentLen: 120, alpha: 0.88 });
+    drawRank(ctx, story.s.rep, 664, 130, 312);
     drawCarChip(ctx, 660, 620);
     hints(ctx, [['ud', 'SELECT'], ['confirm', 'OPEN'], ['back', 'RADIO']], { y: 740 });
   }
 
   // ---- the board: city map + flyer
   function drawBoard(ctx) {
-    const mx = 30, my = 104, mw = 560, mh = 560;
-    drawCityMap(ctx, mx, my, mw, mh);
+    drawCityMap(ctx, 30, 104, 560, 560, { ch: boardCh, sel: boardSel, t });
     const evs = story.events(boardCh);
     const ev = evs[boardSel];
     if (ev) drawFlyer(ctx, ev, 612, 112);
-    hints(ctx, [['tabR', 'CREW'], ['lr', 'RACE'], ['confirm', 'GO'], ['back', 'BACK']], { y: 740 });
+    const st = ev ? story.status(ev) : null;
+    const go1 = st === 'cup' ? 'NEXT ROUND' : ev?.kind === 'cup' ? 'START CUP' : 'GO';
+    const row = [['tabR', 'CREW'], ['lr', 'RACE'], ['confirm', go1], ['back', 'BACK']];
+    if (st === 'cup') row.splice(3, 0, ['extra', 'QUIT CUP']);
+    hints(ctx, row, { y: 740 });
   }
 
-  function drawCityMap(ctx, x, y, w, h) {
-    ctx.save();
-    // paper
-    ctx.translate(x + w / 2, y + h / 2);
-    ctx.rotate(-0.012);
-    ctx.translate(-w / 2, -h / 2);
-    ctx.shadowColor = 'rgba(0,0,0,0.6)';
-    ctx.shadowBlur = 16;
-    ctx.fillStyle = '#e6dfc8';
-    ctx.fillRect(0, 0, w, h);
-    ctx.shadowBlur = 0;
-    const rng = makeRng('citymap');
-    // water (the bay)
-    ctx.fillStyle = '#9cbbd0';
-    ctx.beginPath();
-    ctx.moveTo(0, h * 0.66);
-    ctx.bezierCurveTo(w * 0.2, h * 0.6, w * 0.35, h * 0.9, w * 0.42, h);
-    ctx.lineTo(0, h);
-    ctx.closePath();
-    ctx.fill();
-    // mountains
-    ctx.strokeStyle = 'rgba(90,80,60,0.55)';
-    ctx.lineWidth = 1.5;
-    for (let k = 0; k < 16; k++) {
-      const px = 20 + rng() * w * 0.4, py = 20 + rng() * h * 0.36, s = 10 + rng() * 16;
-      ctx.beginPath(); ctx.moveTo(px - s, py + s * 0.6); ctx.lineTo(px, py - s * 0.6); ctx.lineTo(px + s, py + s * 0.6); ctx.stroke();
-    }
-    // desert stipple
-    ctx.fillStyle = 'rgba(190,140,80,0.35)';
-    for (let k = 0; k < 500; k++) ctx.fillRect(w * 0.68 + rng() * w * 0.32, h * 0.32 + rng() * h * 0.6, 2, 2);
-    // street grid downtown
-    ctx.strokeStyle = 'rgba(120,110,90,0.35)';
-    ctx.lineWidth = 1;
-    for (let k = 0; k < 9; k++) {
-      ctx.beginPath(); ctx.moveTo(w * 0.38 + k * 14, h * 0.42); ctx.lineTo(w * 0.38 + k * 14, h * 0.72); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(w * 0.36, h * 0.44 + k * 12); ctx.lineTo(w * 0.7, h * 0.44 + k * 12); ctx.stroke();
-    }
-    // highways linking the districts
-    ctx.strokeStyle = 'rgba(200,60,40,0.6)';
-    ctx.lineWidth = 4;
-    const P = (d) => [DISTRICTS[d].x * w, DISTRICTS[d].y * h];
-    const road = (a, b, bend = 0) => {
-      const [ax, ay] = P(a), [bx, by] = P(b);
-      ctx.beginPath(); ctx.moveTo(ax, ay);
-      ctx.quadraticCurveTo((ax + bx) / 2 + bend, (ay + by) / 2 - bend, bx, by);
-      ctx.stroke();
-    };
-    road('city', 'docks', 30); road('city', 'mountain', -40); road('city', 'desert', 20); road('city', 'highway', 30); road('highway', 'mountain', 20);
-    // districts
-    CHAPTERS.forEach((ch, i) => {
-      const [cx, cy] = P(ch.district);
-      const open = i <= story.s.chapter;
-      const sel = i === boardCh;
-      hit.add(`dist:${i}`, x + cx - 60, y + cy - 60, 120, 120);
-      ctx.beginPath();
-      ctx.arc(cx, cy, 64, 0, Math.PI * 2);
-      ctx.fillStyle = open ? hexA(ch.color, sel ? 0.22 : 0.12) : 'rgba(40,40,40,0.25)';
-      ctx.fill();
-      ctx.setLineDash(sel ? [] : [6, 5]);
-      ctx.strokeStyle = open ? ch.color : 'rgba(60,60,60,0.6)';
-      ctx.lineWidth = sel ? 3 : 2;
-      ctx.stroke();
-      ctx.setLineDash([]);
-      text(ctx, open ? ch.name : '???', cx, cy - 70, { size: 13, color: open ? '#1d1b16' : '#5a5a5a', weight: 900, align: 'center', shadow: false, spacing: 1.5 });
-      if (story.s.bosses[i]) text(ctx, 'BEATEN', cx, cy + 82, { size: 11, color: '#1d6a32', weight: 900, align: 'center', shadow: false, spacing: 2 });
-    });
-    // pins for the selected chapter
-    const ch = CHAPTERS[boardCh];
-    const [cx, cy] = P(ch.district);
-    const evs = story.events(boardCh);
-    evs.forEach((ev, k) => {
-      const a = (k / evs.length) * Math.PI * 2 - Math.PI / 2;
-      const px = ev.boss ? cx : cx + Math.cos(a) * 42;
-      const py = ev.boss ? cy : cy + Math.sin(a) * 42;
-      const st = story.status(ev);
-      const sel = k === boardSel;
-      hit.add(`pin:${k}`, x + px - 14, y + py - 14, 28, 28);
-      const r = (ev.boss ? 11 : 8) + (sel ? 3 + Math.sin(t * 6) * 1.5 : 0);
-      ctx.beginPath();
-      ctx.arc(px + 1.5, py + 2, r, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0,0,0,0.35)';
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(px, py, r, 0, Math.PI * 2);
-      ctx.fillStyle = st === 'locked' ? '#777' : st === 'won' ? '#2f9e57' : ev.boss ? '#111' : ch.color;
-      ctx.fill();
-      ctx.strokeStyle = sel ? '#fff' : 'rgba(0,0,0,0.6)';
-      ctx.lineWidth = sel ? 3 : 1.5;
-      ctx.stroke();
-      if (ev.boss) text(ctx, st === 'locked' ? '?' : '★', px, py + 5, { size: 14, color: '#ffd34a', weight: 900, align: 'center', shadow: false, font: 'Arial' });
-      else if (st === 'won') text(ctx, '✓', px, py + 4, { size: 11, color: '#fff', weight: 900, align: 'center', shadow: false, font: 'Arial' });
-    });
-    // tape
-    ctx.fillStyle = 'rgba(240,230,190,0.6)';
-    ctx.fillRect(w / 2 - 50, -10, 100, 24);
-    text(ctx, 'PORT HALCYON', 18, 30, { size: 18, color: '#1d1b16', weight: 900, shadow: false, spacing: 3 });
-    ctx.restore();
+  // ---- the list
+  function drawList(ctx) {
+    drawRivals(ctx, { tab: rivTab, sel: rivSel });
+    drawRivalCar(ctx, rivalRows(rivTab)[rivSel], 640, 618);
+    hints(ctx, [['tabR', 'CREW'], ['ud', 'RIVAL'], ['back', 'BACK']], { y: 740 });
   }
 
-  function drawFlyer(ctx, ev, x, y) {
-    const ch = CHAPTERS[ev.ch];
-    const def = TRACK_BY_ID[ev.track];
-    const st = story.status(ev);
-    const w = 384, h = 560;
-    ctx.save();
-    ctx.translate(x + w / 2, y + h / 2);
-    ctx.rotate(0.018);
-    ctx.translate(-w / 2, -h / 2);
-    ctx.shadowColor = 'rgba(0,0,0,0.6)';
-    ctx.shadowBlur = 18;
-    ctx.fillStyle = ev.boss ? '#14151a' : '#f1ecdc';
-    ctx.fillRect(0, 0, w, h);
-    ctx.shadowBlur = 0;
-    const ink = ev.boss ? '#f1ecdc' : '#16140f';
-    const sub = ev.boss ? '#9aa0ac' : '#5a5446';
-    ctx.fillStyle = ch.color;
-    ctx.fillRect(0, 0, w, 8);
-    text(ctx, ev.boss ? `${ch.crew}  ·  BOSS` : ch.crew, 22, 34, { size: 11, color: ev.boss ? ch.color : sub, weight: 900, spacing: 2, shadow: false });
-    const ns = Math.min(30, (w - 44) / Math.max(1, vWidth(ev.name, 1)));
-    vText(ctx, ev.name, 22, 72, ns, { color: ink, skew: -0.1 });
-    // mini map
-    if (def) {
-      drawTrackMap(ctx, def, 22, 88, w - 44, 168, { t: game.time, grid: false });
-      text(ctx, def.name, 32, 110, { size: 12, color: '#fff', weight: 900, spacing: 1.5 });
-    } else {
-      ctx.fillStyle = '#222';
-      ctx.fillRect(22, 88, w - 44, 168);
-      text(ctx, 'COMING SOON', w / 2, 178, { size: 14, color: '#888', weight: 900, align: 'center' });
-    }
-    const units = settings.get('units');
-    const facts = [
-      ['TYPE', TYPE_NAMES[ev.type] || ev.type.toUpperCase()],
-      ['LAPS', ev.type === 'sprint' || ev.type === 'drag' ? '—' : ev.type === 'knockout' ? String(knockLaps(ev.rivals)) : ev.type === 'timeattack' ? (def?.type === 'sprint' ? '1 RUN' : 'BEST OF 3') : String(ev.laps || def?.laps || 3)],
-      ['LENGTH', def ? fmtDistance(trackInfo(def).length, units) : '—'],
-      ['RIVALS', ev.type === 'timeattack' ? 'THE CLOCK' : ev.type === 'drift' ? 'POSTED SCORES' : ev.boss ? ch.boss.name : String(ev.rivals)],
-    ];
-    facts.forEach(([k, v], i) => {
-      const fx = 22 + (i % 2) * 180, fy = 282 + Math.floor(i / 2) * 42;
-      text(ctx, k, fx, fy, { size: 10, color: sub, weight: 900, spacing: 2, shadow: false });
-      vText(ctx, v, fx, fy + 22, 16, { color: ink, skew: 0 });
-    });
-    // performance comparison
-    const mine = story.pr();
-    const theirs = ev.type === 'timeattack' || ev.type === 'drift' ? null : story.rivalPR(ev);
-    text(ctx, 'YOUR PR', 22, 382, { size: 10, color: sub, weight: 900, spacing: 2, shadow: false });
-    vText(ctx, String(mine), 22, 408, 22, { color: ink, skew: 0 });
-    if (theirs) {
-      text(ctx, ev.boss ? `${ch.boss.name}'S PR` : 'RIVALS PR', 202, 382, { size: 10, color: sub, weight: 900, spacing: 2, shadow: false });
-      const col = theirs > mine + 25 ? '#d42a2a' : theirs < mine - 25 ? '#2f9e57' : ink;
-      vText(ctx, String(theirs), 202, 408, 22, { color: col, skew: 0 });
-    }
-    paragraph(ctx, ev.flavor, 22, 440, w - 44, { size: 13, color: ink, weight: 600, lineHeight: 18, shadow: false });
-    // prize stamp
-    ctx.save();
-    ctx.translate(w - 222, h - 60);
-    ctx.rotate(-0.1);
-    ctx.strokeStyle = st === 'won' ? '#2f9e57' : '#c21c1c';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(-6, -30, 196, 50);
-    vText(ctx, st === 'won' ? 'WON' : money(ev.prize), 92, 6, 26, { align: 'center', color: st === 'won' ? '#2f9e57' : '#c21c1c', skew: 0 });
-    ctx.restore();
-    if (st === 'locked') {
-      ctx.fillStyle = 'rgba(0,0,0,0.55)';
-      ctx.fillRect(0, 0, w, h);
-      vText(ctx, 'LOCKED', w / 2, h / 2, 40, { align: 'center', color: '#fff', skew: 0 });
-      if (ev.boss) text(ctx, `WIN ${BOSS_UNLOCK_WINS} OF ${ch.crew}'S RACES`, w / 2, h / 2 + 30, { size: 13, color: '#ddd', weight: 800, align: 'center' });
-    } else {
-      const rec = story.s.events[ev.id];
-      if (rec && !rec.won && rec.best) text(ctx, `BEST: ${rec.best}${['', 'ST', 'ND', 'RD'][rec.best] || 'TH'}`, 22, h - 22, { size: 12, color: sub, weight: 900, spacing: 2, shadow: false });
-    }
-    // pin
-    ctx.fillStyle = '#c21c1c';
-    ctx.beginPath(); ctx.arc(w / 2, 14, 7, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
+  // ---- the pink slip
+  function drawSlipPage(ctx) {
+    const sl = story.s.slips[0];
+    if (!sl || !slipMenu) return;
+    const b = RIVALS[sl.rival];
+    const sp = CAR_BY_ID[sl.car];
+    panel(ctx, 34, 104, 470, 92, { accent: '#ff5ac8', accentLen: 160, alpha: 0.9 });
+    text(ctx, `PINK SLIP  ·  ${CHAPTERS[sl.ch].crew}`, 58, 132, { size: 12, color: '#ff8ad0', weight: 900, spacing: 2 });
+    const title = `${b.name}'S ${sp.model}`;
+    vText(ctx, title, 56, 172, Math.min(28, 420 / Math.max(1, vWidth(title, 1))), { color: '#fff' });
+    const mh = 40 + slipMenu.items.length * 44;
+    panel(ctx, 34, 470, 400, mh, { accent: C.accent, alpha: 0.92 });
+    slipMenu.draw(ctx, 76, 514, 330, { rowH: 44, size: 18, hintX: 56, hintY: 470 + mh + 24 });
+    text(ctx, `${story.s.cars.length} / ${GARAGE_SLOTS} BAYS`, 412, 470 + mh - 12, { size: 11, color: story.garageFull ? C.red : C.dim, weight: 800, spacing: 2, align: 'right' });
+    drawSlipPaper(ctx, sl, 572, 360);
+    hints(ctx, [['ud', 'CHOOSE'], ['confirm', 'OK'], ['back', 'LATER']], { y: 740 });
   }
 
   // ---- performance shop
@@ -772,11 +844,13 @@ registerScreen('story', () => {
         const sel = k === carsSel;
         hit.add(`crow:${k}`, 40, y - 10, 400, 64);
         if (sel) { ctx.fillStyle = 'rgba(255,178,30,0.16)'; ctx.fillRect(40, y - 10, 400, 64); }
-        text(ctx, `${sp.make} · CLASS ${sp.cls}${c.uid === story.s.active ? '  · ACTIVE' : ''}`, 60, y + 10, { size: 11, color: c.uid === story.s.active ? C.green : C.dim, weight: 800, spacing: 1.5 });
+        const won = c.from && RIVALS[c.from] ? `  · WON OFF ${RIVALS[c.from].name}` : '';
+        text(ctx, `${sp.make} · CLASS ${sp.cls}${c.uid === story.s.active ? '  · ACTIVE' : won}`, 60, y + 10, { size: 11, color: c.uid === story.s.active ? C.green : won ? '#ff8ad0' : C.dim, weight: 800, spacing: 1.5 });
         vText(ctx, sp.model, 60, y + 38, Math.min(20, 260 / Math.max(1, vWidth(sp.model, 1))), { color: '#fff' });
         text(ctx, `PR ${story.pr(c)}`, 420, y + 14, { size: 13, color: C.accent, weight: 900, align: 'right' });
         text(ctx, money(story.value(c)), 420, y + 36, { size: 12, color: C.dim, weight: 700, align: 'right' });
       });
+      if (story.s.slips.length) text(ctx, 'A PINK SLIP IS WAITING: OPEN IT FROM THE HUB', 60, 614, { size: 11, color: '#ff8ad0', weight: 900, spacing: 1.5 });
       text(ctx, `${story.s.cars.length} / ${GARAGE_SLOTS} BAYS`, 60, 640, { size: 12, color: C.dim, weight: 800, spacing: 2 });
       hints(ctx, [['tabR', 'DEALER'], ['ud', 'CAR'], ['confirm', 'DRIVE THIS'], ['extra', 'SELL'], ['back', 'BACK']], { y: 740 });
     } else {
@@ -885,22 +959,33 @@ registerScreen('story', () => {
     text(ctx, '11:58P', sx + sw - 8, sy + 18, { size: 12, color: '#8affc0', weight: 700, shadow: false, align: 'right', font: '"Consolas", monospace' });
     ctx.fillStyle = 'rgba(138,255,192,0.4)';
     ctx.fillRect(sx + 6, sy + 26, sw - 12, 1);
-    // messages, newest at the bottom
+    // messages: the newest at the bottom, as many older ones above as fit
     const msgs = story.inbox();
-    const vis = msgs.slice(Math.max(0, msgs.length - 4 - phoneScroll), msgs.length - phoneScroll);
-    let my = sy + 48;
+    const font = { size: 13, weight: 600, font: '"Consolas", monospace' };
+    const top = sy + 34, bottom = sy + sh - 26;
+    const blocks = [];
+    let used = 0;
+    for (let i = msgs.length - 1 - phoneScroll; i >= 0; i--) {
+      const lines = wrap(ctx, msgs[i].text, sw - 24, font);
+      const hgt = 22 + lines.length * 17 + 12;
+      if (blocks.length && used + hgt > bottom - top) break;
+      blocks.unshift({ m: msgs[i], lines, hgt, i });
+      used += hgt;
+    }
     ctx.save();
     ctx.beginPath();
     ctx.rect(sx, sy + 30, sw, sh - 34);
     ctx.clip();
-    vis.forEach((m) => {
-      const fresh = !m.read;
-      text(ctx, `FROM: ${m.from}`, sx + 12, my, { size: 12, color: fresh ? '#ffffff' : '#8affc0', weight: 900, shadow: false, font: '"Consolas", monospace' });
-      my += 8;
-      const yy = paragraph(ctx, m.text, sx + 12, my + 12, sw - 24, { size: 13, color: fresh ? '#d8ffe8' : '#7fd0a2', weight: 600, lineHeight: 17, shadow: false, font: '"Consolas", monospace' });
-      my = yy + 16;
-    });
+    let my = Math.max(top, bottom - used);
+    for (const b of blocks) {
+      const fresh = !b.m.read;
+      text(ctx, `FROM: ${b.m.from}${fresh ? '  *NEW*' : ''}`, sx + 12, my + 14, { size: 12, color: fresh ? '#ffffff' : '#8affc0', weight: 900, shadow: false, font: '"Consolas", monospace' });
+      b.lines.forEach((ln, k) => text(ctx, ln, sx + 12, my + 36 + k * 17, { ...font, color: fresh ? '#d8ffe8' : '#7fd0a2', shadow: false }));
+      my += b.hgt;
+    }
     ctx.restore();
+    const older = blocks.length ? blocks[0].i : 0;
+    if (older > 0) text(ctx, `▲ ${older} OLDER`, sx + sw - 10, sy + 44, { size: 11, color: '#8affc0', weight: 900, align: 'right', shadow: false, font: '"Consolas", monospace' });
     // keypad hint
     for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) {
       roundRect(ctx, x + 50 + c * 92, y + 566 + r * 28, 76, 22, 8);
@@ -908,40 +993,9 @@ registerScreen('story', () => {
       ctx.fill();
     }
     const blink = Math.floor(t * 2) % 2;
-    if (blink) text(ctx, '▼ PRESS ✕', sx + sw / 2, sy + sh - 10, { size: 12, color: '#8affc0', weight: 900, align: 'center', shadow: false, font: '"Consolas", monospace' });
+    if (blink) text(ctx, phoneScroll ? `▼ ${phoneScroll} NEWER` : '▼ PRESS ✕', sx + sw / 2, sy + sh - 10, { size: 12, color: '#8affc0', weight: 900, align: 'center', shadow: false, font: '"Consolas", monospace' });
     hints(ctx, [['ud', 'SCROLL'], ['confirm', 'CLOSE']], { y: 740 });
-  }
-
-  // ---- result card
-  function drawResult(ctx) {
-    if (!result) return;
-    const ev = EVENT_BY_ID[result.ev];
-    const ch = CHAPTERS[ev?.ch ?? 0];
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(0, 0, 1024, 768);
-    panel(ctx, 212, 170, 600, 400, { accent: result.won ? C.green : C.red, accentLen: 300, alpha: 0.95 });
-    text(ctx, ev ? `${ch.crew}  ·  ${ev.name}` : '', 250, 212, { size: 13, color: ch.color, weight: 900, spacing: 2 });
-    const title = result.finished ? 'PORT HALCYON IS YOURS' : result.won ? (ev?.boss ? `${ch.boss.name} IS DONE` : 'YOU WON') : ev?.type === 'timeattack' ? 'TOO SLOW' : result.place ? `${result.place}${['', 'ST', 'ND', 'RD'][result.place] || 'TH'} PLACE` : 'OUT';
-    vText(ctx, title, 248, 270, Math.min(44, 520 / Math.max(1, vWidth(title, 1))), { color: result.won ? C.green : '#fff', outline: 3, outlineColor: 'rgba(0,0,0,0.6)' });
-    text(ctx, 'PAYOUT', 250, 330, { size: 12, color: C.dim, weight: 800, spacing: 2 });
-    vText(ctx, result.pay ? `+${money(result.pay)}` : '$0', 250, 370, 34, { color: result.pay ? C.green : C.dim });
-    text(ctx, 'CASH', 520, 330, { size: 12, color: C.dim, weight: 800, spacing: 2 });
-    vText(ctx, money(story.s.cash), 520, 370, 34, { color: '#fff' });
-    let y = 430;
-    const line = (s, col) => { vText(ctx, s, 250, y, 18, { color: col }); y += 34; };
-    if (result.bossUnlocked) line(`${ch.boss.name} WANTS A WORD`, C.accent);
-    if (result.chapterUp) line(`CHAPTER ${Math.min(5, (ev?.ch ?? 0) + 2)} UNLOCKED`, C.cyan);
-    if (result.finished) line('YOU RUN THE FREQUENCY NOW', C.cyan);
-    if (result.newMessages) line(`${result.newMessages} NEW MESSAGE${result.newMessages > 1 ? 'S' : ''}`, '#8affc0');
-    if (!result.won && !result.pay) line('Tune the car, try again.', C.dim);
-    if (pageT > 0.8) hints(ctx, [['confirm', 'CONTINUE']], { y: 740 });
   }
 
   return scr;
 });
-
-function hexA(hex, a) {
-  const h = hex.replace('#', '');
-  const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
-  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
-}
