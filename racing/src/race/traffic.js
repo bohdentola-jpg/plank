@@ -5,6 +5,7 @@
 // around the player so the road stays busy without simulating a whole city.
 // Near misses at speed pay out nitrous.
 import { makeRng, clamp } from '../core/util.js';
+import { TUNE } from '../core/tune.js';
 
 const MASS = { car: 1350, truck: 6500 };
 const DIMS = { car: { L: 4.6, W: 1.8 }, truck: { L: 7.6, W: 2.45 } };
@@ -205,6 +206,8 @@ export class TrafficSim {
 
   /** Racer ↔ traffic contacts (call once per physics tick after racer contacts). */
   collide(sim, collideCars) {
+    // (the dev menu can switch traffic contact off)
+    if (!TUNE.trafficCollisions) return;
     for (const r of sim.racers) {
       if (r.out && r.parked) continue;
       for (const c of this.cars) {

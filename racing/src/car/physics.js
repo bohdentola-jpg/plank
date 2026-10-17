@@ -12,9 +12,13 @@
 // Frame: world x/z ground plane, y up. heading θ: forward f = (sinθ, cosθ).
 // The car's LEFT is l = (cosθ, −sinθ) (matches the model's +x = left).
 // ω > 0 turns left. δ (front wheel angle) > 0 points the wheels left.
+//
+// The dev menu's live tunables (core/tune.js) come in as K: the drift,
+// power/grip/brakes, steering and gravity of the car a human drives. Their
+// defaults are the constants they stand in for (gravity is K.gravity, 9.81).
 import { clamp, lerp } from '../core/util.js';
+import { TUNE, TUNE_STOCK } from '../core/tune.js';
 
-const G = 9.81;
 const RHO = 1.225;
 export const PHYS_DT = 1 / 120;
 
@@ -186,6 +190,10 @@ export class Vehicle {
    */
   step(dt, ctl, env) {
     const P = this.P;
+    // the dev menu's tunables shape the car a human drives; the AI keeps the
+    // stock numbers its plans are made for (and so do the garage's stats)
+    const K = env.human ? TUNE : TUNE_STOCK;
+    const g = K.gravity;
     const [fx, fz] = this.fwd;
     const [lx, lz] = this.left;
     let vF = this.vx * fx + this.vz * fz;
@@ -210,7 +218,7 @@ export class Vehicle {
     const groundVy = clamp(dh / dt, slopeVy - 1.5, slopeVy + 1.5);
     const stepH = dh - groundVy * dt;
     if (this.airborne) {
-      this.vy -= G * dt;
+      this.vy -= g * dt;
       this.y += this.vy * dt;
       this.airTime += dt;
       if (this.y <= gq.h) {
@@ -228,12 +236,12 @@ export class Vehicle {
       // leave the ground when the surface drops away faster than gravity
       // follows (a crest, a jump) — judged on the smooth surface, so dropping
       // off a kerb just lets the wheels down
-      const predicted = this.y + this.vy * dt - 0.5 * G * dt * dt;
+      const predicted = this.y + this.vy * dt - 0.5 * g * dt * dt;
       if (gq.h - stepH < predicted - 0.02 && this.vy > groundVy + 1.2 && speed > 12) {
         this.airborne = true;
         this.airTime = 0;
         this.y = predicted;
-        this.vy -= G * dt;
+        this.vy -= g * dt;
       } else {
         if (Math.abs(stepH) > 0.01) {
           // the body lags the wheels over the step (clamped: a big one bottoms out)
@@ -299,9 +307,9 @@ export class Vehicle {
     } else if (this.driftState === 0) {
       // (a brush of the wheel while braking in a straight line stays a
       // correction: the turn has to be held for a few hundredths)
-      const kick = pedal && turning && !this.airborne && this.gear > 0 && vF > 9 && this.driftBlock <= 0;
+      const kick = pedal && turning && !this.airborne && this.gear > 0 && vF > K.driftMinSpeed && this.driftBlock <= 0;
       this.driftArm = kick ? this.driftArm + dt : 0;
-      if (this.driftArm > 0.05 || (kick && hand)) this.startDrift(-Math.sign(steerIn));
+      if (this.driftArm > K.driftArmTime || (kick && hand)) this.startDrift(-Math.sign(steerIn), K);
     } else if (this.driftState === 1) {
       this.driftT += dt;
       const dirIn = -Math.sign(steerIn);
@@ -336,11 +344,11 @@ export class Vehicle {
     const dk = this.driftK;
 
     // steering: speed-sensitive lock + rate limit + countersteer assist
-    const lock = P.steerLock / (1 + Math.max(0, Math.abs(vF) - 6) / 24) * (1 + P.handling * 0.1);
+    const lock = P.steerLock * K.steerLock / (1 + Math.max(0, Math.abs(vF) - 6) / K.steerSpeedFade) * (1 + P.handling * 0.1);
     let target = -steerIn * lock;
     // countersteer help: steer into the slide when the tail steps out (in a
     // drift the front wheels follow the car's path and the stick adds to it)
-    const csK = lerp(0.55 * assists, 0.8, dk);
+    const csK = lerp(0.55 * assists, 0.8, dk) * K.counterSteer;
     if (csK > 0 && vF > 6) {
       const csMax = lerp(0.25, 0.6, dk);
       target += clamp(slip * csK, -csMax, csMax) * (1 - Math.min(1, Math.abs(steerIn)) * 0.5 * (1 - dk));
@@ -352,10 +360,10 @@ export class Vehicle {
     // drift opens it up so the stick can ask for more angle.
     if (vF > 8 && human) {
       const thetaF = Math.atan2(vL + this.yawRate * P.a, Math.max(1, vF));
-      const aMax = lerp(lerp(0.17, 0.26, 1 - assists), 0.45, dk) + (1 - clamp((vF - 8) / 7, 0, 1)) * 0.6;
+      const aMax = (lerp(lerp(0.17, 0.26, 1 - assists), 0.45, dk) + (1 - clamp((vF - 8) / 7, 0, 1)) * 0.6) * K.steerLimiter;
       target = clamp(target, thetaF - aMax, thetaF + aMax);
     }
-    const rate = 3.2 + (Math.abs(target) < Math.abs(this.steer) ? 2.5 : 0);
+    const rate = (3.2 + (Math.abs(target) < Math.abs(this.steer) ? 2.5 : 0)) * K.steerRate;
     this.steer += clamp(target - this.steer, -rate * dt, rate * dt);
     const delta = this.steer;
 
@@ -425,11 +433,12 @@ export class Vehicle {
     this.nitroOn = !!ctl.nitro && this.nitro > 0.002 && drivePedal > 0.3 && this.gear > 0 && !this.airborne;
     let nitroMul = 1;
     if (this.nitroOn) {
-      nitroMul = 1 + 0.35 + P.nitroPower * 0.3;
-      this.nitro = Math.max(0, this.nitro - dt / (5.5 + P.nitroPower * 2));
+      // (the tunables scale the extra thrust and how long a full tank lasts)
+      nitroMul = 1 + 0.35 * K.nitroPower + P.nitroPower * 0.3 * K.nitroPower;
+      this.nitro = Math.max(0, this.nitro - dt / ((5.5 + P.nitroPower * 2) * K.nitroDuration));
     }
 
-    let engineTorque = P.torque(this.rpm) * turboMul * nitroMul * drivePedal;
+    let engineTorque = P.torque(this.rpm) * turboMul * nitroMul * drivePedal * K.power;
     if (cut) engineTorque = 0;
     if (drivePedal < 0.05 && inGear) engineTorque = -P.tScale * 0.11 * (this.rpm / P.redline);
     const driveForce = inGear ? engineTorque * ratio * P.final * 0.83 / P.wheelR * (this.gear < 0 ? -1 : 1) : 0;
@@ -437,21 +446,21 @@ export class Vehicle {
     // -------------------------------------------------- loads
     const v2 = speed * speed;
     const down = 0.5 * RHO * P.clA * v2;
-    const W = P.mass * G * (this.groundN[1] || 1);
+    const W = P.mass * g * (this.groundN[1] || 1);
     const wb = P.wb;
     const dW = P.mass * this.axF * P.cgH / wb;
     let Wf = W * P.b / wb - dW + down * 0.45;
     let Wr = W * P.a / wb + dW + down * 0.55;
     Wf = Math.max(W * 0.12, Wf);
     Wr = Math.max(W * 0.12, Wr);
-    const muS = P.mu * surf.mu;
+    const muS = P.mu * K.grip * surf.mu;
     const loadSens = (Wn, Ws) => muS * (1 - 0.08 * (Wn / Ws - 1));
     const muF = loadSens(Wf, W * P.b / wb);
     const muR = loadSens(Wr, W * P.a / wb);
 
     // a drift runs its own model (see drift()); everything else is tires
     if (this.driftState === 1 && !this.airborne) {
-      this.drift(dt, { driveForce, muS, surf, brake, hand, drivePedal, steerIn, draft: env.draft });
+      this.drift(dt, { driveForce, muS, surf, brake, hand, drivePedal, steerIn, draft: env.draft, K });
     } else {
       // -------------------------------------------------- tire forces
       let FxF = 0, FxR = 0, FyF = 0, FyR = 0;
@@ -471,8 +480,8 @@ export class Vehicle {
         const driveF = driveForce * P.split;
         const driveR = driveForce * (1 - P.split);
         // brakes (65/35), handbrake on the rear
-        const brakeF = brakePedal * P.brakeG * P.mass * G * 0.65;
-        const brakeR = brakePedal * P.brakeG * P.mass * G * 0.35;
+        const brakeF = brakePedal * P.brakeG * K.brakes * P.mass * g * 0.65;
+        const brakeR = brakePedal * P.brakeG * K.brakes * P.mass * g * 0.35;
         const sgn = Math.abs(vF) > 0.3 ? Math.sign(vF) : 0;
         let reqF = driveF - brakeF * sgn;
         let reqR = driveR - brakeR * sgn;
@@ -554,7 +563,7 @@ export class Vehicle {
       }
 
       // -------------------------------------------------- resistances
-      const dragK = 0.5 * RHO * P.cdA * (1 - 0.4 * clamp(env.draft || 0, 0, 1));
+      const dragK = 0.5 * RHO * P.cdA * K.drag * (1 - 0.4 * clamp(env.draft || 0, 0, 1));
       this.draft = env.draft || 0;
       const rr = (0.013 * W + surf.drag * P.mass * 0.25) ;
       const rrF = Math.abs(vF) > 0.05 ? -Math.sign(vF) * Math.min(rr, Math.abs(vF) * P.mass / dt * 0.5) : 0;
@@ -569,8 +578,8 @@ export class Vehicle {
       const n = this.groundN;
       if (!this.airborne) {
         const gF = -(n[0] * fx + n[2] * fz) * -1; // n·f gives the downhill component
-        Fwd += -P.mass * G * gF * 0;
-        const gx = n[0] * G, gz = n[2] * G; // tangential gravity ≈ g * horizontal normal
+        Fwd += -P.mass * g * gF * 0;
+        const gx = n[0] * g, gz = n[2] * g; // tangential gravity ≈ g * horizontal normal
         Fwd += P.mass * (gx * fx + gz * fz);
         Lat += P.mass * (gx * lx + gz * lz) * 0.5;
       }
@@ -587,7 +596,7 @@ export class Vehicle {
           const vAbs = Math.abs(vF);
           const cmd = -clamp(ctl.steer || 0, -1, 1) * lock;
           // the most the car can turn: the grip left over after braking/driving
-          const gLat = Math.sqrt(Math.max(4, Math.pow(muS * G * 1.05, 2) - this.axF * this.axF));
+          const gLat = Math.sqrt(Math.max(4, Math.pow(muS * g * 1.05, 2) - this.axF * this.axF));
           const rMax = gLat / Math.max(5, vAbs);
           const rDes = clamp(vF * cmd / (wb + 0.0022 * vAbs * vAbs), -rMax, rMax);
           const err = this.yawRate - rDes;
@@ -670,8 +679,8 @@ export class Vehicle {
     this.brakeLight = this.gear === -1 ? (throttle > 0.1 ? 1 : 0) : (brake > 0.05 ? 1 : 0);
   }
 
-  /** Throw the tail out into a drift toward dir (+1 = left). */
-  startDrift(dir) {
+  /** Throw the tail out into a drift toward dir (+1 = left). K: the tunables. */
+  startDrift(dir, K = TUNE_STOCK) {
     this.driftState = 1;
     this.driftHeld = true;
     this.driftDir = dir;
@@ -683,7 +692,7 @@ export class Vehicle {
     this.driftCalm = 0;
     this.driftOut = 0;
     this.flipHold = 0;
-    this.driftBetaRate = dir * 1.15; // the kick
+    this.driftBetaRate = dir * K.driftKick; // the kick
     this.driftLat = clamp(this.ayL, -20, 20); // the line starts where the car was turning
     this.heaveV += 0.5; // the weight shifting as it goes
     this.hopped = true;
@@ -723,6 +732,8 @@ export class Vehicle {
    */
   drift(dt, o) {
     const P = this.P;
+    const K = o.K || TUNE_STOCK;
+    const g = K.gravity;
     const d = this.driftDir;
     const held = this.driftHeld;
     // how hard the drift is asked to turn. A stick sets it directly (lightly
@@ -734,8 +745,8 @@ export class Vehicle {
       // (worked in "into the turn" terms: + tighter, − the other way)
       const rawIn = -o.steerIn * d, cur = -this.driftStick * d;
       let tgt = cur, rate = 0;
-      if (rawIn > 0.05 && rawIn > cur) { tgt = rawIn; rate = 1.3; }   // key into the turn: tighten
-      else if (rawIn < -0.05) { tgt = rawIn; rate = 2.2; }           // the other key: loosen
+      if (rawIn > 0.05 && rawIn > cur) { tgt = rawIn; rate = K.driftKeyTighten; }   // key into the turn: tighten
+      else if (rawIn < -0.05) { tgt = rawIn; rate = K.driftKeyLoosen; }           // the other key: loosen
       else { tgt = 0; rate = 0.12; }                                 // neither: hold the line
       const next = cur + clamp(tgt - cur, -rate * dt, rate * dt);
       this.driftStick = -next * d;
@@ -762,24 +773,24 @@ export class Vehicle {
       want = into < 0
         ? Math.max(0.05, (0.2 + 0.13 * into) * angK)
         : (0.2 + 0.2 * sIn + 0.04 * o.drivePedal * sIn) * angK + (o.hand ? 0.06 : 0);
-      want = Math.min(0.52, want);
+      want = Math.min(K.driftMaxAngle, want * K.driftAngle);
     }
     this.driftWant = want;
-    const wn0 = 7.5 * Math.pow(1400 / P.mass, 0.35);
-    const wn = held ? wn0 : wn0 * 1.2, zeta = held ? 0.65 : 0.9;
+    const wn0 = 7.5 * Math.pow(1400 / P.mass, 0.35) * K.driftSnap;
+    const wn = held ? wn0 : wn0 * 1.2, zeta = held ? K.driftDamping : 0.9;
     this.driftBetaRate += (wn * wn * (d * want - beta) - 2 * zeta * wn * this.driftBetaRate) * dt;
     // the line: in the drift, a tight one set by the stick; on the way out,
     // what the tires will hold for the stick as it is
     let latT;
     let rGrip = 0;
     {
-      const lock = P.steerLock / (1 + Math.max(0, sp - 6) / 24) * (1 + P.handling * 0.1);
-      const gLat = o.muS * G;
+      const lock = P.steerLock * K.steerLock / (1 + Math.max(0, sp - 6) / K.steerSpeedFade) * (1 + P.handling * 0.1);
+      const gLat = o.muS * g;
       rGrip = clamp(sp * (-o.steerIn * lock) / (P.wb + 0.0022 * sp * sp), -gLat / spL, gLat / spL);
     }
     if (held) {
-      const k = lerp(0.2, 0.85, (into + 1) / 2) + 0.7 * sIn + (o.hand ? 0.15 : 0);
-      latT = d * k * mu * G;
+      const k = (lerp(0.2, 0.85, (into + 1) / 2) + 0.7 * sIn + (o.hand ? 0.15 : 0)) * K.driftLine;
+      latT = d * k * mu * g;
     } else {
       latT = rGrip * sp;
     }
@@ -793,7 +804,7 @@ export class Vehicle {
     // away, it may turn that way)
     const floor = held ? 0 : rGrip * d * (rGrip * d > 0 ? 0.45 : 0.6);
     if (r * d < floor) {
-      const wMax = Math.max(Math.abs(pathRate), 1.5 * mu * G / spL);
+      const wMax = Math.max(Math.abs(pathRate), 1.5 * mu * g / spL);
       r = floor * d;
       pathRate = clamp(r - this.driftBetaRate, -wMax, wMax);
       this.driftBetaRate = r - pathRate;
@@ -802,16 +813,17 @@ export class Vehicle {
     // and a deep angle scrubs a little. The held brake slows the car off the
     // gas (a braking drift into a corner); on the gas it's just the drift
     // button and only scrubs a touch. On the way out the brake is a brake.
+    // (the tunables' drift scrub scales all of the drift's own losses)
     const eff = P.split === 1 ? 0.38 : P.split === 0 ? 0.46 : 0.43;
-    const aDrive = clamp(o.driveForce / P.mass * eff, -4, mu * G * 0.55);
+    const aDrive = clamp(o.driveForce / P.mass * eff, -4, mu * g * 0.55);
     const sb = Math.sin(beta);
-    const aScrub = mu * G * 0.1 * sb * sb + o.surf.drag * 0.25;
-    const aBrake = held ? o.brake * (0.05 + 0.3 * (1 - o.drivePedal)) * G + (o.hand ? 0.12 * G : 0) : o.brake * 0.5 * G;
-    const aDrag = 0.5 * RHO * P.cdA * (1 - 0.4 * clamp(o.draft || 0, 0, 1)) * sp * sp / P.mass;
+    const aScrub = mu * g * 0.1 * sb * sb * K.driftScrub + o.surf.drag * 0.25;
+    const aBrake = held ? (o.brake * (0.05 + 0.3 * (1 - o.drivePedal)) * g + (o.hand ? 0.12 * g : 0)) * K.driftScrub : o.brake * 0.5 * g * K.brakes;
+    const aDrag = 0.5 * RHO * P.cdA * K.drag * (1 - 0.4 * clamp(o.draft || 0, 0, 1)) * sp * sp / P.mass;
     sp = Math.max(0, sp + (aDrive - aScrub - aBrake - aDrag) * dt);
     // (the tail coming back in line costs a little of the sideways speed)
     const dBeta = this.driftBetaRate * dt;
-    if (dBeta * beta < 0) sp *= 1 - 0.35 * Math.abs(Math.sin(beta)) * Math.abs(dBeta);
+    if (dBeta * beta < 0) sp *= 1 - 0.35 * K.driftScrub * Math.abs(Math.sin(beta)) * Math.abs(dBeta);
     const path2 = path + pathRate * dt;
     this.vx = Math.sin(path2) * sp;
     this.vz = Math.cos(path2) * sp;
@@ -854,21 +866,26 @@ export class Vehicle {
     return true;
   }
 
-  /** Push the car out of a wall: normal (nx,nz) points away from the wall. */
+  /**
+   * Push the car out of a wall: normal (nx,nz) points away from the wall.
+   * (Bounce, scrape and spin are the dev menu's tunables, for every car; with
+   * its walls switched off nothing stops anyone, a ghost mode for testing.)
+   */
   hitWall(nx, nz, pen, contactLocal = null) {
+    if (!TUNE.wallCollisions) return 0;
     this.x += nx * pen;
     this.z += nz * pen;
     const vn = this.vx * nx + this.vz * nz;
     let impact = 0;
     if (vn < 0) {
       impact = -vn;
-      const e = 0.18;
+      const e = TUNE.wallBounce;
       this.vx -= (1 + e) * vn * nx;
       this.vz -= (1 + e) * vn * nz;
       // scrape friction along the wall
       const tx = -nz, tz = nx;
       const vt = this.vx * tx + this.vz * tz;
-      const fr = Math.min(Math.abs(vt), impact * 0.25 + 0.1);
+      const fr = Math.min(Math.abs(vt), (impact * 0.25 + 0.1) * TUNE.wallFriction);
       this.vx -= Math.sign(vt) * fr * tx;
       this.vz -= Math.sign(vt) * fr * tz;
       // a glancing blow swings the nose back parallel to the wall, so the
@@ -879,7 +896,7 @@ export class Vehicle {
         const along = fx * tx + fz * tz;
         const into = fx * nx + fz * nz;
         // the corner's impulse turns the car (harder the harder it hits)
-        this.yawRate += clamp(-into * Math.sign(along) * impact * 0.08, -1.5, 1.5);
+        this.yawRate += clamp(-into * Math.sign(along) * impact * 0.08, -1.5, 1.5) * TUNE.crashSpin;
         if (into < -0.02) {
           const glance = clamp(1 - Math.abs(into) * 1.4, 0, 1);
           const turn = Math.sign(lx * nx + lz * nz) * Math.asin(Math.min(1, -into));
@@ -907,7 +924,10 @@ export class Vehicle {
   }
 }
 
-/** Oriented-box car-vs-car collision (2D SAT) with impulse response. */
+/**
+ * Oriented-box car-vs-car collision (2D SAT) with impulse response. (Its
+ * bounce and spin are the dev menu's tunables; the callers switch it off.)
+ */
 export function collideCars(A, B, dimA, dimB) {
   const axes = [];
   const corners = (c, d) => {
@@ -948,15 +968,15 @@ export function collideCars(A, B, dimA, dimB) {
   const rv = (B.vx - A.vx) * nx + (B.vz - A.vz) * nz;
   let impact = 0;
   if (rv < 0) {
-    const e = 0.25;
+    const e = TUNE.carBounce;
     const j = -(1 + e) * rv / (1 / mA + 1 / mB);
     A.vx -= j * nx / mA; A.vz -= j * nz / mA;
     B.vx += j * nx / mB; B.vz += j * nz / mB;
     impact = -rv;
     // a little spin from off-center hits
     const cross = (dx * nz - dz * nx);
-    A.yawRate += clamp(cross * impact * 0.02, -0.6, 0.6) * (mB / tot);
-    B.yawRate -= clamp(cross * impact * 0.02, -0.6, 0.6) * (mA / tot);
+    A.yawRate += clamp(cross * impact * 0.02, -0.6, 0.6) * (mB / tot) * TUNE.crashSpin;
+    B.yawRate -= clamp(cross * impact * 0.02, -0.6, 0.6) * (mA / tot) * TUNE.crashSpin;
   }
   return { impact, nx, nz };
 }

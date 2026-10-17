@@ -6,6 +6,7 @@ import { Vehicle, PHYS_DT, collideCars } from '../car/physics.js';
 import { AIDriver } from './ai.js';
 import { TrafficSim } from './traffic.js';
 import { clamp } from '../core/util.js';
+import { TUNE } from '../core/tune.js';
 
 /** Laps for a lap knockout with this many rivals: two or three, whatever the
  *  field (a big field loses more than one car a lap), so it stays short. */
@@ -226,7 +227,8 @@ export class RaceSim {
         if (R[a].out && R[a].parked) continue;
         for (let b = a + 1; b < R.length; b++) {
           if (R[b].out && R[b].parked) continue;
-          if (R[a].ghost || R[b].ghost) continue;
+          // (the dev menu can switch car contact off)
+          if (R[a].ghost || R[b].ghost || !TUNE.carCollisions) continue;
           const hit = collideCars(R[a].vehicle, R[b].vehicle, R[a].dims, R[b].dims);
           if (hit && hit.impact > 1.0) {
             R[a].lastHitT = R[b].lastHitT = this.time;
@@ -242,6 +244,8 @@ export class RaceSim {
   }
 
   walls(r) {
+    // (the dev menu's ghost mode: no walls, no scraping)
+    if (!TUNE.wallCollisions) { r.scraping = false; return; }
     const T = this.T;
     const v = r.vehicle;
     const [fx, fz] = v.fwd;

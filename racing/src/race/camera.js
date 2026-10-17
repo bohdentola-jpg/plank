@@ -1,7 +1,10 @@
 // Race cameras: two chase distances, bumper, hood; look-back; speed FOV and
-// shake; start-of-race orbit; finish orbit.
+// shake; start-of-race orbit; finish orbit. The dev menu's camera tunables
+// (core/tune.js) scale the chase views' distance, height, swing and aim, and
+// every view's FOV and shake.
 import * as THREE from 'three';
 import { damp, clamp, lerp } from '../core/util.js';
+import { TUNE } from '../core/tune.js';
 
 export const CAM_MODES = [
   { name: 'CHASE FAR', dist: 6.6, height: 2.25, look: 1.2, fov: 62 },
@@ -62,17 +65,19 @@ export class ChaseCamera {
     if (opts.lookBack) target += Math.PI;
     let d = target - this.yaw;
     d = Math.atan2(Math.sin(d), Math.cos(d));
-    const yawRate = M.mounted ? 30 : (opts.lookBack ? 30 : 5.5);
+    const yawRate = M.mounted ? 30 : (opts.lookBack ? 30 : TUNE.camLag);
     if (this.first) this.yaw = target;
     else this.yaw += d * (1 - Math.exp(-yawRate * dt));
     const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
 
     const speedK = clamp(speed / 60, 0, 1);
-    let dist = M.dist * (1 + speedK * 0.12);
-    let height = M.height;
-    if (opts.lookBack && !M.mounted) { dist = M.dist * 0.9; }
+    const kd = M.mounted ? 1 : TUNE.camDist, kh = M.mounted ? 1 : TUNE.camHeight;
+    let dist = M.dist * kd * (1 + speedK * 0.12);
+    let height = M.height * kh;
+    if (opts.lookBack && !M.mounted) { dist = M.dist * kd * 0.9; }
+    const ahead = M.mounted ? 20 : TUNE.camLookAhead;
     const desired = new THREE.Vector3(car.x - fx * dist, car.y + height, car.z - fz * dist);
-    const lookAt = new THREE.Vector3(car.x + fx * (M.mounted ? 20 : 4), car.y + M.look, car.z + fz * (M.mounted ? 20 : 4));
+    const lookAt = new THREE.Vector3(car.x + fx * ahead, car.y + M.look, car.z + fz * ahead);
     if (M.mounted) {
       // rigidly attached, but keep the horizon from wobbling too much
       this.pos.copy(desired);
@@ -92,7 +97,7 @@ export class ChaseCamera {
     cam.position.copy(this.pos);
     // shake: speed rumble + impacts
     this.shake = damp(this.shake, 0, 3.5, dt);
-    const sh = this.shake * 0.12 + (opts.rumble || 0) * 0.025 + speedK * speedK * 0.012 + (car.nitroOn ? 0.014 : 0);
+    const sh = (this.shake * 0.12 + (opts.rumble || 0) * 0.025 + speedK * speedK * 0.012 + (car.nitroOn ? 0.014 : 0)) * TUNE.camShake;
     if (sh > 0.0005) {
       cam.position.x += (Math.sin(this.time * 61) + Math.sin(this.time * 37.3)) * sh;
       cam.position.y += (Math.sin(this.time * 53.7) + Math.cos(this.time * 29.1)) * sh * 0.7;
@@ -100,7 +105,7 @@ export class ChaseCamera {
     cam.lookAt(this.look);
     // FOV: speed + nitro kick
     this.kick = damp(this.kick, car.nitroOn ? 1 : 0, 3, dt);
-    const fov = M.fov + speedK * 18 + this.kick * 10;
+    const fov = M.fov + TUNE.camFov + speedK * TUNE.camSpeedFov + this.kick * 10;
     cam.fov = damp(cam.fov, fov, 5, dt);
     cam.updateProjectionMatrix();
   }
