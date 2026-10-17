@@ -5,6 +5,8 @@ import { Menu, uiSound } from '../core/menu.js';
 import { C, text, osd, hints, hit, vText } from '../core/ui.js';
 import { input } from '../core/input.js';
 import { settings, store } from '../core/settings.js';
+import { devMenu } from '../core/devmenu.js';
+import { tuneDiff } from '../core/tune.js';
 import { audio } from '../audio/audio.js';
 import { music } from '../audio/music.js';
 import { clamp } from '../core/util.js';
@@ -24,6 +26,7 @@ const CONTROLS = [
   ['LOOK BACK', '◯  CIRCLE', 'B'],
   ['RESET CAR', 'CREATE', 'R'],
   ['PAUSE', 'OPTIONS', 'ESC / P'],
+  ['DEV MENU', 'HOLD L1+R1, OPTIONS', 'SHIFT+~ / CTRL+ALT+D'],
 ];
 
 registerScreen('options', () => {
@@ -59,6 +62,7 @@ registerScreen('options', () => {
         { label: 'DRIVING ASSISTS', type: 'choice', hint: 'Traction + stability help. Off: you own every slide.', options: [{ value: 'on', label: 'ON' }, { value: 'off', label: 'OFF' }], get: () => settings.get('assists'), set: (v) => settings.set('assists', v) },
         { label: 'CAMERA', type: 'choice', options: [{ value: 0, label: 'CHASE FAR' }, { value: 1, label: 'CHASE' }, { value: 2, label: 'BUMPER' }, { value: 3, label: 'HOOD' }], get: () => settings.get('camera'), set: (v) => settings.set('camera', v) },
         { label: 'VIBRATION', type: 'toggle', get: () => settings.get('rumble') !== false, set: (v) => { settings.set('rumble', v); input.settingsRumble = v; if (v) input.rumble(0.6, 0.6, 200); } },
+        { label: 'DEV MENU', id: 'dev', hint: 'Live driving tunables. Shift+~, Ctrl+Alt+D or L1+R1+OPTIONS.' },
         { label: 'ERASE STORY SAVE', id: 'wipe', hint: 'Starts the story over. Press twice.' },
       ], { id: 'opt2' }),
     },
@@ -79,6 +83,7 @@ registerScreen('options', () => {
       if (input.takeClick() && hit.hover?.startsWith('tab:')) { tab = parseInt(hit.hover.slice(4), 10); uiSound('tab'); }
       const pg = pages[tab];
       const it = pg.menu?.update(dt);
+      if (it?.id === 'dev') devMenu.show();
       if (it?.id === 'wipe') {
         if (confirmWipe > 0) { store.remove('story'); confirmWipe = 0; uiSound('back'); pg.wiped = 2.5; } else confirmWipe = 3;
       }
@@ -117,13 +122,15 @@ registerScreen('options', () => {
       const pg = pages[tab];
       const px = x0 + 50, py = y0 + 180;
       if (pg.menu) {
+        // (a long page closes up so its last row clears the hint line)
+        const rowH = pg.menu.items.length > 6 ? 42 : 52;
         pg.menu.items.forEach((it, k) => {
-          const y = py + k * 52;
+          const y = py + k * rowH;
           const sel = k === pg.menu.sel;
-          hit.add(`${pg.menu.id}:${k}`, px - 20, y - 34, w - 60, 48);
+          hit.add(`${pg.menu.id}:${k}`, px - 20, y - rowH + 18, w - 60, rowH - 4);
           if (sel) {
             ctx.fillStyle = 'rgba(216,255,216,0.16)';
-            ctx.fillRect(px - 20, y - 34, w - 60, 46);
+            ctx.fillRect(px - 20, y - rowH + 18, w - 60, rowH - 6);
             osd(ctx, '▶', px - 16, y, 18, OSD_GREEN);
           }
           osd(ctx, it.label, px + 14, y, 22, sel ? '#ffffff' : OSD_GREEN);
@@ -143,6 +150,9 @@ registerScreen('options', () => {
           } else if (it.id === 'wipe') {
             const msg = pg.wiped ? 'ERASED' : confirmWipe > 0 ? 'PRESS AGAIN TO ERASE' : '';
             if (msg) osd(ctx, msg, vx, y, 18, '#ffb0a0');
+          } else if (it.id === 'dev') {
+            const n = Object.keys(tuneDiff()).length;
+            osd(ctx, n ? `${n} CHANGED` : 'ALL STOCK', vx, y, 18, n ? '#ffe8a0' : 'rgba(216,255,216,0.6)');
           }
         });
         const cur = pg.menu.current;
@@ -152,7 +162,7 @@ registerScreen('options', () => {
         osd(ctx, 'CONTROLLER', px + 290, py - 10, 16, 'rgba(216,255,216,0.6)');
         osd(ctx, 'KEYBOARD', px + 520, py - 10, 16, 'rgba(216,255,216,0.6)');
         CONTROLS.forEach(([a, pad, key], k) => {
-          const y = py + 22 + k * 27;
+          const y = py + 22 + k * 25;
           osd(ctx, a, px, y, 17, OSD_GREEN);
           text(ctx, pad, px + 290, y, { size: 16, color: '#ffffff', weight: 700, font: '"Consolas", monospace', shadow: false });
           text(ctx, key, px + 520, y, { size: 16, color: '#ffffff', weight: 700, font: '"Consolas", monospace', shadow: false });

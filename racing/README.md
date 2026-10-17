@@ -37,6 +37,7 @@ Xbox and other standard pads work too, and so do keyboard and mouse.
 | Map (free roam) | touchpad | M |
 | Pause | OPTIONS | Esc / P |
 | Menus | D-pad / stick, ✕ select, ◯ back, L1/R1 tabs | arrows, Enter, Esc, Q/E |
+| Dev menu (live driving tunables) | hold L1 + R1, press OPTIONS | Shift + ~ or Ctrl + Alt + D |
 
 The DualSense rumbles on curbs, impacts, landings and launches. You can turn that
 off in Options.
@@ -254,6 +255,39 @@ Every car is generated procedurally: lofted bodies, painted canvas textures,
 working head, tail and brake lights, and nine rim styles. Each car also has its
 own synthesized engine (I4, I6, V6, V8, V10, V12, flat-6, boxer, rotary) with
 turbo whistle, blow-off, backfires and pops.
+
+## Dev menu
+
+Live driving tunables, for trying a different feel without touching the
+code. Open it over any screen with **Shift + ~** or **Ctrl + Alt + D**, hold
+**L1 + R1 and press OPTIONS** on a pad, or pick **DEV MENU** in Options ›
+Game. The game holds still underneath while it's open (the keys work the
+menu, not the car), and whatever you change is in the moment you close it.
+
+- **Pages** (L1/R1 or Q/E): **Drift** (angle, max angle, snap, damping,
+  line, entry kick, min speed, arm time, how fast the keys tighten and
+  loosen it, speed scrub), **Speed & grip** (power, grip, brakes, aero
+  drag, nitrous power and tank, gravity), **Steering** (lock, speed, speed
+  fade, countersteer, limiter), **Camera** (distance, height, field of view,
+  speed FOV, follow rate, look-ahead, shake), **Collisions** (walls, car
+  contact and traffic contact on or off, wall and car bounce, wall scrape,
+  crash spin) and **Misc** (game speed, down to 0.25× for watching a drift in
+  slow motion, and a telemetry readout: speed, drift angle and state, tire
+  slip, gear, revs, FPS).
+- ↑ ↓ picks, ← → adjusts (hold it to speed up), ✕ / Enter flips a switch,
+  □ / X / Tab puts the value back to its default. A diamond marks every
+  value that's changed. Each page ends with RESET GROUP, RESET ALL (it asks
+  twice) and COPY CHANGES (the changed values as JSON, to the clipboard and
+  the console).
+- Walls off is a ghost mode for testing: every car drives through the
+  barriers (and gets put back on the road if it strays too far).
+- The handling values (drift, speed & grip, steering) act on the car you
+  drive: the AI keeps the stock numbers its racing lines are planned on,
+  and the garage's measured stats stay put. Collisions and game speed apply
+  to every car.
+- Changes are saved in the browser until you reset them. The defaults are
+  the game's own handling, to the last decimal. The code is
+  `src/core/tune.js` (the values) and `src/core/devmenu.js` (the panel).
 
 ## Under the hood
 

@@ -7,6 +7,8 @@ import { input } from './core/input.js';
 import { hit, osd } from './core/ui.js';
 import { audio } from './audio/audio.js';
 import { settings, store } from './core/settings.js';
+import { TUNE } from './core/tune.js';
+import { devMenu } from './core/devmenu.js';
 
 export const game = {
   renderer: null,
@@ -116,16 +118,25 @@ function loop(now) {
   stepTransition(dt);
   const scr = game.screen;
   const busy = game._transition && game._transition.phase !== 'in';
-  if (scr && scr.update) {
-    try { scr.update(dt, busy); } catch (e) { console.error(e); }
+  // the dev menu (core/devmenu.js) has the controls while it's open: the
+  // screen underneath holds still, so the menu's keys don't drive the car
+  let devHeld = false;
+  try { devHeld = devMenu.update(dt, game); } catch (e) { console.error(e); }
+  // (and its game speed: slow motion for watching a drift)
+  const sdt = dt * TUNE.timeScale;
+  if (scr && scr.update && !devHeld) {
+    try { scr.update(sdt, busy); } catch (e) { console.error(e); }
   }
 
   const r = game.renderer;
   const ctx = r.beginUI();
   hit.begin();
   if (scr && scr.draw) {
-    try { scr.draw(ctx, dt); } catch (e) { console.error(e); }
+    try { scr.draw(ctx, sdt); } catch (e) { console.error(e); }
   }
+  // the dev menu and the telemetry over whatever is up (before the hit test,
+  // so the menu's rows take the mouse)
+  try { devMenu.draw(ctx, dt, game); } catch (e) { console.error(e); }
   hit.resolve();
   if (game.overlay) game.overlay(ctx, dt);
   if (game.padToast) {
