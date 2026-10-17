@@ -172,7 +172,8 @@ export class RaceSim {
         if (r.out && r.parked) continue;
         const v = r.vehicle;
         const env = {
-          ground: (x, z) => {
+          // (a race on the world's own roads asks the world for its ground)
+          ground: this.opts.ground ? (x, z) => this.opts.ground(x, z, r) : (x, z) => {
             const g = T.ground(x, z, r.hint, r._g || (r._g = {}));
             r.hint = g.i;
             return g;
@@ -221,6 +222,13 @@ export class RaceSim {
         // the weight shifting as a drift kicks in (or swings across)
         if (v.hopped) { v.hopped = false; this.emit('drifthop', { id: r.id }); }
         this.walls(r);
+        // and the world's solid things (posts, piers, whatever stands by the road)
+        if (this.opts.collide && TUNE.wallCollisions) {
+          const was = r.scraping, at = r.scrapePoint;
+          const hit = this.opts.collide(r);
+          if (!hit) { r.scraping = was; r.scrapePoint = at; }
+          else if (hit.impact > 2) this.emit('wallhit', { id: r.id, impact: hit.impact, x: hit.x, z: hit.z, y: v.y });
+        }
       }
       const R = this.racers;
       for (let a = 0; a < R.length; a++) {

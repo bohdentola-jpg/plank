@@ -177,7 +177,7 @@ const QUALITY = [
 let lowStreak = 0, highStreak = 0;
 function autoQuality(scr) {
   const r = game.renderer;
-  if (!settings.get('autoQuality') || game._transition || (scr?.name !== 'race' && scr?.name !== 'roam')) {
+  if (!settings.get('autoQuality') || game._transition || (scr?.name !== 'race' && scr?.name !== 'world')) {
     lowStreak = highStreak = 0;
     // the menus are cheap: never leave them drawn at the race's reduced scale
     if (r.displayScale !== 1 && !game._transition) {
@@ -212,20 +212,20 @@ async function boot() {
     master: settings.get('volMaster'), music: settings.get('volMusic'), sfx: settings.get('volSfx'),
   });
 
-  // the tracks were redrawn (layout 3: longer again, after layout 2's short
-  // ones): best laps and times set on the old layouts don't compare, so they
-  // go (races and wins stay); the drag strip didn't change
+  // the tracks were redrawn (layout 4: every track is now a route through
+  // Port Halcyon's own streets): best laps and times set on the old layouts
+  // don't compare, so they go (races and wins stay)
   try {
-    if (store.load('recordsLayout') !== 3) {
+    if (store.load('recordsLayout') !== 4) {
       const recs = store.load('records');
       if (recs) {
-        for (const [id, r] of Object.entries(recs)) {
-          if (id === 'drylake' || !r || typeof r !== 'object') continue;
+        for (const r of Object.values(recs)) {
+          if (!r || typeof r !== 'object') continue;
           delete r.bestLap; delete r.bestLapCar; delete r.bestTime; delete r.bestTimeCar; delete r.newLap;
         }
         store.save('records', recs);
       }
-      store.save('recordsLayout', 3);
+      store.save('recordsLayout', 4);
     }
   } catch { /* storage unavailable: nothing to clean */ }
 

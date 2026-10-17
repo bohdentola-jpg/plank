@@ -125,11 +125,27 @@ if (net) {
     }
   }
   for (const n of net.nodes.values()) if (n.ends.length >= 3) dot(px(n.x), pz(n.z), [255, 40, 40]);
-  if (flags.has('--courses') && net.courses) {
-    for (const c of Object.values(net.courses)) {
-      const T = c.track;
-      if (!T) continue;
-      for (let i = 0; i < T.N - 1; i++) line(T.X[i], T.Z[i], T.X[i + 1], T.Z[i + 1], [255, 0, 200], 2, 0.6);
+  if (flags.has('--courses')) {
+    // every race course: its line (a colour each), its start, the side roads closed off
+    const { COURSES, buildCourse } = await import(`${ROOT}world/course.js`);
+    const { Track } = await import(`${ROOT}track/track.js`);
+    const only = args.find((a) => a.startsWith('--course='))?.split('=')[1];
+    let k = 0;
+    for (const id of Object.keys(COURSES)) {
+      if (only && id !== only) continue;
+      const c = buildCourse(id, net);
+      const T = new Track({ id, type: c.loop ? 'circuit' : 'sprint', points: c.points, width: 14, bank: 0, radius: 30, startS: COURSES[id].start });
+      const col = [[255, 60, 200], [80, 255, 120], [255, 160, 40], [90, 170, 255], [255, 255, 80], [200, 120, 255]][k++ % 6];
+      for (let i = 0; i < T.N - 1; i++) line(T.X[i], T.Z[i], T.X[i + 1], T.Z[i + 1], col, Math.max(2, Math.round(T.W[i] * 2 / mpp)), 0.7);
+      const s = T.posAt(T.startS);
+      for (let a = 0; a < 6.3; a += 0.2) dot(px(s.x) + Math.cos(a) * 6, pz(s.z) + Math.sin(a) * 6, [255, 255, 255]);
+      for (const J of c.junctions) {
+        for (const e of J.side) {
+          const rt = e.road.rt, w = rt.hw + rt.shoulder + rt.walk;
+          const bx = J.node.x + e.dx * (e.trim + 1), bz = J.node.z + e.dz * (e.trim + 1);
+          line(bx - e.dz * w, bz + e.dx * w, bx + e.dz * w, bz - e.dx * w, [255, 40, 40], 2, 1);
+        }
+      }
     }
   }
 }

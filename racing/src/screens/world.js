@@ -49,7 +49,7 @@ registerScreen('world', () => {
 
   const makePause = () => new Menu([
     { label: 'RESUME', id: 'resume' },
-    ...(session?.inGarage ? [] : [{ label: 'MAP  ·  FAST TRAVEL', id: 'map' }, { label: 'BACK ON THE ROAD', id: 'reset' }, { label: 'BACK TO THE GARAGE', id: 'garage' }]),
+    ...(session?.inGarage ? [] : [{ label: 'MAP  ·  FAST TRAVEL', id: 'map' }, { label: 'BACK ON THE ROAD', id: 'reset' }, ...(params.noGarage ? [] : [{ label: 'BACK TO THE GARAGE', id: 'garage' }])]),
     {
       label: 'CAMERA', type: 'choice', options: CAM_MODES.map((m, k) => ({ value: k, label: m.name })),
       get: () => session?.camera.mode ?? 1, set: (v) => { session?.camera.setMode(v); settings.set('camera', v); },
@@ -267,6 +267,8 @@ registerScreen('world', () => {
       session = new WorldSession({
         player: { spec: player.spec, look: player.look, upgrades: player.upgrades, name: 'YOU' },
         time: p.time || G.time, garage: fromGarage, start, budget: p.budget ? Number(p.budget) : undefined,
+        traffic: p.traffic === undefined ? undefined : !(p.traffic === false || p.traffic === '0' || p.traffic === 'false'),
+        noGarage: !!p.noGarage,
         slice: Number(p.slice || game.query.get('slice') || 0) || undefined,
       });
       await session.load(game.renderer.gl, (f, l) => { loading = { f, label: l }; });

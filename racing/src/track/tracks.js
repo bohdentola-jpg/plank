@@ -8,6 +8,7 @@ import MOUNTAIN from './defs/mountain.js';
 import DESERT from './defs/desert.js';
 import DOCKS from './defs/docks.js';
 import HIGHWAY from './defs/highway.js';
+import { COURSES, courseFor } from '../world/course.js';
 
 const CITY = [
   {
@@ -75,3 +76,55 @@ CITY.push(
 
 export const TRACKS = [...CITY, ...DOCKS, ...HIGHWAY, ...CIRCUIT, ...MOUNTAIN, ...DESERT];
 export const TRACK_BY_ID = Object.fromEntries(TRACKS.map((t) => [t.id, t]));
+
+// what each route is like now that it runs through the city
+const BLURBS = {
+  downtown: 'Four-lane avenues round the financial district: Main Street east under the towers, down 5th, a jog through Union and Central, west along Harbor Avenue and back up 1st. Wet tonight.',
+  downtown_r: 'The financial district the other way round on a dry night: down 1st, along Harbor Avenue, the Central-Union jog, up 5th and west along Main Street under the towers.',
+  uptown: 'Point to point up the hill: Central Avenue, under the I-9 viaduct, Park Boulevard past the museum, Madison Boulevard by the park, across the top and out onto Kaido Road. Raining hard.',
+  oldtown: 'Cobbles and brick along the river: over the Grand Bridge, a staircase of square corners on the east bank, back over the water on the old stone bridge and up the west quai. Two lanes, no run-off.',
+  oldtown_r: 'Old Town the wrong way round in the pouring rain: up the quai, over the stone bridge, down the staircase of corners and home across the Grand Bridge.',
+  chinatown: 'Under the neon: the long street east through the market blocks, square corners, Grant Avenue under the lanterns and back along the edge of the alleys.',
+  harbor: 'Round the container terminal: in by the gate, the long berth road beside the ships, the stacks and the cranes overhead. Wet quays tonight.',
+  pier9: 'Beach Boulevard along the sand, down to the boardwalk past the Ferris wheel and the arcades, and back up onto the sea road.',
+  shipyard: 'Point to point along the dry docks: the shipyard road past the hulls on their slips, round the docks and out onto Harbor Boulevard.',
+  interstate: 'Five kilometres of the I-9: over the gorge below the dam, up onto the viaduct past the towers, and down across the Eastside plains. Traffic, and wet.',
+  skyline: 'The Skyline Expressway: a loop of elevated deck between the downtown blocks, tight concrete corners and the towers close enough to touch. Traffic.',
+  bayshore: 'From the beach up onto the cliffs, along Bayshore Route and over the Bayshore Bridge to Halcyon Point. Fast, and a long way down.',
+  redwood: 'Grand prix racing in the redwoods: sweepers and a hairpin under trunks as wide as the track, pit straight in the clearing.',
+  crestwood: 'Golden hills at sundown: the Crestwood circuit through the vineyards, over the crests, past the winery and round the long carousel.',
+  ironwood: 'The old ironworks by the lake, made into a raceway: under the conveyor bridges, past the blast furnaces, on a damp grey day.',
+  kaido: 'Up Kaido Pass: hairpin after hairpin through the cedars to the shrine at the top. The road every drifter in town wants to own.',
+  summit: 'Round the Summit Loop at night: snow poles, the observatory dome above you, nothing but the drop past the barrier.',
+  ridgeline: 'Along the Ridgeline Road from the Summit toward the desert: wind turbines turning on the crest, the 92.7 tower, a long run down.',
+  route99: 'Route 99 north through the desert: past the turn for Ghost Town and the Rocket Diner, the motel signs, on toward the canyon. Flat out.',
+  redrock: 'Down the canyon floor between red walls and back along the rim: the arch overhead, the drop beside you, the sun going down.',
+  ghosttown: 'A dirt loop round a dead mining town: false fronts, the saloon, the headframe on the hill. Loose under the tyres, sundown.',
+  drylake: 'The salt flat\'s drag strip: a kilometre of nothing but white, the timing lights and the bleachers.',
+};
+
+// Every track is a place in PORT HALCYON now: its line is its route over
+// the city's own roads (world/course.js), worked out the first time anyone
+// asks (a route map, a race), and the race runs in the world itself. What
+// stays from the definitions above is who they are: name, blurb, race type,
+// laps, time of day and weather, traffic.
+for (const def of TRACKS) {
+  const C = COURSES[def.id];
+  if (!C) continue;
+  const get = () => courseFor(def.id);
+  const loop = !!(C.loop || COURSES[C.reverseOf]?.loop);
+  def.world = true;
+  if (BLURBS[def.id]) def.blurb = BLURBS[def.id];
+  delete def.elevation;
+  delete def.bankBoost;
+  def.bank = 0;
+  def.radius = 30;
+  def.startS = loop ? (C.start ?? 100) : 30;
+  def.finishPad = def.type === 'drag' ? 120 : 60;
+  def.trafficCount = def.traffic ? 18 : undefined;
+  Object.defineProperty(def, 'points', { get: () => get().points, configurable: true, enumerable: true });
+  Object.defineProperty(def, 'course', { get, configurable: true });
+  // (the traffic's lanes: the width the race line keeps to)
+  Object.defineProperty(def, 'width', { get: () => { const P = get().points; return 2 * P[Math.floor(P.length / 2)][4]; }, configurable: true, enumerable: true });
+  Object.defineProperty(def, 'lanes', { get: () => (def.width > 12 ? 3 : 2), configurable: true, enumerable: true });
+}

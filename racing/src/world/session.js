@@ -20,13 +20,11 @@ import { input } from '../core/input.js';
 import { TUNE } from '../core/tune.js';
 import { getEnvMap } from '../core/envmap.js';
 import { clamp, damp, easeInOutCubic } from '../core/util.js';
-import { buildNet } from './net.js';
-import { Terrain } from './terrain.js';
+import { worldData } from './data.js';
 import { WorldScene } from './scene.js';
 import { WorldPhys } from './phys.js';
 import { WorldSim } from './sim.js';
 import { districtAt } from './ground.js';
-import { Districts } from './districts/index.js';
 import { Garage } from './garage.js';
 import { Discoverer } from './discover.js';
 import { WorldMap } from './map2d.js';
@@ -34,16 +32,7 @@ import { WorldTraffic } from './traffic.js';
 import { TrafficRender } from '../race/trafficModels.js';
 import { GARAGE } from './map/base.js';
 
-// the road network, the land and the plans are the same every time: made once a page
-let SHARED = null;
-export function worldData() {
-  if (!SHARED) {
-    const net = buildNet();
-    const terrain = new Terrain(net);
-    SHARED = { net, terrain, districts: new Districts(net, terrain) };
-  }
-  return SHARED;
-}
+export { worldData };
 
 const AMBIENCE = {
   downtown: 'city', chinatown: 'city', works: 'city', oldtown: 'city', uptown: 'city', eastside: 'city',
@@ -173,6 +162,7 @@ export class WorldSession extends RaceSession {
     this.ready = true;
     set(1, 'READY');
     // the map (M), drawn while you drive
+    const SHARED = worldData();
     if (!SHARED.map) {
       const map = new WorldMap(this.net, this.districts);
       let t0 = performance.now();
@@ -473,6 +463,8 @@ export class WorldSession extends RaceSession {
 
   /** Parked inside your garage? Offer it (the screen asks; ✕ goes in). */
   watchGarage(dt) {
+    // (a story cruise has its own garage: this one isn't yours)
+    if (this.opts.noGarage) { this.canGarage = false; return; }
     const v = this.player.vehicle;
     // (only once you've been out: not the moment you're handed the wheel)
     if (!this.garage.inside(v.x, v.z, -2)) this.leftGarage = true;

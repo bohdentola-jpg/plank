@@ -83,6 +83,7 @@ export class RoadNet {
     if (spec.loop) pts.pop();
     const r = new Road(spec, this.roads.length, pts);
     r.a = A; r.b = B;
+    r.net = this;
     this.roads.push(r);
     this.byId.set(spec.id, r);
     // ends: direction pointing away from the node, along the road

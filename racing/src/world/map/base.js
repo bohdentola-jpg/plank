@@ -87,6 +87,13 @@ export const ZONES = [
   { id: 'summit', kind: 'peak', x: 1250, z: -4700, r: 1300, h: 760 },
   { id: 'ridge', kind: 'ridge', path: [[1500, -3700], [2500, -3500], [3400, -3250], [4300, -2900]], width: 520, h: 330 },
   { id: 'kaido', kind: 'hills', poly: [[-1200, -4200], [500, -4200], [500, -1750], [-1200, -1750]], y: 160, amp: 90, scale: 520, edge: 500 },
+  // the raceways in the hills sit on their own rolling ground (the range must
+  // not lift a grand prix circuit by hundreds of metres)
+  { id: 'crestwoodring', kind: 'hills', poly: [[-2450, -3200], [-1000, -3200], [-1000, -2000], [-2450, -2000]], y: 150, amp: 34, scale: 300, edge: 280 },
+  // the lake's north shore: a long slope up from the water to the range
+  // (the North Shore Road climbs along it instead of hitting the massif)
+  { id: 'northshore', kind: 'slope', poly: [[-4750, -2950], [-2050, -2950], [-2050, -2150], [-4750, -2150]], y0: 72, y1: 200, dir: [0, -1], edge: 260 },
+  { id: 'redwoodring', kind: 'hills', poly: [[-5700, -4000], [-4350, -4000], [-4350, -2850], [-5700, -2850]], y: 125, amp: 22, scale: 340, edge: 320 },
   // east: the plains out of town, then the desert
   { id: 'plains', kind: 'hills', poly: [[950, -1750], [2900, -1750], [2900, 1650], [950, 1650]], y: 22, amp: 18, scale: 800, edge: 400 },
   { id: 'desert', kind: 'mesas', poly: [[2900, -2600], [6200, -2600], [6200, 4400], [3300, 4400], [3300, 1300], [2900, 1300]], y: 86, amp: 120, terrace: 26, scale: 650, edge: 600 },

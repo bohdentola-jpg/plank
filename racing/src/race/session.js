@@ -63,9 +63,15 @@ export class RaceSession {
     this.track = world.track;
     this.scene = world.scene;
     this.track.computeRacingLine(1.12);
+    await this.setupRace(progress);
+  }
+
+  /** The race itself on a built world: the grid, the cars, the sounds (simExtra: more for the sim). */
+  async setupRace(progress, simExtra = {}) {
     progress(0.84, 'ROLLING CARS OUT');
     const racers = [{ ...this.opts.player, isPlayer: true, name: this.opts.player.name || 'YOU' }, ...(this.opts.opponents || [])];
     this.sim = new RaceSim(this.track, {
+      ...simExtra,
       type: this.type, laps: this.opts.laps || this.def.laps || 3, racers,
       auto: settings.get('transmission') !== 'manual',
       // drift events run loose: stability control would smother every slide

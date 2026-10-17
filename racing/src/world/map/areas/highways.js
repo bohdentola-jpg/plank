@@ -13,13 +13,15 @@ const nodes = {
   i9_farm: [-3900, 300],        // farms interchange (at grade)
   i9_wr: [-2760, -560],         // River Road junction, west of the gorge
   i9_cw: [-1420, -615],         // the viaduct starts (at grade, Bastion end)
-  i9_j1: [-220, -615, DECK_I9],  // Skyline spur (west)
-  i9_j2: [200, -615, DECK_I9],   // Skyline spur (east)
+  i9_j1: [-150, -615, DECK_I9],  // Skyline spur (west)
+  i9_j2: [130, -615, DECK_I9],   // Skyline spur (east)
   i9_ce: [1150, -600],          // the viaduct comes down (Eastside)
   i9_e1: [2200, -480],          // Eastside exit
   i9_e2: [3800, -300],          // the end: Route 99
-  sx_n1: [-220, -280, DECK_SX],
-  sx_n2: [200, -280, DECK_SX],
+  // (the loop runs down the middle of the blocks, never over a street:
+  // its piers stand between the buildings)
+  sx_n1: [-150, -225, DECK_SX],
+  sx_n2: [130, -225, DECK_SX],
 };
 
 const roads = [
@@ -37,7 +39,7 @@ const roads = [
   { id: 'sx_north', type: 'expressway', a: 'sx_n1', b: 'sx_n2', name: 'SKYLINE EXPY', elevated: [[-999, 99999, DECK_SX - 6, 1]] },
   {
     id: 'sx_loop', type: 'expressway', a: 'sx_n2', b: 'sx_n1', name: 'SKYLINE EXPY',
-    pts: [[340, -280, 70], [340, 380, 70], [-360, 380, 70], [-360, -280, 70]],
+    pts: [[270, -225, 70], [270, 325, 70], [-290, 325, 70], [-290, -225, 70]],
     elevated: [[-999, 99999, DECK_SX - 6, 1]],
   },
   { id: 'sx_spur1', type: 'expressway', a: 'sx_n1', b: 'i9_j1', name: 'SKYLINE EXPY', elevated: [[-999, 99999, DECK_SX - 6, 1]] },

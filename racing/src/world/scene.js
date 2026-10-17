@@ -322,7 +322,7 @@ export class WorldScene {
   async warm(camera, onProgress = () => {}, sliceMs = 20) {
     let t0 = performance.now();
     const slice = async () => { if (performance.now() - t0 > sliceMs) { await new Promise((r) => setTimeout(r, 0)); t0 = performance.now(); } };
-    for (const _ of warmRoads(this.ctx.net)) await slice();
+    for (const _ of warmRoads(this.ctx.net, !!this.ctx.wet)) await slice();
     onProgress(0.4);
     if (this.ctx.districts) for (const _ of this.ctx.districts.warm()) await slice();
     onProgress(0.7);
