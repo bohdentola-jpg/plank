@@ -53,7 +53,8 @@ step('after phone: ' + await page.evaluate(() => window.__story.page));
 await press('ArrowDown', 1);
 await press('Enter', 1);
 step('after buy: ' + await page.evaluate(() => JSON.stringify({ p: window.__story.page, cash: window.__story.story.s.cash, car: window.__story.story.car?.id })));
-await press('Enter', 2);
+// the texts about the car, then chapter one's title card, then the hub
+for (let k = 0; k < 6 && (await page.evaluate(() => window.__story.page)) !== 'hub'; k++) await press('Enter', 2);
 step('hub: ' + await page.evaluate(() => window.__story.page));
 await page.screenshot({ path: join(root, 'qa', 'flow_hub.png') });
 await press('Escape', 0.3);
