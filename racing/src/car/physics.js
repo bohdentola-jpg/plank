@@ -160,6 +160,7 @@ export class Vehicle {
     this.driftHeld = false; // the brake/handbrake still held (else it's on the way out)
     this.driftT = 0; this.driftArm = 0; this.driftCalm = 0; this.flipHold = 0; this.driftBlock = 0; this.driftOut = 0;
     this.driftBetaRate = 0; this.driftLat = 0; this.driftWant = 0;
+    this.driftStick = 0; this.steerDigital = false; // how far the drift is asked to tighten (see drift())
     this.hopped = false;
     this.speed = 0;
     this.vF = 0; this.vL = 0;
@@ -282,8 +283,10 @@ export class Vehicle {
     // The gas holds your speed through it (the brake then only scrubs a
     // touch); off the gas, the brake slows the car as it drifts.
     const steerIn = clamp(ctl.steer || 0, -1, 1);
+    this._steerIn = steerIn;
     const slip = Math.atan2(vL, Math.max(1, Math.abs(vF))); // body slip (+ = sliding left)
     const human = !!env.human;
+    this.steerDigital = !!ctl.steerDigital;
     const pedal = brake > 0.2 || hand;
     const turning = Math.abs(steerIn) > 0.3;
     if (this.driftBlock > 0) this.driftBlock -= dt;
@@ -312,8 +315,10 @@ export class Vehicle {
         }
       } else {
         // the stick held over the other way swings the tail across
+        // (on keys a short press the other way only loosens the drift; hold
+        // it to swing across)
         this.flipHold = Math.abs(steerIn) > 0.5 && dirIn !== this.driftDir ? this.flipHold + dt : 0;
-        if (this.flipHold > 0.1 && this.driftT > 0.2) this.flipDrift();
+        if (this.flipHold > (this.steerDigital ? 0.22 : 0.1) && this.driftT > 0.2) this.flipDrift();
       }
       // over a crest the drift carries on in the air and picks up again on
       // landing (its swing is whatever the car is doing up there)
@@ -667,6 +672,9 @@ export class Vehicle {
     this.driftState = 1;
     this.driftHeld = true;
     this.driftDir = dir;
+    // keys start a drift gently and tighten it the longer they're held; the
+    // stick says exactly how much
+    this.driftStick = this.steerDigital ? -dir * 0.35 : (this._steerIn ?? -dir * 0.5);
     this.driftT = 0;
     this.driftArm = 0;
     this.driftCalm = 0;
@@ -714,7 +722,24 @@ export class Vehicle {
     const P = this.P;
     const d = this.driftDir;
     const held = this.driftHeld;
-    const into = clamp(-o.steerIn * d, -1, 1);
+    // how hard the drift is asked to turn. A stick sets it directly (lightly
+    // smoothed). Keys are all-or-nothing, so for them the key into the turn
+    // tightens it the longer it's held, the other key loosens it, and with
+    // neither it stays about where it is (easing off only slowly): taps set
+    // anything from a touch to all the way in
+    if (this.steerDigital) {
+      // (worked in "into the turn" terms: + tighter, − the other way)
+      const rawIn = -o.steerIn * d, cur = -this.driftStick * d;
+      let tgt = cur, rate = 0;
+      if (rawIn > 0.05 && rawIn > cur) { tgt = rawIn; rate = 1.3; }   // key into the turn: tighten
+      else if (rawIn < -0.05) { tgt = rawIn; rate = 2.2; }           // the other key: loosen
+      else { tgt = 0; rate = 0.12; }                                 // neither: hold the line
+      const next = cur + clamp(tgt - cur, -rate * dt, rate * dt);
+      this.driftStick = -next * d;
+    } else {
+      this.driftStick += clamp(o.steerIn - this.driftStick, -12 * dt, 12 * dt);
+    }
+    const into = clamp(-this.driftStick * d, -1, 1);
     const sIn = Math.max(0, into);
     let sp = Math.hypot(this.vx, this.vz);
     const path = Math.atan2(this.vx, this.vz);

@@ -70,6 +70,9 @@ class Input {
     this._dyAcc = 0;
     this.enabled = true;
     this._kbSteer = 0;
+    // last device that steered: keys and the d-pad are on/off, the stick is
+    // analog (the drift reads them differently)
+    this.steerDigital = true;
 
     window.addEventListener('keydown', (e) => {
       if (e.repeat) { if (KEYMAP[e.code]) e.preventDefault(); return; }
@@ -211,9 +214,12 @@ class Input {
       const v = (Math.abs(this.axes[0]) - DEAD) / (1 - DEAD);
       padSteer = Math.sign(this.axes[0]) * Math.pow(v, 1.45); // finer near center
     }
+    const dpad = !!(this.btn[14] || this.btn[15]);
     if (this.btn[14]) padSteer = -1;
     if (this.btn[15]) padSteer = 1;
     this.steer = Math.abs(padSteer) > Math.abs(this._kbSteer) ? padSteer : this._kbSteer;
+    if (kbTarget !== 0 || dpad) this.steerDigital = true;
+    else if (Math.abs(this.axes[0]) > DEAD) this.steerDigital = false;
 
     const kbGas = k.has('ArrowUp') || k.has('KeyW') ? 1 : 0;
     const kbBrake = k.has('ArrowDown') || k.has('KeyS') ? 1 : 0;

@@ -251,6 +251,7 @@ export class RaceSession {
     c.throttle = input.throttle;
     c.brake = input.brake;
     c.steer = input.steer;
+    c.steerDigital = input.steerDigital;
     c.handbrake = input.handbrake;
     c.nitro = input.nitro;
     if (input.pressed('shiftUp')) c.shiftUp = true;
