@@ -9,6 +9,7 @@ import { store } from '../core/settings.js';
 import { music } from '../audio/music.js';
 import { fmtTime, makeRng } from '../core/util.js';
 import { uiSound } from '../core/menu.js';
+import { CHAPTERS } from '../story/data.js';
 
 registerScreen('records', () => {
   let t = 0;
@@ -55,7 +56,7 @@ registerScreen('records', () => {
       const races = all.reduce((s, r) => s + (r.races || 0), 0);
       const wins = all.reduce((s, r) => s + (r.wins || 0), 0);
       const story = store.load('story');
-      const stats = [['RACES', String(races)], ['WINS', String(wins)], ['WIN RATE', races ? `${Math.round((wins / races) * 100)}%` : '--'], ['STORY', story ? `CH ${Math.min(5, (story.chapter ?? 0) + 1)}/5` : '--']];
+      const stats = [['RACES', String(races)], ['WINS', String(wins)], ['WIN RATE', races ? `${Math.round((wins / races) * 100)}%` : '--'], ['STORY', story ? `CH ${Math.min(CHAPTERS.length, (story.chapter ?? 0) + 1)}/${CHAPTERS.length}` : '--']];
       stats.forEach(([k, v], i) => {
         const x = 420 + i * 140;
         text(ctx, k, x, 66, { size: 11, color: C.dim, weight: 800, spacing: 2 });

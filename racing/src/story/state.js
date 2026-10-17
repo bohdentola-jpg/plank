@@ -13,6 +13,21 @@ import {
 } from './data.js';
 import { repFor, rankOf } from './rep.js';
 
+/**
+ * A rival's style (the label on THE LIST) → how the AI drives them:
+ * aggression 0..1 (braking point, how close they run, passing, defending,
+ * slip-ups) and 'drift' / 'grip' for the hairpins (otherwise their mood).
+ */
+const HOT = ['ALL GAS', 'LATE BRAKER', 'BRUISER', 'WILD', 'WEAVER', 'WALL RIDER', 'STRIKER', 'SHOWBOAT', 'SCREAMER', 'JAMMER', 'HUNTER', 'GAMBLER', 'FLAT OUT', 'BULLDOZER', 'BRONCO', 'CHAOS', 'DART', 'LAUNCH', 'THE HAMMER'];
+const COOL = ['SMOOTH', 'STEADY', 'PRECISE', 'POLISHED', 'PATIENT', 'CLEAN', 'COLD', 'VETERAN', 'THE STUDENT', 'FEATHERWEIGHT', 'THE SIGNAL', 'ENGINEER', 'HIGH LINE'];
+const DRIFTERS = ['SIDEWAYS', 'DRIFT QUEEN', 'SHOWMAN', 'SHOWBOAT', 'THE GHOST', 'RALLY'];
+const GRIPPERS = ['PRECISE', 'POLISHED', 'CLEAN', 'ENGINEER', 'HIGH LINE', 'COLD', 'THE SIGNAL'];
+export function driving(style = '') {
+  const s = String(style).toUpperCase();
+  const aggression = HOT.includes(s) ? 0.85 : COOL.includes(s) ? 0.3 : 0.55;
+  return { aggression, style: DRIFTERS.includes(s) ? 'drift' : GRIPPERS.includes(s) ? 'grip' : undefined };
+}
+
 const KEY = 'story';
 const LAST = CHAPTERS.length - 1;
 const MSG_BY_ID = Object.fromEntries(MESSAGES.map((m, i) => [m.id, { ...m, i }]));
@@ -391,7 +406,9 @@ class Story {
     const spec = CAR_BY_ID[R.car];
     const levels = tuneLevels(spec, target);
     const upgrades = upgradesFor(levels, spec);
-    return { id, spec, look: { ...R.look }, upgrades, levels, name: R.name, skill: clamp(skill, 0.4, 0.98), pr: prFor(spec, upgrades), ...extra };
+    // how they drive is who they are: their style sets the AI's temperament
+    const ai = driving(R.style);
+    return { id, spec, look: { ...R.look }, upgrades, levels, name: R.name, skill: clamp(skill, 0.4, 0.98), pr: prFor(spec, upgrades), aggression: ai.aggression, style: ai.style, ...extra };
   }
 
   /** The grid for an event: the same crew members in the same cars every time. */

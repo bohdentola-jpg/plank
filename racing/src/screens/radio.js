@@ -14,6 +14,7 @@ import { music } from '../audio/music.js';
 import { sfx } from '../audio/sfx.js';
 import { EngineSound } from '../audio/engine.js';
 import { engineProfile } from '../race/session.js';
+import { CHAPTERS } from '../story/data.js';
 
 export const STATIONS = [
   { id: 'quick', freq: 88.1, name: 'NITRO 88.1', theme: 'nitro', mode: 'QUICK RACE', rds: 'NITRO 88.1 * DRUM N BASS ALL NIGHT * ',
@@ -406,12 +407,11 @@ function drawPhone(c, t) {
   }
 }
 
-const CREWS = ['KINGS OF MAIN', 'HARBOR RATS', 'KAIDO GHOSTS', 'ROUTE 99 SYNDICATE', 'THE FREQUENCY'];
 function storyDesc(st) {
   const s = store.load('story');
   if (!s || !s.cars?.length) return st.desc;
   if (s.finished) return `Port Halcyon is yours. $${Math.round(s.cash).toLocaleString()} in the bank. The crews still want rematches.`;
-  return `Chapter ${s.chapter + 1}: ${CREWS[s.chapter] || ''}. $${Math.round(s.cash).toLocaleString()} in the bank, ${s.stats?.wins || 0} wins so far. Pick up where you left off.`;
+  return `Chapter ${s.chapter + 1} of ${CHAPTERS.length}: ${CHAPTERS[s.chapter]?.crew || ''}. $${Math.round(s.cash).toLocaleString()} in the bank, ${s.stats?.wins || 0} wins so far. Pick up where you left off.`;
 }
 
 function loadRecords() {

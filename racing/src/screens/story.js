@@ -181,8 +181,21 @@ registerScreen('story', () => {
       { label: unread ? `PHONE  (${unread})` : 'PHONE', id: 'phone', hint: 'Messages.' },
     ];
     if (slips) items.splice(5, 0, { label: `PINK SLIP  (${slips})`, id: 'slip', hint: 'A car you won off a boss. Keep it or sell it.' });
+    items.push({ label: 'CRUISE', id: 'cruise', hint: 'Take your car out: the whole city, every road joined up by the tunnels.' });
     items.push({ label: 'SAVE & EXIT', id: 'exit', hint: 'Back to the radio. Progress saves itself.' });
     return new Menu(items, { id: 'hub', sel: Math.min(hubMenu?.sel ?? 0, items.length - 1) });
+  }
+
+  /** Free roam in your story car, starting in this chapter's part of town. */
+  function cruise() {
+    if (!story.car) { say('NO CAR', C.red); uiSound('error'); return; }
+    story.save();
+    const ev = EVENTS.find((e) => e.ch === story.s.chapter && TRACK_BY_ID[e.track]) || EVENTS[0];
+    const def = TRACK_BY_ID[ev.track];
+    go('roam', {
+      track: def.reverseOf || def.id, spec: story.spec(), look: story.look(), upgrades: story.up(),
+      noRaces: true, quitLabel: 'BACK TO THE GARAGE', onExit: () => go('story', {}),
+    });
   }
 
   function makeSlipMenu() {
@@ -419,6 +432,7 @@ registerScreen('story', () => {
       const it = hubMenu.update(dt);
       if (it) {
         if (it.id === 'exit') { story.save(); go('radio', { station: 'story' }); return; }
+        if (it.id === 'cruise') { cruise(); return; }
         if (it.id === 'phone') { flowNext = 'hub'; setPage('phone'); return; }
         if (it.id === 'slip') { slipLater = false; setPage('slip'); return; }
         setPage(it.id);
