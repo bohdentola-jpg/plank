@@ -30,6 +30,8 @@ import { Districts } from './districts/index.js';
 import { Garage } from './garage.js';
 import { Discoverer } from './discover.js';
 import { WorldMap } from './map2d.js';
+import { WorldTraffic } from './traffic.js';
+import { TrafficRender } from '../race/trafficModels.js';
 import { GARAGE } from './map/base.js';
 
 // the road network, the land and the plans are the same every time: made once a page
@@ -162,6 +164,11 @@ export class WorldSession extends RaceSession {
     const st = this.start;
     await this.world.ensureAsync(st.x, st.z, 300, (f) => set(0.7 + f * 0.3, 'PAVING THE STREETS'), sliceMs);
     if (this.disposed) return;
+    // the town's traffic
+    if (this.opts.traffic !== false) {
+      this.sim.traffic = new WorldTraffic(this.net, this.phys, { count: 34 });
+      this.trafficRender = new TrafficRender(this.scene, this.sim.traffic, { night: !!this.world.at.headlights, seed: 'world' });
+    }
     this.world.live = true;
     this.ready = true;
     set(1, 'READY');
@@ -254,6 +261,11 @@ export class WorldSession extends RaceSession {
     this.def.time = time;
     this.world.setTime(time);
     if (this.inGarage) this.scene.environment = this.envGarage;
+    // the traffic's lights on or off
+    if (this.trafficRender) {
+      this.trafficRender.dispose();
+      this.trafficRender = new TrafficRender(this.scene, this.sim.traffic, { night: !!this.world.at.headlights, seed: 'world' });
+    }
   }
 
   dimHeadlights(dt) {
@@ -452,6 +464,8 @@ export class WorldSession extends RaceSession {
     const env = inside ? this.envGarage : this.world.envMap;
     if (this.scene.environment !== env) this.scene.environment = env;
     if (!this.inGarage) this.bayLight.intensity = damp(this.bayLight.intensity, inside ? 14 : 0, 2, dt);
+    if (this.inGarage) this.sim.physics(dt);      // (the traffic outside)
+    this.trafficRender?.update(this.camera.cam);
     this.world.update(dt, this.camera.cam, [{ x: pv.x, z: pv.z, vx: pv.vx, vz: pv.vz }]);
     for (const m of this.messages) m.t += dt;
     this.messages = this.messages.filter((m) => m.t < m.dur);

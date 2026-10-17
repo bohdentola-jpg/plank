@@ -201,16 +201,19 @@ export const haloMat = () => once('mat:halo', () => {
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     uniforms: { map: { value: glowTexture() }, uNight: U.night },
     vertexShader: `
-      attribute vec3 icol; attribute float isz; varying vec2 vUv; varying vec3 vCol;
+      attribute vec3 icol; attribute float isz; varying vec2 vUv; varying vec3 vCol; varying float vFade;
       void main(){
         vUv = uv; vCol = icol;
         vec4 mv = modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-        mv.xy += position.xy * isz;
+        // right next to a lamp the halo would fill the screen: shrink and fade it
+        float d = -mv.z;
+        vFade = smoothstep(4.0, 22.0, d);
+        mv.xy += position.xy * isz * (0.45 + 0.55 * vFade);
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: `
-      uniform sampler2D map; uniform float uNight; varying vec2 vUv; varying vec3 vCol;
-      void main(){ float a = texture2D(map, vUv).a; gl_FragColor = vec4(vCol * a * uNight * 0.55, 1.0); }`,
+      uniform sampler2D map; uniform float uNight; varying vec2 vUv; varying vec3 vCol; varying float vFade;
+      void main(){ float a = texture2D(map, vUv).a; gl_FragColor = vec4(vCol * a * uNight * 0.55 * (0.25 + 0.75 * vFade), 1.0); }`,
   });
   return m;
 });
