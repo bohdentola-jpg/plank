@@ -63,20 +63,40 @@ station is a mode with its own music:
 
 ## Story: "Who runs Port Halcyon?"
 
-You arrive with $8,000. Rosa lends you her late father's body shop, Santos Auto
-Body. Buy a used car from the Halcyon Gazette's classifieds, then work through
-five crews and their territories:
+You arrive with $8,000. Rosa lends you her late father Manny's body shop,
+Santos Auto Body. Buy a used car from the Halcyon Gazette's classifieds, then
+take the city crew by crew, eight chapters and 79 races across every road in
+the game:
 
-1. **Kings of Main** (downtown): boss **Dez**
-2. **Harbor Rats** (the docks): boss **Tank**
-3. **Kaido Ghosts** (the mountain pass): boss **Kaito**
-4. **Route 99 Syndicate** (the desert): boss **Vex**
-5. **The Frequency** (highway and raceway): boss **Zero**
+1. **Kings of Main** (downtown): boss **Dez**, S15
+2. **Night Market** (Chinatown): boss **Jade**
+3. **Harbor Rats** (the docks): boss **Tank**
+4. **Kaido Ghosts** (the mountain pass): boss **Kaito**, the 20-year-old Trueno
+5. **The 200 Club** (Bayshore): boss **Bishop**
+6. **Paddock Club** (the raceways): boss **Sterling**
+7. **Route 99 Syndicate** (the desert): boss **Vex**
+8. **The Frequency** (the whole city): boss **ZERO**
 
-Each crew has five events plus a boss race (30 races in total). The events are
-circuits, sprints, knockouts, drags, drift, and time attack against a pro's
-ghost. Win four of a crew's races and its boss calls you out. The plot comes
-through text messages on your flip phone.
+The plot comes through text messages on your flip phone (150 of them): rivals
+call you out, gloat when they beat you, and slowly the story of what happened
+to Manny on the Bayshore bridge comes out. Each chapter opens and closes with a
+title card.
+
+- **Named rivals:** 56 of them, each always in the same car and livery, with
+  a style, a bio and a line before the race. Their style is how the AI drives
+  them: the hot-heads brake late and lean on you, the clean drivers don't,
+  the showmen drift the hairpins. **THE LIST** shows every crew, what they
+  drive, and your record against each of them.
+- **Races:** circuits, sprints, knockouts, drags, drift, time attack against a
+  pro's ghost, **duels** one-on-one with a named rival, and invitation-only
+  **cups** (three rounds, points for every place).
+- **REP:** wins, places, first wins, beating named rivals and how you won
+  (a photo finish, wire to wire, clean laps, drift style) earn street REP and
+  a rank from NOBODY to THE FREQUENCY. A boss calls you out once you've won
+  enough of the crew's races and your REP is high enough; REP also gets you
+  into the cups.
+- **Pink slips:** beat a boss and you can keep their car, parts and all, or
+  sell it.
 
 In the garage you can:
 - **Performance:** engine, forced induction (a supercharger on the big
@@ -88,11 +108,14 @@ In the garage you can:
 - **Body shop:** paint and finish (gloss, metallic, pearl, candy, matte,
   chrome), vinyls, rims (style, finish, size), body kits, spoilers, hoods, tint,
   underglow, ride height and calipers, all previewed live on the car.
-- **Cars:** a three-bay garage and the dealer lot. Classes unlock by chapter, and
+- **Cars:** a six-bay garage and the dealer lot. Classes unlock by chapter, and
   cars sell back at 60%.
+- **Cruise:** take your car out into free roam, starting in the chapter's part
+  of town.
 
-Progress saves itself in your browser. To start over, use Options › Game ›
-Erase story save.
+Progress saves itself in your browser (saves from the old five-chapter story
+carry over: cash, cars, wins and beaten bosses). To start over, use Options ›
+Game › Erase story save.
 
 ## Free roam
 
