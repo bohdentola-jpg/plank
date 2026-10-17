@@ -64,4 +64,12 @@ export function arrival(from, exit) {
 
 export function placement(id) { return PLACE[id] || {}; }
 
+/** A region's name for tight spots (the radar): 'OLD TOWN', 'ROUTE 99', 'HARBOR'. */
+const GENERIC = new Set(['LOOP', 'RUN', 'DOCKS', 'EXPRESSWAY', 'ROUTE', 'RACEWAY', 'HILLS', 'PARK', 'PASS', 'CLIMB', 'CANYON', 'DRAG']);
+export function shortName(name) {
+  const w = name.split(' ');
+  if (w.length > 1 && GENERIC.has(w[w.length - 1])) w.pop();
+  return w.join(' ');
+}
+
 export function isRegion(id) { return ring().includes(id); }

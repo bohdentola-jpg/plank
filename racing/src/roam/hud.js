@@ -5,7 +5,7 @@ import { HUD } from '../race/hud.js';
 import { C, vText, text, panel } from '../core/ui.js';
 import { clamp, damp } from '../core/util.js';
 import { TRACK_BY_ID } from '../track/tracks.js';
-import { MAP_POS, DISTRICT_NAMES, ring, links } from './network.js';
+import { MAP_POS, DISTRICT_NAMES, ring, links, shortName } from './network.js';
 
 const TIME_NAMES = { night: 'NIGHT', dusk: 'DUSK', sunset: 'SUNSET', day: 'DAY', overcast: 'OVERCAST' };
 const WEATHER_NAMES = { dry: 'DRY', wet: 'WET ROADS', rain: 'RAIN' };
@@ -78,7 +78,7 @@ export class RoamHUD extends HUD {
       ctx.stroke();
       ctx.fill();
       ctx.restore();
-      if (!out) text(ctx, m.name.split(' ')[0], cx + px, cy + py - 10, { size: 10, color: m.color, align: 'center', weight: 900 });
+      if (!out) text(ctx, shortName(m.name), cx + px, cy + py - 10, { size: 10, color: m.color, align: 'center', weight: 900 });
     }
   }
 
