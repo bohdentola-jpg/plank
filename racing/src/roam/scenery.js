@@ -19,7 +19,15 @@ export async function decorateRegion(world, track, plan, opts = {}) {
   const kit = makeKit(world, track);
   if (plan.approach) buildApproach(world, track, plan.approach, kit);
   for (const q of plan.portals) buildBore(world, q, kit);
-  for (const f of plan.faces || []) buildFace(world, f, kit, terrainEnv);
+  for (const f of plan.faces || []) {
+    // the terrain over a tunnel is cut away a whole grid cell wide: the
+    // portal block has to be wide enough to hide the cut
+    if (terrainEnv) {
+      const reach = Math.max(...f.bores.map((b) => Math.abs(b.off) + b.hw)) + 1.5;
+      f.hw = Math.max(f.hw, reach + world.terrain.cell + 1);
+    }
+    buildFace(world, f, kit, terrainEnv);
+  }
   for (const m of kit.glow) world.glowMeshes.push(m);
   if (!opts.noRaces) buildMarker(world, track, plan);
 }
@@ -341,8 +349,14 @@ function carveTerrain(world, plan) {
     const keep = new Uint8Array(nT).fill(1);
     for (let t = 0; t < nT; t++) {
       const a = I[t * 3] * 3, b = I[t * 3 + 1] * 3, c = I[t * 3 + 2] * 3;
-      const x = (P[a] + P[b] + P[c]) / 3, z = (P[a + 2] + P[b + 2] + P[c + 2]) / 3;
-      if (regions.some((R) => inRegion(R, x, z))) keep[t] = 0;
+      // (a coarse terrain cell can reach into a bore with its middle outside:
+      // test its corners and edge midpoints too)
+      const pts = [
+        [(P[a] + P[b] + P[c]) / 3, (P[a + 2] + P[b + 2] + P[c + 2]) / 3],
+        [P[a], P[a + 2]], [P[b], P[b + 2]], [P[c], P[c + 2]],
+        [(P[a] + P[b]) / 2, (P[a + 2] + P[b + 2]) / 2], [(P[b] + P[c]) / 2, (P[b + 2] + P[c + 2]) / 2], [(P[a] + P[c]) / 2, (P[a + 2] + P[c + 2]) / 2],
+      ];
+      if (pts.some(([x, z]) => regions.some((R) => inRegion(R, x, z)))) keep[t] = 0;
     }
     rebuildTriangles(g, I, keep);
   });
