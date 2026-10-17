@@ -20,6 +20,8 @@ const RING = [
  */
 const PLACE = {
   uptown: { flip: true },
+  // (the search would take the pit straight, through the grandstand)
+  redwood: { junction: { s: 1045, side: 1 } },
 };
 
 /** Map positions (0..1 across the world map) — the city in the middle, the
