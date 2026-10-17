@@ -43,7 +43,7 @@ export const ATMOS = {
   },
 };
 
-function skyMesh(at) {
+export function skyMesh(at) {
   const mat = new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
     uniforms: {

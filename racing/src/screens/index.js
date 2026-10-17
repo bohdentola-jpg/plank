@@ -10,3 +10,4 @@ import './options.js';
 import './records.js';
 import './story.js';
 import './roam.js';
+import './world.js';
