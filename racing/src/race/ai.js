@@ -8,6 +8,9 @@
 //   • a personality: aggression sets how late they brake, how close they'll
 //     run alongside, how readily they pull out to pass, whether they defend
 //     the inside against a faster car behind, and how often they slip up
+//   • drift the hairpins now and then (a rear driver with some nerve most
+//     of all): brake + turn in, steer the drift's tightness to hold the
+//     racing line, gas to hold the speed, let go on the way out
 //   • recover from walls (reverse out) and respawn if truly stuck
 import { clamp, lerp, makeRng } from '../core/util.js';
 
@@ -21,6 +24,41 @@ const stopDist = (closing) => (closing > 0 ? 4 + closing * 0.35 + (closing * clo
  * AI wide, and side by side in a pack that meant the wall).
  */
 const fastGrip = (v, k = 0.0072) => (v <= 32 ? 1 : Math.max(0.7, 1 - (v - 32) * k));
+
+/**
+ * The hairpins on a track's racing line (cached on the track): tight bends
+ * (radius under ~50 m) turning through more than ~70°, with where to turn in,
+ * the apex, where it opens out, which way it goes.
+ */
+function hairpins(T) {
+  if (T._hairpins) return T._hairpins;
+  const out = [];
+  const N = T.N, curv = T.line.curv;
+  const tight = 1 / 50, soft = 1 / 220;
+  let i = 0;
+  const seen = new Uint8Array(N);
+  for (let n = 0; n < N; n++) {
+    i = n;
+    if (seen[i] || curv[i] < tight) continue;
+    // grow the tight run
+    let a = i, b = i;
+    while (curv[T.idx(a - 1)] >= tight && !seen[T.idx(a - 1)] && (T.closed || a > 0) && i - a < N) a--;
+    while (curv[T.idx(b + 1)] >= tight && (T.closed || b < N - 1) && b - i < N) b++;
+    for (let k = a; k <= b; k++) seen[T.idx(k)] = 1;
+    let ang = 0, sgn = 0, apex = a, cMax = 0;
+    for (let k = a; k <= b; k++) { const j = T.idx(k); ang += curv[j] * T.step; sgn += T.Ks[j]; if (curv[j] > cMax) { cMax = curv[j]; apex = j; } }
+    if (ang < 1.2) continue;
+    // the turn-in: back to where the bend starts to build (and a straight-ish run before it)
+    let e = a, back = 0;
+    while (back < 30 / T.step && curv[T.idx(e - 1)] >= soft && (T.closed || e > 0)) { e--; back++; }
+    let x = b, fwd = 0;
+    while (fwd < 30 / T.step && curv[T.idx(x + 1)] >= soft && (T.closed || x < N - 1)) { x++; fwd++; }
+    if (!T.closed && (e < 10 || x > N - 10)) continue;
+    out.push({ entry: T.idx(e), apex, exit: T.idx(x), dir: Math.sign(sgn) || 1, angle: ang, release: 6 + ang * 4 });
+  }
+  T._hairpins = out;
+  return out;
+}
 
 /** This car's own speed plan along the racing line: corner limits from its
  *  grip (less of it at high speed: k is how fast it fades), then the braking
@@ -77,6 +115,11 @@ export class AIDriver {
     // and the room on the outside soaks up the slide
     this.vPlan = track.line ? speedProfile(track, this.gripScale) : null;
     this.vPlanFree = track.line ? speedProfile(track, this.gripScale, 0.0012) : null;
+    // how often this driver drifts a hairpin rather than gripping round it
+    const drv = P.drive === 'RWD' ? 0.3 : P.drive === 'AWD' ? 0.1 : -0.15;
+    this.driftLove = opts.style === 'drift' ? 1 : opts.style === 'grip' ? 0 : clamp(0.2 + (this.aggr - 0.5) * 0.7 + drv, 0, 0.9);
+    this.driftMode = false;
+    this.driftPick = new Map();
   }
 
   /** Called every frame before physics. race: the RaceSession. */
@@ -127,6 +170,9 @@ export class AIDriver {
     latT = room.lat;
     const tx = T.X[it] + T.LX[it] * latT;
     const tz = T.Z[it] + T.LZ[it] * latT;
+
+    // a hairpin worth drifting: the drift drives the car instead (see driftDrive)
+    if (this.driftDrive(race, i0, tx, tz, latT)) return;
 
     // pure pursuit
     const [fx, fz] = v.fwd;
@@ -234,6 +280,7 @@ export class AIDriver {
       }
     }
     ctl.handbrake = false;
+    if (this.capBrake !== undefined) { ctl.brake = Math.min(ctl.brake, this.capBrake); this.capBrake = undefined; }
     if (race.state !== 'racing') { ctl.throttle = race.state === 'countdown' ? 0.35 + 0.3 * Math.sin(race.time * 7 + r.id) : 0; ctl.brake = 0; }
 
     // ---------- nitrous on straights
@@ -253,6 +300,78 @@ export class AIDriver {
     ctl.nitro = !!this.nitroHeld;
     // AI refills a bit of nitrous over time
     v.nitro = Math.min(1, v.nitro + dt * 0.012 * (0.5 + this.skill));
+  }
+
+  /**
+   * Drifting a hairpin. Arm (brake + turn in at the turn-in point), then
+   * while the drift holds steer its tightness so the car's path (its
+   * velocity, not its nose) runs at the racing line, gas or brake to the
+   * corner's speed, and let go once the corner opens out. Returns true when
+   * it has set the controls this frame.
+   */
+  driftDrive(race, i0, tx, tz, latT) {
+    const r = this.r, T = this.T, v = r.vehicle, ctl = r.ctl;
+    const zones = hairpins(T);
+    if (!this.driftMode) {
+      if (!zones.length || race.state !== 'racing' || r.finished || r.out || this.crowd > 0 || this.reverseT > 0) return false;
+      if (v.speed < 13 || v.airborne) return false;
+      const z = zones.find((q) => { const d = T.deltaS(i0 * T.step, q.entry * T.step); return d >= -2 && d < 6; });
+      if (!z) return false;
+      const key = `${z.entry}:${r.lap}`;
+      if (!this.driftPick.has(key)) this.driftPick.set(key, this.rng() < this.driftLove);
+      if (!this.driftPick.get(key)) return false;
+      this.driftMode = true;
+      this.driftPhase = 'arm';
+      this.driftT = 0;
+      this.zone = z;
+    }
+    const z = this.zone;
+    const dt = this._dt || 1 / 60;
+    this.driftT += dt;
+    if (this.driftPhase === 'arm') {
+      if (v.driftState === 1) { this.driftPhase = 'hold'; }
+      else if (this.driftT > 0.4) { this.driftMode = false; return false; }
+      else {
+        ctl.throttle = 0; ctl.brake = 0.7; ctl.handbrake = false; ctl.nitro = false;
+        ctl.steer = -z.dir * 0.85;
+        return true;
+      }
+    }
+    if (this.driftPhase === 'hold') {
+      // where the corner goes from here: let go once it opens out
+      const past = T.deltaS(z.apex * T.step, i0 * T.step);
+      const left = T.deltaS(i0 * T.step, z.exit * T.step);
+      const wide = Math.abs((r.lat ?? 0) - latT);
+      const nearEdge = Math.abs(r.lat ?? 0) > T.W[i0] - 0.6;
+      if (v.driftState !== 1 || (past > 0 && left < z.release) || wide > 3.2 || nearEdge || this.driftT > 6) {
+        this.driftPhase = 'out';
+      } else {
+        // pursuit in the frame of the car's path (in a drift the nose points in)
+        const sp = Math.max(5, v.speed);
+        const ph = Math.atan2(v.vx, v.vz);
+        const pfx = Math.sin(ph), pfz = Math.cos(ph), plx = Math.cos(ph), plz = -Math.sin(ph);
+        const dx = tx - v.x, dz = tz - v.z;
+        const f = dx * pfx + dz * pfz, l = dx * plx + dz * plz;
+        const kappa = 2 * l / Math.max(1, f * f + l * l);
+        const mu = v.P.mu * 1.08 * (v.P.split > 0 && v.P.split < 1 ? 1.05 : 1);
+        const k = (kappa * sp * sp * z.dir) / (mu * 9.81);
+        const into = clamp(k >= 0.525 ? (k - 0.525) / 1.025 : (k - 0.525) / 0.325, -1, 1);
+        ctl.steer = -into * z.dir;
+        // the corner's speed (a touch under the grip plan: it's for show, not to win)
+        let vT = Infinity;
+        for (let q = 0; q <= 16; q += 2) vT = Math.min(vT, this.vPlan[T.idx(i0 + q)]);
+        vT *= 0.97;
+        if (sp > vT + 1) { ctl.throttle = 0; ctl.brake = 0.8; }
+        else { ctl.throttle = clamp(0.55 + (vT - sp) * 0.2, 0.35, 1); ctl.brake = 0.3; }
+        ctl.handbrake = false; ctl.nitro = false;
+        return true;
+      }
+    }
+    // on the way out: off the brake (a press would put it straight back in)
+    // and the normal driving takes over; done when the tires have it again
+    if (v.driftState !== 1) { this.driftMode = false; return false; }
+    this.capBrake = 0.15;
+    return false;
   }
 
   /**

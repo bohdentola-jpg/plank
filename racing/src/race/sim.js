@@ -50,6 +50,7 @@ export class RaceSim {
         id: k, name: rd.name || rd.spec.model, isPlayer: !!rd.isPlayer, spec: rd.spec, look: rd.look || {},
         // driving personality 0..1 (given, or a steady one from the name)
         aggression: rd.aggression ?? personality(rd.name || rd.spec.model),
+        style: rd.style,   // 'drift' | 'grip' | undefined (their own mind)
         vehicle: veh, skill: rd.skill ?? 0.8, hint: -1, s: 0, lat: 0, lap: 0, total: 0,
         lapStart: 0, lapTimes: [], bestLap: null, lastLap: null, finished: false, finishTime: null,
         out: false, pos: k + 1, draft: 0, wrongT: 0, wrongWay: false, offT: 0, scraping: false,
@@ -60,7 +61,7 @@ export class RaceSim {
     });
     this.player = this.racers.find((r) => r.isPlayer) || null;
     for (const r of this.racers) {
-      if (!r.isPlayer) r.ai = new AIDriver(r, track, { skill: r.skill, rubber: opts.rubber ?? 1, seed: opts.seed || '', aggression: r.aggression });
+      if (!r.isPlayer) r.ai = new AIDriver(r, track, { skill: r.skill, rubber: opts.rubber ?? 1, seed: opts.seed || '', aggression: r.aggression, style: r.style });
     }
     this.placeGrid();
     if (opts.traffic) {
@@ -182,6 +183,7 @@ export class RaceSim {
           // limiter (made for thumbs and keys) and a planted rear; the AI
           // drives the raw chassis
           human: !!(r.isPlayer && !r.ai),
+          aiDrift: !!(r.ai && r.ai.driftMode),
           draft: r.draft,
         };
         const ctl = r.ctl;

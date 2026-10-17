@@ -268,8 +268,9 @@ export class Vehicle {
     this.throttle = drivePedal;
 
     // -------------------------------------------------- drifting
-    // Arcade drifting, for the human driver's car only (env.human; the AI
-    // drives the raw chassis and never drifts). The brake is the drift
+    // Arcade drifting, for the human driver's car (env.human), and for an AI
+    // that has chosen to drift a hairpin (env.aiDrift; otherwise the AI
+    // drives the raw chassis). The brake is the drift
     // button: hold it (or the handbrake) while you turn at speed and the car
     // rotates into the corner with its tail out; keep holding it and it
     // stays in the drift; let go and it stops rotating, its line comes round
@@ -286,11 +287,13 @@ export class Vehicle {
     this._steerIn = steerIn;
     const slip = Math.atan2(vL, Math.max(1, Math.abs(vF))); // body slip (+ = sliding left)
     const human = !!env.human;
+    // (an AI gets the drift model only while it means to drift a hairpin)
+    const canDrift = human || !!env.aiDrift;
     this.steerDigital = !!ctl.steerDigital;
     const pedal = brake > 0.2 || hand;
     const turning = Math.abs(steerIn) > 0.3;
     if (this.driftBlock > 0) this.driftBlock -= dt;
-    if (!human || this.gear < 0) {
+    if (!canDrift || this.gear < 0) {
       if (this.driftState === 1) this.endDrift();
       this.driftState = 0;
     } else if (this.driftState === 0) {
