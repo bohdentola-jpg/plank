@@ -114,6 +114,12 @@ export class RoamHUD extends HUD {
     text(ctx, def.name, 40, 52, { size: 18, color: '#fff', weight: 900, spacing: 2 });
     text(ctx, `${DISTRICT_NAMES[def.env] || ''}  ·  ${TIME_NAMES[def.time] || ''}`, 40, 72, { size: 12, color: col, weight: 800, spacing: 2 });
     text(ctx, 'FREE ROAM', 984, 52, { size: 13, color: C.dim, weight: 900, spacing: 3, align: 'right' });
+    // first stop of a session: how it all works, briefly
+    if (s.visits === 1 && (s.arrivedT ?? 99) > 4 && s.arrivedT < 14) {
+      const a = clamp(Math.min((s.arrivedT - 4) / 0.5, (14 - s.arrivedT) / 0.8), 0, 1);
+      const tips = s.noRaces ? 'TUNNEL SIGNS LEAD TO THE NEXT ROADS   ·   M / TOUCHPAD: MAP' : 'TUNNEL SIGNS LEAD TO THE NEXT ROADS   ·   M / TOUCHPAD: MAP   ·   STOP IN THE LIGHT TO RACE';
+      text(ctx, tips, 512, 548, { size: 13, color: '#d8dee8', weight: 800, spacing: 2, align: 'center', alpha: a });
+    }
     // a title card for a few seconds after arriving
     const t = s.arrivedT ?? 99;
     if (t < 4.2) {
