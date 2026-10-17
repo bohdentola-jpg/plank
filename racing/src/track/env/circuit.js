@@ -1427,6 +1427,7 @@ function tiles(mesh, nx, nz, tx, tz) {
       ng.setIndex(idx);
       const m = new THREE.Mesh(ng, mesh.material);
       m.receiveShadow = true;
+      m.userData.terrain = true;
       out.push(m);
     }
   }

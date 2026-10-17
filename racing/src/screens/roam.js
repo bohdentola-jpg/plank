@@ -25,6 +25,7 @@ registerScreen('roam', () => {
   let map = null;           // { sel }
   let fade = 0;
   let raceMenu = null;      // racing this road from the start-line light
+  let postFor = null;       // the region whose picture settings are on
   const rcfg = { type: null, opp: 5, skill: 2, traffic: true };
 
   const trafficRoad = (def) => ['city', 'highway', 'docks'].includes(def.env);
@@ -70,7 +71,7 @@ registerScreen('roam', () => {
     const type = rcfg.type;
     const opp = type === 'timeattack' || type === 'drift' ? 0 : Math.max(type === 'knockout' ? 2 : 1, rcfg.opp);
     // after the race: back on this road, just past the line
-    const back = { ...params, track: def.id, trackDef: undefined, start: { s: (session.track.startS || 0) + (session.track.closed ? 30 : 15) } };
+    const back = { ...params, track: def.id, trackDef: undefined, traffic: session.opts.traffic !== false, start: { s: (session.track.startS || 0) + (session.track.closed ? 30 : 15) } };
     go('race', {
       trackDef: def, spec: P.spec, look: P.look, upgrades: P.upgrades, type,
       laps: type === 'knockout' ? knockLaps(opp) : def.laps || 3,
@@ -125,6 +126,7 @@ registerScreen('roam', () => {
       });
       await session.load(game.renderer.gl, () => {});
       game.renderer.setPost(session.world.at.post || {}, true);
+      postFor = session.world;
       hud = new RoamHUD(session);
       scr.session = session;
       window.__roam = session;
@@ -148,14 +150,19 @@ registerScreen('roam', () => {
           if (id !== session.def.id && session.fastTravel(id)) { uiSound('select'); map = null; pauseMenu = null; session.pause(false); }
           else uiSound('error');
         }
-        if (input.pressed('back') || input.pressed('pause')) { map = null; uiSound('back'); }
+        if (input.pressed('back') || input.pressed('pause')) {
+          map = null; uiSound('back');
+          if (!pauseMenu) session.pause(false);
+        }
         return;
       }
       if (raceMenu) {
+        // (the car waits in the light: the menu's keys are the pedals too)
+        session.hold = true;
         const it = raceMenu.update(dt);
         if (it?.id === 'go') { uiSound('select'); raceMenu = null; startRace(); return; }
-        if (it?.id === 'cancel' || input.pressed('back') || input.pressed('pause') || !session.atMarker) {
-          raceMenu = null; uiSound('back');
+        if (it?.id === 'cancel' || input.pressed('back') || input.pressed('pause')) {
+          raceMenu = null; session.hold = false; uiSound('back');
         }
         session.update(dt);
         Object.assign(game.fx, session.fx || {});
@@ -194,6 +201,11 @@ registerScreen('roam', () => {
       for (let k = 0; k < reps; k++) session.update(dt);
       Object.assign(game.fx, session.fx || {});
       fade = session.fade;
+      // a new region (behind the fade): its own exposure, bloom and grade
+      if (session.world && session.world !== postFor) {
+        postFor = session.world;
+        game.renderer.setPost(session.world.at.post || {}, true);
+      }
     },
     view() { return session && session.state !== 'loading' ? session.view() : null; },
     draw(ctx, dt) {

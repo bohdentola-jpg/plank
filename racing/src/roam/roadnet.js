@@ -49,8 +49,14 @@ export class StubTrack extends Track {
   }
 }
 
-const near = (T, x, z, pad) => {
-  const b = T.bounds;
+/** Could (x, z) be inside this road's walls? (its centreline's box, out to the farthest wall) */
+const near = (T, x, z) => {
+  if (T._reach === undefined) {
+    let m = 0;
+    for (let i = 0; i < T.N; i++) m = Math.max(m, T.WL[i], T.WR[i]);
+    T._reach = m + 6;
+  }
+  const b = T.bounds, pad = T._reach;
   return x > b.minX - pad && x < b.maxX + pad && z > b.minZ - pad && z < b.maxZ + pad;
 };
 
@@ -89,7 +95,7 @@ export class RoadNet {
     for (let n = 0; n < R.length; n++) {
       const k = n === 0 ? st.road : (n <= st.road ? n - 1 : n);
       const T = R[k];
-      if (!near(T, x, z, 30)) continue;
+      if (!near(T, x, z)) continue;
       const p = T.project(x, z, st.hints[k], this._p);
       st.hints[k] = p.i;
       if (pastEnd(T, p, x, z)) continue;
@@ -109,7 +115,8 @@ export class RoadNet {
 
   /**
    * How far (x, z) is into a wall: 0 inside any road's corridor, else the
-   * smallest overshoot and the push-out normal from that road.
+   * smallest overshoot and the push-out normal from that road. lost: no road
+   * anywhere near (nothing to push against: the reset brings the car back).
    */
   wallAt(r, x, z, res) {
     const st = this.state(r);
@@ -117,7 +124,7 @@ export class RoadNet {
     let worst = Infinity, nx = 0, nz = 0;
     for (let k = 0; k < R.length; k++) {
       const T = R[k];
-      if (!near(T, x, z, 30)) continue;
+      if (!near(T, x, z)) continue;
       const p = T.project(x, z, st.hints[k], this._p);
       if (pastEnd(T, p, x, z)) continue;
       const i = p.i;
@@ -130,7 +137,8 @@ export class RoadNet {
         nx = T.LX[i] * sgn; nz = T.LZ[i] * sgn;
       }
     }
-    res.over = worst === Infinity ? 0 : worst;
+    res.lost = worst === Infinity;
+    res.over = res.lost ? 0 : worst;
     res.nx = nx; res.nz = nz;
     return res;
   }
@@ -164,10 +172,11 @@ export class RoadNet {
     for (let k = 0; k < this.roads.length; k++) {
       const T = this.roads[k];
       const p = T.project(x, z, -1, {});
+      if (!Number.isFinite(p.s) || !Number.isFinite(p.lat)) continue;   // (too far from it to say)
       const w = T.lerpArr(T.W, p.i, p.t);
       const over = Math.max(0, Math.abs(p.lat) - w) + (pastEnd(T, p, x, z) ? 50 : 0);
       if (!best || over < best.over) best = { road: k, s: p.s, lat: p.lat, over, i: p.i };
     }
-    return best;
+    return best || { road: 0, s: this.main.startS, lat: 0, over: 0, i: 0 };
   }
 }

@@ -29,7 +29,7 @@ export class RoamSim {
     this.physAcc = 0;
     this.finishOrder = [];
     const P = opts.player.vehicle ? opts.player : RoamSim.makePlayer(opts.player);
-    P.hint = -1; P.net = null; P.offT = 0; P.portalArmed = true;
+    P.hint = -1; P.net = null; P.offT = 0;
     this.player = P;
     this.racers = [P];
     if (opts.traffic) {
@@ -71,7 +71,6 @@ export class RoamSim {
     // heading out: the opposite of the axis into the tunnel
     const heading = Math.atan2(-q.ax, -q.az);
     this.placeAt(x, z, q.y, heading, Math.max(speed, 0));
-    this.player.portalArmed = false;   // drive out before the trigger counts again
   }
 
   placeAt(x, z, y, heading, speed) {
@@ -100,16 +99,46 @@ export class RoamSim {
     const tr = this.traffic;
     const P = this.player;
     const T = this.T;
-    const n = tr.cars.length;
     tr.cars.forEach((c, k) => {
       const lane = tr.lanes[Math.floor(tr.rng() * tr.lanes.length)];
       const sideAhead = k % 3 !== 2;
       const span = sideAhead ? tr.windowAhead : tr.windowBack;
-      let s = P.s + (sideAhead ? 1 : -1) * (70 + ((k * 0.61) % 1) * (span - 70));
+      const d = 70 + ((k * 0.61) % 1) * (span - 70);
+      let s = P.s + (sideAhead ? d : -d);
+      // (at the end of a road there's no room that way: the other way instead)
+      if (!T.closed && (s < 25 || s > T.length - 25)) s = P.s - (sideAhead ? d : -d);
       if (!T.closed) s = clamp(s, 25, T.length - 25);
       tr.spawn(c, s, lane);
     });
-    void n;
+  }
+
+  /**
+   * On a road with ends, traffic drives on into the tunnels (instead of
+   * stopping dead at the end of the road) and comes back round once it is
+   * out of sight in there.
+   */
+  trafficEnds() {
+    const T = this.T;
+    const tr = this.traffic;
+    if (T.closed) return;
+    const L = T.length;
+    for (const c of tr.cars) {
+      if (c.mode !== 'cruise' || (c.s >= 0 && c.s <= L)) continue;
+      const end = c.s > L;
+      const over = end ? c.s - L : -c.s;
+      const i = end ? T.N - 1 : 0;
+      const p = T.posAt(end ? L : 0, c.lat);
+      const k = end ? over : -over;
+      c.x = p.x + T.TX[i] * k;
+      c.z = p.z + T.TZ[i] * k;
+      if (over < 60) continue;
+      for (let n = 0; n < 6; n++) {
+        const lane = tr.lanes[Math.floor(tr.rng() * tr.lanes.length)];
+        const ahead = tr.rng() < 0.5;
+        const s = this.player.s + (ahead ? 1 : -1) * (120 + tr.rng() * ((ahead ? tr.windowAhead : tr.windowBack) - 120));
+        if (s > 30 && s < L - 30 && tr.spotFree(s, lane.lat, this)) { tr.spawn(c, s, lane); break; }
+      }
+    }
   }
 
   step(dt) {
@@ -145,6 +174,7 @@ export class RoamSim {
       net.walls(this, P);
       if (this.traffic) {
         this.traffic.step(PHYS_DT, this);
+        this.trafficEnds();
         this.traffic.collide(this, collideCars);
       }
     }
@@ -167,30 +197,28 @@ export class RoamSim {
     if (!v.nitroOn) v.nitro = Math.min(1, v.nitro + gain * dt);
     // off every road for a while (over a wall, upside down in a ditch) → back on
     const res = this.net.wallAt(P, v.x, v.z, this._wr || (this._wr = {}));
-    if (res.over > 4 || v.y < -60) P.offT += dt; else P.offT = 0;
+    if (res.over > 4 || res.lost || v.y < -60) P.offT += dt; else P.offT = 0;
     if (P.offT > 2.5) { this.resetRacer(P); P.offT = 0; }
     this.checkPortals();
   }
 
-  /** Deep enough into a bore → time to load what's on the other side. */
+  /** Deep enough into a bore, still heading in → time to load what's on the other side. */
   checkPortals() {
     const P = this.player;
     const v = P.vehicle;
     if (!this.plan || this.leaving) return;
-    let inAny = false;
     for (const q of this.plan.portals) {
       const dx = v.x - q.x, dz = v.z - q.z;
       const depth = dx * q.ax + dz * q.az;
-      const side = dx * q.az - dz * q.ax - (q.off || 0);
-      if (depth > -2 && Math.abs(side) < q.hw + 1.5) inAny = true;
-      if (P.portalArmed && depth > G.portalDepth && depth < G.portalDepth + 80 && Math.abs(side) < q.hw + 1.5) {
+      const side = dx * q.az - dz * q.ax;
+      // (you arrive through a tunnel driving out of it: turn round in there and it takes you back)
+      const vin = v.vx * q.ax + v.vz * q.az;
+      if (vin > 1 && depth > G.portalDepth && depth < G.portalDepth + 80 && Math.abs(side) < q.hw + 1.5) {
         this.leaving = q;
         this.emit('portal', { exit: q.exit, to: q.to, speed: Math.max(0, v.vF ?? v.speed) });
         return;
       }
     }
-    // arrived through a tunnel: the trigger arms once you're out of it
-    if (!inAny) P.portalArmed = true;
   }
 
   resetRacer(r) {

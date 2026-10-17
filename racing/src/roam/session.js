@@ -122,7 +122,7 @@ export class RoamSession extends RaceSession {
   async travel(def, start) {
     this.phase = 'loading';
     const P = this.playerR;
-    try { sfx.skid(0); sfx.scrape(0); sfx.nitro(false); sfx.wind(0); sfx.roll(0, 'asphalt'); } catch { /* */ }
+    try { sfx.skid(0); sfx.scrape(0); sfx.nitro(false); sfx.wind(0); sfx.roll(0, 'asphalt'); sfx.crowd(0); } catch { /* */ }
     this.leaveRegion();
     try {
       await this.enterRegion(def, start);
@@ -190,8 +190,12 @@ export class RoamSession extends RaceSession {
     const r = this.player;
     const c = r.ctl;
     if (r.ai) return;
+    if (this.hold) {
+      // (a menu is up over the road: the car waits on the handbrake)
+      Object.assign(c, { throttle: 0, brake: 0, steer: 0, steerDigital: 0, handbrake: true, nitro: false });
+      return;
+    }
     super.readPlayer();
-    void c;
   }
 
   view() {
