@@ -166,7 +166,7 @@ const QUALITY = [
 let lowStreak = 0, highStreak = 0;
 function autoQuality(scr) {
   const r = game.renderer;
-  if (!settings.get('autoQuality') || game._transition || scr?.name !== 'race') {
+  if (!settings.get('autoQuality') || game._transition || (scr?.name !== 'race' && scr?.name !== 'roam')) {
     lowStreak = highStreak = 0;
     // the menus are cheap: never leave them drawn at the race's reduced scale
     if (r.displayScale !== 1 && !game._transition) {

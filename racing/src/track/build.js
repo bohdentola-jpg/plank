@@ -128,6 +128,31 @@ export class Terrain {
           m = smoothstep(w + flat * 0.5, w + flat + blend, d);
           h = roadY + (nat - roadY) * m;
         }
+        // free roam: side roads level the ground too (whichever road is nearer wins)
+        for (const F of opts.flatten || []) {
+          const kf = F.nearestIndex(x, z, 1);
+          if (kf < 0) continue;
+          const lat = (x - F.X[kf]) * F.LX[kf] + (z - F.Z[kf]) * F.LZ[kf];
+          const lon = (x - F.X[kf]) * F.TX[kf] + (z - F.Z[kf]) * F.TZ[kf];
+          const d = Math.abs(lon) > F.step * 3 ? Math.hypot(lat, lon) : Math.abs(lat);
+          const w = F.W[kf] + F.shoulder;
+          const mf = smoothstep(w + flat * 0.5, w + flat + blend, d);
+          if (mf < m) {
+            const roadY = F.roadY(kf, 0, clamp(lat, -F.W[kf], F.W[kf])) - 0.35;
+            h = roadY + (nat - roadY) * mf;
+            m = mf;
+          }
+        }
+        // ...and a hill over each tunnel (raised to at least y inside the box)
+        for (const R of opts.raise || []) {
+          const a = (x - R.x) * R.ux + (z - R.z) * R.uz;
+          const o = Math.abs((x - R.x) * R.uz - (z - R.z) * R.ux);
+          if (a < R.a0) continue;
+          const wa = a <= R.a1 ? 1 : 1 - smoothstep(0, R.fall, a - R.a1);
+          const wo = o <= R.hw ? 1 : 1 - smoothstep(0, R.fall, o - R.hw);
+          const k = wa * wo;
+          if (k > 0 && R.y > h) h += (R.y - h) * k;
+        }
         this.H[j * this.nx + i] = h;
         this.roadMask[j * this.nx + i] = m;
       }
@@ -179,6 +204,7 @@ export class Terrain {
     g.computeVertexNormals();
     const m = new THREE.Mesh(g, material);
     m.receiveShadow = true;
+    m.userData.terrain = true;
     return m;
   }
 }
@@ -448,11 +474,14 @@ export class World {
  * Build the whole world for a track definition. Yields to the browser
  * between heavy stages so the loading static keeps animating.
  */
-export async function buildWorld(def, renderer, onProgress = () => {}) {
+export async function buildWorld(def, renderer, onProgress = () => {}, hooks = {}) {
   const world = new World(def, renderer);
   const at = world.at;
   const track = new Track(def);
   world.track = track;
+  // free roam: the region's side roads and tunnels, planned before the ground is shaped
+  const extra = hooks.plan ? hooks.plan(track) : null;
+  world.roam = extra;
   onProgress(0.1, 'SURVEYING ROUTE');
   await nextFrame();
 
@@ -487,10 +516,12 @@ export async function buildWorld(def, renderer, onProgress = () => {}) {
   const envApi = envMod.default || envMod;
   const natural = envApi.natural ? envApi.natural(def, track) : () => -1;
   if (envApi.terrain !== false) {
-    const terrain = new Terrain(track, natural, envApi.terrainOpts ? envApi.terrainOpts(def) : {});
+    const topts = { ...(envApi.terrainOpts ? envApi.terrainOpts(def) : {}), flatten: extra?.flatten, raise: extra?.raise };
+    const terrain = new Terrain(track, natural, topts);
     track.terrain = terrain;
     world.terrain = terrain;
   }
+  for (const st of extra?.stubs || []) st.terrain = track.terrain;
   onProgress(0.3, 'GRADING TERRAIN');
   await nextFrame();
 
@@ -538,6 +569,11 @@ export async function buildWorld(def, renderer, onProgress = () => {}) {
   await nextFrame();
   await envApi.build(world, def, track, (f, label) => onProgress(0.45 + f * 0.45, label));
 
+  if (hooks.decorate) {
+    onProgress(0.9, 'OPENING THE TUNNELS');
+    await nextFrame();
+    await hooks.decorate(world, track, extra);
+  }
   onProgress(0.92, 'WIRING THE STREETLIGHTS');
   await nextFrame();
   world.bakeGlow();

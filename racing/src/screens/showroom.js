@@ -20,6 +20,7 @@ import { sfx } from '../audio/sfx.js';
 import { EngineSound } from '../audio/engine.js';
 import { engineProfile } from '../race/session.js';
 import { knockLaps } from '../race/sim.js';
+import { isRegion } from '../roam/network.js';
 
 export const PALETTE = [
   ['#c8102e', 'RALLY RED'], ['#f2f1ec', 'CHAMPIONSHIP WHITE'], ['#0e0f12', 'MIDNIGHT BLACK'], ['#a9aeb5', 'ARCTIC SILVER'],
@@ -37,7 +38,7 @@ export const CLASS_COLORS = { D: '#3fbf6a', C: '#4a8fe0', B: '#f0a020', A: '#e84
 export const REGIONS = [
   ['city', 'CITY'], ['docks', 'DOCKS'], ['highway', 'HIGHWAY'], ['circuit', 'RACEWAY'], ['mountain', 'MOUNTAIN'], ['desert', 'DESERT'],
 ];
-export const TYPE_NAMES = { circuit: 'CIRCUIT', sprint: 'SPRINT', knockout: 'KNOCKOUT', drag: 'DRAG', timeattack: 'TIME ATTACK', drift: 'DRIFT' };
+export const TYPE_NAMES = { circuit: 'CIRCUIT', sprint: 'SPRINT', knockout: 'KNOCKOUT', drag: 'DRAG', timeattack: 'TIME ATTACK', drift: 'DRIFT', roam: 'FREE ROAM' };
 const TYPE_DESC = {
   circuit: 'Lapped race. First across the line after the final lap wins.',
   sprint: 'Point to point. One run, no second chances.',
@@ -45,8 +46,11 @@ const TYPE_DESC = {
   drag: 'Quarter mile. Launch, shift on the light, don\'t blink.',
   timeattack: 'Just you and the clock — chase the pro\'s ghost.',
   drift: 'Score attack. Angle times speed, chain it for multipliers, don\'t touch anything.',
+  roam: 'No clock, no rivals. Start here and drive anywhere: the tunnels join every road in town.',
 };
 export const typesFor = (def) => (def.type === 'drag' ? ['drag'] : def.type === 'sprint' ? ['sprint', 'timeattack'] : ['circuit', 'knockout', 'drift', 'timeattack']);
+/** Quick-race choices for a road: its race types, and free roam from there. */
+const routeTypes = (def) => (isRegion(def.reverseOf || def.id) ? [...typesFor(def), 'roam'] : typesFor(def));
 export const SKILLS = [
   { label: 'ROOKIE', v: 0.35 }, { label: 'STREET', v: 0.6 }, { label: 'PRO', v: 0.8 }, { label: 'LEGEND', v: 0.95 },
 ];
@@ -64,6 +68,7 @@ function loadCfg() {
     opp: d.opp ?? 5,
     skill: d.skill ?? 1,
     catchup: d.catchup ?? true,
+    roamTraffic: d.roamTraffic ?? true,
   };
 }
 
@@ -94,6 +99,7 @@ registerScreen('showroom', () => {
   let settle = 0;
   let orbit = 0;
   let cfg = loadCfg();
+  let station = 'quick';   // the radio station we came in on (CRUISE presets free roam)
   let region = 'city';
   let menu = null;
   let launch = null;
@@ -174,11 +180,11 @@ registerScreen('showroom', () => {
   const regionTracks = (r) => TRACKS.filter((d) => d.env === r);
   const regions = () => REGIONS.filter(([r]) => regionTracks(r).length);
   const track = () => TRACK_BY_ID[cfg.track] || TRACKS[0];
-  const racers = () => (cfg.type === 'timeattack' || cfg.type === 'drift' ? 1 : cfg.opp + 1);
-  const trafficOK = () => ['city', 'highway', 'docks'].includes(track().env) && cfg.type !== 'drag';
+  const racers = () => (cfg.type === 'timeattack' || cfg.type === 'drift' || cfg.type === 'roam' ? 1 : cfg.opp + 1);
+  const trafficOK = () => cfg.type === 'roam' || (['city', 'highway', 'docks'].includes(track().env) && cfg.type !== 'drag');
 
   function fixType() {
-    const allowed = typesFor(track());
+    const allowed = routeTypes(track());
     if (!allowed.includes(cfg.type)) cfg.type = allowed[0];
     if (cfg.type === 'drag') cfg.opp = clamp(cfg.opp, 1, (track().dragLanes?.length || 2) - 1);
     if (cfg.type === 'knockout') cfg.opp = Math.max(2, cfg.opp);
@@ -195,13 +201,13 @@ registerScreen('showroom', () => {
       },
       {
         label: 'RACE TYPE', type: 'choice', id: 'type',
-        get options() { return typesFor(track()).map((v) => ({ value: v, label: TYPE_NAMES[v] })); },
+        get options() { return routeTypes(track()).map((v) => ({ value: v, label: TYPE_NAMES[v] })); },
         get: () => cfg.type, set: (v) => { cfg.type = v; fixType(); },
       },
       {
         label: 'LAPS', type: 'choice', id: 'laps',
         get options() {
-          if (cfg.type === 'sprint' || cfg.type === 'drag') return [{ value: cfg.laps, label: '—' }];
+          if (cfg.type === 'sprint' || cfg.type === 'drag' || cfg.type === 'roam') return [{ value: cfg.laps, label: '—' }];
           if (cfg.type === 'knockout') return [{ value: cfg.laps, label: `${knockLaps(cfg.opp)} (AUTO)` }];
           return Array.from({ length: 10 }, (_, k) => ({ value: k + 1, label: String(k + 1) }));
         },
@@ -210,7 +216,7 @@ registerScreen('showroom', () => {
       {
         label: 'RIVALS', type: 'choice', id: 'opp',
         get options() {
-          if (cfg.type === 'timeattack' || cfg.type === 'drift') return [{ value: cfg.opp, label: cfg.type === 'drift' ? 'POSTED SCORES' : 'NONE' }];
+          if (cfg.type === 'timeattack' || cfg.type === 'drift' || cfg.type === 'roam') return [{ value: cfg.opp, label: cfg.type === 'drift' ? 'POSTED SCORES' : 'NONE' }];
           const max = cfg.type === 'drag' ? (track().dragLanes?.length || 2) - 1 : 7;
           const min = cfg.type === 'knockout' ? 2 : 1;
           return Array.from({ length: max - min + 1 }, (_, k) => ({ value: k + min, label: String(k + min) }));
@@ -230,9 +236,10 @@ registerScreen('showroom', () => {
       {
         label: 'TRAFFIC', type: 'choice', id: 'traffic',
         get options() { return trafficOK() ? [{ value: true, label: 'ON' }, { value: false, label: 'OFF' }] : [{ value: false, label: 'CLOSED ROAD' }]; },
-        get: () => (trafficOK() ? cfg.traffic ?? !!track().traffic : false), set: (v) => { cfg.traffic = v; },
+        get: () => (cfg.type === 'roam' ? cfg.roamTraffic !== false : trafficOK() ? cfg.traffic ?? !!track().traffic : false),
+        set: (v) => { if (cfg.type === 'roam') cfg.roamTraffic = v; else cfg.traffic = v; },
       },
-      { label: 'RACE!', id: 'race' },
+      { get label() { return cfg.type === 'roam' ? 'CRUISE!' : 'RACE!'; }, id: 'race' },
     ];
     return new Menu(items, { id: 'route', sel: 0 });
   }
@@ -268,6 +275,10 @@ registerScreen('showroom', () => {
     const sp = CAR_BY_ID[cfg.car];
     const def = track();
     const type = cfg.type;
+    if (type === 'roam') {
+      go('roam', { track: def.reverseOf || def.id, car: sp.id, look: { paint: paintOf(idx) }, traffic: cfg.roamTraffic !== false, back: 'showroom', station: station === 'cruise' ? 'cruise' : 'quick' });
+      return;
+    }
     const opp = type === 'timeattack' || type === 'drift' ? 0 : cfg.opp;
     const skill = SKILLS[cfg.skill].v;
     const params = {
@@ -276,7 +287,7 @@ registerScreen('showroom', () => {
       opponents: pickRivals(sp, opp, skill, paintOf(idx), def.id + type),
       rubber: cfg.catchup ? 1 : 0,
       traffic: trafficOK() ? (cfg.traffic ?? !!def.traffic) : false,
-      back: 'showroom', station: 'quick',
+      back: 'showroom', station: station === 'cruise' ? 'cruise' : 'quick',
     };
     go('race', params);
   }
@@ -285,6 +296,9 @@ registerScreen('showroom', () => {
 
   const scr = {
     enter(p = {}) {
+      station = p.station === 'cruise' ? 'cruise' : 'quick';
+      if (station === 'cruise' && p.from === 'radio') cfg.type = 'roam';
+      else if (station === 'quick' && p.from === 'radio' && cfg.type === 'roam') cfg.type = 'circuit';
       L = buildLotScene(game.renderer.gl, CARS);
       game.renderer.setPost({ exposure: 1.15, bloomStrength: 0.9, bloomThreshold: 0.95, saturation: 1.02, contrast: 1.08, vignette: 0.85, lift: [0.004, 0.006, 0.012], gain: [1.0, 1.0, 1.02] }, true);
       idx = Math.max(0, CARS.findIndex((c) => c.id === cfg.car));
@@ -339,7 +353,7 @@ registerScreen('showroom', () => {
             else if (h === 'take') takeCar();
           }
           if (input.pressed('confirm')) takeCar();
-          if (input.pressed('back')) { save(); go('radio', { station: 'quick' }); return; }
+          if (input.pressed('back')) { save(); go('radio', { station }); return; }
         } else if (phase === 'route') {
           if (input.pressed('tabR')) switchRegion(1);
           if (input.pressed('tabL')) switchRegion(-1);

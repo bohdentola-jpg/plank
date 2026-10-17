@@ -9,3 +9,4 @@ import './showroom.js';
 import './options.js';
 import './records.js';
 import './story.js';
+import './roam.js';

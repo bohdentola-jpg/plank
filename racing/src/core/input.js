@@ -10,7 +10,7 @@ import { clamp } from './util.js';
 
 export const ACTIONS = [
   'up', 'down', 'left', 'right', 'confirm', 'back', 'tabL', 'tabR', 'alt', 'extra',
-  'pause', 'camera', 'reset', 'shiftUp', 'shiftDown', 'radioPrev', 'radioNext', 'any',
+  'pause', 'camera', 'reset', 'shiftUp', 'shiftDown', 'radioPrev', 'radioNext', 'map', 'any',
 ];
 
 const KEYMAP = {
@@ -25,6 +25,7 @@ const KEYMAP = {
   KeyP: ['pause'],
   KeyC: ['camera'],
   KeyR: ['reset'],
+  KeyM: ['map'],
   BracketLeft: ['radioPrev'], BracketRight: ['radioNext'],
   Comma: ['radioPrev'], Period: ['radioNext'],
 };
@@ -35,6 +36,7 @@ const PADMAP = {
   4: ['tabL', 'shiftDown'], 5: ['tabR', 'shiftUp'],
   8: ['reset'], 9: ['pause'],
   12: ['up'], 13: ['down'], 14: ['left', 'radioPrev'], 15: ['right', 'radioNext'],
+  17: ['map'],
 };
 
 // Firefox / raw DualSense (vendor 054c) → standard indices
