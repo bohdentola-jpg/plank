@@ -57,19 +57,17 @@ export class WorldScene {
   // ---------------------------------------------------------------- atmosphere
 
   setupAtmosphere(time) {
-    const at = { ...ATMOS[time] };
-    this.at = at;
     const scene = this.scene;
-    scene.fog = new THREE.FogExp2(new THREE.Color(at.fog), at.fogD * 0.75);
-    scene.background = new THREE.Color(at.sky[2]);
-    this.sky = skyMesh(at);
+    scene.fog = new THREE.FogExp2(new THREE.Color(), 0.001);
+    scene.background = new THREE.Color();
+    this.sky = skyMesh(ATMOS[time]);
     scene.add(this.sky);
-    this.sunDir = new THREE.Vector3(Math.cos(at.sun.az) * Math.cos(at.sun.el), Math.sin(at.sun.el), Math.sin(at.sun.az) * Math.cos(at.sun.el)).normalize();
-    this.sky.material.uniforms.sunDir.value.copy(this.sunDir);
-    this.hemi = new THREE.HemisphereLight(at.hemi[0], at.hemi[1], at.hemi[2]);
+    this.hemi = new THREE.HemisphereLight(0xffffff, 0x000000, 1);
     scene.add(this.hemi);
-    const sun = new THREE.DirectionalLight(at.sun.color, at.sun.i);
-    sun.castShadow = !at.lamps || time === 'dusk';
+    // the sun (the moon by night) always casts: a light that starts or stops
+    // casting shadows would recompile every material in the world
+    const sun = new THREE.DirectionalLight(0xffffff, 1);
+    sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
     const sc = sun.shadow.camera;
     sc.left = -70; sc.right = 70; sc.top = 70; sc.bottom = -70; sc.near = 1; sc.far = 500;
@@ -78,8 +76,32 @@ export class WorldScene {
     scene.add(sun);
     scene.add(sun.target);
     this.sun = sun;
-    scene.environment = getEnvMap(this.renderer, at.env);
-    updateKit(at.lamps ? 1 : 0, 0);
+    this.sunDir = new THREE.Vector3();
+    this.setTime(time);
+  }
+
+  /** The time of day, in place (sky, fog, sun or moon, the light off the sky, lamps on or off). */
+  setTime(time) {
+    const at = { ...ATMOS[time] };
+    this.at = at;
+    this.timeName = time;
+    const scene = this.scene;
+    scene.fog.color.set(at.fog);
+    scene.fog.density = at.fogD * 0.75;
+    scene.background.set(at.sky[2]);
+    const u = this.sky.material.uniforms;
+    u.cTop.value.set(at.sky[0]); u.cMid.value.set(at.sky[1]); u.cHor.value.set(at.sky[2]); u.cGlow.value.set(at.glowHorizon);
+    u.stars.value = at.stars ? 1 : 0; u.moon.value = at.moon ? 1 : 0;
+    this.sunDir.set(Math.cos(at.sun.az) * Math.cos(at.sun.el), Math.sin(at.sun.el), Math.sin(at.sun.az) * Math.cos(at.sun.el)).normalize();
+    u.sunDir.value.copy(this.sunDir);
+    this.hemi.color.set(at.hemi[0]);
+    this.hemi.groundColor.set(at.hemi[1]);
+    this.hemi.intensity = at.hemi[2];
+    this.sun.color.set(at.sun.color);
+    this.sun.intensity = at.sun.i;
+    this.envMap = getEnvMap(this.renderer, at.env);
+    scene.environment = this.envMap;
+    updateKit(at.lamps ? 1 : 0, this.time || 0);
   }
 
   // ---------------------------------------------------------------- water
@@ -430,6 +452,26 @@ export class WorldScene {
     }
   }
 
+  /** ensure() a slice at a time (behind the garage door: the game keeps drawing). */
+  async ensureAsync(x, z, r, onProgress = () => {}, sliceMs = 20) {
+    const focus = [{ x, z, vx: 0, vz: 0 }];
+    const want = this.wanted([{ x, z }]);
+    const need = [...want.values()].filter((w) => boxDist(w.cx, w.cz, x, z) <= r).length || 1;
+    let guard = 0;
+    while (guard++ < 100000) {
+      this.stream(focus, sliceMs);
+      let ready = 0;
+      for (const w of want.values()) {
+        if (boxDist(w.cx, w.cz, x, z) > r) continue;
+        const c = this.cells.get(cellKey(w.cx, w.cz));
+        if (c && (c.state === 'ready' || c.state === 'failed')) ready++;
+      }
+      onProgress(ready / need);
+      if (ready >= need) break;
+      await new Promise((res) => setTimeout(res, 0));
+    }
+  }
+
   /** Is the cell under (x, z) built? */
   ready(x, z) {
     const c = this.cells.get(cellKey(Math.floor(x / CELL), Math.floor(z / CELL)));
@@ -464,7 +506,7 @@ export class WorldScene {
       this.sun.target.updateMatrixWorld();
     }
     if (this.waterTex) { this.waterTex.offset.x = this.time * 0.006; this.waterTex.offset.y = this.time * 0.004; }
-    if (focus) this.stream(focus);
+    if (focus && this.live !== false) this.stream(focus);
     updateKit(U.night.value, this.time);
     // close-up props only close up; the districts' moving things while they're near
     const cp = camera.position;

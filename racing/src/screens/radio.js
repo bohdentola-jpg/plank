@@ -24,7 +24,7 @@ export const STATIONS = [
   { id: 'records', freq: 97.9, name: 'HALL OF FAME 97.9', theme: 'records', mode: 'RECORDS', rds: '97.9 HALL OF FAME * TOP TIMES * ',
     desc: 'Your fastest laps and best finishes on every road.', screen: 'records' },
   { id: 'cruise', freq: 101.1, name: 'CRUISE 101.1', theme: 'race_highway', mode: 'FREE ROAM', rds: 'CRUISE 101.1 * ALL NIGHT * ALL ROADS * ',
-    desc: 'No clock, no rivals. Pick a car and drive the whole map: every road in town, joined up by the tunnels.', screen: 'showroom' },
+    desc: 'Your garage, your car, the whole city. Pick a ride, fit it out, roll up the door and drive out into Port Halcyon.', screen: 'world' },
   { id: 'talk', freq: 104.5, name: 'TALK 104.5', theme: 'talk', mode: 'OPTIONS', rds: 'TALK 104.5 * LATE NIGHT CALL-IN * ',
     desc: 'Sound, picture, controls, units, gearbox and driving assists.', screen: 'options' },
 ];

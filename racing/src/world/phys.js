@@ -31,6 +31,11 @@ export class WorldPhys {
     this._s = [];
     this._n = [0, 1, 0];
     this._near = new Map();
+    // things placed in the world by hand (your garage): their solid parts
+    // (a collider with on: false is out of the way, like an open door) and
+    // floors to drive on ({ floorAt(x, z) → height or null })
+    this.statics = [];
+    this.floors = [];
   }
 
   /**
@@ -61,6 +66,12 @@ export class WorldPhys {
       if (h > 560) surface = 'gravel';
       n = this.terrain.normalAt(x, z, this._n);
       out.road = null; out.node = null; out.zone = 'ground'; out.flags = 0;
+    }
+    for (const F of this.floors) {
+      const fy = F.floorAt(x, z);
+      if (fy === null || fy > yRef + STEP_UP || fy < h - 0.05) continue;
+      h = fy; surface = 'road'; n = up(this._n);
+      out.road = null; out.node = null; out.zone = 'floor'; out.flags = 0;
     }
     out.h = h;
     out.n = n;
@@ -156,6 +167,15 @@ export class WorldPhys {
           if (c.kind === 'circle') circle(pts[k], c.x, c.z, c.r, k, consider);
           else box(pts[k], c, k, consider);
         }
+      }
+    }
+    for (const c of this.statics) {
+      if (c.on === false) continue;
+      if (Math.abs(c.x - v.x) > 14 || Math.abs(c.z - v.z) > 14) continue;
+      if (v.y > c.y1 || v.y + 1.5 < c.y0) continue;
+      for (let k = 0; k < 6; k++) {
+        if (c.kind === 'circle') circle(pts[k], c.x, c.z, c.r, k, consider);
+        else box(pts[k], c, k, consider);
       }
     }
     if (!wn) { r.scraping = false; return null; }
