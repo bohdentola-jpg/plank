@@ -15,9 +15,10 @@ import { lin, mixc, mulc, frame, roadField, lampTest, levelness, useGround, cell
 import * as F from './peaks/flora.js';
 import { bends, poles, cuts, drapeCut, eachOwnedSample } from './peaks/roadside.js';
 import { cellUV, board } from './peaks/parts.js';
-import { findFlat } from './peaks/sites.js';
+import { findFlat, exactRange } from './peaks/sites.js';
 import { usSignTex, rockFaceTex } from './peaks/tex.js';
 import { ZONES } from '../map/base.js';
+import { ROAD, MARGIN } from './occ.js';
 
 const PAL = {
   krum: lin('#26402a'), krumHi: lin('#3e5a34'), krumBark: lin('#5a4a3a'), snag: lin('#9a9488'),
@@ -99,19 +100,33 @@ function radioTower(P) {
   const n = P.net.nodes.get('tw_top');
   if (!n) return;
   const e = n.ends[0];
-  // the mast just past the end of the road, the hut beside the turnaround
-  const x = n.x - e.dx * 30, z = n.z - e.dz * 30;
-  const y = P.groundY(x, z);
-  const ry = Math.atan2(e.dx, e.dz);
+  // the mast just past the end of the road (the flattest ground there), the hut beside the turnaround
+  let x = n.x - e.dx * 30, z = n.z - e.dz * 30;
+  const site = findFlat(P, x, z, 12, 12, 40, { ry: Math.atan2(e.dx, e.dz), roadPad: true, step: 4, pull: 0.05, refine: 60, noClaim: true });
+  if (site) { x = site.x; z = site.z; }
+  const ry = Math.atan2(n.x - x, n.z - z);
+  const g = exactRange(P, x, z, 5, 5, ry, 2);
+  const y = g.hi + 0.1;                     // the pad's top
   P.claim(x, z, 44, 44, 0);
-  P.add({ type: 'mast', x, z, y, ry, nx: n.x, nz: n.z, ny: n.y, map: 'yard' });
+  // the guy anchors (three ways, 62 m out): turned so that none lands on a road
+  let guy = ry + 0.5;
+  for (let k = 0; k < 36; k++) {
+    const a0 = ry + 0.5 + k * 0.1;
+    let ok = true;
+    for (let q = 0; q < 3 && ok; q++) {
+      const a = a0 + (q / 3) * Math.PI * 2;
+      if (P.occ.hitDisc(x + Math.cos(a) * 62, z + Math.sin(a) * 62, 10, ROAD | MARGIN)) ok = false;
+    }
+    if (ok) { guy = a0; break; }
+  }
+  P.add({ type: 'mast', x, z, y, lo: g.lo, ry, guy, nx: n.x, nz: n.z, ny: n.y, map: 'yard' });
   P.collider({ kind: 'circle', x, z, r: 2.5, y0: y - 3, y1: y + 140 });
   const L = frame(x, y, z, ry);
   const [hx, hz] = L.xz(13, 10);
   P.collider({ kind: 'box', x: hx, z: hz, hx: 4.4, hz: 3, ry, y0: y - 3, y1: y + 4 });
   // the guy anchors
   for (let k = 0; k < 3; k++) {
-    const a = ry + (k / 3) * Math.PI * 2 + 0.5;
+    const a = guy + (k / 3) * Math.PI * 2;
     const ax = x + Math.cos(a) * 62, az = z + Math.sin(a) * 62;
     P.collider({ kind: 'circle', x: ax, z: az, r: 1.2, y0: P.groundY(ax, az) - 2, y1: P.groundY(ax, az) + 2 });
   }
@@ -322,7 +337,8 @@ function mast(B, m, it) {
   drape(B.acc(m.yard), B, yard, { lift: 0.05, uv: 5 });
   // a concrete pad and the lattice mast in red and white bands, narrowing as it climbs
   props.col = PAL.concrete;
-  box(props, x, y - 1, z, 5, 1.4, 5, ry);
+  const py = Math.min(y - 1, (it.lo ?? y) - 0.6);
+  box(props, x, py, z, 5, y + 0.4 - py, 5, ry);
   const H = 140, seg = 7;
   for (let k = 0; k < seg; k++) {
     const y0 = y + 0.4 + (k / seg) * H, y1 = y + 0.4 + ((k + 1) / seg) * H;
@@ -339,7 +355,7 @@ function mast(B, m, it) {
   // guy wires: three ways, three heights, to anchors on the ground
   props.col = PAL.wire;
   for (let k = 0; k < 3; k++) {
-    const a = ry + (k / 3) * Math.PI * 2 + 0.5;
+    const a = (it.guy ?? ry + 0.5) + (k / 3) * Math.PI * 2;
     const ax = x + Math.cos(a) * 62, az = z + Math.sin(a) * 62, ay = B.groundY(ax, az);
     for (const h of [45, 90, 132]) props.beam(x, y + h, z, ax, ay + 0.6, az, 0.05, 0.05);
     props.col = PAL.concrete;

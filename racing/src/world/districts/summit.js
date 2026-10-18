@@ -14,7 +14,7 @@ import { lin, mixc, mulc, frame, roadField, cellRuns, isCountryRoad, lampTest, l
 import * as F from './peaks/flora.js';
 import { bends, poles, cuts, drapeCut, eachOwnedSample } from './peaks/roadside.js';
 import { cellUV, board, lampPost, railing } from './peaks/parts.js';
-import { findBesideRoad, findFlat } from './peaks/sites.js';
+import { findBesideRoad, findFlat, exactGround, exactRange } from './peaks/sites.js';
 import { usSignTex, lodgeTex, rockFaceTex } from './peaks/tex.js';
 
 const PAL = {
@@ -61,19 +61,24 @@ function observatory(P) {
   const n = P.net.nodes.get('ob_top');
   if (!n) return;
   const e = n.ends[0];
-  // the dome stands just past the end of the road, the car park round the end
-  const ry = Math.atan2(e.dx, e.dz);       // +z back toward the road
-  const x = n.x - e.dx * 26, z = n.z - e.dz * 26;
-  const y = P.groundY(x, z);
+  // the dome stands just past the end of the road on the flattest ground
+  // there (the peak is steep), facing it; the car park round the road's end
+  let x = n.x - e.dx * 28, z = n.z - e.dz * 28;
+  const site = findFlat(P, x, z, 24, 24, 34, { ry: Math.atan2(e.dx, e.dz), roadPad: true, step: 4, pull: 0.04, refine: 60, n: 6, noClaim: true });
+  if (site) { x = site.x; z = site.z; }
+  const ry = Math.atan2(n.x - x, n.z - z);   // +z back toward the road
+  const g = exactRange(P, x, z, 21, 21, ry, 6);
+  const y = g.hi + 0.3;                     // the drum's floor: clear of the ground all round
   P.claim(x, z, 40, 40, ry);
-  P.add({ type: 'observatory', x, z, ry, y, nx: n.x, nz: n.z, ny: n.y, map: 'building' });
-  P.collider({ kind: 'circle', x, z, r: 10, y0: y - 3, y1: y + 20 });
+  P.add({ type: 'observatory', x, z, ry, y, lo: g.lo, nx: n.x, nz: n.z, ny: n.y, map: 'building' });
+  P.collider({ kind: 'circle', x, z, r: 10, y0: g.lo - 3, y1: y + 20 });
   const L = frame(x, y, z, ry);
   const [ax, az] = L.xz(-15, 4);
   P.collider({ kind: 'box', x: ax, z: az, hx: 7, hz: 4.5, ry, y0: y - 3, y1: y + 7 });
   const [mx, mz] = L.xz(12, -6);
-  P.collider({ kind: 'circle', x: mx, z: mz, r: 0.5, y0: y - 3, y1: y + 30 });
-  P.lamp({ x: mx, z: mz, y, hx: mx, hz: mz, hy: y + 29, color: '#ff2020', radius: 4, intensity: 0.4, halo: 3 });
+  const my = exactGround(P)(mx, mz);
+  P.collider({ kind: 'circle', x: mx, z: mz, r: 0.5, y0: my - 3, y1: my + 30 });
+  P.lamp({ x: mx, z: mz, y: my, hx: mx, hz: mz, hy: my + 28.6, color: '#ff2020', radius: 4, intensity: 0.4, halo: 3 });
   P.lamp({ x: n.x, z: n.z, y: n.y, hx: n.x, hz: n.z, hy: n.y + 6, color: '#e8eeff', radius: 18, intensity: 0.7, halo: 2 });
   P.far({ shape: 'cyl', x, z, y: y - 2, r: 9.6, h: 10, color: '#d8dce0', lit: 0.1 });
   P.far({ shape: 'cone', x, z, y: y + 8, r: 9.6, h: 8, color: '#e4e8ec' });
@@ -395,7 +400,8 @@ function observatory3d(B, m, it) {
   drape(B.acc(m.lot), B, lot, { lift: 0.06, uv: 6 });
   // the drum and the base ring
   const con = B.acc(m.concrete);
-  cylinder(con, x, y - 3, z, 10.2, 4.2, 20, { top: true });
+  const by = Math.min(y - 3, (it.lo ?? y) - 1);
+  cylinder(con, x, by, z, 10.2, y + 1.2 - by, 20, { top: true });
   props.col = PAL.offwhite;
   cylinder(props, x, y + 1.2, z, 9.6, 7.6, 20);
   props.col = PAL.steel;
@@ -430,8 +436,9 @@ function observatory3d(B, m, it) {
   // the annex with its little dome, the mast with its red light
   const [ax, az] = L.xz(-15, 4);
   const ay = gy(-15, 4);
+  const alo = Math.min(gy(-22, -0.5), gy(-8, -0.5), gy(-22, 8.5), gy(-8, 8.5), ay);
   props.col = PAL.offwhite;
-  box(props, ax, ay - 2, az, 14, 7.5, 9, ry);
+  box(props, ax, alo - 1, az, 14, ay + 5.5 - (alo - 1), 9, ry);
   for (const lx of [-4.5, -1.5, 1.5, 4.5]) { const q = L.xz(-15 + lx, 8.55); box(glow, q[0], ay + 2.4, q[1], 1.6, 1.0, 0.06, ry); }
   sphere(B.acc(m.dome), ax, ay + 5.5, az, 3.2, 12, { dome: true });
   const [mx, mz] = L.xz(12, -6);
@@ -476,9 +483,10 @@ function lodge3d(B, m, it) {
   }
   // the lodge: a stone plinth, timber walls with big warm windows, a steep roof, the glazed A-frame
   const ly = Math.max(gy(-6, -8), gy(-16, -14), gy(4, -14), gy(-16, -2), gy(4, -2)) + 0.4;
+  const llo = Math.min(gy(-16.5, -14.5), gy(4.5, -14.5), gy(-16.5, -1.5), gy(4.5, -1.5), gy(-6, -14.5), gy(-6, -1.5), gy(-16.5, -8), gy(4.5, -8));
   const [cx, cz] = L.xz(-6, -8);
   props.col = PAL.stone;
-  box(props, cx, ly - 4, cz, 21, 4.4, 13, ry);
+  box(props, cx, Math.min(ly - 4, llo - 0.6), cz, 21, ly + 0.4 - Math.min(ly - 4, llo - 0.6), 13, ry);
   box(B.acc(m.lodge), cx, ly + 0.4, cz, 20, 7.2, 12, ry, { u: 8, v: 4, top: false });
   props.col = PAL.timberDark;
   gable(props, cx, ly + 7.6, cz, 20, 12, 6.5, ry, { over: 1.4, u: 2 });

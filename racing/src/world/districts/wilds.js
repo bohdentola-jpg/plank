@@ -15,7 +15,7 @@ import { lin, mixc, mulc, frame, roadField, lampTest, levelness, useGround, cell
 import * as F from './peaks/flora.js';
 import { bends, cuts, drapeCut } from './peaks/roadside.js';
 import { cellUV, board, railing, bench } from './peaks/parts.js';
-import { findBesideRoad, findFlat } from './peaks/sites.js';
+import { findBesideRoad, findFlat, exactGround } from './peaks/sites.js';
 import { usSignTex, logWallTex, cribTex, ironTex, fallTex, rockFaceTex } from './peaks/tex.js';
 import { ROAD, ITEM } from './occ.js';
 
@@ -97,19 +97,38 @@ function lookoutTower(P) {
   const n = P.net.nodes.get('wd_fire');
   if (!n) return;
   const e = n.ends[0];
-  const x = n.x - e.dx * 14, z = n.z - e.dz * 14;
-  const y = P.groundRange(x, z, 8, 8, 0).lo;
-  const ry = Math.atan2(e.dx, e.dz);
+  // on top of the hill above the trail's end: the highest free ground near it
+  const gx = exactGround(P);
+  let best = null;
+  for (let dz = -27; dz <= 27; dz += 3) {
+    for (let dx = -27; dx <= 27; dx += 3) {
+      if (dx * dx + dz * dz > 27 * 27) continue;
+      const px = n.x + dx, pz = n.z + dz;
+      if (!P.isFree(px, pz, 10, 10, 0, { pad: 1, roadPad: true })) continue;
+      const h = gx(px, pz);
+      if (!best || h > best.h) best = { x: px, z: pz, h };
+    }
+  }
+  const x = best ? best.x : n.x - e.dx * 14, z = best ? best.z : n.z - e.dz * 14;
+  const ry = Math.atan2(n.x - x, n.z - z);
+  // the legs stand where they land on the rock: the cab 16 m over the highest foot
+  const L = frame(x, 0, z, ry);
+  let fhi = -Infinity, flo = Infinity;
+  for (const [ox, oz] of [[-3.6, -3.6], [3.6, -3.6], [3.6, 3.6], [-3.6, 3.6]]) {
+    const [px, pz] = L.xz(ox, oz);
+    const h = gx(px, pz);
+    fhi = Math.max(fhi, h); flo = Math.min(flo, h);
+  }
+  const y = fhi;
   P.claim(x, z, 14, 14, ry);
-  P.add({ type: 'firetower', x, z, y, ry, map: 'building' });
-  const L = frame(x, y, z, ry);
+  P.add({ type: 'firetower', x, z, y, lo: flo, ry, map: 'building' });
   for (const [ox, oz] of [[-3.5, -3.5], [3.5, -3.5], [3.5, 3.5], [-3.5, 3.5]]) {
     const [px, pz] = L.xz(ox, oz);
-    P.collider({ kind: 'circle', x: px, z: pz, r: 0.4, y0: y - 3, y1: y + 18 });
+    P.collider({ kind: 'circle', x: px, z: pz, r: 0.4, y0: flo - 3, y1: y + 18 });
   }
-  P.lamp({ x, z, y, hx: x, hz: z, hy: y + 18, color: '#ffb868', radius: 10, intensity: 0.8, halo: 2.4 });
+  P.lamp({ x, z, y, hx: x, hz: z, hy: y + 17.6, color: '#ffb868', radius: 10, intensity: 0.8, halo: 2.4 });
   P.lamp({ x: n.x, z: n.z, y: n.y, hx: n.x, hz: n.z, hy: n.y + 3, color: '#ffc890', radius: 8, intensity: 0.5, halo: 0.8 });
-  P.far({ x, z, y: y - 1, w: 6, d: 6, h: 17, ry, color: '#4a3424', lit: 0 });
+  P.far({ x, z, y: flo - 1, w: 6, d: 6, h: y + 17 - flo, ry, color: '#4a3424', lit: 0 });
   P.far({ x, z, y: y + 16, w: 5, d: 5, h: 3.5, ry, color: '#5a4430', lit: 0.8 });
   P.landmark({ id: 'firelookout', name: 'FIRE LOOKOUT', x, z, r: 20, kind: 'lookout' });
 }
@@ -366,11 +385,16 @@ function mill3d(B, m, it) {
   const props = B.acc(m.props), near = B.near(m.props);
   const gy = (lx, lz) => { const q = L.xz(lx, lz); return B.groundY(q[0], q[1]); };
   drape(B.acc(m.yard), B, [L.xz(-w / 2, -d / 2), L.xz(w / 2, -d / 2), L.xz(w / 2, d / 2), L.xz(-w / 2, d / 2)], { lift: 0.06, uv: 5 });
-  // the mill shed: corrugated iron on three sides, open toward the yard, the saw line inside
-  const sy = Math.min(gy(-12, -12), gy(-30, -18), gy(6, -18)) ;
+  // the mill shed: corrugated iron on three sides, open toward the yard, the saw line inside,
+  // its concrete floor level with the highest ground under it (a plinth down the slope)
+  let slo = Infinity, shi = -Infinity;
+  for (let lx = -32; lx <= 8; lx += 5) for (let lz = -20; lz <= -4; lz += 4) { const h = gy(lx, lz); slo = Math.min(slo, h); shi = Math.max(shi, h); }
+  const sy = shi + 0.2;
   const [sx, sz] = L.xz(-12, -12);
   const iron = B.acc(m.iron);
-  box(iron, sx, sy - 2, sz, 40, 11, 16, ry, { u: 3, v: 3, faces: 'blr', top: false });
+  props.col = PAL.stone;
+  box(props, sx, slo - 1, sz, 40.6, sy - slo + 1, 16.6, ry);
+  box(iron, sx, sy, sz, 40, 9, 16, ry, { u: 3, v: 3, faces: 'blr', top: false });
   const front = L.xz(-12, -4.2);
   box(iron, front[0], sy + 6, front[1], 40, 3, 0.2, ry, { u: 3, v: 3, top: false });
   props.col = PAL.rust;
@@ -390,8 +414,10 @@ function mill3d(B, m, it) {
   // the wigwam burner: a riveted cone, its mesh crown glowing at night
   const [bx, bz] = L.xz(22, -10);
   const by = gy(22, -10);
+  let blo = by;
+  for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; blo = Math.min(blo, gy(22 + Math.cos(a) * 7.2, -10 + Math.sin(a) * 7.2)); }
   props.col = PAL.rust;
-  cylinder(props, bx, by - 1, bz, 7.2, 4, 18);
+  cylinder(props, bx, blo - 0.8, bz, 7.2, by + 3 - (blo - 0.8), 18);
   cylinder(props, bx, by + 3, bz, 7.2, 12, 18, { r2: 2.2 });
   const fire = B.acc(m.fire);
   cylinder(fire, bx, by + 15, bz, 2.2, 2.4, 14, { r2: 2.0 });
@@ -415,10 +441,13 @@ function mill3d(B, m, it) {
   truck(B.acc(m.props), L, 4, 19, gy(4, 19), ry + Math.PI / 2, false);
   // bunkhouse trailers with lit windows, a fuel tank on legs
   for (const lz of [6, 14]) {
-    const q = L.xz(27, lz), qy = gy(27, lz);
+    const q = L.xz(27, lz), qy = Math.max(gy(27, lz - 5), gy(27, lz + 5), gy(27, lz));
+    const qlo = Math.min(gy(24.6, lz - 5.5), gy(29.4, lz - 5.5), gy(24.6, lz + 5.5), gy(29.4, lz + 5.5));
+    props.col = PAL.stone;
+    box(props, q[0], qlo - 0.3, q[1], 4.2, qy + 0.3 - (qlo - 0.3), 10.4, ry);
     props.col = PAL.white;
-    box(props, q[0], qy - 0.2, q[1], 4.8, 3.0, 11, ry);
-    for (const oz of [-3, 0, 3]) { const wq = L.xz(24.55, lz + oz); box(gl, wq[0], qy + 1.4, wq[1], 0.06, 0.8, 1.4, ry); }
+    box(props, q[0], qy + 0.3, q[1], 4.8, 3.0, 11, ry);
+    for (const oz of [-3, 0, 3]) { const wq = L.xz(24.55, lz + oz); box(gl, wq[0], qy + 1.9, wq[1], 0.06, 0.8, 1.4, ry); }
   }
   const tq = L.xz(32, -6), ty = gy(32, -6);
   props.col = PAL.steel;
@@ -453,11 +482,23 @@ function fireTower3d(B, m, it) {
   const L = frame(x, y, z, ry);
   const props = B.acc(m.props);
   const H = 16;
-  // four splayed timber legs, cross-braced storey by storey
-  const leg = (sx, sz, t) => { const r = 3.6 - t * 1.4; const q = L.xz(sx * r, sz * r); return [q[0], y - 0.5 + t * (H + 0.5), q[1]]; };
+  // four splayed timber legs, each from its own footing on the rock (y: the
+  // highest foot), cross-braced storey by storey above it
+  const top = y + H;
   const C = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+  const feet = C.map(([sx, sz]) => { const q = L.xz(sx * 3.6, sz * 3.6); return [q[0], B.groundY(q[0], q[1]) - 0.5, q[1]]; });
+  const footOf = (sx, sz) => feet[C.findIndex((c) => c[0] === sx && c[1] === sz)];
+  const legAt = (sx, sz, h) => {
+    const f = footOf(sx, sz), q = L.xz(sx * 2.2, sz * 2.2);
+    const t = (h - f[1]) / (top - f[1]);
+    return [f[0] + (q[0] - f[0]) * t, h, f[2] + (q[1] - f[2]) * t];
+  };
+  const leg = (sx, sz, t) => legAt(sx, sz, y - 0.5 + t * (H + 0.5));
   props.col = PAL.timber;
-  for (const [sx, sz] of C) props.beam(...leg(sx, sz, 0), ...leg(sx, sz, 1), 0.4, 0.4);
+  for (const [sx, sz] of C) props.beam(...footOf(sx, sz), ...legAt(sx, sz, top), 0.4, 0.4);
+  // concrete footings under the legs
+  props.col = PAL.stone;
+  for (const f of feet) box(props, f[0], f[1] - 0.6, f[2], 1.2, 1.4, 1.2, ry);
   for (let lv = 0; lv < 4; lv++) {
     const t0 = lv / 4, t1 = (lv + 1) / 4;
     for (let k = 0; k < 4; k++) {
