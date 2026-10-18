@@ -16,7 +16,7 @@ import { makeRng } from '../../core/util.js';
 import { Acc } from '../build/geo.js';
 import { ROAD, MARGIN, ITEM } from './occ.js';
 import { owns, toWorld, lin, mixc, hash2, rectPoly } from './westkit/util.js';
-import { Fr, tube, lathe, beam, lattice2, gambrel, quonset, drapeUV, col, fence, wallAlong } from './westkit/geo.js';
+import { Fr, tube, lathe, beam, lattice2, gambrel, quonset, drapeUV, col, fence, wallAlong, segBox } from './westkit/geo.js';
 import { bandAtlas, windowPane, corrugatedTex, roofTex, signAtlas, text, speckle, streaks, cvs, once } from './westkit/tex.js';
 import { oak, poplar, bush, rock } from './westkit/veg.js';
 import { pickup, sedan, tractor, hayRound, hayBlock, drum } from './westkit/props.js';
@@ -229,7 +229,7 @@ function mats(B) {
 // ------------------------------------------------------------------ helpers
 
 function storey(acc, x, y, z, w, d, ry, k, faces = 'fblr') {
-  box(acc, x, y, z, w, STOREY, d, ry, { u: 8, v: STOREY * BANDS, v0: k / BANDS, top: false, faces });
+  segBox(acc, x, y, z, w, STOREY, d, ry, { u: 8, v: STOREY * BANDS, v0: k / BANDS, top: false, faces });
 }
 
 function signPanel(acc, F, lx, ly, lz, w, h, k) {

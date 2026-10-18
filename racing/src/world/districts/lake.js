@@ -15,7 +15,7 @@ import { plankTexture } from '../kit.js';
 import { concreteTexture, toTex } from '../../track/textures.js';
 import { makeRng } from '../../core/util.js';
 import { owns, toWorld, lin, nearOnLine, rectPoly, hash2 } from './westkit/util.js';
-import { Fr, tube, lathe, beam, quad2, wallAlong, fence, drapeUV, col, fan } from './westkit/geo.js';
+import { Fr, tube, lathe, beam, quad2, wallAlong, fence, drapeUV, col, fan, segBox } from './westkit/geo.js';
 import { bandAtlas, windowPane, roofTex, signAtlas, text, speckle, streaks, cvs, once } from './westkit/tex.js';
 import { pine, fir, bush, rock, log as fallenLog } from './westkit/veg.js';
 import { pickup, sedan, boat, picnicTable, bench, tent, camper, canoe, drum, crate } from './westkit/props.js';
@@ -252,7 +252,7 @@ const signUV = (k) => signs().uv(k);
 
 /** One storey of walls from atlas band k (no top). */
 function storey(acc, x, y, z, w, d, ry, k, faces = 'fblr') {
-  box(acc, x, y, z, w, STOREY, d, ry, { u: 8, v: STOREY * BANDS, v0: k / BANDS, top: false, faces });
+  segBox(acc, x, y, z, w, STOREY, d, ry, { u: 8, v: STOREY * BANDS, v0: k / BANDS, top: false, faces });
 }
 
 /** A sign panel facing local +z of frame F at (lx, ly, lz), w × h, atlas slot k. */
@@ -650,8 +650,8 @@ function* buildDam(B, M, it) {
   }
   // the crest walls along the road (both sides), with a cap
   for (const sd of [1, -1]) {
-    F.box(stone, 10, Y - 0.6, sd * 9.55, 272, 1.75, 0.5, { u: 4, v: 4 });
-    F.box(stone, 10, Y + 1.15, sd * 9.55, 272, 0.12, 0.75, { u: 4 });
+    segBox(stone, F.wx(10, sd * 9.55), Y - 0.6, F.wz(10, sd * 9.55), 272, 1.75, 0.5, F.ry, { u: 4, v: 4 }, 12);
+    segBox(stone, F.wx(10, sd * 9.55), Y + 1.15, F.wz(10, sd * 9.55), 272, 0.12, 0.75, F.ry, { u: 4 }, 12);
   }
   // a low rail along the face's edge
   col(paint, lin('#3a3f44'));

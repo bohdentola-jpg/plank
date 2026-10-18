@@ -10,7 +10,7 @@
 import * as THREE from 'three';
 import { litMat, plainMat, glowColorMat, box, cylinder } from '../builder.js';
 import { groundTexture } from '../../../track/textures.js';
-import { Fr, beam, lattice2, drapeUV, col, tube, quad2 } from './geo.js';
+import { Fr, beam, lattice2, drapeUV, col, tube, quad2, segBox } from './geo.js';
 import { lin, toWorld } from './util.js';
 import { tyreTex, meshFenceTex, crowdTex, sponsorTex } from './tex.js';
 import { ROAD, ITEM } from '../occ.js';
@@ -325,13 +325,13 @@ export function* buildStand(B, M, it, st, wallAcc) {
   const kind = it.kind || st.stand || 'steel';
   // the base: a solid plinth / concourse under the stand
   col(paint, lin(kind === 'timber' ? '#5a4632' : kind === 'classic' ? '#e8e2d4' : '#4a4e52'));
-  F.box(paint, 0, g.lo - 1, -1.5, w, y0 - g.lo + 1, d - 3, { u: 2 });
+  segBox(paint, F.wx(0, -1.5), g.lo - 1, F.wz(0, -1.5), w, y0 - g.lo + 1, d - 3, it.ry, { u: 2 });
   // the tiers: a step each, seats in rows (colour per block), the crowd
   const seats = st.seats || ['#2a5fa8', '#d8dce2'];
   for (let k = 0; k < n; k++) {
     const zf = d / 2 - 3 - k * dt, yk = y0 + k * ht;
     col(paint, lin(kind === 'timber' ? '#8a6a48' : '#9a9a96'));
-    F.box(paint, 0, y0, zf - dt / 2, w, (k + 1) * ht, dt, { u: 2, top: true });
+    segBox(paint, F.wx(0, zf - dt / 2), y0, F.wz(0, zf - dt / 2), w, (k + 1) * ht, dt, it.ry, { u: 2, top: true });
     // seat rows: blocks of colour with aisles
     const nb = Math.max(1, Math.round(w / 14));
     for (let b = 0; b < nb; b++) {
@@ -351,7 +351,7 @@ export function* buildStand(B, M, it, st, wallAcc) {
   // the back and the sides
   const top = y0 + it.h;
   col(paint, lin(kind === 'timber' ? '#6a4e34' : kind === 'classic' ? '#ece6d8' : '#5a5e62'));
-  F.box(paint, 0, y0, -d / 2 + 0.3, w, it.h - 1.2, 0.6, { u: 2 });
+  segBox(paint, F.wx(0, -d / 2 + 0.3), y0, F.wz(0, -d / 2 + 0.3), w, it.h - 1.2, 0.6, it.ry, { u: 2 });
   for (const sx of [-1, 1]) {
     // the end walls, raked with the tiers (both faces)
     const x = sx * (w / 2 + 0.15);
@@ -362,10 +362,14 @@ export function* buildStand(B, M, it, st, wallAcc) {
   // the roof: a cantilever from the back over the seats
   const rc = lin(st.roof || (kind === 'timber' ? '#3e5a3a' : kind === 'classic' ? '#f4f1ea' : '#7a8086'));
   col(paint, rc);
-  const r0 = F.p(-w / 2 - 0.5, top + 0.2, -d / 2 - 0.5), r1 = F.p(w / 2 + 0.5, top + 0.2, -d / 2 - 0.5);
-  const r2 = F.p(w / 2 + 0.5, top - 0.6, d / 2 - 1.5), r3 = F.p(-w / 2 - 0.5, top - 0.6, d / 2 - 1.5);
-  paint.quadP(r3, r2, r1, r0);       // top
-  paint.quadP(r0, r1, r2, r3);       // underside
+  const nr = Math.max(1, Math.round((w + 1) / 8));
+  for (let k = 0; k < nr; k++) {
+    const a = -w / 2 - 0.5 + ((w + 1) * k) / nr, b = -w / 2 - 0.5 + ((w + 1) * (k + 1)) / nr;
+    const r0 = F.p(a, top + 0.2, -d / 2 - 0.5), r1 = F.p(b, top + 0.2, -d / 2 - 0.5);
+    const r2 = F.p(b, top - 0.6, d / 2 - 1.5), r3 = F.p(a, top - 0.6, d / 2 - 1.5);
+    paint.quadP(r3, r2, r1, r0);       // top
+    paint.quadP(r0, r1, r2, r3);       // underside
+  }
   if (kind === 'classic') {
     // fabric sails: a scalloped white edge
     for (let k = 0; k < Math.round(w / 8); k++) {

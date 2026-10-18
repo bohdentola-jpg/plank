@@ -46,6 +46,31 @@ export function beam(acc, a, b, w, h = w, o = {}) {
   }
 }
 
+/**
+ * A box (as builder's box) cut along its length (local x) into pieces of
+ * about `seg` m: the lamps' light is baked per vertex, so a long facade or
+ * wall needs vertices along it to show a lamp's pool. Texture u runs on
+ * across the pieces (front and back), the end faces only at the ends.
+ */
+export function segBox(acc, x, y, z, w, h, d, ry = 0, o = {}, seg = 8) {
+  const U = o.u || 1;
+  const sw = U >= 1 ? Math.max(U, Math.round(seg / U) * U) : seg;
+  if (w <= sw * 1.5) { box(acc, x, y, z, w, h, d, ry, o); return; }
+  const n = Math.ceil(w / sw - 1e-6);
+  const c = Math.cos(ry), s = Math.sin(ry);
+  const F = o.faces || 'fblr';
+  const u0 = o.u0 || 0;
+  for (let k = 0; k < n; k++) {
+    const a = -w / 2 + k * sw, b = Math.min(w / 2, a + sw), pw = b - a, lx = (a + b) / 2;
+    const px = x + lx * c, pz = z - lx * s;
+    let fr = F.includes('f') ? 'f' : '';
+    if (k === 0 && F.includes('l')) fr += 'l';
+    if (k === n - 1 && F.includes('r')) fr += 'r';
+    if (fr || o.top !== false) box(acc, px, y, pz, pw, h, d, ry, { ...o, faces: fr, u0: u0 + (a + w / 2) / U });
+    if (F.includes('b')) box(acc, px, y, pz, pw, h, d, ry, { ...o, faces: 'b', top: false, u0: u0 + (w / 2 - b) / U });
+  }
+}
+
 /** A lattice mast/boom between two points (four chords, zig-zag bracing), faces out. */
 export function lattice2(acc, a, b, w, o = {}) {
   const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];

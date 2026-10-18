@@ -13,7 +13,7 @@ import { litMat, glowColorMat, box, cylinder, cone, gable, hip } from './builder
 import { concreteTexture } from '../../track/textures.js';
 import { makeRng } from '../../core/util.js';
 import { owns, toWorld, lin, mixc, hash2, rectPoly } from './westkit/util.js';
-import { Fr, tube, lathe, beam, drapeUV, col, wallAlong, stringLights } from './westkit/geo.js';
+import { Fr, tube, lathe, beam, drapeUV, col, wallAlong, stringLights, segBox } from './westkit/geo.js';
 import { bandAtlas, windowPane, roofTex, signAtlas, text, speckle, streaks, cvs, once } from './westkit/tex.js';
 import { cypress, olive, oak, bush, rock } from './westkit/veg.js';
 import { pickup, sedan, tractor } from './westkit/props.js';
@@ -215,7 +215,7 @@ function mats(B) {
 // ------------------------------------------------------------------ helpers
 
 function storey(acc, x, y, z, w, d, ry, k, faces = 'fblr') {
-  box(acc, x, y, z, w, STOREY, d, ry, { u: 8, v: STOREY * BANDS, v0: k / BANDS, top: false, faces });
+  segBox(acc, x, y, z, w, STOREY, d, ry, { u: 8, v: STOREY * BANDS, v0: k / BANDS, top: false, faces });
 }
 
 function signPanel(acc, F, lx, ly, lz, w, h, k) {
@@ -369,12 +369,14 @@ function planVilla(P) {
     const x = F.wx(lx, lz), z = F.wz(lx, lz);
     P.lamp({ x, z, hx: x, hz: z, hy: base + 2.6, color: '#ffc880', radius: 10, intensity: 0.8, halo: 0.9 });
   }
+  // the gate piers stand either side of the lane's end, square to it
+  const G = new Fr(e.x, 0, e.z, ry0);
   for (const sx of [-1, 1]) {
-    const x = F.wx(sx * 4.5, 1), z = F.wz(sx * 4.5, 1);
-    P.collider({ kind: 'box', x, z, hx: 0.6, hz: 0.6, ry, y0: P.groundY(x, z) - 1, y1: P.groundY(x, z) + 2.6 });
+    const x = G.wx(sx * 5.2, 1), z = G.wz(sx * 5.2, 1);
+    P.collider({ kind: 'box', x, z, hx: 0.6, hz: 0.6, ry: ry0, y0: P.groundY(x, z) - 1, y1: P.groundY(x, z) + 2.6 });
   }
-  P.add({ type: 'sign', x: F.wx(4.5, 1.6), z: F.wz(4.5, 1.6), ry: ry + Math.PI, slot: 1, w: 1.6, h: 0.4, post: 1.3, kind: 'plaque' });
-  P.add({ type: 'gate', x: e.x, z: e.z, ry, y: ye });
+  P.add({ type: 'sign', x: G.wx(5.2, 1.6), z: G.wz(5.2, 1.6), ry: ry0 + Math.PI, slot: 1, w: 1.6, h: 0.4, post: 1.3, kind: 'plaque' });
+  P.add({ type: 'gate', x: e.x, z: e.z, ry: ry0, y: ye });
   // cypress along the lane's last stretch, an olive grove round the house
   cypressLine(P, r, r.length - 160, r.length - 10, [1, -1], 9, 2.2);
   for (let k = 0; k < 60; k++) {
@@ -720,15 +722,15 @@ function buildGate(B, M, it) {
   const stone = B.acc(M.stone), paint = B.acc(M.paint);
   col(stone, lin('#c8b898'));
   for (const sx of [-1, 1]) {
-    F.box(stone, sx * 4.5, -0.5, 1, 1.2, 3.1, 1.2, { u: 1 });
-    F.box(stone, sx * 4.5, 2.6, 1, 1.5, 0.3, 1.5, { u: 1 });
+    F.box(stone, sx * 5.2, -0.5, 1, 1.2, 3.1, 1.2, { u: 1 });
+    F.box(stone, sx * 5.2, 2.6, 1, 1.5, 0.3, 1.5, { u: 1 });
   }
   col(paint, lin('#1e1e1e'));
   // the iron gates, standing open
   for (const sx of [-1, 1]) {
-    for (let k = 0; k < 7; k++) F.box(paint, sx * 3.75, 0, 1.4 + k * 0.52, 0.06, 2.0 + Math.sin((k / 6) * Math.PI) * 0.4, 0.06, { u: 1 });
-    beam(paint, F.p(sx * 3.75, 1.9, 1.2), F.p(sx * 3.75, 1.9, 4.6), 0.06, 0.06);
-    beam(paint, F.p(sx * 3.75, 0.3, 1.2), F.p(sx * 3.75, 0.3, 4.6), 0.06, 0.06);
+    for (let k = 0; k < 7; k++) F.box(paint, sx * 4.45, 0, 1.4 + k * 0.52, 0.06, 2.0 + Math.sin((k / 6) * Math.PI) * 0.4, 0.06, { u: 1 });
+    beam(paint, F.p(sx * 4.45, 1.9, 1.2), F.p(sx * 4.45, 1.9, 4.6), 0.06, 0.06);
+    beam(paint, F.p(sx * 4.45, 0.3, 1.2), F.p(sx * 4.45, 0.3, 4.6), 0.06, 0.06);
   }
   col(stone, WHITE); col(paint, WHITE);
 }

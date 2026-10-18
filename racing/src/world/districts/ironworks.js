@@ -14,7 +14,7 @@ import { litMat, glowColorMat, box, cylinder, cone, sphere, gable } from './buil
 import { concreteTexture, toTex } from '../../track/textures.js';
 import { makeRng } from '../../core/util.js';
 import { toWorld, lin, hash2 } from './westkit/util.js';
-import { Fr, tube, lathe, beam, lattice2, sawtooth, drapeUV, col } from './westkit/geo.js';
+import { Fr, tube, lathe, beam, lattice2, sawtooth, drapeUV, col, segBox } from './westkit/geo.js';
 import { bandAtlas, windowPane, corrugatedTex, signAtlas, text, speckle, streaks, cvs, once } from './westkit/tex.js';
 import { bush, rock, oak } from './westkit/veg.js';
 import { drum, crate, pickup } from './westkit/props.js';
@@ -216,7 +216,7 @@ function mats(B) {
 // ------------------------------------------------------------------ helpers
 
 function storey(acc, x, y, z, w, d, ry, k, faces = 'fblr') {
-  box(acc, x, y, z, w, STOREY, d, ry, { u: 8, v: STOREY * BANDS, v0: k / BANDS, top: false, faces });
+  segBox(acc, x, y, z, w, STOREY, d, ry, { u: 8, v: STOREY * BANDS, v0: k / BANDS, top: false, faces });
 }
 
 function signPanel(acc, F, lx, ly, lz, w, h, k) {
@@ -446,7 +446,14 @@ function planYard(P) {
   P.collider({ kind: 'box', x: cx - 20, z: cz - 14, hx: 1.5, hz: 5, ry: 0.2 + Math.PI / 2, y0: P.groundY(cx - 20, cz - 14) - 1, y1: P.groundY(cx - 20, cz - 14) + 4 });
   P.add({ type: 'ladle', x: cx + 8, z: cz + 22, ry: 0.2, hot: true });
   P.collider({ kind: 'box', x: cx + 8, z: cz + 22, hx: 1.4, hz: 5, ry: 0.2, y0: P.groundY(cx + 8, cz + 22) - 1, y1: P.groundY(cx + 8, cz + 22) + 4 });
-  P.add({ type: 'sign', x: e.x + 6, z: e.z - 8, ry: Math.atan2(-r.TX[e.i], -r.TZ[e.i]), slot: 3, w: 4, h: 1, post: 1.4 });
+  {
+    // the yard's warning sign beside the lane, facing whoever comes down it
+    const q = r.posAt(r.length - 24);
+    const off = r.rt.hw + r.rt.shoulder + r.rt.walk + 3;
+    const sx = q.x + r.LX[q.i] * off, sz = q.z + r.LZ[q.i] * off;
+    P.add({ type: 'sign', x: sx, z: sz, ry: Math.atan2(-r.TX[q.i], -r.TZ[q.i]) + 0.3, slot: 3, w: 4, h: 1, post: 1.4 });
+    P.collider({ kind: 'box', x: sx, z: sz, hx: 2.1, hz: 0.3, ry: Math.atan2(-r.TX[q.i], -r.TZ[q.i]) + 0.3, y0: P.groundY(sx, sz) - 1, y1: P.groundY(sx, sz) + 2.6 });
+  }
   const ly = P.groundY(cx, cz);
   P.lamp({ x: cx, z: cz + 6, hx: cx, hz: cz + 6, hy: ly + 12, color: '#ffa848', radius: 22, intensity: 0.8, halo: 1.6 });
   P.lamp({ x: cx + 8, z: cz + 22, hx: cx + 8, hz: cz + 22, hy: ly + 4.5, color: '#ff6a20', radius: 9, intensity: 0.9, halo: 1.0 });

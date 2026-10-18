@@ -12,7 +12,7 @@ import { litMat, glowColorMat, box, cylinder, cone, gable, hip } from './builder
 import { concreteTexture, toTex } from '../../track/textures.js';
 import { makeRng } from '../../core/util.js';
 import { owns, toWorld, lin, mixc, hash2 } from './westkit/util.js';
-import { Fr, tube, lathe, beam, drapeUV, col, limb } from './westkit/geo.js';
+import { Fr, tube, lathe, beam, drapeUV, col, limb, segBox } from './westkit/geo.js';
 import { bandAtlas, windowPane, roofTex, signAtlas, text, speckle, streaks, cvs, once, puffTex } from './westkit/tex.js';
 import { redwood, fir, fern, log as fallenLog, rock, bicone } from './westkit/veg.js';
 import { pickup, sedan, picnicTable, camper } from './westkit/props.js';
@@ -219,7 +219,7 @@ function mats(B) {
 // ------------------------------------------------------------------ helpers
 
 function storey(acc, x, y, z, w, d, ry, k, faces = 'fblr') {
-  box(acc, x, y, z, w, STOREY, d, ry, { u: 8, v: STOREY * BANDS, v0: k / BANDS, top: false, faces });
+  segBox(acc, x, y, z, w, STOREY, d, ry, { u: 8, v: STOREY * BANDS, v0: k / BANDS, top: false, faces });
 }
 
 function signPanel(acc, F, lx, ly, lz, w, h, k) {
