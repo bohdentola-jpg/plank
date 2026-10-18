@@ -385,10 +385,10 @@ export function lodgeTex() {
 /** Rock face with strata (cut slopes on the Ridgeline), 6 m a tile; snowy for the Summit. */
 export function rockFaceTex(snowy = false) {
   return tex(snowy ? 'rockSnow' : 'rockFace', 256, 256, (x, w, h, rng) => {
-    x.fillStyle = snowy ? '#7a7874' : '#76695a'; x.fillRect(0, 0, w, h);
+    x.fillStyle = snowy ? '#a4a29e' : '#76695a'; x.fillRect(0, 0, w, h);
     let y = 0;
     while (y < h) {
-      const th = 10 + rng() * 30, tone = (snowy ? 96 : 92) + rng() * 50;
+      const th = 10 + rng() * 30, tone = (snowy ? 128 : 92) + rng() * 50;
       x.fillStyle = snowy ? `rgba(${tone | 0},${tone | 0},${(tone + 4) | 0},0.75)` : `rgba(${(tone + 10) | 0},${(tone - 2) | 0},${(tone - 16) | 0},0.75)`;
       x.fillRect(0, y, w, th);
       x.fillStyle = 'rgba(15,12,10,0.55)'; x.fillRect(0, y + th - 2, w, 2);
