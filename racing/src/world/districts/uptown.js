@@ -20,7 +20,7 @@ import {
   rowhouseTex, ROW, decoTex, DECO, stoneTex, STONE, ashlarTex, boutiqueTex, utSignsTex, UT_SIGN_RECTS, signUV, glowOf,
   pondTex, hexTex, UT_STREET_SIGN, AWNINGS,
 } from './central/paint.js';
-import { walls, lid, block, panel, decal, tree, car, ring, disc, place, circle, polyWalls, polyCap, apex, toWorld, slope, blob, under, paint, A, N } from './central/geo.js';
+import { walls, lid, block, panel, decal, tree, car, ring, disc, place, circle, polyWalls, polyCap, apex, toWorld, slope, blob, under, stairs, paint, A, N } from './central/geo.js';
 import { drawParts, drawTops } from './central/draw.js';
 import { blockSide, cityJunctions, signalSpot, walkSidewalks, reachOf, frontLots, Spots, naturalGround } from './central/plan.js';
 import { roadLamps } from '../build/roads.js';
@@ -957,7 +957,7 @@ function drawRow(B, it, M) {
   // roof: a cornice (or a mansard storey), a chimney
   trim.col = it.trim;
   trim.box(x + fx * (d / 2 + 0.3), top - 0.75, z + fz * (d / 2 + 0.3), w + 0.02, 0.85, 0.7, ry);
-  trim.box(x + fx * (d / 2 + 0.1), top - 1.25, z + fz * (d / 2 + 0.1), w, 0.25, 0.3, ry);
+  panel(trim, x + fx * (d / 2 + 0.06), top - 1.25, z + fz * (d / 2 + 0.06), w, 0.25, ry);
   lid(A(B, M.roof), x, top, z, w, d, ry, 4);
   if (it.mansard) {
     // a mansard storey: slate sloping back 2 m from the cornice, then its roof
@@ -981,15 +981,11 @@ function drawRow(B, it, M) {
   const doorY = it.stoop ? sy + 1.8 : sy;
   const dcx = x + lx * dxl + fx * (d / 2 + 0.03), dcz = z + lz * dxl + fz * (d / 2 + 0.03);
   trim.col = it.door;
-  trim.box(dcx - fx * 0.02, doorY, dcz - fz * 0.02, 1.3, 2.45, 0.1, ry);
+  panel(trim, dcx + fx * 0.02, doorY, dcz + fz * 0.02, 1.3, 2.45, ry);
   panel(A(B, M.warm), dcx + fx * 0.04, doorY + 2.5, dcz + fz * 0.04, 1.3, 0.45, ry);
   if (it.stoop) {
     trim.col = it.tint.map((v) => v * 0.85);
-    for (let k = 0; k < 5; k++) {
-      const run = 3.0 - 0.6 * k;
-      const cx = x + lx * dxl + fx * (d / 2 + run / 2), cz = z + lz * dxl + fz * (d / 2 + run / 2);
-      trim.box(cx, sy - 0.2, cz, 2.0, 0.2 + 0.36 * (k + 1), run, ry);
-    }
+    stairs(trim, x + lx * dxl + fx * (d / 2), z + lz * dxl + fz * (d / 2), fx, fz, 2.0, 3.0, sy - 0.2, sy, sy + 1.8, 5);
     // railings down both sides
     const rail = N(B, M.metal);
     for (const sd of [-1, 1]) {
@@ -1011,7 +1007,6 @@ function drawRow(B, it, M) {
   for (const [a, b] of segs) {
     if (b - a < 0.4) continue;
     rail.beam(ex + lx * a, sy + 0.95, ez + lz * a, ex + lx * b, sy + 0.95, ez + lz * b, 0.06, 0.06);
-    rail.beam(ex + lx * a, sy + 0.12, ez + lz * a, ex + lx * b, sy + 0.12, ez + lz * b, 0.05, 0.05);
   }
 }
 
@@ -1476,7 +1471,6 @@ function drawTree(B, it, M) {
     const g = N(B, M.metal);
     const pts = place([[-0.8, -0.8], [0.8, -0.8], [0.8, 0.8], [-0.8, 0.8]], it.x, it.z, it.ry || 0);
     for (let q = 0; q < 4; q++) { const a = pts[q], b = pts[(q + 1) % 4]; g.beam(a[0], it.y + 0.45, a[1], b[0], it.y + 0.45, b[1], 0.04, 0.04); }
-    for (const p of pts) g.cyl(p[0], it.y, p[1], 0.03, 0.45, 4);
   }
 }
 

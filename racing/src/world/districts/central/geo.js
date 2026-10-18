@@ -234,6 +234,28 @@ export function slope(acc, x, z, w, d, y0, y1, ry, uv = [0, 0, 1, 1]) {
   acc.quadP(P(-w / 2, y1, d), P(w / 2, y1, d), P(w / 2, y0, 0), P(-w / 2, y0, 0), uv);
 }
 
+/**
+ * A flight of n steps up to a wall (a stoop): its foot at local v = run out
+ * from the wall point (x, z), rising toward the wall to y1, from y0 (the
+ * street); (fx, fz) the way out from the wall, w wide. Treads and risers,
+ * and a solid cheek each side up the steps' nosing line (no hidden faces).
+ */
+export function stairs(acc, x, z, fx, fz, w, run, y0, ys, y1, n) {
+  const lx = fz, lz = -fx;           // across the steps
+  const hw = w / 2;
+  const P = (u, y, v) => [x + lx * u + fx * v, y, z + lz * u + fz * v];
+  const dv = run / n, dy = (y1 - ys) / n;
+  for (let k = 0; k < n; k++) {
+    const vo = run - k * dv, vi = run - (k + 1) * dv;
+    const yt = ys + (k + 1) * dy, yb = k === 0 ? y0 : ys + k * dy;
+    acc.quadP(P(-hw, yb, vo), P(hw, yb, vo), P(hw, yt, vo), P(-hw, yt, vo));   // riser (faces out)
+    acc.quadP(P(-hw, yt, vo), P(hw, yt, vo), P(hw, yt, vi), P(-hw, yt, vi));   // tread
+  }
+  // the cheeks: from the street up the nosing line to the top step
+  acc.quadP(P(hw, y0, run), P(hw, y0, 0), P(hw, y1 + 0.12, 0), P(hw, ys + dy + 0.12, run));
+  acc.quadP(P(-hw, y0, 0), P(-hw, y0, run), P(-hw, ys + dy + 0.12, run), P(-hw, y1 + 0.12, 0));
+}
+
 // ------------------------------------------------------------------ nature & clutter
 
 /** A low-poly ball with shared vertices (use a flatShading material for facets). */
@@ -275,7 +297,7 @@ export function tree(trunk, leaf, x, y, z, s, kind, t) {
     return;
   }
   // the trunk forks into two or three limbs up into the crown
-  const limbs = kind === 'elm' ? 3 : 2;
+  const limbs = 2;
   for (let q = 0; q < limbs; q++) {
     const b = a + (q / limbs) * TAU;
     const spread = kind === 'elm' ? 0.75 : 0.5;

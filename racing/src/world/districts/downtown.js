@@ -541,7 +541,8 @@ function specialParcels(P, b, ctx) {
       { f: east ? 'r' : 'l', y: 3, w: 24, h: 12, off: 4 },
       { f: east ? 'r' : 'l', y: 18, w: 16, h: 8, off: -6 },
     ];
-    corner.logo = null;
+    // the west corner wears the crossing's name up top, lit red
+    corner.logo = east ? null : 'crossing';
     corner.noPodium = true;
     const rest = east
       ? [{ x0: x0 + cw, x1: x0 + cw + 38, z0, z1: z0 + cd }, { x0: x0 + cw + 38, x1, z0, z1: z0 + cd }, { x0, x1: x0 + 58, z0: z0 + cd, z1 }, { x0: x0 + 58, x1, z0: z0 + cd, z1 }]
