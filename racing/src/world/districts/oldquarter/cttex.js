@@ -277,7 +277,7 @@ function moonWindow(x, e, px, py, rng) {
   const cx = px + 128, cy = py + 128;
   x.fillStyle = '#3a0a0a'; x.beginPath(); x.arc(cx, cy, 108, 0, Math.PI * 2); x.fill();
   e.save(); e.beginPath(); e.arc(cx, cy, 100, 0, Math.PI * 2); e.clip();
-  const g = e.createRadialGradient(cx, cy, 10, cx, cy, 100); g.addColorStop(0, '#ffe0a0'); g.addColorStop(1, '#e07020');
+  const g = e.createRadialGradient(cx, cy, 10, cx, cy, 100); g.addColorStop(0, '#a8784a'); g.addColorStop(1, '#6a2a0c');
   e.fillStyle = g; e.fillRect(px, py, 256, 256); e.restore();
   x.strokeStyle = '#2a6a3a'; x.lineWidth = 10; x.beginPath(); x.arc(cx, cy, 108, 0, Math.PI * 2); x.stroke();
   x.strokeStyle = '#c89a30'; x.lineWidth = 5; e.strokeStyle = '#000'; e.lineWidth = 5;

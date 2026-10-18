@@ -238,15 +238,20 @@ function planSquare(P) {
   P.landmark({ id: 'lantern', name: 'LANTERN SQUARE', x: M.x, z: M.z, r: 80, kind: 'square' });
   // the east end: trees in planters, benches, by Grant Ave
   const E = { type: 'plaza', x: SQ.x1 - 28, z: (SQ.z0 + SQ.z1) / 2, g, trees: [], posts: [] };
-  // lantern posts along the square's north and south sides
-  for (const z of [SQ.z0 + 4, SQ.z1 - 4]) {
-    for (let x = SQ.x1 - 30; x > SQ.x0 + 92; x -= 24) {
-      E.posts.push([x, z]);
-      P.collider({ kind: 'circle', x, z, r: 0.25, y0: g - 1, y1: g + 5 });
-      P.lamp({ x, z, y: g, hx: x, hz: z, hy: g + 4.3, color: '#ff7a50', radius: 13, intensity: 0.75, halo: 1.1 });
-    }
+  const zm = (SQ.z0 + SQ.z1) / 2;
+  // lantern posts along the square's north and south sides, and a pair lighting its middle
+  const posts = [[SQ.x1 - 62, zm - 24], [SQ.x1 - 62, zm + 24]];
+  for (const z of [SQ.z0 + 4, SQ.z1 - 4]) for (let x = SQ.x1 - 30; x > SQ.x0 + 92; x -= 24) posts.push([x, z]);
+  for (const [x, z] of posts) {
+    E.posts.push([x, z]);
+    P.collider({ kind: 'circle', x, z, r: 0.25, y0: g - 1, y1: g + 5 });
+    P.lamp({ x, z, y: g, hx: x, hz: z, hy: g + 4.3, color: '#ff7a50', radius: 13, intensity: 0.75, halo: 1.1 });
   }
-  for (let z = SQ.z0 + 12; z < SQ.z1 - 6; z += 18) for (const x of [SQ.x1 - 46, SQ.x1 - 14]) { E.trees.push([x, z]); P.collider({ kind: 'circle', x, z, r: 1.2, y0: g - 1, y1: g + 7 }); }
+  // (none on the square's middle line: from Grant Ave you see down it to the market)
+  for (let z = SQ.z0 + 12; z < SQ.z1 - 6; z += 18) {
+    if (Math.abs(z - zm) < 12) continue;
+    for (const x of [SQ.x1 - 46, SQ.x1 - 14]) { E.trees.push([x, z]); P.collider({ kind: 'circle', x, z, r: 1.2, y0: g - 1, y1: g + 7 }); }
+  }
   P.add(E);
 }
 
