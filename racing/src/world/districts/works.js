@@ -17,7 +17,7 @@ import { ROAD, ITEM, RESERVED } from './occ.js';
 import { drape } from './builder.js';
 import * as W from './eastend/wbuild.js';
 import { frontLots } from './eastend/plan.js';
-import { M, rgb, shade, Frame, boxW, chainFence, floodMast, glowBox, drum, pallets, skip, car, tree } from './eastend/kit.js';
+import { M, rgb, shade, Frame, boxW, chainFence, floodMast, glowBox, drum, pallets, skip, car, tree, warmNeighbours, drapePieces, STEP_MS } from './eastend/kit.js';
 import { BK, METAL, tileUV } from './eastend/atlas.js';
 
 const XS = COLS.slice(10);                                   // 340 … 1400: the Works' north–south streets
@@ -364,9 +364,9 @@ function lowLine(P) {
   for (const x of lamps) P.lamp({ x, z, hx: x, hz: z, hy: yd - 4.7, color: '#ffa040', radius: 17, intensity: 1.0, halo: 1.8 });
   const plates = blocked.map(([a, b]) => ({ x: (a + b) / 2, k: 'lowline', w: 8 }));
   for (let x = xA + 80; x < xB - 40; x += 210) plates.push({ x, k: 'belt', w: 6.5 });
-  // one run per cell
+  // one run per half cell
   const cuts = [xA];
-  for (let c = Math.ceil(xA / 256) * 256; c < xB; c += 256) cuts.push(c);
+  for (let c = Math.ceil(xA / 128) * 128; c < xB; c += 128) if (c - cuts[cuts.length - 1] > 20) cuts.push(c);
   cuts.push(xB);
   for (let k = 0; k < cuts.length - 1; k++) {
     const x0 = cuts[k], x1 = cuts[k + 1];
@@ -788,28 +788,29 @@ function scatter(S) {
 
 // ------------------------------------------------------------------ build
 
-// rough cost of building one of each (to yield every few milliseconds)
-const COST = { power: 40, el: 14, bone: 12, stack: 6, gantry: 4, tank: 4, track: 2, boxes: 3, carpile: 2, shed: 3, quonset: 2, fence: 1, lot: 3, sfence: 4, railcar: 1, car: 0.6, trailer: 1 };
-
+// a step is a few milliseconds of building (the clock says when); the set
+// pieces (the Low Line, the power station, the boneyard, rail track, big
+// lots) yield between their own parts
 function* build(B, items) {
-  let n = 0, blink = false;
+  yield* warmNeighbours(B, items);
+  let t0 = performance.now(), blink = false;
   for (const it of items) {
-    n += it.type === 'brick' ? 1.5 + (it.floors || 1) * it.w * it.d / 1400 : (COST[it.type] ?? 0.4);
+    let g = null;
     switch (it.type) {
       case 'brick': W.brick(B, it); break;
       case 'shed': W.shed(B, it); break;
       case 'quonset': W.quonset(B, it); break;
       case 'stack': W.stack(B, it); blink = true; break;
-      case 'el': W.el(B, it); break;
-      case 'power': W.power(B, it); blink = true; break;
-      case 'track': W.track(B, it); break;
+      case 'el': g = W.el(B, it); break;
+      case 'power': g = W.power(B, it); blink = true; break;
+      case 'track': g = W.track(B, it); break;
       case 'railcar': W.railcar(B, it); break;
       case 'gantry': W.gantry(B, it); blink = true; break;
       case 'boxes': W.boxes(B, it); break;
       case 'tank': W.tank(B, it); break;
       case 'carpile': W.carpile(B, it); break;
       case 'crane': W.crane(B, it); break;
-      case 'bone': W.bone(B, it); break;
+      case 'bone': g = W.bone(B, it); break;
       case 'fire': W.fireBarrel(B, it.x, it.z); blink = true; break;
       case 'trailer': W.trailer(B, it); break;
       case 'gwall': W.gwall(B, it); break;
@@ -818,7 +819,7 @@ function* build(B, items) {
       case 'fence': chainFence(B, it.pts, it.h, { gaps: it.gaps }); break;
       case 'sfence': solidFence(B, it); break;
       case 'flood': floodMast(B, it.x, it.z, it.h, it.heads, it.ry, it.col); break;
-      case 'lot': lotDrape(B, it); break;
+      case 'lot': g = lotDrape(B, it); break;
       case 'decal': decal(B, it); break;
       case 'car': carProp(B, it); break;
       case 'prop': prop(B, it); break;
@@ -826,14 +827,18 @@ function* build(B, items) {
       case 'weed': weed(B, it); break;
       default: break;
     }
-    if (n >= 7) { n = 0; yield; }
+    if (g) {
+      if (performance.now() - t0 > 1) yield;
+      for (let r = g.next(); !r.done; r = g.next()) yield;
+      t0 = performance.now();
+    } else if (performance.now() - t0 > STEP_MS) { yield; t0 = performance.now(); }
   }
   if (blink) W.blinkAnim(B);
 }
 
-function lotDrape(B, it) {
+function* lotDrape(B, it) {
   const m = it.kind === 'pave' ? M.pave(B) : it.kind === 'dirt' ? M.dirt(B) : M.lot(B);
-  drape(B.acc(m), B, it.poly, { lift: 0.05, uv: it.kind === 'pave' ? 4 : 6 });
+  yield* drapePieces(B.acc(m), B, it.poly, { lift: 0.06, uv: it.kind === 'pave' ? 4 : 6, step: 6 });
 }
 
 /** Paint on the drag strip: the start line, the finish, burnt rubber. */

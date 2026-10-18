@@ -113,14 +113,16 @@ export function pylon(B, it) {
 }
 
 /** A parking lot: asphalt, white stall lines in rows, optional light poles (their lamps are in the plan). */
-export function parking(B, it) {
+export function* parking(B, it) {
   const F = new Frame(it.x, it.z, it.ry, 0);
   const hw = it.w / 2, hd = it.d / 2;
   const W = (lx, lz) => [F.X(lx, lz), F.Z(lx, lz)];
   drape(B.acc(M.lot(B)), B, [W(-hw, -hd), W(hw, -hd), W(hw, hd), W(-hw, hd)], { lift: 0.06, uv: 6, step: 6 });
   const ln = B.near(M.line(B));
   ln.col = rgb('#e8e6dc');
-  if (it.dense) { for (const c of it.cars || []) { const [x, z] = W(c[0], c[1]); car(B, x, z, it.ry + c[2], rgb(c[3])); } for (const [lx, lz] of it.poles || []) lightPole(B, ...W(lx, lz), it.ry, it.lampCol || '#f0f4ff'); return; }
+  yield;
+  if (it.dense) { let k = 0; for (const c of it.cars || []) { const [x, z] = W(c[0], c[1]); car(B, x, z, it.ry + c[2], rgb(c[3])); if (++k % 12 === 0) yield; } for (const [lx, lz] of it.poles || []) lightPole(B, ...W(lx, lz), it.ry, it.lampCol || '#f0f4ff'); return; }
+  yield;
   // rows of stalls along local x, 2.7 m wide, 5.5 m deep, an aisle of 7 m between pairs
   for (let z = -hd + 0.5; z + 5.5 <= hd - 0.5; z += 18) {
     for (const zr of [z, z + 12.5]) {
@@ -134,8 +136,10 @@ export function parking(B, it) {
       }
     }
   }
+  yield;
   for (const [lx, lz] of it.poles || []) lightPole(B, ...W(lx, lz), it.ry, it.lampCol || '#f0f4ff');
-  for (const c of it.cars || []) { const [x, z] = W(c[0], c[1]); car(B, x, z, it.ry + c[2], rgb(c[3])); }
+  let k = 0;
+  for (const c of it.cars || []) { const [x, z] = W(c[0], c[1]); car(B, x, z, it.ry + c[2], rgb(c[3])); if (++k % 12 === 0) yield; }
 }
 
 /** A parking-lot light: a square pole, two heads. */
@@ -463,7 +467,7 @@ export function school(B, it) {
 }
 
 /** The football stadium: { x, z, ry, y (field level), towers: true }. Field 110 × 49, track round it. */
-export function stadium(B, it) {
+export function* stadium(B, it) {
   const F = new Frame(it.x, it.z, it.ry, it.y);
   const W = (lx, lz) => [F.X(lx, lz), F.Z(lx, lz)];
   // the track: a red ring (drape), the field in it (its own texture, laid flat)
@@ -479,6 +483,7 @@ export function stadium(B, it) {
     const P = (lx, lz) => { const [x, z] = W(lx, lz); return [x, B.groundY(x, z) + 0.1, z]; };
     fm.quadP(P(x0, z1), P(x1, z1), P(x1, z0), P(x0, z0), [i / nx, 1 - (j + 1) / nz, (i + 1) / nx, 1 - j / nz].map((v, k) => (k % 2 ? 1 - v : v)));
   }
+  yield;
   // goalposts (yellow)
   const st = B.acc(M.steel(B));
   st.col = rgb('#e8c020');
@@ -488,6 +493,7 @@ export function stadium(B, it) {
     const b = F.P(x, 3.05, -2.8), c = F.P(x, 3.05, 2.8); st.beam(b[0], b[1], b[2], c[0], c[1], c[2], 0.12, 0.12);
     for (const sz of [-2.8, 2.8]) { const d = F.P(x, 3.05, sz); st.box(d[0], d[1], d[2], 0.1, 6, 0.1); }
   }
+  yield;
   // bleachers: home (north, −z) big with a press box, visitors (south) smaller
   const cm = B.acc(M.concrete(B));
   const al = B.acc(M.steel(B));
@@ -513,6 +519,7 @@ export function stadium(B, it) {
       boxL(p, F, 0, rows * 0.45 + 4.1, zb + sz * 2, 19, 0.4, 4.2);
     }
   }
+  yield;
   // the scoreboard at the east end
   const sg = B.acc(HM.sign(B));
   const Fs = new Frame(F.X(rx + 4, 0), F.Z(rx + 4, 0), it.ry - Math.PI / 2, it.y);
@@ -521,6 +528,7 @@ export function stadium(B, it) {
   wallQ(sg, Fs, 5, -0.6, -5, -0.6, 6, 11, rectUV(ESIGN, 'mascot'));
   st.col = rgb('#2a2a2c');
   boxL(st, Fs, 0, 5.9, -0.3, 10.2, 5.2, 0.5, 0, { faces: 'lr' });
+  yield;
   // the light towers at the corners: a pole, a bank of lamps aimed at the field
   for (const [lx, lz] of it.towers) {
     const [x, z] = W(lx, lz);
@@ -566,7 +574,7 @@ export function diamond(B, it) {
 // ------------------------------------------------------------------ the park
 
 /** A pond: an ellipse of dark water with a stone edge. { x, z, rx, rz, ry }. */
-export function pond(B, it) {
+export function* pond(B, it) {
   const F = new Frame(it.x, it.z, it.ry, 0);
   const pts = [], edge = [];
   for (let k = 0; k < 20; k++) {
@@ -575,6 +583,7 @@ export function pond(B, it) {
     edge.push([F.X(Math.cos(a) * (it.rx * w + 1.6), Math.sin(a) * (it.rz * w + 1.6)), F.Z(Math.cos(a) * (it.rx * w + 1.6), Math.sin(a) * (it.rz * w + 1.6))]);
   }
   drape(B.acc(M.pave(B)), B, edge, { lift: 0.05, uv: 2, step: 8 });
+  yield;
   drape(B.acc(HM.water(B)), B, pts, { lift: 0.09, uv: 8, step: 8 });
 }
 

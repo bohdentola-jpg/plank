@@ -15,7 +15,7 @@ import { frontLots } from './eastend/plan.js';
 import * as H from './eastend/ehouse.js';
 import * as E from './eastend/estuff.js';
 import * as Fm from './eastend/farm.js';
-import { M, rgb, shade, Frame, boxL, chainFence, glowBox, tree, car } from './eastend/kit.js';
+import { M, rgb, shade, Frame, boxL, chainFence, glowBox, tree, car, warmNeighbours, drapePieces, STEP_MS } from './eastend/kit.js';
 
 const PI = Math.PI;
 const AVE = -60;                                   // Eastside Ave (z)
@@ -564,12 +564,14 @@ function density(x, z, S) {
 
 // ------------------------------------------------------------------ build
 
-const COST = { home: 1.4, strip: 4, bigbox: 4, motel: 3, gas: 3, diner: 2, burger: 2, school: 8, stadium: 14, diamond: 3, pond: 3, wtower: 5, swall: 2, drivein: 6, barn: 2, parking: 3, church: 4, dealer: 3, path: 2, field: 3, bins: 1, mshed: 1, windmill: 1, bstack: 0.6 };
+// a step is a few milliseconds of building (the clock says when); the
+// stadium, parking lots, the pond and big lots yield between their own parts
 
 function* build(B, items) {
-  let n = 0, blink = false;
+  yield* warmNeighbours(B, items);
+  let t0 = performance.now(), blink = false;
   for (const it of items) {
-    n += COST[it.type] ?? 0.3;
+    let g = null;
     switch (it.type) {
       case 'home': H.home(B, it); break;
       case 'strip': E.strip(B, it); break;
@@ -581,10 +583,10 @@ function* build(B, items) {
       case 'dealer': E.dealer(B, it); break;
       case 'church': E.church(B, it); break;
       case 'school': E.school(B, it); break;
-      case 'stadium': E.stadium(B, it); break;
+      case 'stadium': g = E.stadium(B, it); break;
       case 'diamond': E.diamond(B, it); break;
       case 'courts': courts(B, it); break;
-      case 'pond': E.pond(B, it); break;
+      case 'pond': g = E.pond(B, it); break;
       case 'playground': E.playground(B, it.x, it.z, it.ry); break;
       case 'gazebo': E.gazebo(B, it.x, it.z); break;
       case 'bench': E.bench(B, it.x, it.z, it.ry); break;
@@ -596,9 +598,9 @@ function* build(B, items) {
       case 'lookout': lookout(B, it); break;
       case 'barn': E.barn(B, it); break;
       case 'pylon': E.pylon(B, it); break;
-      case 'parking': if (!it.bare) E.parking(B, it); else for (const c of it.cars) car(B, it.x + c[0], it.z + c[1], it.ry + c[2], rgb(c[3])); break;
+      case 'parking': if (!it.bare) g = E.parking(B, it); else for (const c of it.cars) car(B, it.x + c[0], it.z + c[1], it.ry + c[2], rgb(c[3])); break;
       case 'bulb': bulb(B, it); break;
-      case 'lot': drape(B.acc(it.kind === 'dirt' ? M.dirt(B) : M.lot(B)), B, it.poly, { lift: 0.05, uv: 5, step: 6 }); break;
+      case 'lot': g = drapePieces(B.acc(it.kind === 'dirt' ? M.dirt(B) : M.lot(B)), B, it.poly, { lift: 0.05, uv: 5, step: 6 }); break;
       case 'car': car(B, it.x, it.z, it.ry, it.wreck ? shade(rgb(it.col), 0.45) : rgb(it.col), { lights: it.lights }); break;
       case 'fire': fire(B, it.x, it.z); blink = true; break;
       case 'tree': tree(B, it.x, it.z, it.s, rgb(it.col), { kind: it.col === '#2a4a2a' ? 'cone' : undefined }); break;
@@ -612,7 +614,11 @@ function* build(B, items) {
       case 'bstack': Fm.bstack(B, it); break;
       default: break;
     }
-    if (n >= 7) { n = 0; yield; }
+    if (g) {
+      if (performance.now() - t0 > 1) yield;
+      for (let r = g.next(); !r.done; r = g.next()) yield;
+      t0 = performance.now();
+    } else if (performance.now() - t0 > STEP_MS) { yield; t0 = performance.now(); }
   }
   if (blink) {
     const bl = H.HM.blink(B);

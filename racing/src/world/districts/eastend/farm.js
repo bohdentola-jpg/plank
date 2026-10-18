@@ -5,8 +5,9 @@
 // grain bins, a machine shed, a windmill, and the yard light you see from
 // the freeway at night. The grid is fixed (plan and scatter both read it).
 import { cylinder, cone } from '../builder.js';
+import { CELL } from '../../terrain.js';
 import { ROAD, ITEM } from '../occ.js';
-import { M, Frame, rgb, boxL, wallQ, slope, glowBox } from './kit.js';
+import { M, Frame, rgb, boxL, wallQ, slope, glowBox, clipRect } from './kit.js';
 import { HM, hh } from './ehouse.js';
 
 const PI = Math.PI;
@@ -127,11 +128,10 @@ function addField(P, x0, x1, z0, zb, ij) {
   P.occ.markPoly(poly, ITEM);
   const [kind, col] = CROPS[Math.floor(hh(ij, 3, 5) * CROPS.length)];
   const rot = hh(ij, 9, 2) < 0.5 ? 0 : PI / 2;
-  const it = { type: 'field', x: (x0 + x1) / 2, z: (z0 + Math.max(zA, zB)) / 2, poly, col, rot };
+  const it = { bales: null, wrap: hh(ij, 4, 4) < 0.3 };
   if (kind === 'stubble') {
     // round bales left where the baler dropped them, in rows along the crop rows
     it.bales = [];
-    it.wrap = hh(ij, 4, 4) < 0.3;
     const across = rot === 0 ? [x0 + 14, x1 - 14] : [z0 + 14, zm - 14];
     const along = rot === 0 ? [z0 + 12, zm - 12] : [x0 + 12, x1 - 12];
     for (let a = across[0]; a < across[1] && it.bales.length < 26; a += 26 + P.rng() * 8) {
@@ -145,7 +145,41 @@ function addField(P, x0, x1, z0, zb, ij) {
       }
     }
   }
-  P.add(it);
+  // one item per cell it covers (each cell builds its own piece)
+  for (let cx = Math.floor(x0 / CELL); cx * CELL < x1; cx++) {
+    for (let cz = Math.floor(z0 / CELL); cz * CELL < Math.max(zA, zB); cz++) {
+      const piece = clipRect(poly, cx * CELL, cz * CELL, (cx + 1) * CELL, (cz + 1) * CELL);
+      if (piece.length < 3) continue;
+      let mx = 0, mz = 0;
+      for (const [px, pz] of piece) { mx += px; mz += pz; }
+      const f = { type: 'field', x: mx / piece.length, z: mz / piece.length, poly: piece, col, rot };
+      const mine = (it.bales || []).filter(([bx, bz]) => Math.floor(bx / CELL) === cx && Math.floor(bz / CELL) === cz);
+      if (mine.length) { f.bales = mine; f.wrap = it.wrap; }
+      P.add(f);
+    }
+  }
+}
+
+/** A convex polygon cut by another convex polygon (Sutherland–Hodgman). */
+function clipConvex(subject, clip, ccw) {
+  let out = subject;
+  for (let e = 0; e < clip.length && out.length >= 3; e++) {
+    const a = clip[e], b = clip[(e + 1) % clip.length];
+    const side = (p) => ((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])) * ccw >= -1e-9;
+    const src = out;
+    out = [];
+    for (let i = 0; i < src.length; i++) {
+      const p = src[i], q = src[(i + 1) % src.length], ip = side(p), iq = side(q);
+      if (ip) out.push(p);
+      if (ip !== iq) {
+        const dp = (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);
+        const dq = (b[0] - a[0]) * (q[1] - a[1]) - (b[1] - a[1]) * (q[0] - a[0]);
+        const t = dp / (dp - dq);
+        out.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]);
+      }
+    }
+  }
+  return out;
 }
 
 /** A farmstead across the north of the band x0..x1 from z0 (its front to the south). */
@@ -280,13 +314,57 @@ export function poplar(B, it) {
 export function fieldB(B, it) {
   const acc = B.acc(HM.crops(B));
   acc.col = rgb(it.col);
-  fieldDrape(acc, B, it.poly, it.rot);
+  latticeDrape(acc, B, it.poly, it.rot);
   if (it.bales) {
     const p = B.acc(M.paint(B));
     p.col = rgb(it.wrap ? '#e8e8e2' : '#c8a860');
     for (const [x, z, ry] of it.bales) bale(p, x, B.groundY(x, z) + 0.78, z, ry);
   }
 }
+/**
+ * A convex polygon laid on the ground on an 8 m lattice (world-aligned, so the
+ * pieces of a field in two cells meet vertex for vertex), uv turned rot.
+ */
+function latticeDrape(acc, B, poly, rot, step = 8, lift = 0.14, uv = 16) {
+  const c = Math.cos(rot), s = Math.sin(rot);
+  let ax = Infinity, bx = -Infinity, az = Infinity, bz = -Infinity, area = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const p = poly[i], q = poly[(i + 1) % poly.length];
+    ax = Math.min(ax, p[0]); bx = Math.max(bx, p[0]); az = Math.min(az, p[1]); bz = Math.max(bz, p[1]);
+    area += p[0] * q[1] - q[0] * p[1];
+  }
+  const ccw = area > 0 ? 1 : -1;
+  const ids = new Map();
+  const vid = (x, z) => {
+    const k = Math.round(x * 16) * 4194304 + Math.round(z * 16);
+    let i = ids.get(k);
+    if (i === undefined) { i = acc.v(x, B.groundY(x, z) + lift, z, (x * c + z * s) / uv, (-x * s + z * c) / uv); ids.set(k, i); }
+    return i;
+  };
+  const inside = (x, z) => {
+    for (let e = 0; e < poly.length; e++) {
+      const a = poly[e], b = poly[(e + 1) % poly.length];
+      if (((b[0] - a[0]) * (z - a[1]) - (b[1] - a[1]) * (x - a[0])) * ccw < -1e-9) return false;
+    }
+    return true;
+  };
+  for (let gx = Math.floor(ax / step) * step; gx < bx; gx += step) {
+    for (let gz = Math.floor(az / step) * step; gz < bz; gz += step) {
+      let sq = [[gx, gz], [gx + step, gz], [gx + step, gz + step], [gx, gz + step]];
+      if (!(inside(gx, gz) && inside(gx + step, gz) && inside(gx + step, gz + step) && inside(gx, gz + step))) sq = clipConvex(sq, poly, ccw);
+      if (sq.length < 3) continue;
+      const i0 = vid(sq[0][0], sq[0][1]);
+      for (let k = 1; k < sq.length - 1; k++) {
+        const a = sq[0], b = sq[k], d = sq[k + 1];
+        const ny = (b[1] - a[1]) * (d[0] - a[0]) - (b[0] - a[0]) * (d[1] - a[1]);
+        if (Math.abs(ny) < 1e-6) continue;
+        const i1 = vid(b[0], b[1]), i2 = vid(d[0], d[1]);
+        if (ny > 0) acc.tri(i0, i1, i2); else acc.tri(i0, i2, i1);
+      }
+    }
+  }
+}
+
 function fieldDrape(acc, B, poly, rot, lift = 0.12, step = 6, uv = 16) {
   const c = Math.cos(rot), s = Math.sin(rot);
   const verts = new Map();

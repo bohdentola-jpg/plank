@@ -309,7 +309,7 @@ function lot(B, it, F, front) {
       flatQ(sg, Fe, -3.9, -1.9, 3.9, 1.9, 0.06, true, rectUV(ESIGN, 'pool'));
     } else if (e.k === 'shed') {
       const sh = { ...it, wall: 'siding', tint: e.tint || it.tint, floors: 1, fh: 2.3, garIn: null, door: 0, pic: -1, lit: 0, yb: y + 0.15, y0: y - 0.3, style: 'shed' };
-      body(B, sh, Fe, 3.2, 2.6, { floors: 1, roof: 'gable', rise: 1.0, tiles: (side, i) => (side === 'f' && i === 0 ? HS.door : HS.plain) });
+      body(B, sh, new Frame(ex, ez, it.ry + (e.ry || 0), 0), 3.2, 2.6, { floors: 1, roof: 'gable', rise: 1.0, tiles: (side, i) => (side === 'f' && i === 0 ? HS.door : HS.plain) });
     } else if (e.k === 'swing') {
       const st = B.near(M.steel(B));
       st.col = rgb(e.col || '#c82a2a');

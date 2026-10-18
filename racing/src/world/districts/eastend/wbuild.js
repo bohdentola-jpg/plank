@@ -635,7 +635,7 @@ export function stack(B, it) {
  * One cell's run of the Low Line: { x0, x1, z, yd (deck top), cols: [[x,
  * yGround]], abut: 'w'|'e'|null, lamps: [x], plates: [x], weeds: seed }.
  */
-export function el(B, it) {
+export function* el(B, it) {
   const { x0, x1, z, yd } = it;
   const len = x1 - x0, cx = (x0 + x1) / 2;
   const st = B.acc(M.steel(B));
@@ -652,6 +652,7 @@ export function el(B, it) {
     const x = x0 + (k / Math.max(1, nst)) * len;
     for (const sd of [1, -1]) boxW(st, x, yd - 2.05, z + sd * 5.05, 0.12, 2.3, 0.14);
   }
+  yield;
   // the deck slab (its underside too: you drive under it), ballast and two tracks
   const cm = B.acc(M.concrete(B));
   cm.col = rgb('#5a5852');
@@ -676,6 +677,7 @@ export function el(B, it) {
     boxW(st, cx, yd + 0.55, z + sd * 4.95, len, 0.05, 0.05);
     for (let x = x0 + 1; x < x1; x += 2.4) boxW(st, x, yd, z + sd * 4.95, 0.06, 1.1, 0.06);
   }
+  yield;
   // the bents: two columns, a cross girder, knee braces
   for (const [x, yg] of it.cols) {
     boxW(st, x, yd - 3.6, z, 0.7, 1.5, 11.4);
@@ -692,6 +694,7 @@ export function el(B, it) {
       st.beam(x + 0.3, yd - 6.2, cz, x + 2.5, yd - 3.65, cz, 0.16, 0.16);
     }
   }
+  yield;
   // ends: a brick abutment with a buffer stop on the deck
   if (it.abut) {
     const pl = B.acc(WM.bplain(B));
@@ -726,6 +729,7 @@ export function el(B, it) {
     boxW(st, lx, yd - 4.4, z, 0.08, 0.8, 0.08);
     glowBox(B, lx, yd - 4.62, z, 0.9, 0.22, 0.45, 0, '#ffa040');
   }
+  yield;
   // weeds on the disused line
   const lf = B.near(M.paint(B));
   for (let k = 0; k < len / 3; k++) {
@@ -739,7 +743,7 @@ export function el(B, it) {
 // ------------------------------------------------------------------ rail: track, cars, gantry
 
 /** Track on the ground: { pts: [[x, z]], cross: [[s0, s1]] (level crossings: rails only, on the road) }. */
-export function track(B, it) {
+export function* track(B, it) {
   const rb = B.acc(WM.rail(B));
   const st = B.acc(M.steel(B));
   st.col = rgb('#5a4c42');
@@ -766,6 +770,7 @@ export function track(B, it) {
       for (const ro of [-0.72, 0.72]) st.beam(x0 + lx * ro, y0 + 0.08, z0 + lz * ro, x1 + lx * ro, y1 + 0.08, z1 + lz * ro, 0.08, onRoad ? 0.06 : 0.16);
     }
     s += L;
+    if (k % 10 === 9) yield;
   }
 }
 
@@ -956,7 +961,7 @@ export function tank(B, it) {
 // ------------------------------------------------------------------ the power station
 
 /** HALCYON POWER & LIGHT: { x, z, ry, y0, yb, ... } (front toward +z). */
-export function power(B, it) {
+export function* power(B, it) {
   const F = new Frame(it.x, it.z, it.ry, 0);
   const tint = rgb('#b0705c');
   const acc = B.acc(WM.brick(B));
@@ -995,6 +1000,7 @@ export function power(B, it) {
   const g = B.acc(WM.sign(B));
   const nw = Math.min(46, it.hw * 0.42), nh = nw * (96 / 512);
   wallQ(g, Fh, -nw / 2, it.hd / 2 + 0.06, nw / 2, it.hd / 2 + 0.06, ht - nh - 0.6, ht - 0.6, rectUV(WSIGN, 'power'));
+  yield;
   // the boiler house behind: taller, plainer, the four chimneys at its corners
   const Fb = new Frame(F.X(0, -it.D / 2 + it.bd / 2), F.Z(0, -it.D / 2 + it.bd / 2), it.ry, 0);
   const bh = 38;
@@ -1013,6 +1019,7 @@ export function power(B, it) {
   // the part of the boiler house's front above the turbine hall's roof
   plainFront(pl, Fb, it.hw / 2 - 2, it.bd / 2, ht, yb + bh + 1.6);
   flatQ(rf, Fb, -it.hw / 2 + 2, -it.bd / 2, it.hw / 2 - 2, it.bd / 2, yb + bh + 0.3, true, [0, 0, it.hw / 8, it.bd / 8]);
+  yield;
   // the chimneys: white fluted concrete on brick plinths
   const pa = B.acc(M.paint(B));
   const bl = B.acc(WM.blink(B));
@@ -1036,6 +1043,7 @@ export function power(B, it) {
       bl.box(x + Math.cos(a) * 4.0, yr + 5 + it.ch * 0.5, z + Math.sin(a) * 4.0, 0.45, 0.45, 0.45);
     }
   }
+  yield;
   // corner towers at the turbine hall's front corners (art deco fluting)
   for (const sx of [-1, 1]) {
     const lx = sx * (it.hw / 2 - 3), lz = it.D / 2 - 3;
@@ -1044,6 +1052,7 @@ export function power(B, it) {
     boxW(pl, x, y0, z, 6.4, ht + 6 - y0, 6.4, it.ry, null, { u: 4 });
     for (let k = 0; k < 3; k++) boxW(pl, x, ht + 6 + k * 1.2, z, 6.0 - k * 1.2, 1.2, 6.0 - k * 1.2, it.ry, null, { u: 4 });
   }
+  yield;
   // a coal conveyor gallery up to the boiler house's side
   const st = B.acc(M.steel(B));
   st.col = rgb('#4a4438');
@@ -1110,7 +1119,7 @@ export function crane(B, it) {
  * The abandoned warehouse you can drive into: steel portal frames, some
  * cladding left, the roof half fallen in. { x, z, w, d, ry, yb, h, n }.
  */
-export function bone(B, it) {
+export function* bone(B, it) {
   const F = new Frame(it.x, it.z, it.ry, 0);
   const st = B.acc(M.steel(B));
   st.col = rgb('#5a3a2a');
@@ -1139,6 +1148,7 @@ export function bone(B, it) {
       st.beam(a[0], a[1], a[2], b[0], b[1], b[2], 0.14, 0.2);
     }
   }
+  yield;
   // cladding: what's left of it
   const acc = B.acc(WM.metal(B));
   acc.col = rgb('#a89078');
@@ -1151,6 +1161,7 @@ export function bone(B, it) {
     if (sd > 0) wallQ(acc, F, hw - 0.05, z0, hw - 0.05, z1, y, y + hgt, t);
     else wallQ(acc, F, -hw + 0.05, z1, -hw + 0.05, z0, y, y + hgt, t);
   }
+  yield;
   // roof sheets on the bays still standing (both faces)
   const rf = B.acc(WM.metal(B));
   rf.col = rgb('#7a6a5a');
@@ -1177,6 +1188,7 @@ export function bone(B, it) {
     if (sd > 0) wallQ(g, F, hw - 0.1, z0, hw - 0.1, z1, y + 0.4, y + 3.6, u);
     else wallQ(g, F, -hw + 0.1, z1, -hw + 0.1, z0, y + 0.4, y + 3.6, u);
   }
+  yield;
   // the floor: cracked concrete slab
   const cm = B.acc(M.concrete(B));
   cm.col = rgb('#7a7870');

@@ -3,9 +3,10 @@
 // a local frame for placing things on a footprint, facades laid bay by bay
 // from an atlas, roofs, and the street furniture both districts use.
 import * as THREE from 'three';
-import { litMat, plainMat, cylinder, cone, sphere } from '../builder.js';
+import { litMat, plainMat, cylinder, cone, sphere, drape } from '../builder.js';
 import { concreteTexture, groundTexture } from '../../../track/textures.js';
 import { plankTexture } from '../../kit.js';
+import { CELL } from '../../terrain.js';
 import { tileUV } from './atlas.js';
 import { chainlink, plainBrick } from './tex.js';
 
@@ -55,6 +56,88 @@ export const M = {
   trunk: (B) => sharedMat(B, 'trunk', () => litMat({ color: 0x4a3a2c, roughness: 0.92 })),
   leaf: (B) => sharedMat(B, 'leaf', () => litMat({ color: 0xffffff, vertexColors: true, roughness: 0.85, flatShading: true })),
 };
+
+// ------------------------------------------------------------------ building a cell
+
+/**
+ * The terrain grids of the neighbouring cells these items reach, made one per
+ * step before the items are built: a fresh grid costs several milliseconds,
+ * and met halfway through an item it makes one long step.
+ */
+export function* warmNeighbours(B, items) {
+  const x0 = B.x0, z0 = B.z0, x1 = x0 + CELL, z1 = z0 + CELL;
+  const need = new Set();
+  for (const it of items) {
+    if (it.x === undefined) continue;
+    let ax = it.x, bx = it.x, az = it.z, bz = it.z;
+    for (const q of [it.poly, it.pts]) if (q) for (const p of q) { ax = Math.min(ax, p[0]); bx = Math.max(bx, p[0]); az = Math.min(az, p[1]); bz = Math.max(bz, p[1]); }
+    if (it.x0 !== undefined && it.x1 !== undefined) { ax = Math.min(ax, it.x0); bx = Math.max(bx, it.x1); }
+    const r = it.w || it.d ? Math.hypot(it.w || 0, it.d || 0) / 2 + 4 : 8;
+    ax -= r; bx += r; az -= r; bz += r;
+    if (ax >= x0 && bx < x1 && az >= z0 && bz < z1) continue;
+    for (let x = ax; ; x = Math.min(bx, x + CELL / 2)) {
+      for (let z = az; ; z = Math.min(bz, z + CELL / 2)) {
+        const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
+        if (cx !== B.cx || cz !== B.cz) need.add(cx * 65536 + cz);
+        if (z >= bz) break;
+      }
+      if (x >= bx) break;
+    }
+  }
+  for (const k of need) {
+    const cx = Math.round(k / 65536), cz = k - cx * 65536;
+    if (B.terrain.cache?.has?.(`4:${cx}:${cz}`)) continue;
+    B.groundY(cx * CELL + CELL / 2, cz * CELL + CELL / 2);
+    yield;
+  }
+}
+
+const lerpX = (a, b, x) => [x, a[1] + ((b[1] - a[1]) * (x - a[0])) / (b[0] - a[0])];
+const lerpZ = (a, b, z) => [a[0] + ((b[0] - a[0]) * (z - a[1])) / (b[1] - a[1]), z];
+/** A polygon cut to the rectangle x0..x1 × z0..z1 (Sutherland–Hodgman); [] if nothing is left. */
+export function clipRect(poly, x0, z0, x1, z1) {
+  let out = poly;
+  for (const [inside, cut] of [[(p) => p[0] >= x0, (a, b) => lerpX(a, b, x0)], [(p) => p[0] <= x1, (a, b) => lerpX(a, b, x1)], [(p) => p[1] >= z0, (a, b) => lerpZ(a, b, z0)], [(p) => p[1] <= z1, (a, b) => lerpZ(a, b, z1)]]) {
+    const src = out;
+    out = [];
+    for (let i = 0; i < src.length; i++) {
+      const a = src[i], b = src[(i + 1) % src.length], ia = inside(a), ib = inside(b);
+      if (ia) out.push(a);
+      if (ia !== ib) out.push(cut(a, b));
+    }
+    if (out.length < 3) return [];
+  }
+  return out;
+}
+
+/**
+ * drape() a big polygon in pieces on a 48 m lattice, yielding between them
+ * (one big lot is otherwise one long step). Small ones in one go.
+ */
+export function* drapePieces(acc, B, poly, o) {
+  let ax = Infinity, bx = -Infinity, az = Infinity, bz = -Infinity;
+  for (const [x, z] of poly) { ax = Math.min(ax, x); bx = Math.max(bx, x); az = Math.min(az, z); bz = Math.max(bz, z); }
+  if ((bx - ax) * (bz - az) <= 2600) { drape(acc, B, poly, o); return; }
+  const S = 48;
+  for (let gx = Math.floor(ax / S) * S; gx < bx; gx += S) {
+    for (let gz = Math.floor(az / S) * S; gz < bz; gz += S) {
+      const piece = clipRect(poly, gx, gz, gx + S, gz + S);
+      if (piece.length < 3) continue;
+      drape(acc, B, piece, o);
+      yield;
+    }
+  }
+}
+
+/** Milliseconds of building between yields (a cell is built a few ms a frame). */
+export const STEP_MS = 2.5;
+
+/** A polygon's area (m²). */
+export function polyArea(poly) {
+  let a = 0;
+  for (let i = 0; i < poly.length; i++) { const p = poly[i], q = poly[(i + 1) % poly.length]; a += p[0] * q[1] - q[0] * p[1]; }
+  return Math.abs(a) / 2;
+}
 
 // ------------------------------------------------------------------ frames and quads
 
