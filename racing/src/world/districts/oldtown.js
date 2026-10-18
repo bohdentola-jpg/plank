@@ -212,7 +212,7 @@ function plan(P) {
     const quai = /QUAI/.test(r.name || '');
     const grand = r.rt.id === 'street' || r.rt.id === 'avenue' || r.rt.id === 'boulevard' || quai;
     for (const sd of [1, -1]) {
-      for (const L of frontage(P, r, sd, { width: grand ? [9, 15] : [6.5, 12.5], depth: grand ? [13, 17] : [10, 15], water: true })) {
+      for (const L of frontage(P, r, sd, { width: grand ? [10, 16] : [7.5, 13.5], depth: grand ? [13, 17] : [10, 15], water: true })) {
         const kind = character(P, L, grand ? 'grand' : '');
         const nu = Math.max(1, Math.round(L.w / 4.8));
         const shops = [];
@@ -559,6 +559,8 @@ function mats(B) {
     trim: B.mat('trim', () => plainMat({ vertexColors: true, roughness: 0.7 })),
     stoneHi: B.mat('stoneHi', () => plainMat({ map: stoneTex(), vertexColors: true, roughness: 0.85 })),
     metal: B.mat('metal', () => litMat({ map: metalTex(), vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.5 }, { shadow: false })),
+    // (the balconies' ironwork, above the street lamps: unlit)
+    metalHi: B.mat('metalHi', () => plainMat({ map: metalTex(), vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.5 }, { shadow: false })),
     glow: B.mat('glow', () => { const m = glowColorMat('#ffc27a', 3.2); m.side = THREE.DoubleSide; return m; }),
     leaf: B.mat('leaf', () => litMat({ vertexColors: true, roughness: 0.85, flatShading: true })),
     pave: B.mat('pave', () => litMat({ map: cobbleTexture(), roughness: 0.85, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -3 })),
@@ -573,7 +575,7 @@ function kit(B) {
   const K = {};
   for (const [k, m] of Object.entries(M)) { m.name = 'ot:' + k; K[k] = B.acc(m); }
   K.near = {};
-  for (const k of ['stone', 'paint', 'leaf', 'glow', 'metal', 'plaster', 'win', 'slate', 'tile', 'trim', 'stoneHi']) K.near[k] = B.near(M[k]);
+  for (const k of ['stone', 'paint', 'leaf', 'glow', 'metal', 'plaster', 'win', 'slate', 'tile', 'trim', 'stoneHi', 'metalHi']) K.near[k] = B.near(M[k]);
   K.M = M;
   return K;
 }
@@ -663,7 +665,7 @@ function sceneryTree(K, it) {
 
 /** Courtyard trees inside the town's blocks; poplars and oaks out in the fields. */
 function scatter(S) {
-  const pts = S.points(18, { r: 4.5, density: (x, z) => (inGrid(...toUV(x, z)) ? 0.4 : 0.16) });
+  const pts = S.points(18, { r: 4.5, density: (x, z) => (inGrid(...toUV(x, z)) ? 0.26 : 0.16) });
   for (const [x, z] of pts) {
     const town = inGrid(...toUV(x, z));
     const r = S.rng();
@@ -739,7 +741,7 @@ function* warmCode(B) {
   const M = mats(B);
   const K = { M, near: {} };
   for (const k of Object.keys(M)) K[k] = new Acc(true);
-  for (const k of ['stone', 'paint', 'leaf', 'glow', 'metal', 'plaster', 'win', 'slate', 'tile', 'trim', 'stoneHi']) K.near[k] = new Acc(true);
+  for (const k of ['stone', 'paint', 'leaf', 'glow', 'metal', 'plaster', 'win', 'slate', 'tile', 'trim', 'stoneHi', 'metalHi']) K.near[k] = new Acc(true);
   const fakeB = { anim() {}, group: { add() {} }, D: B.D };
   const base = { x: 0, z: 0, w: 10, d: 14, ry: 0, y0: -1, gy: 0.1, lit: 0.5, seed: 7, trim: [0.9, 0.9, 0.9], door: [0.2, 0.3, 0.2], col: [0.9, 0.85, 0.8], roofCol: [0.5, 0.5, 0.55], boxes: 0.5, ped: true, shops: [0, 3, 14], shopK: 0 };
   const rect = { x: 0, z: 0, w: 10, d: 14, ry: 0 };

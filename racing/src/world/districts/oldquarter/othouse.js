@@ -121,7 +121,7 @@ function streetFace(K, it, f, e, top, rng, k) {
         // a pediment over each window of the noble floor
         N.stone.col = stoneCol;
         bandFU(N.stone, f, a - ww / 2 - 0.25, a + ww / 2 + 0.25, ys + wh + 0.04, 0.16, 0, 0.18);
-        pediment(N.stone, f, a, ys + wh + 0.2, ww + 0.5, 0.4);
+        pediment(N.stoneHi || N.stone, f, a, ys + wh + 0.2, ww + 0.5, 0.4);
       }
       if (boxes > 0 && !balcony && rng() < 0.5) {
         boxes--;
@@ -154,7 +154,7 @@ function streetFace(K, it, f, e, top, rng, k) {
       const Nb = N.stoneHi || N.stone;
       Nb.col = stoneCol;
       bandFU(Nb, f, 0.15, len - 0.15, ys - 0.2, 0.16, 0, 0.78);
-      railing(N.metal, f, 0.25, len - 0.25, ys - 0.04, 0.95, 0.76);
+      railing(N.metalHi || N.metal, f, 0.25, len - 0.25, ys - 0.04, 0.95, 0.76);
     }
   }
   groundFloor(K, it, f, e, rng, k);
@@ -226,7 +226,7 @@ function awning(K, f, a0, a1, y, depth, rng) {
   const striped = rng() < 0.4;
   const c2 = [0.92, 0.9, 0.84];
   const drop = depth * 0.42, val = 0.32;
-  const n = striped ? Math.max(3, Math.round((a1 - a0) / 0.75)) : 1;
+  const n = striped ? Math.max(3, Math.round((a1 - a0) / 0.95)) : 1;
   for (let q = 0; q < n; q++) {
     const s0 = a0 + (a1 - a0) * q / n, s1 = a0 + (a1 - a0) * (q + 1) / n;
     A.col = striped && q % 2 ? c2 : c1;
