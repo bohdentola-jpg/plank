@@ -648,7 +648,7 @@ function falls3d(B, m, it) {
   }
   // the water: a curtain off the lip, a stream along the ledge to it, the pool, foam and spray
   const fall = B.acc(m.fall);
-  const hw = 3.4;
+  const hw = 2.4;
   const lip = (lx, dz) => L(lx, top - y, dz);
   for (const off of [0.5, 1.1]) {
     const a = L(-hw, -0.2, off), b = L(hw, -0.2, off), c = L(hw, top - y + 0.2, off - 0.4), d = L(-hw, top - y + 0.2, off - 0.4);
