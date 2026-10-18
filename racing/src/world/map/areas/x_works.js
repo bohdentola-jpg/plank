@@ -28,7 +28,7 @@ const nodes = {
   xe_c8n: [1675, 730], xe_c8s: [1675, 990],
   xe_c9n: [2175, 1020], xe_c9s: [2175, 1262],
   // behind the bleachers; up the bluff
-  xe_back: [1318, 530], xe_lk1: [2650, 330], xe_look: [2862, 250],
+  xe_back: [1318, 530], xe_lk1: [2650, 330], xe_look: [2832, 298],
 };
 
 const W = 'works', E = 'eastside';
@@ -64,7 +64,7 @@ const roads = [
   { id: 'xe_back', type: 'dirt', a: 'c_15_10', b: 'xe_back', pts: [[1200, 540, 18]], name: 'BACK LOT RD', district: E },
   // up the bluff east of town: a switchback to the old drive-in, and a gravel lane back down through the orchards
   { id: 'xe_look1', type: 'dirt', a: 'es_6_2', b: 'xe_lk1', pts: [[2450, 330, 60], [2560, 150, 70]], name: 'LOOKOUT RD', district: E },
-  { id: 'xe_look2', type: 'dirt', a: 'xe_lk1', b: 'xe_look', pts: [[2780, 290, 60]], name: 'LOOKOUT RD', district: E },
+  { id: 'xe_look2', type: 'dirt', a: 'xe_lk1', b: 'xe_look', pts: [[2760, 322, 60]], name: 'LOOKOUT RD', district: E },
   { id: 'xe_orchard', type: 'gravel', a: 'es_6_4', b: 'xe_lk1', pts: [[2420, 760, 100], [2560, 520, 120]], name: 'ORCHARD LN', district: E },
 ];
 

@@ -184,6 +184,37 @@ export function plainWall(acc, F, A, id, ax, az, bx, bz, y0, y1) {
   }
 }
 
+/**
+ * A gable end in an atlas wall: the triangle over the base from local
+ * (ax, az) to (bx, bz) at height y, apex `rise` over the middle (facing
+ * (−dz, dx) like a wall), split into strips a tile wide so the texture
+ * keeps its scale across; its height stretches the tile to fit.
+ */
+export function gableStrips(acc, F, A, id, ax, az, bx, bz, y, rise) {
+  const len = Math.hypot(bx - ax, bz - az);
+  const n = Math.max(1, Math.round(len / A.mw));
+  const H = (t) => rise * (1 - Math.abs(2 * t - 1));
+  const span = Math.max(A.mh, rise);
+  for (let k = 0; k < n; k++) {
+    const t0 = k / n, t1 = (k + 1) / n;
+    const cuts = t0 < 0.5 && t1 > 0.5 ? [t0, 0.5, t1] : [t0, t1];
+    const uv = tileUV(A, id);
+    for (let q = 0; q < cuts.length - 1; q++) {
+      const s0 = cuts[q], s1 = cuts[q + 1];
+      const u0 = uv[0] + (uv[2] - uv[0]) * (s0 - t0) / (t1 - t0), u1 = uv[0] + (uv[2] - uv[0]) * (s1 - t0) / (t1 - t0);
+      const h0 = H(s0), h1 = H(s1);
+      const vt = (h) => uv[1] + (uv[3] - uv[1]) * (h / span);
+      const ia = acc.v(...F.P(ax + (bx - ax) * s0, y, az + (bz - az) * s0), u0, uv[1]);
+      const ib = acc.v(...F.P(ax + (bx - ax) * s1, y, az + (bz - az) * s1), u1, uv[1]);
+      const ic = acc.v(...F.P(ax + (bx - ax) * s1, y + h1, az + (bz - az) * s1), u1, vt(h1));
+      const idd = acc.v(...F.P(ax + (bx - ax) * s0, y + h0, az + (bz - az) * s0), u0, vt(h0));
+      if (h0 < 1e-3) acc.tri(ia, ib, ic);
+      else if (h1 < 1e-3) acc.tri(ia, ib, idd);
+      else acc.quad(ia, ib, ic, idd);
+    }
+  }
+}
+
 /** A gable-end triangle in a wall plane: base from local (ax,az) to (bx,bz) at y, apex `rise` over the middle; uv from a tile. */
 export function gableTri(acc, F, ax, az, bx, bz, y, rise, uv) {
   const mx = (ax + bx) / 2, mz = (az + bz) / 2;

@@ -294,6 +294,43 @@ export function shingles() {
   });
 }
 
+/** White pickets (alpha): one repeat is 1.6 m of fence, 1 m tall. */
+export function picket() {
+  return once('picket', () => {
+    const W = 128, H = 64, c = cnv(W, H), x = c.getContext('2d');
+    x.clearRect(0, 0, W, H);
+    x.fillStyle = '#f4f2ea';
+    for (let k = 0; k < 8; k++) {
+      const px = k * 16 + 3;
+      x.beginPath(); x.moveTo(px, 64); x.lineTo(px, 10); x.lineTo(px + 5, 2); x.lineTo(px + 10, 10); x.lineTo(px + 10, 64); x.fill();
+    }
+    x.fillRect(0, 18, W, 5); x.fillRect(0, 46, W, 5);
+    x.fillStyle = 'rgba(0,0,0,0.12)'; x.fillRect(0, 23, W, 1); x.fillRect(0, 51, W, 1);
+    return toTex(c);
+  });
+}
+
+/** Crop rows for the fields on the plains (neutral grey: the vertex colour makes them wheat, corn or ploughed ground): eight rows across, running along v. */
+export function crops() {
+  return once('crops', () => {
+    const S = 256, c = cnv(S, S), x = c.getContext('2d');
+    const rng = makeRng('es-crops');
+    x.fillStyle = '#8e8a82'; x.fillRect(0, 0, S, S);
+    for (let k = 0; k < 8; k++) {
+      const px = k * 32 + 7;
+      x.fillStyle = '#dcdad2'; x.fillRect(px, 0, 18, S);
+      for (let i = 0; i < 240; i++) {
+        const v = 160 + rng() * 95;
+        x.fillStyle = `rgba(${v | 0},${v | 0},${(v * 0.96) | 0},0.85)`;
+        x.fillRect(px - 3 + rng() * 22, rng() * S, 2 + rng() * 3, 2 + rng() * 5);
+      }
+    }
+    speckle(x, 0, 0, S, S, rng, 5000, 0.16);
+    for (let i = 0; i < 8; i++) blot(x, rng() * S, rng() * S, 40 + rng() * 60, 'rgba(0,0,0,0.06)');
+    return toTex(c);
+  });
+}
+
 /** A high school football field (u along its length, 120 yd × 53 yd). */
 export function footballField() {
   return once('field', () => {
@@ -375,7 +412,7 @@ export function eastSigns() {
       ['VIDEO WORLD', '#1d3fa8', '#ffe040', 'video'], ['DONUTS', '#f2b8c8', '#a8203a', 'food'], ['NAILS', '#2a1a2a', '#ff5ad8', 'neon'], ['PIZZA', '#c8201a', '#ffffff', 'food'],
       ['DRY CLEAN', '#f0f0e8', '#1d3fa8', 'clean'], ['LIQUOR', '#f4f0e4', '#b3141a', 'store'], ['CHINA WOK', '#c8201a', '#ffd040', 'food'], ['HARDWARE', '#e86a1a', '#ffffff', 'store'],
       ['TANNING', '#1a1a1a', '#ffb02a', 'neon'], ['PET SHOP', '#2a8a4a', '#ffffff', 'store'], ['SUBS', '#2a6a2a', '#ffe040', 'food'], ['GAMES', '#1a1a2a', '#3ae0ff', 'video'],
-      ['BARBER', '#f4f0e4', '#c8201a', 'clean'], ['FOR LEASE', '#d8d4c8', '#5a5a5a', 'dark'], ['VIDEO', '#c8201a', '#ffffff', 'video'], ['CARDS & GIFTS', '#7a2a6a', '#ffffff', 'store'],
+      ['BARBER', '#f4f0e4', '#c8201a', 'clean'], ['FOR LEASE', '#d8d4c8', '#5a5a5a', 'dark'], ['VIDEO', '#c8201a', '#ffffff', 'video'], ['FOOD MART', '#c8201a', '#ffffff', 'store'],
     ];
     for (let k = 0; k < 16; k++) {
       const x0 = (k % 8) * 128, y0 = Math.floor(k / 8) * 96;
