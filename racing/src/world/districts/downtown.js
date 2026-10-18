@@ -101,8 +101,8 @@ export default {
         case 'deckend': drawDeckEnd(B, it, M); break;
         default: break;
       }
-      // (a few milliseconds a step: the streamer runs a step a frame)
-      if (performance.now() - t0 > 2.5) { yield; t0 = performance.now(); }
+      // (a couple of milliseconds a step: the streamer runs a step a frame)
+      if (performance.now() - t0 > 2) { yield; t0 = performance.now(); }
     }
   },
 };
@@ -567,8 +567,8 @@ function planPlaza(P, ctx) {
   const Wd = blockSide(P, 'z', PLAZA.x0, PLAZA.z0, PLAZA.z1, 1), E = blockSide(P, 'z', PLAZA.x1, PLAZA.z0, PLAZA.z1, -1);
   const x0 = Wd.edge + 0.4, x1 = E.edge - 0.4, z0 = N.edge + 0.4, z1 = S.edge - 0.4;
   ctx.plaza = { x0, x1, z0, z1 };
-  // the paving, cut at cell lines (each cell builds its own share)
-  const cuts = (a, b) => { const out = [a]; for (let k = Math.ceil(a / 256) * 256; k < b; k += 256) out.push(k); out.push(b); return out; };
+  // the paving, in 64 m tiles (each cell builds its own share, a tile a time)
+  const cuts = (a, b) => { const out = [a]; for (let k = Math.ceil(a / 64) * 64; k < b; k += 64) if (k - a > 1 && b - k > 1) out.push(k); out.push(b); return out; };
   const xs = cuts(x0, x1), zs = cuts(z0, z1);
   for (let i = 0; i < xs.length - 1; i++) {
     for (let j = 0; j < zs.length - 1; j++) {

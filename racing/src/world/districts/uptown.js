@@ -125,8 +125,8 @@ export default {
         case 'boathouse': drawBoathouse(B, it, M); break;
         default: break;
       }
-      // (a few milliseconds a step: the streamer runs a step a frame)
-      if (performance.now() - t0 > 2.5) { yield; t0 = performance.now(); }
+      // (a couple of milliseconds a step: the streamer runs a step a frame)
+      if (performance.now() - t0 > 2) { yield; t0 = performance.now(); }
     }
   },
 };
@@ -170,8 +170,8 @@ function planPark(P, ctx) {
   PARK = pk;
   const W = rect.x1 - rect.x0, D = rect.z1 - rect.z0;
   const at = (u, v) => [rect.x0 + W * u, rect.z0 + D * v];
-  // lawns: the whole park, cut at cell lines
-  const cuts = (a, b) => { const o = [a]; for (let k = Math.ceil(a / 256) * 256; k < b; k += 256) o.push(k); o.push(b); return o; };
+  // lawns: the whole park, in 64 m tiles (a cell builds its own, a tile a time)
+  const cuts = (a, b) => { const o = [a]; for (let k = Math.ceil(a / 64) * 64; k < b; k += 64) if (k - a > 1 && b - k > 1) o.push(k); o.push(b); return o; };
   const xs = cuts(rect.x0, rect.x1), zs = cuts(rect.z0, rect.z1);
   for (let i = 0; i < xs.length - 1; i++) for (let j = 0; j < zs.length - 1; j++) {
     P.add({ type: 'lawn', x: (xs[i] + xs[i + 1]) / 2, z: (zs[j] + zs[j + 1]) / 2, poly: [[xs[i], zs[j]], [xs[i + 1], zs[j]], [xs[i + 1], zs[j + 1]], [xs[i], zs[j + 1]]], map: 'park' });
@@ -977,16 +977,19 @@ function drawRow(B, it, M) {
   }
   trim.col = it.tint.map((v) => v * 0.8);
   trim.box(x - fx * (d * 0.25) + lx * (w * 0.3), top, z - fz * (d * 0.25) + lz * (w * 0.3), 0.9, 1.6, 0.7, ry);
-  // the door, its lit transom, the stoop up to it
+  trim.col = [1, 1, 1];
+  // the door, its lit transom, the stoop up to it (close up only: from afar
+  // the terrace is its facades, cornices and roofs)
+  const near = N(B, M.trim);
   const dxl = (it.doorLeft ? -1 : 1) * (w / 2 - 1.4);
   const doorY = it.stoop ? sy + 1.8 : sy;
   const dcx = x + lx * dxl + fx * (d / 2 + 0.03), dcz = z + lz * dxl + fz * (d / 2 + 0.03);
-  trim.col = it.door;
-  panel(trim, dcx + fx * 0.02, doorY, dcz + fz * 0.02, 1.3, 2.45, ry);
-  panel(A(B, M.warm), dcx + fx * 0.04, doorY + 2.5, dcz + fz * 0.04, 1.3, 0.45, ry);
+  near.col = it.door;
+  panel(near, dcx + fx * 0.02, doorY, dcz + fz * 0.02, 1.3, 2.45, ry);
+  panel(N(B, M.warm), dcx + fx * 0.04, doorY + 2.5, dcz + fz * 0.04, 1.3, 0.45, ry);
   if (it.stoop) {
-    trim.col = it.tint.map((v) => v * 0.85);
-    stairs(trim, x + lx * dxl + fx * (d / 2), z + lz * dxl + fz * (d / 2), fx, fz, 2.0, 3.0, sy - 0.2, sy, sy + 1.8, 5);
+    near.col = it.tint.map((v) => v * 0.85);
+    stairs(near, x + lx * dxl + fx * (d / 2), z + lz * dxl + fz * (d / 2), fx, fz, 2.0, 3.0, sy - 0.2, sy, sy + 1.8, 5);
     // railings down both sides
     const rail = N(B, M.metal);
     for (const sd of [-1, 1]) {
@@ -998,7 +1001,7 @@ function drawRow(B, it, M) {
     }
     N(B, M.warm).box(dcx + lx * (it.doorLeft ? 1.1 : -1.1) + fx * 0.15, doorY + 1.9, dcz + lz * (it.doorLeft ? 1.1 : -1.1) + fz * 0.15, 0.28, 0.42, 0.28, ry);
   }
-  trim.col = [1, 1, 1];
+  near.col = [1, 1, 1];
   // an areaway railing along the front
   const sb = it.setback;
   const rail = N(B, M.metal);
