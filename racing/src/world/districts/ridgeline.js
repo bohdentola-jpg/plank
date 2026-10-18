@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import { litMat, plainMat, box, gable, cylinder, cone, lattice, drape } from './builder.js';
 import { shoulderMat } from '../kit.js';
 import { Acc } from '../build/geo.js';
-import { lin, mixc, mulc, frame, roadField, lampTest, levelness, useGround, cellPoints } from './peaks/util.js';
+import { lin, mixc, mulc, frame, roadField, lampTest, levelness, useGround, cellPoints, ownAcc, ownMesh } from './peaks/util.js';
 import * as F from './peaks/flora.js';
 import { bends, poles, cuts, drapeCut, eachOwnedSample } from './peaks/roadside.js';
 import { cellUV, board } from './peaks/parts.js';
@@ -162,7 +162,7 @@ function scatter(S) {
       const sd = S.rng() < 0.5 ? 1 : -1, off = reach + 1.5 + Math.pow(S.rng(), 1.6) * 55, along = (S.rng() - 0.5) * 6;
       const x = r.X[i] + r.LX[i] * sd * off + r.TX[i] * along, z = r.Z[i] + r.LZ[i] * sd * off + r.TZ[i] * along;
       const s = S.range(0.7, 1.4), t = S.rng();
-      if (x < S.x0 || x >= S.x1 || z < S.z0 || z >= S.z1 || !S.inside(x, z) || !S.free(x, z, 0.6, true)) continue;
+      if (x < S.x0 || x >= S.x1 || z < S.z0 || z >= S.z1 || !S.inside(x, z) || !S.free(x, z, 1.5, true)) continue;
       S.add({ type: 'tuss', x, z, y: S.groundY(x, z), s, t });
     }
   });
@@ -198,7 +198,7 @@ const HEAVY = new Set(['turbine', 'mast', 'substation', 'face', 'fence']);
 function* build(B, items) {
   const m = mats(B);
   useGround(B);
-  const vegL = B.acc(m.veg), vegD = B.acc(m.vegDark), rockL = B.acc(m.rock), rockD = B.acc(m.rockDark);
+  const vegL = B.acc(m.veg), vegD = ownAcc(m.vegDark), rockL = B.acc(m.rock), rockD = B.acc(m.rockDark);
   const V = (it) => (it.lit ? vegL : vegD), R = (it) => (it.lit ? rockL : rockD);
   const nearL = B.near(m.veg), nearD = B.near(m.vegDark), N = (it) => (it.lit ? nearL : nearD);
   let n = 0;
@@ -234,6 +234,7 @@ function* build(B, items) {
     }
     if (++n % 30 === 0 || HEAVY.has(it.type)) yield;
   }
+  yield* ownMesh(B, vegD);
 }
 
 function fencePost(B, m, it) {

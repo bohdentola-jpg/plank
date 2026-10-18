@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import { litMat, plainMat, box, prism, gable, hip, cylinder, cone, sphere, drape } from './builder.js';
 import { shoulderMat, U } from '../kit.js';
 import { Acc } from '../build/geo.js';
-import { lin, mixc, mulc, frame, roadField, lampTest, levelness, useGround, cellPoints } from './peaks/util.js';
+import { lin, mixc, mulc, frame, roadField, lampTest, levelness, useGround, cellPoints, ownAcc, ownMesh } from './peaks/util.js';
 import * as F from './peaks/flora.js';
 import { bends, cuts, drapeCut } from './peaks/roadside.js';
 import { cellUV, board, railing, bench } from './peaks/parts.js';
@@ -162,6 +162,8 @@ function loonLake(P) {
     list.push(i, j);
   }
   const lx = sx / cells.length, lz = sz / cells.length;
+  // keep the forest out of the water
+  for (const k of cells) P.claim(x0 + (k % nI) * g, z0 + ((k / nI) | 0) * g, g + 2, g + 2, 0);
   P.add({ type: 'lake', x: lx, z: lz, y: level + 0.5, x0, z0, g, cells: list, w: bx1 - bx0 + g, d: bz1 - bz0 + g, ry: 0, map: 'water' });
   // the campsite: at the road's end, between it and the water
   let best = null;
@@ -185,6 +187,7 @@ function loonLake(P) {
   const table = dry(4, -4) ? [4, -4] : [-4, -5];
   const truck = [[-10, -9], [10, -9], [-13, -2], [13, -2]].find(([lx, lz]) => dry(lx, lz) && dry(lx, lz + 3) && dry(lx, lz - 3)) || null;
   P.add({ type: 'camp', x: cxp, z: czp, y: n.y, ry, sx: best.x, sz: best.z, level: surface, tents, table, truck });
+  P.claim(cxp, czp, 30, 26, ry);
   if (truck) { const [px, pz] = L.xz(...truck); P.collider({ kind: 'box', x: px, z: pz, hx: 1.1, hz: 2.8, ry, y0: n.y - 3, y1: n.y + 3 }); }
   const [fx, fz] = L.xz(0, 0);
   P.lamp({ x: fx, z: fz, y: n.y, hx: fx, hz: fz, hy: n.y + 1.6, color: '#ff8a3a', radius: 13, intensity: 1.2, halo: 2.2 });
@@ -214,6 +217,7 @@ function falls(P) {
   const top = Math.max(P.groundY(fx + ux * 12, fz + uz * 12), py + 22) + 3;
   P.claim(fx + ux * 12, fz + uz * 12, 36, 26, ry);
   P.add({ type: 'falls', x: fx, z: fz, ry, y: py, top, px, pz });
+  P.claim(px, pz, 26, 26, ry);
   P.collider({ kind: 'box', x: fx + ux * 12, z: fz + uz * 12, hx: 17, hz: 12, ry, y0: py - 4, y1: top });
   P.lamp({ x: px, z: pz, y: py, hx: px, hz: pz, hy: py + 6, color: '#9ccaff', radius: 20, intensity: 1.1, halo: 0 });
   P.far({ x: fx + ux * 12, z: fz + uz * 12, y: py - 3, w: 34, d: 24, h: top - py + 3, ry, color: '#5a5650' });
@@ -294,7 +298,7 @@ const HEAVY = new Set(['mill', 'firetower', 'lake', 'camp', 'falls', 'cabin', 'c
 function* build(B, items) {
   const m = mats(B);
   useGround(B);
-  const vegL = B.acc(m.veg), vegD = B.acc(m.vegDark), rockL = B.acc(m.rock), rockD = B.acc(m.rockDark);
+  const vegL = B.acc(m.veg), vegD = ownAcc(m.vegDark), rockL = B.acc(m.rock), rockD = B.acc(m.rockDark);
   const V = (it) => (it.lit ? vegL : vegD), R = (it) => (it.lit ? rockL : rockD);
   const nearL = B.near(m.veg), nearD = B.near(m.vegDark), N = (it) => (it.lit ? nearL : nearD);
   let n = 0;
@@ -326,6 +330,7 @@ function* build(B, items) {
     }
     if (++n % 24 === 0 || HEAVY.has(it.type)) yield;
   }
+  yield* ownMesh(B, vegD);
 }
 
 // ------------------------------------------------------------------ the sawmill

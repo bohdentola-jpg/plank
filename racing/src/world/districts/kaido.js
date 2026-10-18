@@ -10,7 +10,7 @@
 import * as THREE from 'three';
 import { litMat, plainMat, box, prism, gable, cylinder, cone, drape } from './builder.js';
 import { shoulderMat } from '../kit.js';
-import { lin, mixc, mulc, frame, roadField, hash01, lampTest, levelness, useGround, cellPoints } from './peaks/util.js';
+import { lin, mixc, mulc, frame, roadField, hash01, lampTest, levelness, useGround, cellPoints, ownAcc, ownMesh } from './peaks/util.js';
 import * as F from './peaks/flora.js';
 import { bends, poles, cuts, drapeCut } from './peaks/roadside.js';
 import { cellUV, board, curveMirror, lampPost, utilityPole, railing, bench } from './peaks/parts.js';
@@ -249,7 +249,7 @@ const HEAVY = new Set(['rest', 'shrine', 'lookout', 'lattice', 'upole', 'routebo
 function* build(B, items) {
   const m = mats(B);
   useGround(B);
-  const vegL = B.acc(m.veg), vegD = B.acc(m.vegDark), rockL = B.acc(m.rock), rockD = B.acc(m.rockDark);
+  const vegL = B.acc(m.veg), vegD = ownAcc(m.vegDark), rockL = B.acc(m.rock), rockD = B.acc(m.rockDark);
   let n = 0;
   for (const it of items) {
     switch (it.type) {
@@ -269,6 +269,7 @@ function* build(B, items) {
     }
     if (++n % 24 === 0 || HEAVY.has(it.type)) yield;
   }
+  yield* ownMesh(B, vegD);
 }
 
 // ------------------------------------------------------------------ roadside parts

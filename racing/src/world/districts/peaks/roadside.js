@@ -75,7 +75,7 @@ export function poles(S, type, o = {}) {
     for (const sd of sides) {
       const lat = sd * (reachOf(r) + off);
       const x = r.X[i] + r.LX[i] * lat, z = r.Z[i] + r.LZ[i] * lat;
-      if (o.free && !S.free(x, z, 0.8, false)) continue;
+      if (o.free && !S.free(x, z, 1.5, false)) continue;
       const it = { type, x, z, y: r.roadY(i, 0, sd * r.rt.hw), ry: Math.atan2(r.TX[i], r.TZ[i]), k, sd };
       if (o.wires) {
         // the next pole stands one spacing on (at the same offset from its mark)

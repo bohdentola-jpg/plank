@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { litMat, plainMat, box, gable, cylinder, cone, sphere, drape, archWall } from './builder.js';
 import { shoulderMat } from '../kit.js';
 import { Acc } from '../build/geo.js';
-import { lin, mixc, mulc, frame, roadField, cellRuns, isCountryRoad, lampTest, levelness, useGround, cellPoints } from './peaks/util.js';
+import { lin, mixc, mulc, frame, roadField, cellRuns, isCountryRoad, lampTest, levelness, useGround, cellPoints, ownAcc, ownMesh } from './peaks/util.js';
 import * as F from './peaks/flora.js';
 import { bends, poles, cuts, drapeCut, eachOwnedSample } from './peaks/roadside.js';
 import { cellUV, board, lampPost, railing } from './peaks/parts.js';
@@ -109,6 +109,9 @@ function lodgeAndLift(P) {
   const tx = bx + dx * len, tz = bz + dz * len;
   const by = P.groundY(bx, bz), ty = P.groundY(tx, tz);
   P.add({ type: 'lift', x: bx, z: bz, tx, tz, by, ty, map: 'track' });
+  // the run: a clear strip down the lift line and its floodlights, the top station
+  P.claim((bx + tx) / 2 - dz * 9, (bz + tz) / 2 + dx * 9, 40, len, Math.atan2(dx, dz));
+  P.claim(tx, tz, 18, 18, Math.atan2(dx, dz));
   // towers every ~60 m; floodlights down the run beside them
   const nT = Math.max(2, Math.round(len / 60));
   for (let k = 0; k <= nT; k++) {
@@ -251,7 +254,7 @@ const HEAVY = new Set(['observatory', 'lodge', 'lift', 'icecave', 'shed', 'bank'
 function* build(B, items) {
   const m = mats(B);
   useGround(B);
-  const vegL = B.acc(m.veg), vegD = B.acc(m.vegDark), rockL = B.acc(m.rock), rockD = B.acc(m.rockDark);
+  const vegL = B.acc(m.veg), vegD = ownAcc(m.vegDark), rockL = B.acc(m.rock), rockD = B.acc(m.rockDark);
   const V = (it) => (it.lit ? vegL : vegD), R = (it) => (it.lit ? rockL : rockD);
   let n = 0;
   for (const it of items) {
@@ -288,6 +291,7 @@ function* build(B, items) {
     }
     if (++n % 20 === 0 || HEAVY.has(it.type)) yield;
   }
+  yield* ownMesh(B, vegD);
 }
 
 // ------------------------------------------------------------------ roadside

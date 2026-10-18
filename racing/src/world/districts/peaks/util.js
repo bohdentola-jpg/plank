@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { CELL, natural } from '../../terrain.js';
 import { sstep } from '../../geom.js';
 import { lampsInBox } from '../../build/roads.js';
+import { Acc } from '../../build/geo.js';
 
 const GRID = 4;   // the terrain's near grid (m)
 
@@ -182,7 +183,8 @@ function makeRuns(net, cx, cz) {
  */
 export function cellPoints(S, spacing, o = {}) {
   const out = [];
-  const j = o.jitter ?? 0.9, r = o.r ?? 1, pad = o.roadPad ?? true;
+  // (the occupancy grid is 2 m: a disc under 1.5 m can miss every cell centre)
+  const j = o.jitter ?? 0.9, r = Math.max(1.5, o.r ?? 1), pad = o.roadPad ?? true;
   for (let z = S.z0 + spacing / 2; z < S.z1; z += spacing) {
     for (let x = S.x0 + spacing / 2; x < S.x1; x += spacing) {
       const px = x + (S.rng() - 0.5) * spacing * j, pz = z + (S.rng() - 0.5) * spacing * j;
@@ -300,6 +302,54 @@ export function groundFn(T, net) {
     const d = vert(I + 1, J + 1);
     return d + (vert(I, J + 1) - d) * (1 - tx) + (vert(I + 1, J) - d) * (1 - tz);
   };
+}
+
+/**
+ * Geometry for one material that a pack turns into its mesh itself, a slice
+ * a step (ownMesh), instead of in the cell's shared batch: the batch makes
+ * all its meshes in one step after the packs are done, and a whole forest's
+ * worth of trees there is a hitch while driving. Only for unlit (no baked
+ * lamp glow), flat-shaded, vertex-coloured materials: the trees and rocks
+ * out of every lamp's reach.
+ */
+export function ownAcc(mat) {
+  const acc = new Acc(true);
+  acc.mat = mat;
+  return acc;
+}
+
+export function* ownMesh(B, acc) {
+  const n = acc.count;
+  if (!n) return;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(acc.p, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(acc.c, 3));
+  yield;
+  // flat shaded (the faces' normals come from the pixels): the vertex
+  // normal is only the shadows' bias, so straight up will do
+  const nr = new Float32Array(n * 3);
+  for (let i = 1; i < nr.length; i += 3) nr[i] = 1;
+  g.setAttribute('normal', new THREE.BufferAttribute(nr, 3));
+  g.setIndex(n > 65535 ? new THREE.Uint32BufferAttribute(acc.idx, 1) : new THREE.Uint16BufferAttribute(acc.idx, 1));
+  // bounds in one pass
+  const p = g.attributes.position.array;
+  let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+  for (let i = 0; i < p.length; i += 3) {
+    const x = p[i], y = p[i + 1], z = p[i + 2];
+    if (x < x0) x0 = x; if (x > x1) x1 = x;
+    if (y < y0) y0 = y; if (y > y1) y1 = y;
+    if (z < z0) z0 = z; if (z > z1) z1 = z;
+  }
+  g.boundingBox = new THREE.Box3(new THREE.Vector3(x0, y0, z0), new THREE.Vector3(x1, y1, z1));
+  g.boundingSphere = new THREE.Sphere(new THREE.Vector3((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2), Math.hypot(x1 - x0, y1 - y0, z1 - z0) / 2);
+  yield;
+  const m = new THREE.Mesh(g, acc.mat);
+  m.castShadow = !!acc.mat.userData.castShadow;
+  m.receiveShadow = true;
+  m.matrixAutoUpdate = false;
+  m.updateMatrix();
+  B.group.add(m);
+  acc.p = acc.uv = acc.c = acc.idx = null;
 }
 
 /**
