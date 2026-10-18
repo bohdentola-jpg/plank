@@ -174,8 +174,7 @@ Port Halcyon is one city with no seams. It covers about 12 by 10 km, with
 
 - **Race length:** two to three minutes a race. A circuit's lap is a minute
   to a minute and a half of city streets, so circuits run two laps (three on
-  the short Skyline loop). Sprints run one to one and a half minutes end to
-  end. A lap knockout lasts two laps (three on the Skyline), and a big field
+  the short Skyline loop). Sprints run about a minute and a half end to end. A lap knockout lasts two laps (three on the Skyline), and a big field
   loses more than one car a lap, so it's down to two for the last lap.
 - **Race types:** circuit, sprint, lap knockout, drag (manual shifting on a shift light, graded launches and upshifts),
   drift (angle × speed scoring with a multiplier chain that a crash wipes out),
@@ -262,17 +261,17 @@ designs, laid into the hills at one and a half times the size.
 | City | Old Town Reverse | circuit, 2 laps | 2.44 km | Old Town the other way round | night, rain |
 | Docks | Harbor Docks | circuit, 2 laps | 2.83 km | round the container terminal and the berths | night, wet |
 | Docks | Pier 9 | circuit, 2 laps | 2.48 km | Beach Blvd, the boardwalk, the sea road | night |
-| Docks | Shipyard Run | sprint | 2.86 km | past the dry docks to Harbor Blvd | dusk |
-| Highway | Interstate 9 | sprint | 4.88 km | over the gorge, the viaduct, the Eastside plains | night, wet, traffic |
+| Docks | Shipyard Run | sprint | 4.14 km | past the dry docks and along Harbor Blvd | dusk |
+| Highway | Interstate 9 | sprint | 6.49 km | over the gorge, the viaduct, the Eastside plains to the desert | night, wet, traffic |
 | Highway | Skyline Expressway | circuit, 3 laps | 2.07 km | the elevated loop between the downtown blocks | dusk, traffic |
 | Highway | Bayshore Route | sprint | 3.69 km | up the cliffs and over the Bayshore Bridge | night, traffic |
 | Raceway | Redwood Raceway | circuit, 2 laps | 2.26 km | the hairpin, the esses down through the redwoods, the back straight | day |
 | Raceway | Crestwood Hills | circuit, 2 laps | 2.15 km | a blind crest, the hairpin, the corkscrew and the carousel in the vineyards | sunset |
 | Raceway | Ironwood Park | circuit, 2 laps | 2.25 km | sweepers past the old ironworks, the hairpin, the tight infield | overcast, wet |
-| Mountain | Kaido Pass | sprint | 2.50 km | hairpins up to the shrine | dusk |
+| Mountain | Kaido Pass | sprint | 2.50 km | downhill from the top of the pass, hairpin after hairpin | dusk |
 | Mountain | Summit Loop | circuit, 2 laps | 3.08 km | round the peak by the observatory | night, fog |
-| Mountain | Ridgeline Climb | sprint | 3.08 km | the Ridgeline Road past the turbines | day |
-| Desert | Route 99 | sprint | 2.93 km | north past the Ghost Town turn and the diner | day |
+| Mountain | Ridgeline Climb | sprint | 3.77 km | uphill from the desert floor along the ridge to the Summit | day |
+| Desert | Route 99 | sprint | 4.66 km | north from the cliffs past the Ghost Town turn and the diner | day |
 | Desert | Red Rock Canyon | circuit, 2 laps | 3.94 km | the canyon floor and back along the rim | sunset |
 | Desert | Ghost Town | circuit, 2 laps | 1.93 km | a dirt loop round the dead mining town | sunset |
 | Desert | Dry Lake Drag | drag | 402 m | the salt flat's strip | sunset |
