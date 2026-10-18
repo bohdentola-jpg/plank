@@ -287,10 +287,17 @@ const roads = [
 export default {
   id: 'north', nodes, roads,
   landmarks: [
-    {id: 'shrine', name: 'KAIDO SHRINE', x: -330, z: -3560, kind: 'shrine', district: 'kaido'},
-    {id: 'observatory', name: 'SUMMIT OBSERVATORY', x: 1260, z: -4700, kind: 'observatory', district: 'summit'},
-    {id: 'lodge', name: 'SUMMIT LODGE', x: 900, z: -4280, kind: 'lodge', district: 'summit'},
-    {id: 'windfarm', name: 'RIDGELINE WIND FARM', x: 3150, z: -3400, kind: 'windfarm', district: 'ridgeline'},
-    {id: 'tower', name: 'THE 92.7 TOWER', x: 2620, z: -3060, kind: 'tower', district: 'ridgeline', hidden: true},
+    {id: 'observatory', name: 'SUMMIT OBSERVATORY', x: 1269, z: -4714, kind: 'observatory', district: 'summit'},
+    {id: 'lodge', name: 'SUMMIT LODGE', x: 1136, z: -4060, kind: 'lodge', district: 'summit'},
+    {id: 'icecave', name: 'THE ICE CAVE', x: 1371, z: -5332, kind: 'cave', district: 'summit', hidden: true},
+    {id: 'windfarm', name: 'RIDGELINE WIND FARM', x: 2927, z: -3346, kind: 'windfarm', district: 'ridgeline'},
+    {id: 'tower', name: 'THE 92.7 TOWER', x: 2633, z: -3033, kind: 'tower', district: 'ridgeline', hidden: true},
+    {id: 'shrine', name: 'KAIDO SHRINE', x: -504, z: -3583, kind: 'shrine', district: 'kaido'},
+    {id: 'kaido_rest', name: 'KAIDO REST AREA', x: -104, z: -2587, kind: 'rest', district: 'kaido'},
+    {id: 'miharashi', name: 'MIHARASHI LOOKOUT', x: -432, z: -1992, kind: 'lookout', district: 'kaido', hidden: true},
+    {id: 'sawmill', name: 'NORTH WOODS SAWMILL', x: -2200, z: -3960, kind: 'sawmill', district: 'wilds'},
+    {id: 'firelookout', name: 'FIRE LOOKOUT', x: -2108, z: -3299, kind: 'lookout', district: 'wilds'},
+    {id: 'loonlake', name: 'LOON LAKE CAMP', x: -2342, z: -4036, kind: 'camp', district: 'wilds', hidden: true},
+    {id: 'falls', name: 'HIDDEN FALLS', x: -1360, z: -4081, kind: 'falls', district: 'wilds', hidden: true},
   ],
 };
