@@ -975,7 +975,7 @@ function den(B, M, it) {
 
 // ------------------------------------------------------------------ buildings
 
-function portOffice(B, M, it, uv) {
+function* portOffice(B, M, it, uv) {
   const { x, z, w, d, ry } = it;
   const F = frame(x, 0, z, ry);
   const of = B.acc(M.office), cc = B.acc(M.conc), st = B.acc(M.paint), gl = B.acc(M.glow), sg = B.acc(M.sign);
@@ -987,6 +987,7 @@ function portOffice(B, M, it, uv) {
   box(of, x, base + 0.4, z, w, H, d, ry, { u: 16, v: 16, top: false });
   col(cc, C('#c8c6be'));
   box(cc, x, base + 0.4 + H, z, w + 0.6, 1.0, d + 0.6, ry, { u: 4 });
+  yield;
   // roof plant
   col(st, C('#8a8d90'));
   lbox(st, F, ry, -10, base + H + 1.4, 3, 9, 2.4, 7, {});
@@ -1070,7 +1071,7 @@ function gateCanopy(B, M, it, uv) {
   void r;
 }
 
-function transitShed(B, M, it, uv) {
+function* transitShed(B, M, it, uv) {
   const { x, z, w, d, ry, h } = it;
   const F = frame(x, 0, z, ry);
   const cl = B.acc(M.clad), st = B.acc(M.paint), cc = B.acc(M.conc), gl = B.acc(M.glow), sg = B.acc(M.sign);
@@ -1104,6 +1105,7 @@ function transitShed(B, M, it, uv) {
   } else {
     gable(st, x, base + 0.3 + h, z, w, d, Math.min(4.5, d * 0.12), ry, { over: 0.6, endAcc: cl, alongZ: false });
   }
+  yield;
   // the loading dock along the front with its roller doors, lamps and trucks
   col(cc, C('#9a978f'));
   lbox(cc, F, ry, 0, base - 0.4, d / 2 + 1.5, w - 2, 1.6, 3, { u: 3 });
@@ -1118,6 +1120,7 @@ function transitShed(B, M, it, uv) {
   }
   // a truck or two alongside the dock (parked along it, inside the lot)
   for (const t of it.trucks || []) {
+    yield;
     const p = F(t.lx, 0, d / 2 + 5.6);
     truck(B, M, p[0], B.groundY(p[0], p[2]), p[2], ry + (t.flip ? Math.PI : 0), rng, rng() < 0.8);
   }

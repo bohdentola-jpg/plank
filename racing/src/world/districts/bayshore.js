@@ -714,13 +714,14 @@ function anchorage(B, M, it, uv) {
 
 // ------------------------------------------------------------------ Vista Point
 
-function vista(B, M, it, uv) {
+function* vista(B, M, it, uv) {
   const { x, z, ry, w, d, pts } = it;
   const rng = makeRng(seedOf(it));
   const dc = B.acc(M.decal), pa = B.acc(M.paint), gl = B.acc(M.glow), wd = B.acc(M.wood), rk = B.acc(M.rock);
   col(dc, C('#3c3d40'));
   drape(dc, B, pts, { lift: 0.06, step: 4, uv: 8 });
   const F = frame(x, 0, z, ry);
+  yield;
   // bays painted on the road side
   col(dc, C('#e8e6dc'));
   for (let lx = -w / 2 + 4; lx <= w / 2 - 14; lx += 3) {
@@ -731,6 +732,7 @@ function vista(B, M, it, uv) {
   const wl = [];
   for (let lx = -w / 2; lx <= w / 2 + 0.1; lx += 4) { const p = F(lx, 0, -d / 2 + 0.8); wl.push([p[0], p[2]]); }
   stoneWall(rk, B, wl, 0.9, 0.7, rng, [0.6, 0.56, 0.5]);
+  yield;
   // binoculars, benches, the board, a bin
   for (const lx of [-6, 4]) {
     const p = F(lx, 0, -d / 2 + 2.2);
@@ -765,6 +767,7 @@ function vista(B, M, it, uv) {
     col(gl, C('#ffd29a', 2.6));
     gl.box(q[0], y + 6.1, q[2], 0.55, 0.5, 0.55);
   }
+  yield;
   // the coffee cart, lit, a couple of parked cars
   const cp = F(10, 0, -d / 2 + 9);
   const cy = B.groundY(cp[0], cp[2]);
