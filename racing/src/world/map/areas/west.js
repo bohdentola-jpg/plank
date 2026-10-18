@@ -7,11 +7,12 @@
 // vineyards east of the lake.
 const nodes = {
   // up the gorge, over the dam
-  rr_1: [-2330, -560], rr_2: [-2440, -780],
+  rr_1: [-2330, -560], rr_2: [-2440, -780, 31.9],
   dam_w: [-2565, -1000, 58], dam_e: [-2305, -1102, 58],
   // round the lake
   lk_s1: [-3000, -1010], lk_s2: [-3700, -1060], lk_w: [-4560, -1360],
-  lk_n1: [-4250, -2120], lk_n2: [-3500, -2620], lk_n3: [-2850, -2560], lk_ne: [-2240, -1800],
+  cg_end: [-4290, -1255],
+  lk_n1: [-4250, -2120], lk_n2: [-3500, -2620], lk_n3: [-2850, -2560], lk_ne: [-2240, -1800, 111.2],
   // Ironwood Park
   iw_n: [-3650, -1000], iw_s: [-3800, -400], iw_a: [-3350, -560], iw_b: [-3350, -900], iw_c: [-4050, -900], iw_d: [-4050, -560],
   // the farms
@@ -19,29 +20,32 @@ const nodes = {
   fm_4: [-3700, 900], fm_5: [-3400, 1380], fm_6: [-4300, 1500],
   af_a: [-5650, 640], af_b: [-4760, 520],
   // the redwoods
-  rh_1: [-4900, -2050], rh_2: [-5150, -2700], rw_g: [-5050, -2980],
+  rh_1: [-4900, -2050, 133.2], rh_2: [-5150, -2700], rw_g: [-5050, -2980],
   rw_a: [-5300, -3050], rw_b: [-4750, -3150], rw_c: [-4650, -3650], rw_d: [-5350, -3750],
   // Crestwood
   cw_1: [-1900, -2050], cw_g: [-1750, -2250],
   cw_a: [-2150, -2350], cw_b: [-1350, -2300], cw_c: [-1300, -2800], cw_d: [-2100, -2850],
-  cr_e: [-1250, -1720],
+  cr_e: [-1250, -1720, 79.7],
 };
 
 const roads = [
   { id: 'rr_road1', type: 'coastal', a: 'ot_river_n', b: 'rr_1', name: 'RIVER ROAD' },
-  { id: 'rr_road2', type: 'coastal', a: 'rr_1', b: 'rr_2', name: 'RIVER ROAD', pts: [[-2380, -660, 80]] },
-  { id: 'rr_road3', type: 'coastal', a: 'rr_2', b: 'dam_w', name: 'RIVER ROAD', pts: [[-2530, -880, 60]] },
+  { id: 'rr_road2', type: 'coastal', a: 'rr_1', b: 'rr_2', name: 'RIVER ROAD', pts: [[-2380, -660, 80]], grade: 0.11 },
+  { id: 'rr_road3', type: 'coastal', a: 'rr_2', b: 'dam_w', name: 'RIVER ROAD', pts: [[-2530, -880, 60]], grade: 0.11 },
   { id: 'rr_i9', type: 'street', a: 'rr_1', b: 'i9_wr', pts: [[-2560, -560, 60]] },
   { id: 'dam_road', type: 'street', a: 'dam_w', b: 'dam_e', name: 'DAM ROAD', profile: 'flat', noBridge: true },
   // the lake loop
   { id: 'lk_south1', type: 'highway', a: 'dam_w', b: 'lk_s1', name: 'SOUTH SHORE RD' },
   { id: 'lk_south2', type: 'highway', a: 'lk_s1', b: 'lk_s2', name: 'SOUTH SHORE RD' },
-  { id: 'lk_south3', type: 'highway', a: 'lk_s2', b: 'lk_w', name: 'SOUTH SHORE RD', pts: [[-4250, -1140, 300]] },
+  { id: 'lk_south3', type: 'highway', a: 'lk_s2', b: 'lk_w', name: 'SOUTH SHORE RD', pts: [[-4250, -1140, 300]], grade: 0.1 },
   { id: 'lk_north1', type: 'highway', a: 'lk_w', b: 'lk_n1', name: 'NORTH SHORE RD', pts: [[-4500, -1800, 300]] },
-  { id: 'lk_north2', type: 'highway', a: 'lk_n1', b: 'lk_n2', name: 'NORTH SHORE RD', pts: [[-3950, -2480, 300]] },
+  { id: 'lk_north2', type: 'highway', a: 'lk_n1', b: 'lk_n2', name: 'NORTH SHORE RD', pts: [[-3950, -2480, 300]], grade: 0.1, endBlend: 160 },
   { id: 'lk_north3', type: 'highway', a: 'lk_n2', b: 'lk_n3', name: 'NORTH SHORE RD' },
-  { id: 'lk_north4', type: 'highway', a: 'lk_n3', b: 'lk_ne', name: 'NORTH SHORE RD', pts: [[-2450, -2250, 300]] },
-  { id: 'lk_east', type: 'highway', a: 'lk_ne', b: 'dam_e', name: 'EAST SHORE RD', pts: [[-2180, -1450, 300]] },
+  { id: 'lk_north4', type: 'highway', a: 'lk_n3', b: 'lk_ne', name: 'NORTH SHORE RD', pts: [[-2450, -2250, 300]], grade: 0.11, endBlend: 250 },
+  { id: 'lk_east', type: 'highway', a: 'lk_ne', b: 'dam_e', name: 'EAST SHORE RD', pts: [[-2180, -1450, 300]], grade: 0.11 },
+  // the lake's backroads: the camp road along the south-west shore, on past
+  // the campground to the fishing jetty at Heron Point
+  { id: 'cg_road', type: 'gravel', a: 'lk_s2', b: 'cg_end', name: 'PINECONE CAMP RD', district: 'lake', pts: [[-3740, -1100, 30], [-3900, -1122, 80], [-4060, -1162, 80], [-4180, -1205, 60]] },
   // Ironwood Park: the circuit, its gate off the shore road and the back gate
   { id: 'iw_gate', type: 'street', a: 'lk_s2', b: 'iw_n' },
   { id: 'iw_l1', type: 'circuit', a: 'iw_n', b: 'iw_b', pts: [[-3450, -1000, 40]] },
@@ -82,15 +86,15 @@ const roads = [
   { id: 'rw_l3', type: 'circuit', a: 'rw_c', b: 'rw_d', pts: [[-5000, -3850, 120]] },
   { id: 'rw_l4', type: 'circuit', a: 'rw_d', b: 'rw_a', pts: [[-5500, -3400, 90]] },
   // Crestwood: from the lake's north-east corner, and from Uptown
-  { id: 'cw_road', type: 'highway', a: 'lk_ne', b: 'cw_1', name: 'CRESTWOOD RD' },
-  { id: 'cw_gate', type: 'street', a: 'cw_1', b: 'cw_g' },
+  { id: 'cw_road', type: 'highway', a: 'lk_ne', b: 'cw_1', name: 'CRESTWOOD RD', grade: 0.12 },
+  { id: 'cw_gate', type: 'street', a: 'cw_1', b: 'cw_g', grade: 0.12, blend: 50 },
   { id: 'cw_l0', type: 'circuit', a: 'cw_g', b: 'cw_b', pts: [[-1500, -2200, 80]] },
   { id: 'cw_l1', type: 'circuit', a: 'cw_b', b: 'cw_c', pts: [[-1150, -2550, 90]] },
   { id: 'cw_l2', type: 'circuit', a: 'cw_c', b: 'cw_d', pts: [[-1700, -2950, 90], [-1850, -2650, 60]] },
   { id: 'cw_l3', type: 'circuit', a: 'cw_d', b: 'cw_a', pts: [[-2300, -2650, 90]] },
   { id: 'cw_l4', type: 'circuit', a: 'cw_a', b: 'cw_g', pts: [[-1950, -2250, 60]] },
-  { id: 'cr_road1', type: 'highway', a: 'cw_1', b: 'cr_e', name: 'CRESTWOOD RD', pts: [[-1550, -1880, 300]] },
-  { id: 'cr_road2', type: 'street', a: 'cr_e', b: 'u_0_0', name: 'CRESTWOOD RD' },
+  { id: 'cr_road1', type: 'highway', a: 'cw_1', b: 'cr_e', name: 'CRESTWOOD RD', pts: [[-1550, -1880, 300]], grade: 0.12, blend: 50 },
+  { id: 'cr_road2', type: 'street', a: 'cr_e', b: 'u_0_0', name: 'CRESTWOOD RD', grade: 0.15, blend: 40 },
 ];
 
 export default {
