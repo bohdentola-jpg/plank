@@ -85,11 +85,12 @@ function streetFace(K, it, f, top, rng, k) {
           const lit = rng() < it.lit;
           fquad(K.win, f, a - 0.6, a + 0.6, yb + 0.15, yb + 2.55, 0.04, ctwUV(lit ? ['d_lit', 'd_red', 'd_green'][Math.floor(rng() * 3)] : 'd_dark'));
         }
-        P.col = [0.82, 0.8, 0.74];
-        bandFU(P, f, 0.1, len - 0.1, yb - 0.05, 0.16, 0, 1.1, 2);
+        const Ps = K.trim || P;
+        Ps.col = [0.82, 0.8, 0.74];
+        bandFU(Ps, f, 0.1, len - 0.1, yb - 0.05, 0.16, 0, 1.1, 2);
         K.metal.col = it.rail;
         fquad(K.metal, f, 0.1, len - 0.1, yb + 0.11, yb + 1.15, 1.08, metalUV(1, len, 1.6));
-        if (fl === it.nf || rng() < 0.4) pent(K, f, 0, len, yb + it.fh - 0.15, 1.3, it.tileCol);
+        if (fl === it.nf || rng() < 0.4) pent(K.trim ? { ...K, paint: K.trim } : K, f, 0, len, yb + it.fh - 0.15, 1.3, it.tileCol);
         // plants on the balcony
         if (rng() < 0.5) {
           N.leaf.col = [0.18 + rng() * 0.1, 0.42, 0.16];
@@ -104,8 +105,9 @@ function streetFace(K, it, f, top, rng, k) {
           fquad(K.win, f, a - wd / 2, a + wd / 2, yb + 0.75, yb + 0.75 + wd * 2, 0.04, ctwUV(t));
           // an AC unit hung out of the window now and then
           if ((t === 's_ac' || t === 's_aclit') && fl <= 3) {
-            N.paint.col = [0.78, 0.78, 0.74];
-            fbox(N.paint, f, a, yb + 0.85, 0, wd * 0.85, 0.5, 0.55, { u: 1, faces: 'f', top: false });
+            const Na = N.trim || N.paint;
+            Na.col = [0.78, 0.78, 0.74];
+            fbox(Na, f, a, yb + 0.85, 0, wd * 0.85, 0.5, 0.55, { u: 1, faces: 'f', top: false });
           }
         }
       }

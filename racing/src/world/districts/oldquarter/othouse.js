@@ -151,8 +151,9 @@ function streetFace(K, it, f, e, top, rng, k) {
       if (noble && !it.ped) bandFU(Ns, f, 0, len, ys + wh + 0.05, 0.14, 0, 0.12);
     }
     if (balcony) {
-      N.stone.col = stoneCol;
-      bandFU(N.stone, f, 0.15, len - 0.15, ys - 0.2, 0.16, 0, 0.78);
+      const Nb = N.stoneHi || N.stone;
+      Nb.col = stoneCol;
+      bandFU(Nb, f, 0.15, len - 0.15, ys - 0.2, 0.16, 0, 0.78);
       railing(N.metal, f, 0.25, len - 0.25, ys - 0.04, 0.95, 0.76);
     }
   }
