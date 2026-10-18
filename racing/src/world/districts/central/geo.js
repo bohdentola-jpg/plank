@@ -260,21 +260,60 @@ export function stairs(acc, x, z, fx, fz, w, run, y0, ys, y1, n) {
 
 /** A low-poly ball with shared vertices (use a flatShading material for facets). */
 export function blob(acc, x, y, z, rx, ry_, rz, seg = 6, rings = 4) {
-  const base = acc.count;
-  for (let j = 0; j <= rings; j++) {
+  // one vertex at each pole, rings of seg between (no seam): a sixth of a
+  // tree's old vertices (nothing drawn with it is textured)
+  const top = acc.v(x, y + ry_, z, 0, 1);
+  for (let j = 1; j < rings; j++) {
     const th = (j / rings) * Math.PI;
-    for (let i = 0; i <= seg; i++) {
+    for (let i = 0; i < seg; i++) {
       const ph = (i / seg) * TAU;
-      acc.v(x + Math.sin(th) * Math.cos(ph) * rx, y + Math.cos(th) * ry_, z + Math.sin(th) * Math.sin(ph) * rz, i / seg, j / rings);
+      acc.v(x + Math.sin(th) * Math.cos(ph) * rx, y + Math.cos(th) * ry_, z + Math.sin(th) * Math.sin(ph) * rz, i / seg, 1 - j / rings);
     }
   }
-  const row = seg + 1;
-  for (let j = 0; j < rings; j++) {
+  const bot = acc.v(x, y - ry_, z, 0, 0);
+  const R = (j, i) => top + 1 + (j - 1) * seg + (i % seg);
+  for (let i = 0; i < seg; i++) acc.tri(top, R(1, i + 1), R(1, i));
+  for (let j = 1; j < rings - 1; j++) {
     for (let i = 0; i < seg; i++) {
-      const a = base + j * row + i, b = a + 1, c = a + row, d = c + 1;
-      if (j > 0) acc.tri(a, b, c);
-      if (j < rings - 1) acc.tri(b, d, c);
+      const a = R(j, i), b = R(j, i + 1), c = R(j + 1, i), d = R(j + 1, i + 1);
+      acc.tri(a, b, c);
+      acc.tri(b, d, c);
     }
+  }
+  for (let i = 0; i < seg; i++) acc.tri(R(rings - 1, i), R(rings - 1, i + 1), bot);
+}
+
+/** An upright post (seg sides, r at its foot to r2 at its top), its sides sharing vertices. */
+export function post(acc, x, y, z, r, h, seg = 5, r2 = r) {
+  const base = acc.count;
+  for (let i = 0; i < seg; i++) { const a = (i / seg) * TAU; acc.v(x + Math.cos(a) * r, y, z + Math.sin(a) * r, i / seg, 0); }
+  for (let i = 0; i < seg; i++) { const a = (i / seg) * TAU; acc.v(x + Math.cos(a) * r2, y + h, z + Math.sin(a) * r2, i / seg, 1); }
+  for (let i = 0; i < seg; i++) {
+    const j = (i + 1) % seg;
+    acc.tri(base + j, base + i, base + seg + i);
+    acc.tri(base + j, base + seg + i, base + seg + j);
+  }
+}
+
+/** A thin square rod from a to b (a rail, a limb), its sides sharing vertices. */
+export function rod(acc, ax, ay, az, bx, by, bz, w) {
+  const dx = bx - ax, dy = by - ay, dz = bz - az;
+  const L = Math.hypot(dx, dy, dz) || 1;
+  const t = [dx / L, dy / L, dz / L];
+  let up = Math.abs(t[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0];
+  const s = [t[1] * up[2] - t[2] * up[1], t[2] * up[0] - t[0] * up[2], t[0] * up[1] - t[1] * up[0]];
+  const sl = Math.hypot(s[0], s[1], s[2]) || 1;
+  s[0] /= sl; s[1] /= sl; s[2] /= sl;
+  up = [s[1] * t[2] - s[2] * t[1], s[2] * t[0] - s[0] * t[2], s[0] * t[1] - s[1] * t[0]];
+  const h = w / 2, base = acc.count;
+  const C4 = [[-h, -h], [h, -h], [h, h], [-h, h]];
+  for (const [px, py, pz] of [[ax, ay, az], [bx, by, bz]]) {
+    for (const [a, b] of C4) acc.v(px + s[0] * a + up[0] * b, py + s[1] * a + up[1] * b, pz + s[2] * a + up[2] * b, 0, 0);
+  }
+  for (let k = 0; k < 4; k++) {
+    const k1 = (k + 1) % 4;
+    acc.tri(base + k, base + k1, base + 4 + k1);
+    acc.tri(base + k, base + 4 + k1, base + 4 + k);
   }
 }
 
@@ -287,7 +326,7 @@ export function blob(acc, x, y, z, rx, ry_, rz, seg = 6, rings = 4) {
 export function tree(trunk, leaf, x, y, z, s, kind, t) {
   const k = { locust: [3.6, 2.3, 0.15], plane: [4.4, 3.5, 0.27], elm: [4.6, 3.4, 0.24], linden: [3.8, 2.9, 0.22], pine: [3, 2.2, 0.2] }[kind] || [4, 3, 0.22];
   const [hTrunk, rCan, rTrunk] = k;
-  trunk.cyl(x, y - 0.3, z, rTrunk * s, (hTrunk + 0.3) * s, 5, rTrunk * 0.75 * s);
+  post(trunk, x, y - 0.3, z, rTrunk * s, (hTrunk + 0.3) * s, 5, rTrunk * 0.75 * s);
   const top = y + hTrunk * s;
   const R = rCan * s;
   const a = t * TAU;
@@ -301,7 +340,7 @@ export function tree(trunk, leaf, x, y, z, s, kind, t) {
   for (let q = 0; q < limbs; q++) {
     const b = a + (q / limbs) * TAU;
     const spread = kind === 'elm' ? 0.75 : 0.5;
-    trunk.beam(x, top - 0.6 * s, z, x + Math.cos(b) * R * spread, top + R * (kind === 'elm' ? 0.9 : 0.55), z + Math.sin(b) * R * spread, rTrunk * 1.1 * s, rTrunk * 1.1 * s);
+    rod(trunk, x, top - 0.6 * s, z, x + Math.cos(b) * R * spread, top + R * (kind === 'elm' ? 0.9 : 0.55), z + Math.sin(b) * R * spread, rTrunk * 1.1 * s);
   }
   if (kind === 'elm') {
     // a vase: wide and high, open below

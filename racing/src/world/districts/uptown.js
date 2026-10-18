@@ -20,7 +20,7 @@ import {
   rowhouseTex, ROW, decoTex, DECO, stoneTex, STONE, ashlarTex, boutiqueTex, utSignsTex, UT_SIGN_RECTS, signUV, glowOf,
   pondTex, hexTex, UT_STREET_SIGN, AWNINGS,
 } from './central/paint.js';
-import { walls, lid, block, panel, decal, tree, car, ring, disc, place, circle, polyWalls, polyCap, apex, toWorld, slope, blob, under, stairs, paint, A, N } from './central/geo.js';
+import { walls, lid, block, panel, decal, tree, car, ring, disc, place, circle, polyWalls, polyCap, apex, toWorld, slope, blob, under, stairs, post, rod, paint, A, N } from './central/geo.js';
 import { drawParts, drawTops } from './central/draw.js';
 import { blockSide, cityJunctions, signalSpot, walkSidewalks, reachOf, frontLots, Spots, naturalGround } from './central/plan.js';
 import { roadLamps } from '../build/roads.js';
@@ -374,8 +374,8 @@ function planBoathouse(P, pk, wy) {
   const kx = x - fx * (d / 2 + dock / 2), kz = z - fz * (d / 2 + dock / 2);
   P.collider({ kind: 'box', x: kx, z: kz, hx: 3, hz: dock / 2, ry, y0: wy - 1, y1: wy + 0.75 });
   // the porch lamp, the dock's lantern, the cupola's glow
-  P.lamp({ x: x + fx * (d / 2 + 1.5), z: z + fz * (d / 2 + 1.5), hy: gy + 3.6, color: '#ffcf8a', radius: 16, intensity: 0.95, halo: 1 });
-  P.lamp({ x: x - fx * (d / 2 + dock - 0.6), z: z - fz * (d / 2 + dock - 0.6), hy: wy + 2.6, color: '#ffc070', radius: 12, intensity: 0.9, halo: 1.2 });
+  P.lamp({ x: x + fx * (d / 2 + 1.5), z: z + fz * (d / 2 + 1.5), hy: gy + 3.6, color: '#ffcf8a', radius: 11, intensity: 0.5, halo: 1 });
+  P.lamp({ x: x - fx * (d / 2 + dock - 0.6), z: z - fz * (d / 2 + dock - 0.6), hy: wy + 2.6, color: '#ffc070', radius: 10, intensity: 0.6, halo: 1.2 });
   P.far({ shape: 'box', x, z, y: gy, w, d, h: 6.6, ry, color: '#d8ccb0', lit: 0.3 });
   pk.keep.push([x, z, 13], [kx, kz, 7]);
   P.landmark({ id: 'ut_boathouse', name: 'THE BOATHOUSE', x, z, r: 25, hidden: true, kind: 'boathouse' });
@@ -414,7 +414,7 @@ function planMuseum(P, ctx) {
   P.far({ shape: 'box', x, z, y: gy - 2, w, d, h: top - gy + 2, color: '#d0c6b0', lit: 0.1 });
   P.far({ shape: 'cyl', x, z, y: top, r: 15, h: 12, color: '#6a9e8a', lit: 0 });
   // floodlights on the portico and the steps
-  for (const sd of [-1, 0, 1]) P.lamp({ x: x + sd * 22, z: z1 - 2, hy: gy + 1, color: '#ffe6c0', radius: 26, intensity: 1, halo: 0 });
+  for (const sd of [-1, 0, 1]) P.lamp({ x: x + sd * 22, z: z1 - 2, hy: gy + 1, color: '#ffe6c0', radius: 24, intensity: 0.6, halo: 0 });
   for (const sd of [-1, 1]) P.lamp({ x: x + sd * 44, z: z1 - 6, hy: gy + 1.3, color: '#bfe0ff', radius: 9, intensity: 0.7, halo: 0 });
   void ctx;
 }
@@ -436,7 +436,7 @@ function planTheatre(P, ctx) {
   P.collider({ kind: 'box', x, z, hx: w / 2, hz: d / 2, ry: Math.PI, y0: gy - 2, y1: gy + 40 });
   P.far({ shape: 'box', x, z, y: gy - 2, w, d, h: 26, ry: Math.PI, color: '#a8846a', lit: 0.1 });
   P.far({ shape: 'box', x, z: z + 12, y: gy + 24, w: w - 6, d: 22, h: 14, ry: Math.PI, color: '#8a6a56', lit: 0 });
-  P.lamp({ x, z: z - d / 2 - 4, hy: gy + 4.2, color: '#ffd890', radius: 24, intensity: 1.2, halo: 2.6 });
+  P.lamp({ x, z: z - d / 2 - 4, hy: gy + 4.2, color: '#ffd890', radius: 20, intensity: 0.85, halo: 2.6 });
   for (const sd of [-1, 1]) P.collider({ kind: 'box', x: x + sd * (w / 2 + 2.5), z: z - d / 2 - 2.6, hx: 0.8, hz: 1.2, ry: Math.PI, y0: gy - 1, y1: gy + 1.8 });
   P.lamp({ x: x - w / 2 + 3, z: z - d / 2 - 2, hy: gy + 16, color: '#ff4a3a', radius: 6, intensity: 0.4, halo: 3 });
   P.landmark({ id: 'ut_orpheum', name: 'THE ORPHEUM', x, z: z - d / 2, r: 30, kind: 'theatre' });
@@ -454,7 +454,8 @@ function planArch(P, ctx) {
   const half = r.rt.hw + r.rt.shoulder + 1.6;      // the opening clears the carriageway
   const pier = 5.5, depth = 9, H = 26;
   const gy = r.roadY(i, p.t, 0);
-  P.add({ type: 'arch', x: p.x, z: p.z, ry, gy, half, pier, depth, H, map: 'monument' });
+  // (no map footprint: it stands over the road)
+  P.add({ type: 'arch', x: p.x, z: p.z, ry, gy, half, pier, depth, H });
   for (const sd of [-1, 1]) {
     const lat = sd * (half + pier / 2);
     const cx = p.x + r.LX[i] * lat, cz = p.z + r.LZ[i] * lat;
@@ -875,7 +876,7 @@ function mats(B) {
   const deco = m('deco', () => windowMat(decoTex(), { key: 'ut-deco', tint: true, ...DECO, pal: WARM, occ: [0.35, 0.8], dense: 0.72, sparse: 0.14, curtains: true, tv: 0.04, perWindow: true, rough: 0.8, metal: 0.02, env: 0.4, night: 1.2, crown: { hex: '#ffd890', k: 1.83 } }));
   // plain-coloured iron, slate, copper: colours of the trim material
   const trim = m('trim', () => litMat({ vertexColors: true, roughness: 0.6, metalness: 0.15 }));
-  const leaf = sharedMat(B, 'leaf', () => litMat({ vertexColors: true, roughness: 0.9, flatShading: true }, { glow: 0.45 }));
+  const leaf = sharedMat(B, 'leaf', () => litMat({ vertexColors: true, roughness: 0.9, flatShading: true }, { glow: 0.32 }));
   // gold crown edges and warm lamp glass: one glowing material
   const glo = sharedMat(B, 'glo', () => nightGlowVC(4));
   const lit = (hex, k) => { const c = new THREE.Color(hex); return [c.r * k / 4, c.g * k / 4, c.b * k / 4]; };
@@ -896,7 +897,7 @@ function mats(B) {
     steel: paint(trim, 0xa8adb2),
     pole: poleMat(),
     wood: paint(trim, 0x6e5038),
-    cream: paint(trim, 0xe6dcc2),
+    cream: paint(trim, 0xcbbf9f),
     boatGreen: paint(trim, 0x1f4a32),
     boatRed: paint(trim, 0x8a2a22),
     ashlar: m('ashlar', () => litMat({ map: ashlarTex(), roughness: 0.85 }, { glow: 1.9 })),
@@ -992,8 +993,8 @@ function drawRow(B, it, M) {
       const ox = dxl + sd * 1.05;
       const ax = x + lx * ox + fx * (d / 2 + 0.2), az = z + lz * ox + fz * (d / 2 + 0.2);
       const bx = x + lx * ox + fx * (d / 2 + 3.1), bz = z + lz * ox + fz * (d / 2 + 3.1);
-      rail.beam(ax, sy + 2.75, az, bx, sy + 1.05, bz, 0.07, 0.07);
-      rail.cyl(bx, sy, bz, 0.06, 1.05, 5);
+      rod(rail, ax, sy + 2.75, az, bx, sy + 1.05, bz, 0.07);
+      post(rail, bx, sy, bz, 0.06, 1.05, 4);
     }
     N(B, M.warm).box(dcx + lx * (it.doorLeft ? 1.1 : -1.1) + fx * 0.15, doorY + 1.9, dcz + lz * (it.doorLeft ? 1.1 : -1.1) + fz * 0.15, 0.28, 0.42, 0.28, ry);
   }
@@ -1006,7 +1007,7 @@ function drawRow(B, it, M) {
   const segs = it.stoop ? [[-w / 2, doorAt - 1.15], [doorAt + 1.15, w / 2]] : [[-w / 2, doorAt - 0.8], [doorAt + 0.8, w / 2]];
   for (const [a, b] of segs) {
     if (b - a < 0.4) continue;
-    rail.beam(ex + lx * a, sy + 0.95, ez + lz * a, ex + lx * b, sy + 0.95, ez + lz * b, 0.06, 0.06);
+    rod(rail, ex + lx * a, sy + 0.95, ez + lz * a, ex + lx * b, sy + 0.95, ez + lz * b, 0.06);
   }
 }
 
@@ -1470,7 +1471,7 @@ function drawTree(B, it, M) {
     // a little iron guard round the pit
     const g = N(B, M.metal);
     const pts = place([[-0.8, -0.8], [0.8, -0.8], [0.8, 0.8], [-0.8, 0.8]], it.x, it.z, it.ry || 0);
-    for (let q = 0; q < 4; q++) { const a = pts[q], b = pts[(q + 1) % 4]; g.beam(a[0], it.y + 0.45, a[1], b[0], it.y + 0.45, b[1], 0.04, 0.04); }
+    for (let q = 0; q < 4; q++) { const a = pts[q], b = pts[(q + 1) % 4]; rod(g, a[0], it.y + 0.45, a[1], b[0], it.y + 0.45, b[1], 0.04); }
   }
 }
 

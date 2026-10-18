@@ -924,7 +924,7 @@ function mats(B) {
   // a lit crown is the curtain wall with every window on (shaders.js)
   const curtain = m('curtain', () => windowMat(curtainTex(), { key: 'dt-curtain', tint: true, ...CURTAIN, pal: PAL, occ: [0.18, 0.72], dense: 0.93, sparse: 0.05, rough: 0.22, metal: 0.55, env: 1.25, night: 1.35, crown: { hex: '#cfe2ff', k: 1.55 } }));
   const paintCar = m('paintCar', () => litMat({ vertexColors: true, roughness: 0.35, metalness: 0.5, envMapIntensity: 1.0 }));
-  const leaf = sharedMat(B, 'leaf', () => litMat({ vertexColors: true, roughness: 0.9, flatShading: true }, { glow: 0.45 }));
+  const leaf = sharedMat(B, 'leaf', () => litMat({ vertexColors: true, roughness: 0.9, flatShading: true }, { glow: 0.32 }));
   // every LED strip, lit edge and neon: one material, its colour per vertex
   const glo = sharedMat(B, 'glo', () => nightGlowVC(4));
   const lit = (hex, k) => { const c = new THREE.Color(hex); return [c.r * k / 4, c.g * k / 4, c.b * k / 4]; };
