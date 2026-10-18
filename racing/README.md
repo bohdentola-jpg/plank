@@ -3,9 +3,11 @@
 An early-2000s street racer that runs in the browser, on a CRT TV in a dark room.
 It has a free-race mode where you pick a real-ish car and a road, a story
 mode where you buy a beater from the classifieds, build it up in a borrowed
-garage, and take Port Halcyon crew by crew, and a free roam where you drive
-the whole map, every road in town joined up by tunnels. It has full 3D, a dynamic soundtrack
-and real driving physics. There is no install and no build step.
+garage, and take Port Halcyon crew by crew, and a free roam that starts in
+your own garage and drives straight out into the city: one seamless Port
+Halcyon, every race track a part of town, and no loading screens. It has
+full 3D, a dynamic soundtrack and real driving physics. There is no install
+and no build step.
 
 ## Run it
 
@@ -55,9 +57,9 @@ station is a mode with its own music:
 - **THE UNDERGROUND 92.7 — Story.**
 - **HALL OF FAME 97.9 — Records.** Brass plaques with your best lap per road,
   the car that set it, and wins and races.
-- **CRUISE 101.1 — Free Roam.** The same row of cars, then pick where to start
-  and drive anywhere (see below). Free roam is also a choice of race type in
-  Quick Race.
+- **CRUISE 101.1 — Free Roam.** Your garage: pick a car, fit it out, and drive
+  out of the door into Port Halcyon (see below). FREE ROAM is also a race
+  type in Quick Race, which puts you on that track's start line in the city.
 - **TALK 104.5 — Options.** This is the TV's own on-screen menu: CRT strength,
   sharpness (internal resolution), auto quality, volumes, units, gearbox,
   assists, camera, vibration, and the full control list.
@@ -111,44 +113,70 @@ In the garage you can:
   underglow, ride height and calipers, all previewed live on the car.
 - **Cars:** a six-bay garage and the dealer lot. Classes unlock by chapter, and
   cars sell back at 60%.
-- **Cruise:** take your car out into free roam, starting in the chapter's part
-  of town.
+- **Cruise:** take your car (with its parts and paint) out into the city,
+  starting in the chapter's part of town.
 
 Progress saves itself in your browser (saves from the old five-chapter story
 carry over: cash, cars, wins and beaten bosses). To start over, use Options ›
 Game › Erase story save.
 
-## Free roam
+## Free roam: Port Halcyon
 
-No clock, no rivals: just you, the city at night and every road in the game.
-Each road is a region with its own time of day and weather, and they hang
-together in one big ring round Port Halcyon (city, docks, the bay, the
-highways, the desert, the mountains, the raceways and back into town):
+Port Halcyon is one city with no seams. It covers about 12 by 10 km, with
+236 km of road, and you can drive all of it without a loading screen:
 
-- A **circuit** has a side road off one of its straights, running to a
-  tunnel portal with two bores. The signs over them say where each goes:
-  back along the ring or on to the next region.
-- A **point-to-point road** runs on into a tunnel at each end.
-- Drive deep enough into a bore and the picture fades while the next region
-  builds; you come out of its tunnel at the speed you went in. Go back the
-  way you came and you're back where you were.
-- The radar shows the side roads and the tunnel mouths, coloured by where
-  they lead, with an arrow on the rim when they're off the edge.
-- **M** / the touchpad opens the map of the whole ring, where you can fast
-  travel to any region. The pause menu has the map too, traffic on/off,
-  gearbox, camera and "back on the road".
-- **Race from anywhere:** a column of light stands over every road's start
-  line (a chequered square on the radar). Pull up in it and ✕ / Enter
-  races that road in the car you're cruising in: pick the type, rivals,
-  skill and traffic, and afterwards you're back on the road.
-- Traffic runs in the city, at the docks and on the highways.
+- **Your garage.** Free roam starts with the door shut in your own garage on
+  Foundry Street. ↑ ↓ picks any car on the roster, the stick looks round it,
+  and L1/R1 changes tab:
+  - **PERFORMANCE:** every part's STREET, PRO and RACE tiers, or ALL PARTS at
+    once.
+  - **BODY:** paint, rims, kits, spoilers and the rest.
+  - **DRIVE:** night, dusk or day, and the camera.
+
+  Parts and paint are free here and kept per car. While you choose, the
+  city is being built behind the door.
+- **Drive out.** Press △ / F, or DRIVE OUT on the last tab. The camera swings
+  round from the showroom view to the chase cam, the door rolls up, and you
+  drive out into the street. There's no fade and no loading screen. Park
+  back inside to get the garage again, or pick BACK TO THE GARAGE in the
+  pause menu.
+- **The city:**
+  - **Downtown and Uptown:** towers and four-lane avenues.
+  - **Chinatown:** neon and market blocks.
+  - **Old Town:** cobbles and bridges on the river.
+  - **The coast:** the container docks, the shipyard, Pier 9 and the beach,
+    the Bayshore cliffs and the bridge out to Halcyon Point.
+  - **East:** the Eastside, the Works.
+  - **West:** Halcyon Lake and its dam, the redwoods, the farms and the
+    Ironwood ironworks.
+  - **The mountains:** Kaido Pass, the Summit, the Ridgeline.
+  - **The desert:** Route 99, Red Rock Canyon, Ghost Town and the dry lake.
+
+  Freeways and viaducts join the districts, and backroads, dirt tracks and
+  bridges run between them. Every district has its own buildings, props and
+  ground.
+- **No loading screens.** The world is cut into 256 m cells. The cells round
+  your car are built a few milliseconds at a time as you drive, the far city
+  stands on the horizon, and the frame rate holds. The only loading screen
+  is fast travel.
+- **Places to find.** Drive close to a landmark to find it: a message, a
+  sound, and a pin on the map. Some are on no sign, at the end of a dirt
+  road or under a bridge.
+- **M / the touchpad opens the map** of the whole city. L1/R1 zooms, and
+  ✕ fast travels to any place you've found. The pause menu has the map too,
+  plus "back on the road", the garage, the camera and the music.
+- **Traffic** drives the real road network: in lane on the right, turning at
+  junctions, and taking its turn at the crossings.
+- **The race tracks are places in it.** Every track is a route through
+  these streets (see Tracks below), so you can cruise any of them.
 
 ## Racing
 
-- **Race length:** about two minutes a race: circuits run three laps of about
-  45 seconds, sprints about two minutes end to end, and a lap knockout lasts
-  three laps at most (a big field loses more than one car a lap, so it's down
-  to two for the last lap).
+- **Race length:** two to three minutes a race. A circuit's lap is a minute
+  to a minute and a half of city streets, so circuits run two laps (three on
+  the short Skyline loop). Sprints run one to one and a half minutes end to
+  end. A lap knockout lasts two laps (three on the Skyline), and a big field
+  loses more than one car a lap, so it's down to two for the last lap.
 - **Race types:** circuit, sprint, lap knockout, drag (manual shifting on a shift light, graded launches and upshifts),
   drift (angle × speed scoring with a multiplier chain that a crash wipes out),
   and time attack (a pro drives your exact car first; you chase the ghost and
@@ -212,35 +240,45 @@ highways, the desert, the mountains, the raceways and back into town):
 
 ## Tracks (22)
 
-Circuit races run three laps of about 45 seconds (about two and a quarter
-minutes in all); point-to-point runs take about two minutes. Six of the
-roads are new: Chinatown, Shipyard Run, Bayshore Route, Ironwood Park,
-Ridgeline Climb and Ghost Town.
+Every track is a route through Port Halcyon's own roads, so no two tracks
+share scenery: no two run on the same streets. The waypoints are joined by
+the real roads between them, the corners are the real junctions and bends,
+and the walls are where each road ends. A race runs in the world itself. The
+districts stream round the cars, every side street the race passes is closed
+with a line of barriers, and a gantry, a chequered line and painted grid
+boxes mark the start. The drag runs on the dry lake's own strip, with its
+own tree and timing tower.
 
-| Region | Track | Type | Lap / run | Time / weather |
-|---|---|---|---|---|
-| City | Downtown Loop | circuit | 1.29 km | night, wet |
-| City | Uptown Run | sprint | 3.6 km | night, rain |
-| City | Old Town | circuit | 1.02 km | dusk |
-| City | Chinatown | circuit | 1.00 km | night |
-| City | Downtown Reverse | circuit | 1.29 km | night |
-| City | Old Town Reverse | circuit | 1.02 km | night, rain |
-| Docks | Harbor Docks | circuit | 1.41 km | night, wet |
-| Docks | Pier 9 | circuit | 1.27 km | night |
-| Docks | Shipyard Run | sprint | 3.7 km | dusk |
-| Highway | Interstate 9 | sprint | 7.3 km | night, wet |
-| Highway | Skyline Expressway | circuit | 2.21 km | dusk |
-| Highway | Bayshore Route | sprint | 7.6 km | night |
-| Raceway | Redwood Raceway | circuit | 1.51 km | day |
-| Raceway | Crestwood Hills | circuit | 1.43 km | sunset |
-| Raceway | Ironwood Park | circuit | 1.50 km | overcast, wet |
-| Mountain | Kaido Pass | sprint | 4.0 km | dusk |
-| Mountain | Summit Loop | circuit | 1.30 km | night, fog |
-| Mountain | Ridgeline Climb | sprint | 3.9 km | day |
-| Desert | Route 99 | sprint | 6.2 km | day |
-| Desert | Red Rock Canyon | circuit | 1.78 km | sunset |
-| Desert | Ghost Town | circuit | 1.81 km | sunset |
-| Desert | Dry Lake Drag | drag | 402 m | sunset |
+The three raceways (Redwood, Crestwood, Ironwood) are the original circuit
+designs, laid into the hills at one and a half times the size.
+
+| Region | Track | Type | Lap / run | Where it runs | Time / weather |
+|---|---|---|---|---|---|
+| City | Downtown Loop | circuit, 2 laps | 2.73 km | Main St under the towers, 5th, Harbor Ave, 1st | night, wet |
+| City | Uptown Run | sprint | 2.56 km | Central Ave, Park Blvd, Madison Blvd, up to Kaido Rd | night, rain |
+| City | Old Town | circuit, 2 laps | 2.44 km | over the Grand Bridge, the east bank's cobbles, the stone bridge | dusk |
+| City | Chinatown | circuit, 2 laps | 2.83 km | the market blocks and Grant Ave under the lanterns | night |
+| City | Downtown Reverse | circuit, 2 laps | 2.76 km | Downtown the other way round | night |
+| City | Old Town Reverse | circuit, 2 laps | 2.44 km | Old Town the other way round | night, rain |
+| Docks | Harbor Docks | circuit, 2 laps | 2.83 km | round the container terminal and the berths | night, wet |
+| Docks | Pier 9 | circuit, 2 laps | 2.48 km | Beach Blvd, the boardwalk, the sea road | night |
+| Docks | Shipyard Run | sprint | 2.86 km | past the dry docks to Harbor Blvd | dusk |
+| Highway | Interstate 9 | sprint | 4.88 km | over the gorge, the viaduct, the Eastside plains | night, wet, traffic |
+| Highway | Skyline Expressway | circuit, 3 laps | 2.07 km | the elevated loop between the downtown blocks | dusk, traffic |
+| Highway | Bayshore Route | sprint | 3.69 km | up the cliffs and over the Bayshore Bridge | night, traffic |
+| Raceway | Redwood Raceway | circuit, 2 laps | 2.26 km | the hairpin, the esses down through the redwoods, the back straight | day |
+| Raceway | Crestwood Hills | circuit, 2 laps | 2.15 km | a blind crest, the hairpin, the corkscrew and the carousel in the vineyards | sunset |
+| Raceway | Ironwood Park | circuit, 2 laps | 2.25 km | sweepers past the old ironworks, the hairpin, the tight infield | overcast, wet |
+| Mountain | Kaido Pass | sprint | 2.50 km | hairpins up to the shrine | dusk |
+| Mountain | Summit Loop | circuit, 2 laps | 3.08 km | round the peak by the observatory | night, fog |
+| Mountain | Ridgeline Climb | sprint | 3.08 km | the Ridgeline Road past the turbines | day |
+| Desert | Route 99 | sprint | 2.93 km | north past the Ghost Town turn and the diner | day |
+| Desert | Red Rock Canyon | circuit, 2 laps | 3.94 km | the canyon floor and back along the rim | sunset |
+| Desert | Ghost Town | circuit, 2 laps | 1.93 km | a dirt loop round the dead mining town | sunset |
+| Desert | Dry Lake Drag | drag | 402 m | the salt flat's strip | sunset |
+
+The tracks were redrawn, so best laps and times set on the old layouts were
+cleared. Races and wins were kept.
 
 ## Cars (16)
 
@@ -297,14 +335,39 @@ menu, not the car), and whatever you change is in the moment you close it.
   and a final pass with tube curvature, aberration, ACES tonemapping, grading,
   scanlines, aperture grille, snow static, interference and vignette. The page
   frames it in a CSS TV set.
+- **The world** (`src/world`):
+  - **The map** (`world/map`) is data: nodes and roads of a dozen types
+    (freeway, avenue, cobble, mountain pass, dirt and the rest), terrain
+    zones (hills, mesas, a canyon, the lake's slopes), water, the 24
+    districts and the landmarks.
+  - **Terrain and roads.** The terrain is graded to the roads. Each road
+    gets its own mesh, with junctions, bridges on piers, viaducts and
+    street lamps.
+  - **District packs** (`world/districts`). Each district plans its own
+    buildings and props once, on a shared occupancy grid that keeps them
+    off the roads, and scatters the small things cell by cell.
+  - **Streaming.** A streamer builds the 256 m cells round the cars a few
+    milliseconds a frame, with the shaders warmed up first so nothing
+    hitches. The far city is one skyline mesh.
+  - **Physics and traffic.** The physics drives on the same roads and
+    terrain and collides with the districts' buildings. Traffic follows the
+    road network's lanes.
+  - **Ready for multiplayer.** Every page builds the same city from the
+    same data, and the streamer builds round a list of cars, so a second
+    player's car is just one more on the list.
 - **Audio:** all procedural WebAudio. Engines, SFX, and a 14-theme dynamic
   soundtrack (DnB, boom-bap, 2-step, jazz, house, big beat, eurobeat, trance,
   rock). The music reacts to the countdown, position, final lap, nitrous, air
   time and crashes.
-- **Dev URL params:** `?screen=race&track=downtown&car=lancet&type=drift&traffic=1`,
-  `?screen=roam&track=harbor&car=m3` (free roam from a region),
-  `?autopilot=1&sim=4` (the AI drives you, four times faster),
-  `?screen=carlab&car=m3`, `?screen=trackview&track=kaido`.
+- **Dev URL params:**
+  - `?screen=race&track=downtown&car=lancet&type=drift&traffic=1`
+  - `?screen=world`: free roam from the garage.
+  - `?screen=world&car=silvio&x=700&z=790&heading=3.14`: on the road at a
+    spot.
+  - `?autopilot=1&sim=4`: the AI drives you, four times faster.
+  - `?screen=carlab&car=m3`
+  - `?screen=trackview&track=kaido`: a course in the world, race dressing
+    up.
 - **Headless tools** (`racing/tools`):
   - `simrace.mjs`: AI-only race report.
   - `physbench.mjs`: 0-60, top speed, braking and skidpad.
@@ -316,3 +379,9 @@ menu, not the car), and whatever you change is in the moment you close it.
   - `carviews.mjs`: car model grid from any set of camera angles.
   - `e2e_story.mjs`, `e2e_flow.mjs`: story-mode and menu-flow end-to-end tests.
   - `typesweep.mjs`: every race type driven to the results and replay.
+  - `worldmap.mjs`: the city's map as a PNG, in node with no browser. It
+    can draw the terrain, the roads, the districts' plans and the course
+    routes.
+  - `worldshot.mjs`: screenshots of the city from chosen spots, from the
+    road or the air.
+  - `worldprof.mjs`: how long each world cell takes to build, step by step.

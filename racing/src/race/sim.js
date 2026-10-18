@@ -9,8 +9,9 @@ import { clamp } from '../core/util.js';
 import { TUNE } from '../core/tune.js';
 
 /** Laps for a lap knockout with this many rivals: two or three, whatever the
- *  field (a big field loses more than one car a lap), so it stays short. */
-export const knockLaps = (rivals) => Math.min(3, Math.max(2, rivals | 0));
+ *  field (a big field loses more than one car a lap), and no more than the
+ *  track's own race (`most`: its laps), so it stays short. */
+export const knockLaps = (rivals, most = 3) => Math.min(Math.max(2, most), Math.max(2, rivals | 0));
 
 /** A rival's temperament from their name: the same driver races the same way every time. */
 function personality(name) {
@@ -407,7 +408,7 @@ export class RaceSim {
     }
     // knockout: the last racers to complete each lap are eliminated — one a
     // lap, or more in a big field, so it's down to two for the final lap
-    // (races stay three laps at most)
+    // (races stay three laps at most, two on the longer circuits)
     if (this.type === 'knockout' && L < this.laps) {
       const done = (this.knockLap[L] = this.knockLap[L] || []);
       if (!done.length) {

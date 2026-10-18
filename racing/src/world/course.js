@@ -12,8 +12,11 @@ import { worldNet } from './data.js';
 /**
  * way: waypoint node ids, in race order (a circuit closes back to the first).
  * loop: a circuit. start: metres from the first waypoint to the start line
- * (circuits). reverseOf: the same route the other way round. types: the road
- * types the route may use besides the main ones.
+ * (a sprint starts 30 m in unless it says). reverseOf: the same route the
+ * other way round. types: the road types the route may use besides the main
+ * ones. own: the place has its own start and finish built (no race gantries).
+ * laps: a circuit's race (2 unless it says: a lap of these streets takes a
+ * minute or more, so two make a race of two to three minutes).
  */
 export const COURSES = {
   downtown: { way: ['c_4_4', 'c_10_4', 'c_10_7', 'c_7_7', 'c_7_9', 'c_4_9'], loop: true, start: 140 },
@@ -26,18 +29,19 @@ export const COURSES = {
   pier9: { way: ['wf_works', 'wf_pier', 'wf_beach', 'p9_c', 'p9_b', 'p9_a'], loop: true, start: 120, types: ['boardwalk'] },
   shipyard: { way: ['sy_w', 'sy_q1', 'sy_q2', 'sy_e', 'wf_hw'], types: ['quay'] },
   interstate: { way: ['i9_wr', 'i9_cw', 'i9_j1', 'i9_j2', 'i9_ce', 'i9_e1'] },
-  skyline: { way: ['sx_n1', 'sx_n2'], loop: true, start: 200, roads: ['sx_north', 'sx_loop'] },
+  skyline: { way: ['sx_n1', 'sx_n2'], loop: true, start: 200, laps: 3, roads: ['sx_north', 'sx_loop'] },
   bayshore: { way: ['wf_beach', 'wf_cliff', 'bs_1', 'bs_2', 'bs_be', 'pt_e', 'pt_n'] },
-  redwood: { way: ['rw_a', 'rw_b', 'rw_c', 'rw_d'], loop: true, start: 120 },
-  crestwood: { way: ['cw_g', 'cw_b', 'cw_c', 'cw_d', 'cw_a'], loop: true, start: 100 },
-  ironwood: { way: ['iw_n', 'iw_b', 'iw_a', 'iw_s', 'iw_d', 'iw_c'], loop: true, start: 100 },
+  redwood: { way: ['rw_a', 'rw_b', 'rw_c', 'rw_d'], loop: true, start: 140 },
+  crestwood: { way: ['cw_g', 'cw_b', 'cw_c', 'cw_d'], loop: true, start: 470 },
+  ironwood: { way: ['iw_n', 'iw_s', 'iw_d', 'iw_c'], loop: true, start: 2160 },
   kaido: { way: ['kd_0', 'kd_top'] },
   summit: { way: ['sm_j', 'sm_e', 'sm_s', 'sm_w'], loop: true, start: 150 },
   ridgeline: { way: ['sm_e', 'rg_1', 'rg_2', 'rg_3', 'rg_e'] },
   route99: { way: ['r99_s2', 'gt_j', 'r99_s1', 'i9_e2', 'r99_n1', 'r99_rr'] },
   redrock: { way: ['rr_w', 'rr_e', 'rr_r1', 'rr_r2', 'rr_r3'], loop: true, start: 120 },
   ghosttown: { way: ['gt_a', 'gt_b', 'gt_c', 'gt_d'], loop: true, start: 90, types: ['dirt'] },
-  drylake: { way: ['dl_a', 'dl_b'], types: ['strip'] },
+  // (the strip's own line, tree and finish gantry: districts/drylake.js)
+  drylake: { way: ['dl_a', 'dl_b'], types: ['strip'], start: 60, own: true },
 };
 
 const RACE_TYPES = new Set(['avenue', 'boulevard', 'street', 'cobble', 'freeway', 'expressway', 'ramp', 'highway', 'coastal', 'mountain', 'circuit', 'strip', 'quay']);
@@ -111,7 +115,8 @@ function legDir(leg, end) {
  * The course as a track definition's points ([x, z, radius, y, halfWidth])
  * and what the race needs besides: { points, walls ([left, right] distance
  * from the line to the road's edges, per point), loop, legs, junctions (each
- * junction passed, with the side roads to close off), roads }. On a road
+ * junction passed, with the side roads to close off), roads, own (the place
+ * has its own start and finish) }. On a road
  * with a median (a boulevard, a freeway) the race keeps to the right-hand
  * carriageway.
  */
@@ -201,7 +206,8 @@ export function buildCourse(id, net = worldNet()) {
     if (side.length) junctions.push({ node, side });
   };
   for (const L of legs) { visit(nodeAt(L, 'in')); visit(nodeAt(L, 'out')); }
-  return { points: pts, walls, loop, legs, junctions, roads: [...used] };
+  const own = !!(COURSES[id].own || COURSES[COURSES[id].reverseOf]?.own);
+  return { points: pts, walls, loop, legs, junctions, roads: [...used], own };
 }
 
 const CACHE = new Map();

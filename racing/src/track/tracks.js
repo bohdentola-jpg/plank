@@ -91,9 +91,9 @@ const BLURBS = {
   interstate: 'Five kilometres of the I-9: over the gorge below the dam, up onto the viaduct past the towers, and down across the Eastside plains. Traffic, and wet.',
   skyline: 'The Skyline Expressway: a loop of elevated deck between the downtown blocks, tight concrete corners and the towers close enough to touch. Traffic.',
   bayshore: 'From the beach up onto the cliffs, along Bayshore Route and over the Bayshore Bridge to Halcyon Point. Fast, and a long way down.',
-  redwood: 'Grand prix racing in the redwoods: sweepers and a hairpin under trunks as wide as the track, pit straight in the clearing.',
-  crestwood: 'Golden hills at sundown: the Crestwood circuit through the vineyards, over the crests, past the winery and round the long carousel.',
-  ironwood: 'The old ironworks by the lake, made into a raceway: under the conveyor bridges, past the blast furnaces, on a damp grey day.',
+  redwood: 'Grand prix racing in the redwoods: the pit straight in the clearing, a brutal hairpin, the esses down through trunks as wide as the track, the long back straight and the climb to the sweeper.',
+  crestwood: 'Golden hills at sundown: the main straight over a blind crest, the hairpin, the climb through the vineyards to the corkscrew, then round the long carousel.',
+  ironwood: 'The old ironworks by the lake, made into a raceway: fast sweepers past the blast furnaces, the long back straight, then the hairpin and a tight infield under the conveyor bridges. Damp and grey.',
   kaido: 'Up Kaido Pass: hairpin after hairpin through the cedars to the shrine at the top. The road every drifter in town wants to own.',
   summit: 'Round the Summit Loop at night: snow poles, the observatory dome above you, nothing but the drop past the barrier.',
   ridgeline: 'Along the Ridgeline Road from the Summit toward the desert: wind turbines turning on the crest, the 92.7 tower, a long run down.',
@@ -106,8 +106,9 @@ const BLURBS = {
 // Every track is a place in PORT HALCYON now: its line is its route over
 // the city's own roads (world/course.js), worked out the first time anyone
 // asks (a route map, a race), and the race runs in the world itself. What
-// stays from the definitions above is who they are: name, blurb, race type,
-// laps, time of day and weather, traffic.
+// stays from the definitions above is who they are: name, race type, time
+// of day and weather, traffic. A circuit's laps come from its course (its
+// laps are longer than the old ones: two make a race of two to three minutes).
 for (const def of TRACKS) {
   const C = COURSES[def.id];
   if (!C) continue;
@@ -119,8 +120,9 @@ for (const def of TRACKS) {
   delete def.bankBoost;
   def.bank = 0;
   def.radius = 30;
-  def.startS = loop ? (C.start ?? 100) : 30;
-  def.finishPad = def.type === 'drag' ? 120 : 60;
+  def.startS = C.start ?? (loop ? 100 : 30);
+  if (loop) def.laps = C.laps ?? COURSES[C.reverseOf]?.laps ?? 2;
+  def.finishPad = 60;
   def.trafficCount = def.traffic ? 18 : undefined;
   Object.defineProperty(def, 'points', { get: () => get().points, configurable: true, enumerable: true });
   Object.defineProperty(def, 'course', { get, configurable: true });

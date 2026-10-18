@@ -107,9 +107,12 @@ export function buildDressing(course, T, opts = {}) {
     }
   }
   // ---- the start (and a sprint's finish): gantry, chequered line, grid boxes
-  const lines = [[T.startS, 'START']];
-  if (!T.closed) lines.push([T.finishS, 'FINISH']);
-  else lines[0][1] = 'START · FINISH';
+  // (not where the place has its own: the drag strip's tree and gantries)
+  const lines = [];
+  if (!course.own) {
+    lines.push([T.startS, T.closed ? 'START · FINISH' : 'START']);
+    if (!T.closed) lines.push([T.finishS, 'FINISH']);
+  }
   for (const [s0, label] of lines) {
     const p = T.posAt(s0);
     const i = p.i, W = T.W[i];
@@ -143,7 +146,7 @@ export function buildDressing(course, T, opts = {}) {
     ch.quadP(P(a0, W), P(a0, -W), P(a1, -W), P(a1, W), [0, 0, (W * 2) / 3, 0.25]);
   }
   // grid boxes behind the start: two columns, a box every 8 m
-  {
+  if (!course.own) {
     const pm = A(M.paint);
     for (let k = 0; k < 8; k++) {
       const s = T.startS - 6 - k * 8;

@@ -41,6 +41,8 @@ export class WorldRaceSession extends RaceSession {
     this.world = new WorldScene({ net: this.net, terrain: this.terrain, districts: this.districts, wet }, renderer, { time: def.time || 'night' });
     this.world.live = false;
     this.scene = this.world.scene;
+    // (a fogbound track keeps its fog: the Summit at night)
+    if (def.fogD > 0.003) this.scene.fog.density = Math.max(this.scene.fog.density, def.fogD * 0.75);
     await this.world.buildFar((f, l) => progress(0.14 + f * 0.3, l), 30);
     await this.world.warm(this.camera.cam, (f) => progress(0.44 + f * 0.1, 'MIXING THE PAINT'), 30);
     this.phys = new WorldPhys(this.net, this.terrain, this.districts);
