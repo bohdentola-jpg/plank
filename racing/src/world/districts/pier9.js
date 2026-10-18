@@ -14,7 +14,7 @@ import { makeRng } from '../../core/util.js';
 import { litMat, box, cylinder, gable, lattice, drape } from './builder.js';
 import { Acc } from '../build/geo.js';
 import { roadLamps } from '../build/roads.js';
-import { mats, cmat, C, col, frame, lbox, lbeam, tube, panel, seedOf, groundStrip, coneC, disc, bulb, stringLights, beamLine, palm, chaseBulb, spark, warmBuilders } from './coast/kit.js';
+import { mats, cmat, C, col, frame, lbox, lbeam, tube, panel, seedOf, groundStrip, coneC, disc, bulb, stringLights, beamLine, palm, chaseBulb, spark, warmBuilders, prepareGround } from './coast/kit.js';
 import { signAtlas, decoTexture, shackTexture, shackUV, SHACK_KINDS } from './coast/tex.js';
 import { frame2 } from './coast/geo.js';
 
@@ -107,6 +107,7 @@ export default {
   *build(B, items) {
     const M = pmats(B);
     const uv = UV();
+    yield* prepareGround(B, items);
     let t0 = performance.now();
     for (const it of items) {
       const fn = BUILD[it.type];
@@ -558,7 +559,7 @@ function platform(B, M, it) {
   for (let z = z0 + 6; z < z1 - 4; z += 16) { const y = yAt(z); nb.box(x1 - 2.2, y + 0.45, z, 0.6, 0.08, 2.2); nb.box(x1 - 2.5, y + 0.5, z, 0.1, 0.6, 2.2); }
 }
 
-function ferrisWheel(B, M, it) {
+function* ferrisWheel(B, M, it) {
   const { x, z, y0 } = it;
   const R = 26, hubY = y0 + 31, N = 20;
   const st = B.acc(M.steel), gl = B.acc(M.glow), pa = B.acc(M.paint);
@@ -574,6 +575,7 @@ function ferrisWheel(B, M, it) {
   box(pa, x, y0, z + 7, 12, 2.4, 6, 0, {});
   col(pa, C('#e8e4dc'));
   box(pa, x, y0 + 2.4, z + 7, 12.4, 0.2, 6.4, 0, {});
+  yield;
   // the turning wheel: built about its hub, two rims, spokes and ties, its bulbs
   const wa = new Acc(true), ga = new Acc(true), ca = new Acc(true);
   const rim = 48;
@@ -611,6 +613,7 @@ function ferrisWheel(B, M, it) {
   g.position.set(x, hubY, z);
   g.add(new THREE.Mesh(wa.toGeometry(false), M.steel), new THREE.Mesh(ga.toGeometry(false), M.glow), new THREE.Mesh(ca.toGeometry(false), M.chase));
   for (const m of g.children) { m.matrixAutoUpdate = false; m.updateMatrix(); }
+  yield;
   // the gondolas: hung from the rim's outside, kept upright
   const cab = new Acc(true), cabG = new Acc(true);
   cab.col = [1, 1, 1];

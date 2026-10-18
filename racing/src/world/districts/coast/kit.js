@@ -553,6 +553,43 @@ export function farBeam(P, ax, az, bx, bz, y, h, w, color) {
   P.far({ shape: 'box', x: (ax + bx) / 2, z: (az + bz) / 2, y, w: L, d: w, h, ry: Math.atan2(-(bz - az), bx - ax), color, lit: 0 });
 }
 
+// ------------------------------------------------------------------ the ground next door
+
+/** The world box an item's geometry may reach (its points, its ends, its footprint). */
+function itemBox(it) {
+  let x0 = it.x, z0 = it.z, x1 = it.x, z1 = it.z;
+  const add = (x, z) => { if (x < x0) x0 = x; if (x > x1) x1 = x; if (z < z0) z0 = z; if (z > z1) z1 = z; };
+  if (Array.isArray(it.pts)) for (const p of it.pts) add(p[0], p[1]);
+  for (const k of ['a', 'b']) if (Array.isArray(it[k])) add(it[k][0], it[k].length > 2 ? it[k][2] : it[k][1]);
+  const r = Math.max(it.w || 0, it.d || 0, it.len || 0, it.L || 0) * 0.6 + 8;
+  return [x0 - r, z0 - r, x1 + r, z1 + r];
+}
+
+/**
+ * Make the ground (the 4 m terrain grids) of the cells next door that this
+ * cell's items reach into, a step each: a builder asking the height there
+ * would otherwise make that whole grid in the middle of its own step.
+ */
+export function* prepareGround(B, items) {
+  const need = new Set();
+  for (const it of items) {
+    const [x0, z0, x1, z1] = itemBox(it);
+    for (let cx = Math.floor(x0 / CELL); cx <= Math.floor(x1 / CELL); cx++) {
+      for (let cz = Math.floor(z0 / CELL); cz <= Math.floor(z1 / CELL); cz++) {
+        if (cx === B.cx && cz === B.cz) continue;
+        if (Math.abs(cx - B.cx) > 1 || Math.abs(cz - B.cz) > 1) continue;
+        need.add(`${cx},${cz}`);
+      }
+    }
+  }
+  for (const k of need) {
+    const [cx, cz] = k.split(',').map(Number);
+    if (B.terrain.cache.has(`4:${cx}:${cz}`)) continue;
+    B.terrain.grid(cx, cz, 4);
+    yield;
+  }
+}
+
 // ------------------------------------------------------------------ warming up
 
 /**

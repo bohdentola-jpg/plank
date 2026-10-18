@@ -12,7 +12,7 @@
 // the wreck of the MARY KESTREL. Lit sodium orange, not the terminal's white.
 import { makeRng } from '../../core/util.js';
 import { litMat, box, cylinder, gable, lattice } from './builder.js';
-import { C, col, frame, frame3, lbox, lbeam, fbox, tube, panel, seedOf, groundStrip, cmat, coneC, spark, arcPanel, catenary, beamLine, warmBuilders } from './coast/kit.js';
+import { C, col, frame, frame3, lbox, lbeam, fbox, tube, panel, seedOf, groundStrip, cmat, coneC, spark, arcPanel, catenary, beamLine, warmBuilders, prepareGround } from './coast/kit.js';
 import { signAtlas, cladTexture, brickTexture, officeTexture, scaffoldTexture } from './coast/tex.js';
 import { portMats, quayEdge, hull, hullFrames, container, randomBox, truck, mast, tugBoat, capUp } from './coast/port.js';
 import { polyAtX, pieces, mid, frame2, shoreRuns } from './coast/geo.js';
@@ -132,6 +132,7 @@ export default {
   *build(B, items) {
     const M = smats(B);
     const uv = UV();
+    yield* prepareGround(B, items);
     let t0 = performance.now();
     for (const it of items) {
       const fn = BUILD[it.type];
@@ -155,7 +156,7 @@ function shoreFrame(x) {
 // ------------------------------------------------------------------ shore
 
 function planShore(P, S) {
-  for (const pc of shoreRuns(QSY, [[SLIP_X - 18, SLIP_X + 18]], 110)) {
+  for (const pc of shoreRuns(QSY, [[SLIP_X - 18, SLIP_X + 18]], 60)) {
     const m = mid(pc);
     // the pieces run east → west: the sea is on their left
     P.add({ type: 'quay', x: m[0], z: m[1], pts: pc, sea: 1 });
@@ -723,17 +724,19 @@ function goliath(B, M, it, uv) {
 
 // ------------------------------------------------------------------ hulls under construction
 
-function yardHull(B, M, it) {
+function* yardHull(B, M, it) {
   const rng = makeRng(seedOf(it));
   const F = frame3(it.x, it.y, it.z, it.ry, it.pitch || 0, 0);
   const pl = B.acc(M.plate);
   const L = it.L, Bm = it.Bm, D = it.D;
   const bands = [[D * 0.42, C('#8a3a2a')], [null, C('#878a8d')]];
   const h = hull(pl, F, L, Bm, 0, D, bands, { open: it.open, jitter: rng, bottom: true, deckCol: C('#5d6064'), sheer: 1.6 });
+  yield;
   // the bare frames of the unfinished part
   const st = B.acc(M.paint);
   col(st, C('#7a4632'));
   hullFrames(st, F, h, L, 0, it.open[0], it.open[1], 3.2, 0.42);
+  yield;
   // the inner bottom and a couple of bulkheads showing in the open part
   col(st, C('#8a8d90'));
   const xa = h.xOf(it.open[0]), xb = h.xOf(Math.min(1, it.open[0] + 0.2));
@@ -926,12 +929,13 @@ function portalCrane(B, M, it) {
 
 // ------------------------------------------------------------------ ships fitting out
 
-function ferry(B, M, it, uv) {
+function* ferry(B, M, it, uv) {
   const F = frame(it.x, 0, it.z, it.ry);
   const pl = B.acc(M.plate), hs = B.acc(M.house), st = B.acc(M.paint), gl = B.acc(M.glow), sg = B.acc(M.sign);
   const L = it.L, Bm = it.Bm;
   const h = hull(pl, F, L, Bm, -6, 8, [[-0.3, C('#8a2a22')], [1.6, C('#1d3f6e')], [2.4, C('#f0eee8')], [3.0, C('#2a7ab8')], [null, C('#f0eee8')]], { deckCol: C('#6a7a78'), sheer: 2.2 });
   void h;
+  yield;
   // three decks of cabins stepped back from the bow, the bridge on top
   col(hs, C('#f4f2ec'));
   lbox(hs, F, it.ry, -12, 8, 0, L * 0.62, 5, Bm - 1.2, { u: 10, v: 10 });
@@ -960,11 +964,12 @@ function ferry(B, M, it, uv) {
   st.beam(a[0], a[1], a[2], b[0], b[1], b[2], 1.2, 0.25);
 }
 
-function cutter(B, M, it, uv) {
+function* cutter(B, M, it, uv) {
   const F = frame(it.x, 0, it.z, it.ry);
   const pl = B.acc(M.plate), hs = B.acc(M.house), st = B.acc(M.paint), gl = B.acc(M.glow), sg = B.acc(M.sign);
   const L = it.L, Bm = it.Bm;
   hull(pl, F, L, Bm, -4.6, 5, [[-0.3, C('#4a4a4c')], [null, C('#f0eee8')]], { deckCol: C('#7a7d80'), sheer: 2.4 });
+  yield;
   // the racing stripe on the bow (red and blue bars)
   for (const sd of [1, -1]) {
     for (const [o, c] of [[0, '#c8322a'], [2.6, '#1d3f6e']]) {

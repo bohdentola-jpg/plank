@@ -10,7 +10,7 @@
 // the terminal's floods, sodium in the rail yard, warm in the old harbor.
 import { makeRng } from '../../core/util.js';
 import { litMat, box, cylinder, gable, hip, lattice, drape } from './builder.js';
-import { C, col, frame, lbox, lbeam, tube, panel, seedOf, stringLights, groundStrip, truss, cmat, coneC, arcPanel, warmBuilders } from './coast/kit.js';
+import { C, col, frame, lbox, lbeam, tube, panel, seedOf, stringLights, groundStrip, truss, cmat, coneC, arcPanel, warmBuilders, prepareGround } from './coast/kit.js';
 import { signAtlas, officeTexture, cladTexture, brickTexture, trackTexture } from './coast/tex.js';
 import { portMats, stackBlock, stsCrane, stsPlan, rtgCrane, straddle, mast, quayEdge, hull, truck, fence, container, randomBox, tugBoat, CH, CW, C40 } from './coast/port.js';
 import { waterAt, riverAt } from '../terrain.js';
@@ -110,6 +110,7 @@ export default {
   *build(B, items) {
     const M = hmats(B);
     const uv = UV();
+    yield* prepareGround(B, items);
     let t0 = performance.now();
     for (const it of items) {
       const fn = BUILD[it.type];
@@ -126,7 +127,7 @@ export default {
 
 function planQuay(P) {
   // the quay wall, its fenders and bollards along Berth Road's water
-  for (const pc of pieces(QUAY, 110)) {
+  for (const pc of pieces(QUAY, 60)) {
     const m = mid(pc);
     P.add({ type: 'quay', x: m[0], z: m[1], pts: pc, sea: 1 });
   }
@@ -683,7 +684,7 @@ function planRiver(P, S) {
       const pts = [];
       for (let z = za; z <= zb; z += 40) { const q = riverBank(z, side); if (q) pts.push([q.x, q.z]); }
       const q = riverBank(zb, side); if (q) pts.push([q.x, q.z]);
-      for (const pc of pieces(pts, 120)) {
+      for (const pc of pieces(pts, 60)) {
         const m = mid(pc);
         // walking downstream (south) the west bank has the water on its left
         P.add({ type: 'riverwall', x: m[0], z: m[1], pts: pc, sea: side < 0 ? 1 : -1 });

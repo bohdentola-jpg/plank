@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import { makeRng } from '../../core/util.js';
 import { U } from '../kit.js';
 import { litMat, box, cylinder, drape } from './builder.js';
-import { mats, cmat, C, col, frame, lbox, tube, panel, seedOf, groundStrip, coneC, windTree, chaseBulb, warmBuilders } from './coast/kit.js';
+import { mats, cmat, C, col, frame, lbox, tube, panel, seedOf, groundStrip, coneC, windTree, chaseBulb, warmBuilders, prepareGround } from './coast/kit.js';
 import { signAtlas, motelTexture } from './coast/tex.js';
 import { homeMats, rockLump, stoneWall, cottage, glassHouse, car, lampPost, blob } from './coast/home.js';
 
@@ -162,6 +162,7 @@ export default {
   *build(B, items) {
     const M = bmats(B);
     const uv = UV();
+    yield* prepareGround(B, items);
     let t0 = performance.now();
     for (const it of items) {
       const fn = BUILD[it.type];

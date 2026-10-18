@@ -14,7 +14,7 @@ import { makeRng } from '../../core/util.js';
 import { U } from '../kit.js';
 import { litMat, box, cylinder, gable, sphere, drape } from './builder.js';
 import { Acc } from '../build/geo.js';
-import { mats, C, col, frame, frame3, lbox, tube, panel, seedOf, groundStrip, coneC, windTree, mixC, warmBuilders } from './coast/kit.js';
+import { mats, C, col, frame, frame3, lbox, tube, panel, seedOf, groundStrip, coneC, windTree, mixC, warmBuilders, prepareGround } from './coast/kit.js';
 import { signAtlas } from './coast/tex.js';
 import { homeMats, rockLump, rockPile, stoneWall, picket, cottage, car, lampPost, blob } from './coast/home.js';
 
@@ -122,6 +122,7 @@ export default {
   *build(B, items) {
     const M = pmats(B);
     const uv = UV();
+    yield* prepareGround(B, items);
     let t0 = performance.now();
     for (const it of items) {
       const fn = BUILD[it.type];
