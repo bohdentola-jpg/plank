@@ -100,8 +100,16 @@ function streetFace(K, it, f, top, rng, k) {
       } else {
         for (let b = 0; b < nb; b++) {
           const a = (b + 0.5) * bw;
-          const t = winTile(rng, it.lit, it.kind);
           const wd = Math.min(bw * 0.62, 1.0);
+          // tenement windows often go in pairs: two bays as one paired window (one quad)
+          if (it.kind === 'ten' && b + 1 < nb && rng() < 0.55) {
+            const am = (b + 1) * bw, lit = rng() < it.lit;
+            const t2 = lit ? (rng() < 0.6 ? 'p_lit' : 'p_pink') : rng() < 0.4 ? 'p_wash' : 'p_dark';
+            fquad(K.win, f, am - wd, am + wd, yb + 0.75, yb + 0.75 + wd * 2, 0.04, ctwUV(t2));
+            b++;
+            continue;
+          }
+          const t = winTile(rng, it.lit, it.kind);
           fquad(K.win, f, a - wd / 2, a + wd / 2, yb + 0.75, yb + 0.75 + wd * 2, 0.04, ctwUV(t));
           // an AC unit hung out of the window now and then
           if ((t === 's_ac' || t === 's_aclit') && fl <= 3) {
@@ -202,8 +210,8 @@ function vSign(K, f, s) {
 
 /** A fire escape: a landing at each floor over two bays, stairs between them, a drop ladder. */
 function fireEscape(K, f, it, rng) {
-  // (close up only: past a few hundred metres it is a hatching nobody sees)
-  const N = K.near, M = K.near.metal;
+  // (close up only: past a few hundred metres it is a hatching nobody sees; unlit, above the lamps)
+  const N = K.near, M = K.near.metalHi || K.near.metal;
   const w = Math.min(f.len - 0.6, 4.6), a0 = it.fireA ?? Math.max(0.3, (f.len - w) / 2), a1 = a0 + w;
   const dep = 1.25;
   M.col = [0.16, 0.16, 0.17];

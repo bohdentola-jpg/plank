@@ -60,7 +60,7 @@ function plan(P) {
     if (t !== 'street' && t !== 'avenue' && t !== 'alley' && t !== 'cobble') continue;
     const alley = t === 'alley', grant = t === 'avenue';
     for (const sd of [1, -1]) {
-      const lots = frontage(P, r, sd, { width: alley ? [7, 12] : grant ? [7.5, 12] : [6.5, 11.5], depth: alley ? [9, 14] : grant ? [16, 23] : [14, 21], water: true });
+      const lots = frontage(P, r, sd, { width: alley ? [8, 13] : grant ? [8.5, 13] : [7.5, 12.5], depth: alley ? [9, 14] : grant ? [16, 23] : [14, 21], water: true });
       for (const L of lots) {
         const rr = P.rng();
         const kind = grant ? (rr < 0.32 ? 'shop' : rr < 0.62 ? 'ten' : rr < 0.84 ? 'rest' : 'mod') : alley ? (rr < 0.62 ? 'ten' : rr < 0.8 ? 'shop' : 'mod') : (rr < 0.5 ? 'ten' : rr < 0.74 ? 'shop' : rr < 0.88 ? 'mod' : 'rest');
@@ -360,6 +360,8 @@ function mats(B) {
     // (the same paint, unlit by the lamps: roofs, tanks, cornices, sign brackets, wires)
     trim: B.mat('trim', () => plainMat({ vertexColors: true, roughness: 0.7 })),
     metal: B.mat('metal', () => litMat({ map: metalTex(), vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.5 }, { shadow: false })),
+    // (the fire escapes' ironwork, above the street lamps: unlit)
+    metalHi: B.mat('metalHi', () => plainMat({ map: metalTex(), vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.5 }, { shadow: false })),
     leaf: B.mat('leaf', () => litMat({ vertexColors: true, roughness: 0.85, flatShading: true })),
     pave: B.mat('pave', () => litMat({ map: cobbleTexture(), vertexColors: true, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -3 })),
     water: B.mat('water', () => litMat({ color: 0x1a4a5a, roughness: 0.06, metalness: 0.3, emissive: 0x3ab0a0, vertexColors: true }, { night: 0.35 })),
@@ -371,7 +373,7 @@ function kit(B) {
   const K = {};
   for (const [k, m] of Object.entries(M)) { m.name = 'ct:' + k; K[k] = B.acc(m); }
   K.near = {};
-  for (const k of ['paint', 'leaf', 'metal', 'win', 'tile', 'neon', 'trim']) K.near[k] = B.near(M[k]);
+  for (const k of ['paint', 'leaf', 'metal', 'win', 'tile', 'neon', 'trim', 'metalHi']) K.near[k] = B.near(M[k]);
   K.lanternNear = B.near(M.lantern);
   K.steam = B.near(M.steam);
   K.lanternFn = lantern;
@@ -396,7 +398,7 @@ function* build(B, items) {
     } else if (it.type === 'strings') {
       // the lanterns themselves close up only (the strings' lamps light the street from afar)
       const L = { ...K, lantern: K.lanternNear };
-      for (const [ax, ay, az, bx, by, bz, sag] of it.list) lanternString(L.lantern, K.near.trim, [ax, ay, az], [bx, by, bz], sag, 2.9, ax * 0.1);
+      for (const [ax, ay, az, bx, by, bz, sag] of it.list) lanternString(L.lantern, K.near.trim, [ax, ay, az], [bx, by, bz], sag, 3.4, ax * 0.1);
     } else if (it.type === 'pave') {
       // (a strip at a time: draping the square in one go is too long a step)
       K.pave.col = [0.78, 0.46, 0.4];
@@ -522,7 +524,7 @@ function* warmCode(B) {
   const M = mats(B);
   const K = { M, near: {}, lanternFn: lantern };
   for (const k of Object.keys(M)) K[k] = new Acc(true);
-  for (const k of ['paint', 'leaf', 'metal', 'win', 'tile', 'neon', 'trim']) K.near[k] = new Acc(true);
+  for (const k of ['paint', 'leaf', 'metal', 'win', 'tile', 'neon', 'trim', 'metalHi']) K.near[k] = new Acc(true);
   K.lanternNear = new Acc(true); K.steam = new Acc(true);
   const poly = rectPoly(0, 0, 10, 14, 0), rect = { x: 0, z: 0, w: 10, d: 14, ry: 0 };
   const signs = [{ k: 0, kind: 'v', a: 0.8, y: 6, h: 5, w: 1.2, tile: 1, neon: [1, 0.3, 0.8] }, { k: 0, kind: 'h', a: 5, y: 4.5, w: 4, tile: 2, neon: [0.2, 0.9, 1] }];
