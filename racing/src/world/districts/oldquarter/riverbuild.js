@@ -8,9 +8,9 @@ import { box, prism, cylinder, cone, sphere } from '../builder.js';
 import { natural } from '../../terrain.js';
 import { ROAD } from '../occ.js';
 import { bankPt, WALL_D, TOP_W, bridgeLayout, archY, riverPt } from './river.js';
-import { otwUV } from './ottex.js';
+import { otwUV, otsUV, otsgUV } from './ottex.js';
 import { metalUV } from './tex.js';
-import { lantern, catenary, cross } from './geo.js';
+import { lantern, catenary, cross, wire } from './geo.js';
 
 /** A quad wound to face (nx, ny, nz). */
 export function quadFacing(acc, A, B, C, D, n, uv) {
@@ -54,7 +54,10 @@ export function quay(K, B, it) {
     let road = false;
     for (const d of [-1, 1.5, 4]) if (occ.get(b.bx + b.ox * d, b.bz + b.oz * d) & ROAD) road = true;
     const stepGap = it.steps.some((q) => Math.abs(q - s) < 1.3);
-    pts.push({ s, b, top, yg, road, stepGap });
+    // a lane along the wall here: its sidewalk's level (the parapet stands on it)
+    let lane = null;
+    for (const [t, y] of it.lane || []) if (Math.abs(t - s) < 1.2) lane = y;
+    pts.push({ s, b, top, yg, road, stepGap, lane, gap: (it.gaps || []).some((q) => Math.abs(q - s) < 1.1) });
   }
   const at = (p, d, y) => [p.b.bx + p.b.ox * d, y, p.b.bz + p.b.oz * d];
   const toLand = (p) => [p.b.ox, 0, p.b.oz], toWater = (p) => [-p.b.ox, 0, -p.b.oz];
@@ -63,6 +66,19 @@ export function quay(K, B, it) {
     const p = pts[k], q = pts[k + 1];
     const u0 = p.s / 2.4, u1 = q.s / 2.4;
     S.col = stoneCol;
+    if (p.lane !== null && q.lane !== null) {
+      // beside a lane: the wall up to a parapet on the lane's level (a gap for a gangway)
+      const gap = p.gap && q.gap;
+      const pt = p.lane + (gap ? 0.05 : 0.9), qt = q.lane + (gap ? 0.05 : 0.9);
+      quadFacing(S, at(p, 0, p.b.yw - 3.2), at(q, 0, q.b.yw - 3.2), at(q, 0, qt), at(p, 0, pt), toWater(p), [u0, (p.b.yw - 3.2) / 2.4, u1, pt / 2.4]);
+      S.col = [0.92, 0.89, 0.82];
+      quadFacing(S, at(p, -0.1, pt), at(q, -0.1, qt), at(q, 0.55, qt), at(p, 0.55, pt), [0, 1, 0], [u0, 0, u1, 0.3]);
+      if (gap) continue;
+      quadFacing(S, at(p, -0.1, pt - 0.14), at(q, -0.1, qt - 0.14), at(q, -0.1, qt), at(p, -0.1, pt), toWater(p), [u0, 0, u1, 0.06]);
+      S.col = [0.84, 0.8, 0.72];
+      quadFacing(S, at(p, 0.55, p.lane - 0.5), at(q, 0.55, q.lane - 0.5), at(q, 0.55, qt), at(p, 0.55, pt), toLand(p), [u0, 0, u1, 0.6]);
+      continue;
+    }
     // the wall down into the river
     const pt = p.road ? Math.min(p.top, p.b.yw + 1.4) : p.top + (p.stepGap ? 0 : 0.85);
     const qt = q.road ? Math.min(q.top, q.b.yw + 1.4) : q.top + (q.stepGap ? 0 : 0.85);
@@ -343,15 +359,16 @@ export function boat(K, it, rng) {
   const c = Math.cos(it.ry), s = Math.sin(it.ry);
   // local x across, z along (bow +z)
   const W = (lx, lz) => [it.x + lx * c + lz * s, it.z - lx * s + lz * c];
-  const L = it.len, b = it.kind === 'launch' ? 2.6 : it.kind === 'row' ? 1.4 : it.kind === 'house' ? 6 : 5.2;
+  const L = it.len, b = it.kind === 'launch' ? 2.6 : it.kind === 'row' ? 1.4 : it.kind === 'house' ? 6 : it.kind === 'cafe' ? 5.6 : 5.2;
   const y = it.y;
-  const hull = HULL[it.seed % HULL.length];
+  const hull = it.kind === 'cafe' ? [0.08, 0.15, 0.24] : HULL[it.seed % HULL.length];
   const free = it.kind === 'row' ? 0.45 : it.kind === 'launch' ? 0.8 : 1.15;
   const poly = [W(-b / 2, -L / 2 + 0.6), W(-b / 2 * 0.8, -L / 2), W(b / 2 * 0.8, -L / 2), W(b / 2, -L / 2 + 0.6), W(b / 2, L / 2 - b * 0.8), W(0, L / 2), W(-b / 2, L / 2 - b * 0.8)];
   P.col = hull;
   prism(P, poly, 0, 0, y - 0.8, y + free - 0.18, 0, { top: false });
-  P.col = it.kind === 'row' ? [0.6, 0.4, 0.24] : [0.75, 0.15, 0.12];
+  P.col = it.kind === 'row' ? [0.6, 0.4, 0.24] : it.kind === 'cafe' ? [0.9, 0.82, 0.6] : [0.75, 0.15, 0.12];
   prism(P, poly, 0, 0, y + free - 0.18, y + free, 0, { top: false });
+  if (it.kind === 'cafe') { cafeBarge(K, it, W, L, b, y + free, rng); return; }
   P.col = [0.42, 0.3, 0.2];
   prism(P, poly.map(([x, z]) => [x, z]), 0, 0, y + free - 0.06, y + free - 0.05, 0, { walls: false });
   if (it.kind === 'row') return;
@@ -360,7 +377,7 @@ export function boat(K, it, rng) {
   const glass = (lx, lz, w, h, yy, face) => {
     // a little window on the cabin side (face +1 starboard, −1 port)
     const p = W(lx, lz);
-    const tx = s * face, tz = c * face;            // along the hull
+    const tx = -s * face, tz = -c * face;          // along the hull (backwards: the quad faces out)
     const ox = c * face, oz = -s * face;           // out of the side
     const lit = rng() < it.lit;
     K.win.col = [0.95, 0.94, 0.9];
@@ -409,6 +426,129 @@ export function boat(K, it, rng) {
     N.leaf.col = [[0.2, 0.42, 0.16], [0.85, 0.2, 0.2], [0.9, 0.7, 0.2]][q % 3];
     sphere(N.leaf, pp[0], y + free + 0.95, pp[1], 0.32, 5, { sy: 0.8 });
   }
+}
+
+/**
+ * LE PETIT PORT: a péniche turned café, moored along the lane's parapet —
+ * a glazed saloon (its board on the roof), the wheelhouse aft, a terrace on
+ * the foredeck under parasols and strings of bulbs from a mast at the bow,
+ * a gangway over to the quay. Local x across (it.wallSide: which side faces
+ * the wall), z along (bow +z); deck at yd.
+ */
+function cafeBarge(K, it, W, L, b, yd, rng) {
+  const P = K.paint, N = K.near;
+  const ry = it.ry, c = Math.cos(ry), s = Math.sin(ry);
+  const at = (lx, ly, lz) => { const p = W(lx, lz); return [p[0], ly, p[1]]; };
+  // the deck: planks
+  P.col = [0.5, 0.36, 0.22];
+  P.quadP(at(-b / 2 + 0.2, yd + 0.02, -L / 2 + 0.8), at(b / 2 - 0.2, yd + 0.02, -L / 2 + 0.8), at(b / 2 - 0.2, yd + 0.02, L / 2 - b * 0.8), at(-b / 2 + 0.2, yd + 0.02, L / 2 - b * 0.8), [0, 0, 1, 4]);
+  // the saloon: cream walls, big lit windows, a dark roof
+  const z0 = -L / 2 + 6.2, z1 = L / 2 - 10, zc = (z0 + z1) / 2, sl = z1 - z0, sw = b - 0.8, sh = 2.5;
+  const ctr = W(0, zc);
+  P.col = [0.9, 0.87, 0.78];
+  box(P, ctr[0], yd, ctr[1], sw, sh, sl, ry, { u: 1 });
+  P.col = [0.16, 0.2, 0.22];
+  box(P, ctr[0], yd + sh, ctr[1], sw + 0.5, 0.16, sl + 0.6, ry, { u: 1 });
+  const win = K.win;
+  win.col = [0.95, 0.94, 0.9];
+  for (const face of [1, -1]) {
+    const n = Math.floor(sl / 1.7);
+    for (let q = 0; q < n; q++) {
+      const lz = z0 + (q + 0.5) * (sl / n);
+      const A = at(face * (sw / 2 + 0.03), yd + 0.75, lz + face * 0.62), Bq = at(face * (sw / 2 + 0.03), yd + 0.75, lz - face * 0.62);
+      win.quadP(A, Bq, [Bq[0], yd + 2.15, Bq[2]], [A[0], yd + 2.15, A[2]], otwUV(q % 3 === 1 ? 'd_lit' : 'o_lit'));
+    }
+  }
+  // its front on the terrace: a café's glazed doors
+  {
+    const A = at(sw / 2 - 0.3, yd, z1 + 0.03), Bq = at(-sw / 2 + 0.3, yd, z1 + 0.03);
+    K.shop.quadP(Bq, A, [A[0], yd + 2.4, A[2]], [Bq[0], yd + 2.4, Bq[2]], otsUV(15));
+  }
+  // the board on the roof, both faces (each its own vertices)
+  {
+    const yb = yd + sh + 0.45, h = 1.15, half = 2.65;
+    for (const face of [1, -1]) {
+      const A = at(face * 0.03, yb, zc + face * half), Bq = at(face * 0.03, yb, zc - face * half);
+      K.sign.quadP(A, Bq, [Bq[0], yb + h, Bq[2]], [A[0], yb + h, A[2]], otsgUV('port'));
+    }
+    N.paint.col = [0.12, 0.12, 0.12];
+    for (const lz of [zc - half + 0.4, zc + half - 0.4]) { const p = W(0, lz); box(N.paint, p[0], yd + sh + 0.1, p[1], 0.1, 0.4, 0.1, ry, { u: 1 }); }
+  }
+  // the wheelhouse aft
+  {
+    const wz = -L / 2 + 3.2, p = W(0, wz);
+    P.col = [0.18, 0.3, 0.32];
+    box(P, p[0], yd, p[1], 2.6, 2.2, 2.4, ry, { u: 1 });
+    P.col = [0.16, 0.2, 0.22];
+    box(P, p[0], yd + 2.2, p[1], 2.9, 0.12, 2.7, ry, { u: 1 });
+    for (const face of [1, -1]) {
+      const A = at(face * 1.33, yd + 1.2, wz + face * 0.7), Bq = at(face * 1.33, yd + 1.2, wz - face * 0.7);
+      win.quadP(A, Bq, [Bq[0], yd + 1.95, Bq[2]], [A[0], yd + 1.95, A[2]], otwUV('d_lit'));
+    }
+  }
+  // the terrace: tables, chairs, two parasols, a railing round it
+  const t0 = z1 + 1.2, t1 = L / 2 - b * 0.8 - 0.4;
+  for (let k = 0; k < 3; k++) {
+    const lz = t0 + (k + 0.5) * (t1 - t0) / 3, lx = (k % 2 ? 1 : -1) * 1.1;
+    const p = W(lx, lz);
+    N.paint.col = [0.86, 0.84, 0.8];
+    cylinder(N.paint, p[0], yd + 0.72, p[1], 0.42, 0.05, 8, { top: true });
+    N.paint.col = [0.12, 0.12, 0.12];
+    cylinder(N.paint, p[0], yd, p[1], 0.05, 0.72, 4);
+    for (const dz of [-0.75, 0.75]) {
+      const cp = W(lx, lz + dz);
+      N.paint.col = [0.62, 0.3, 0.16];
+      box(N.paint, cp[0], yd + 0.42, cp[1], 0.42, 0.06, 0.42, ry, { u: 1 });
+      const bp = W(lx, lz + dz * 1.27);
+      box(N.paint, bp[0], yd + 0.42, bp[1], 0.42, 0.5, 0.05, ry, { u: 1 });
+      N.paint.col = [0.12, 0.12, 0.12];
+      box(N.paint, cp[0], yd, cp[1], 0.36, 0.42, 0.36, ry, { u: 1, top: false });
+    }
+  }
+  for (const [lx, lz] of [[-1.3, t0 + 1], [1.3, t1 - 1.6]]) {
+    const p = W(lx, lz);
+    P.col = [0.2, 0.2, 0.2];
+    cylinder(P, p[0], yd, p[1], 0.04, 2.5, 4);
+    for (let k = 0; k < 8; k++) {
+      const a0 = (k / 8) * Math.PI * 2, a1 = ((k + 1) / 8) * Math.PI * 2, r = 1.45;
+      P.col = k % 2 ? [0.92, 0.88, 0.76] : [0.7, 0.12, 0.12];
+      const A = [p[0] + Math.cos(a0) * r, yd + 2.15, p[1] + Math.sin(a0) * r], Bq = [p[0] + Math.cos(a1) * r, yd + 2.15, p[1] + Math.sin(a1) * r];
+      P.quadP(Bq, A, [p[0], yd + 2.75, p[1]], [p[0], yd + 2.75, p[1]]);
+      P.col = k % 2 ? [0.5, 0.48, 0.42] : [0.4, 0.08, 0.08];
+      P.quadP(A, Bq, [p[0], yd + 2.6, p[1]], [p[0], yd + 2.6, p[1]]);
+    }
+  }
+  N.metal.col = [0.12, 0.12, 0.13];
+  for (const face of [1, -1]) {
+    const A = at(face * (b / 2 - 0.12), yd, z1), Bq = at(face * (b / 2 - 0.12), yd, t1 + 0.6);
+    quadFacing(N.metal, A, Bq, [Bq[0], yd + 0.95, Bq[2]], [A[0], yd + 0.95, A[2]], [face * c, 0, -face * s], metalUV(1, t1 + 0.6 - z1, 2));
+  }
+  // a mast at the bow, bulbs strung back to the saloon's roof and along its edges
+  const m = W(0, L / 2 - 1.8);
+  P.col = [0.2, 0.2, 0.2];
+  cylinder(P, m[0], yd, m[1], 0.07, 4.6, 5);
+  K.glow.col = [1, 1, 1];
+  box(K.glow, m[0], yd + 4.6, m[1], 0.22, 0.32, 0.22, ry, { u: 1 });
+  for (const face of [1, -1]) {
+    const a = at(face * (sw / 2), yd + sh + 0.1, z1), top = [m[0], yd + 4.5, m[1]];
+    const pts = catenary(a, top, 0.35, 10);
+    for (const q of pts) cross(N.glow, q[0], q[1] - 0.1, q[2], 0.06, 0.12);
+    wire(N.paint, pts, 0.012);
+    const e0 = at(face * (sw / 2 + 0.2), yd + sh + 0.1, z0), e1 = at(face * (sw / 2 + 0.2), yd + sh + 0.1, z1);
+    for (const q of catenary(e0, e1, 0.25, 10)) cross(N.glow, q[0], q[1] - 0.1, q[2], 0.06, 0.12);
+  }
+  // the gangway over to the quay
+  if (it.wallSide) {
+    const gz = z0 + 2.2, ws = it.wallSide;
+    const A = at(ws * (b / 2 - 0.3), yd + 0.05, gz - 0.5), Bq = at(ws * (b / 2 - 0.3), yd + 0.05, gz + 0.5);
+    const C = at(ws * (b / 2 + it.gap + 1.0), it.gangY + 0.06, gz + 0.5), D = at(ws * (b / 2 + it.gap + 1.0), it.gangY + 0.06, gz - 0.5);
+    P.col = [0.42, 0.3, 0.2];
+    quadFacing(P, A, Bq, C, D, [0, 1, 0]);
+    quadFacing(P, A, Bq, C, D, [0, -1, 0]);
+    N.paint.col = [0.12, 0.12, 0.12];
+    for (const [p0, p1] of [[A, D], [Bq, C]]) N.paint.beam(p0[0], p0[1] + 0.95, p0[2], p1[0], p1[1] + 0.95, p1[2], 0.05, 0.05);
+  }
+  void rng;
 }
 
 /** The river at s, for placing boats: a point d out from the centre on a side. */

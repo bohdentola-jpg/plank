@@ -11,7 +11,7 @@ import { cobbleTexture } from '../kit.js';
 import { plasterTex, brickTex, tileTex, metalTex } from './oldquarter/tex.js';
 import { ctWindows, ctShops, ctSigns, CTSHOP, CTS_V, CTS_H } from './oldquarter/cttex.js';
 import { ctHouse, tank } from './oldquarter/cthouse.js';
-import { lanternMat, lanternString, lantern, gate, temple, marketStall, phoneBooth, clutter, dressLantern, teahouse } from './oldquarter/ctland.js';
+import { lanternMat, lanternString, lantern, gate, temple, marketStall, phoneBooth, clutter, vent, steamMat, steam, dressLantern, teahouse } from './oldquarter/ctland.js';
 import { frontage, corners, edgeKinds, lotPoly, ROAD, ITEM } from './oldquarter/plan.js';
 import { drape, cylinder, box } from './builder.js';
 import { bush, broadTree, cross } from './oldquarter/geo.js';
@@ -66,7 +66,7 @@ function plan(P) {
       }
     }
   }
-  for (const L of P.fill({ spacing: 22, width: [9, 14], depth: [8, 13], chance: 0.5, pad: 0.4 })) {
+  for (const L of P.fill({ spacing: 22, width: [9, 14], depth: [8, 13], chance: 0.5, pad: 0.4, reach: 50 })) {
     makeBuilding(P, L, null, null, P.rng() < 0.8 ? 'ten' : 'mod', { rear: true });
   }
   planRoofGarden(P);
@@ -311,11 +311,20 @@ function planStreetThings(P) {
     if (t === 'alley') {
       for (let s = r.trim0 + 6; s < r.length - r.trim1 - 6; s += 16 + P.rng() * 14) {
         const sd = P.rng() < 0.5 ? 1 : -1;
-        const p = r.posAt(s, sd * (r.rt.hw - 0.2));
-        const q = r.posAt(s, sd * (r.rt.hw + 1.4));
+        const edge = r.rt.hw + r.rt.shoulder;
+        const q = r.posAt(s, sd * (edge + 1.0));
         if (!(P.occ.get(q.x, q.z) & ITEM)) continue;
-        add(p.x, p.z, ['clutter', p.x, p.y, p.z, Math.atan2(r.TX[p.i], r.TZ[p.i]) + (P.rng() - 0.5) * 0.3]);
-        P.collider({ kind: 'circle', x: p.x, z: p.z, r: 0.9, y0: p.y - 1, y1: p.y + 1.4 });
+        const ry = Math.atan2(r.TX[q.i], r.TZ[q.i]);
+        if (P.rng() < 0.45) {
+          // a kitchen's exhaust on the wall, steaming
+          const v = r.posAt(s, sd * (edge + 0.75));
+          add(v.x, v.z, ['vent', v.x, v.y, v.z, Math.atan2(-r.LX[v.i] * sd, -r.LZ[v.i] * sd)]);
+          continue;
+        }
+        // dumpsters and crates against the wall (out of the lane)
+        const p = r.posAt(s, sd * (edge + 0.45));
+        add(p.x, p.z, ['clutter', p.x, p.y, p.z, ry + (P.rng() - 0.5) * 0.3]);
+        P.collider({ kind: 'circle', x: p.x, z: p.z, r: 0.75, y0: p.y - 1, y1: p.y + 1.4 });
       }
     }
   }
@@ -334,6 +343,7 @@ function mats(B) {
     sign: B.mat('sign', () => { const t = ctSigns(); const m = litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, roughness: 0.4, vertexColors: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }, { night: 2.4 }); return m; }),
     neon: B.mat('neon', () => { const m = glowColorMat('#ffffff', 2.6); m.vertexColors = true; m.side = THREE.DoubleSide; return m; }),
     lantern: B.mat('lantern', lanternMat),
+    steam: B.mat('steam', steamMat),
     paint: B.mat('paint', () => litMat({ vertexColors: true, roughness: 0.7 })),
     metal: B.mat('metal', () => litMat({ map: metalTex(), vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.5 }, { shadow: false })),
     leaf: B.mat('leaf', () => litMat({ vertexColors: true, roughness: 0.85, flatShading: true })),
@@ -349,6 +359,7 @@ function kit(B) {
   K.near = {};
   for (const k of ['paint', 'leaf', 'metal', 'win', 'tile', 'neon']) K.near[k] = B.near(M[k]);
   K.lanternNear = B.near(M.lantern);
+  K.steam = B.near(M.steam);
   K.lanternFn = lantern;
   K.M = M;
   return K;
@@ -393,6 +404,7 @@ function* build(B, items) {
       const rng = makeRng(Math.floor(it.x * 3 + it.z));
       for (const [t, x, y, z, ry] of it.list) {
         if (t === 'booth') phoneBooth(K, x, y, z, ry);
+        else if (t === 'vent') vent(K, x, y, z, ry, rng);
         else clutter(K, x, y, z, ry, rng);
       }
     }
@@ -425,7 +437,11 @@ function dressLamps(B, K) {
 /** The night market: stalls, the lantern pole and its strings out to the posts. */
 function market(K, it) {
   const rng = makeRng(77);
-  for (const [x, z, ry, ci] of it.stalls) marketStall(K, x, it.g, z, ry, it.cols[ci], rng);
+  for (const [x, z, ry, ci] of it.stalls) {
+    marketStall(K, x, it.g, z, ry, it.cols[ci], rng);
+    // the food stalls' woks steam
+    if (rng() < 0.4) steam(K.steam, x, it.g + 1.15, z, 4, 1.0, 1.8, Math.floor(x * 3 + z));
+  }
   const g = it.g;
   K.paint.col = [0.66, 0.08, 0.06];
   cylinder(K.paint, it.x, g - 0.2, it.z, 0.42, 14.5, 8, { r2: 0.3 });

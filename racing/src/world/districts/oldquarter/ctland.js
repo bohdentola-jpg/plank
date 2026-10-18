@@ -31,6 +31,46 @@ export function lanternMat() {
   return m;
 }
 
+/**
+ * Steam: soft puffs that rise, swell and fade on a loop, turned to the
+ * camera in the vertex shader. Each puff is one quad whose four corners
+ * share its centre; uv is the corner, the vertex colour carries (phase,
+ * rise in metres / 4, size). No texture: the puff is drawn from the uv.
+ */
+export function steamMat() {
+  const m = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uTime = U.time;
+    sh.uniforms.uNight = U.night;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nuniform float uTime;\nvarying float vLife;\nvarying vec2 vQ;')
+      .replace('#include <project_vertex>', `
+        float life = fract(uTime * 0.28 + color.r);
+        vLife = life; vQ = uv;
+        float sz = color.b * (0.45 + life * 1.5);
+        vec4 mvPosition = modelViewMatrix * vec4(transformed + vec3(sin(uTime * 0.7 + color.r * 9.0) * 0.25 * life, life * color.g * 4.0, 0.0), 1.0);
+        mvPosition.xy += (uv - 0.5) * sz;
+        gl_Position = projectionMatrix * mvPosition;`);
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uNight;\nvarying float vLife;\nvarying vec2 vQ;')
+      .replace('#include <color_fragment>', `#include <color_fragment>
+        float rr = length(vQ - 0.5) * 2.0;
+        float a = smoothstep(1.0, 0.15, rr) * sin(vLife * 3.14159) * 0.3;
+        diffuseColor = vec4(mix(vec3(0.9, 0.9, 0.92), vec3(0.62, 0.52, 0.6), uNight), a);`);
+  };
+  m.customProgramCacheKey = () => 'ct-steam';
+  return m;
+}
+
+/** n puffs of steam rising from (x, y, z). */
+export function steam(S, x, y, z, n = 5, size = 1.4, rise = 2.6, seed = 0) {
+  for (let k = 0; k < n; k++) {
+    S.col = [(seed * 0.618 + k / n) % 1, rise / 4, size * (0.8 + ((k * 7 + seed * 13) % 5) * 0.08)];
+    const i0 = S.v(x, y, z, 0, 0), i1 = S.v(x, y, z, 1, 0), i2 = S.v(x, y, z, 1, 1), i3 = S.v(x, y, z, 0, 1);
+    S.quad(i0, i1, i2, i3);
+  }
+}
+
 const RINGS = [[-0.08, 0.15, 1], [-0.15, 0.22, 0], [-0.42, 0.31, 0], [-0.69, 0.22, 0], [-0.76, 0.15, 1]];
 const RED = [1, 0.13, 0.08], GOLD = [1, 0.72, 0.22];
 
@@ -366,6 +406,19 @@ export function clutter(K, x, y, z, ry, rng) {
     N.paint.col = [0.8, 0.8, 0.82];
     for (let k = 0; k < 3; k++) cylinder(N.paint, x + k * 0.36, y, z, 0.15, 1.1, 6, { top: true });
   }
+}
+
+/** A kitchen exhaust on an alley wall (ry: facing out into the alley), its duct up the wall, steaming. */
+export function vent(K, x, y, z, ry, rng) {
+  const N = K.near;
+  const fx = Math.sin(ry), fz = Math.cos(ry);
+  N.paint.col = [0.56, 0.58, 0.6];
+  box(N.paint, x, y + 2.35, z, 0.85, 0.6, 0.5, ry, { u: 1 });
+  N.paint.col = [0.12, 0.12, 0.13];
+  box(N.paint, x + fx * 0.26, y + 2.42, z + fz * 0.26, 0.7, 0.42, 0.02, ry, { u: 1, top: false });
+  N.paint.col = [0.5, 0.52, 0.54];
+  cylinder(N.paint, x - fx * 0.05, y + 2.95, z - fz * 0.05, 0.13, 4.5, 5);
+  steam(K.steam, x + fx * 0.45, y + 2.6, z + fz * 0.45, 5, 1.25, 2.4, Math.floor(rng() * 100));
 }
 
 /** Dress a road's red street lantern: a curved bracket, a pagoda cap, a gilt finial (close up). */

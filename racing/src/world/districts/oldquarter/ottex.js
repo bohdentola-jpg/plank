@@ -3,9 +3,10 @@
 // cathedral's lancets and rose, the clock dial) and its shopfronts (cafés,
 // bakeries, bookshops, gold letters on painted boards). Each atlas is a day
 // map and a night map: the night map is what glows when the lamps come on.
+// And its signs: boards, posters, enamel plates (one canvas, its own night map).
 // Joinery is drawn pale so the window's vertex colour paints frames and
 // shutters per building.
-import { canvasPair, tileUV, grain, fitText, rrect } from './tex.js';
+import { canvasPair, canvasTex, tileUV, grain, fitText, rrect } from './tex.js';
 
 // ------------------------------------------------------------------ windows
 
@@ -555,6 +556,112 @@ export function otShops() {
   return canvasPair('ot-shops', 1024, 1024, (x, e, w, h, rng) => {
     for (let i = 0; i < OTS.length; i++) shopTile(x, e, i, rng);
     grain(x, w, h, rng, 20000, 0.08, 1.5);
+  });
+}
+
+// ------------------------------------------------------------------ signs and posters
+
+/**
+ * Boards, posters and enamel plates: one canvas that is its own night map
+ * (the lettering is the bright part, so it is what glows). name → [px, py, pw, ph].
+ */
+export const OTSG = {
+  port: [0, 0, 512, 112], moulin: [0, 112, 512, 96], journaux: [0, 208, 512, 64],
+  p0: [0, 272, 128, 176], p1: [128, 272, 128, 176], p2: [256, 272, 128, 176], p3: [384, 272, 128, 176],
+  tabac: [0, 448, 128, 64], hotel: [128, 448, 256, 64], enamel: [384, 448, 128, 64],
+};
+export const otsgUV = (name) => tileUV(512, 512, ...OTSG[name], 1.5);
+
+function board(x, [px, py, pw, ph], bg, rim) {
+  x.fillStyle = bg;
+  x.fillRect(px, py, pw, ph);
+  x.strokeStyle = rim;
+  x.lineWidth = 3;
+  x.strokeRect(px + 5, py + 5, pw - 10, ph - 10);
+  x.lineWidth = 1;
+  x.strokeRect(px + 10, py + 10, pw - 20, ph - 20);
+}
+
+function anchor(x, cx, cy, s, col) {
+  x.strokeStyle = col;
+  x.lineWidth = s * 0.12;
+  x.beginPath(); x.arc(cx, cy - s * 0.42, s * 0.12, 0, Math.PI * 2); x.stroke();
+  x.beginPath(); x.moveTo(cx, cy - s * 0.3); x.lineTo(cx, cy + s * 0.45); x.stroke();
+  x.beginPath(); x.moveTo(cx - s * 0.25, cy - s * 0.12); x.lineTo(cx + s * 0.25, cy - s * 0.12); x.stroke();
+  x.beginPath(); x.arc(cx, cy + s * 0.05, s * 0.4, 0.15 * Math.PI, 0.85 * Math.PI); x.stroke();
+}
+
+/** Old Town's signs (see OTSG): a single 512² canvas. */
+export function otSigns() {
+  return canvasTex('ot-signs', 512, 512, (x, w, h, rng) => {
+    x.fillStyle = '#101010';
+    x.fillRect(0, 0, w, h);
+    const T = OTSG;
+    // LE PETIT PORT: the café barge's board, cream script on deep teal, anchors
+    board(x, T.port, '#0c262c', '#c8a050');
+    fitText(x, 'Le Petit Port', 256, 50, 380, 'italic bold 60px Georgia, "Times New Roman", serif', '#ffe6a8', 'rgba(255,150,60,0.55)', 5);
+    fitText(x, 'GUINGUETTE  ·  BAL  ·  VINS', 256, 92, 300, 'bold 17px Georgia, serif', '#d8b868');
+    anchor(x, 42, 56, 52, '#d8b060'); anchor(x, 470, 56, 52, '#d8b060');
+    // AU VIEUX MOULIN: the mill's inn board, gold on oxblood
+    board(x, T.moulin, '#4a1410', '#d8b060');
+    fitText(x, 'AU VIEUX MOULIN', 256, 156, 440, 'bold 46px Georgia, "Times New Roman", serif', '#f0cc70', 'rgba(60,20,10,0.8)', 3);
+    fitText(x, 'AUBERGE  ·  1784', 256, 192, 200, 'bold 15px Georgia, serif', '#d8b060');
+    // the kiosk's band
+    board(x, T.journaux, '#173226', '#c8a050');
+    fitText(x, 'JOURNAUX  ·  REVUES  ·  PRESSE', 256, 240, 470, 'bold 30px Georgia, serif', '#f0d080');
+    // four posters for the Morris columns
+    const poster = (k, bg, draw) => {
+      const [px, py, pw, ph] = T['p' + k];
+      x.fillStyle = bg; x.fillRect(px + 2, py + 2, pw - 4, ph - 4);
+      draw(px + 2, py + 2, pw - 4, ph - 4);
+      x.fillStyle = 'rgba(255,255,255,0.06)';
+      for (let i = 0; i < 6; i++) x.fillRect(px + rng() * pw, py, 1, ph);
+    };
+    poster(0, '#c8202a', (px, py, pw, ph) => {
+      x.fillStyle = '#f8d040'; x.beginPath(); x.arc(px + pw / 2, py + ph * 0.42, pw * 0.36, 0, Math.PI * 2); x.fill();
+      x.fillStyle = '#1a1a1a'; x.beginPath(); x.moveTo(px + pw / 2, py + ph * 0.18); x.lineTo(px + pw * 0.7, py + ph * 0.6); x.lineTo(px + pw * 0.3, py + ph * 0.6); x.fill();
+      fitText(x, 'CIRQUE', px + pw / 2, py + ph * 0.78, pw - 10, 'bold 30px Georgia, serif', '#fff4d0');
+      fitText(x, "D'HIVER", px + pw / 2, py + ph * 0.9, pw - 20, 'bold 16px Georgia, serif', '#f8d040');
+    });
+    poster(1, '#16244a', (px, py, pw, ph) => {
+      x.strokeStyle = '#e0b850'; x.lineWidth = 3; x.strokeRect(px + 8, py + 8, pw - 16, ph - 16);
+      x.fillStyle = '#e0b850'; x.beginPath(); x.ellipse(px + pw / 2, py + ph * 0.42, pw * 0.22, ph * 0.2, 0, 0, Math.PI * 2); x.fill();
+      x.fillStyle = '#a0182a'; x.beginPath(); x.ellipse(px + pw / 2, py + ph * 0.47, pw * 0.16, ph * 0.14, 0, 0, Math.PI); x.fill();
+      fitText(x, 'OPÉRA', px + pw / 2, py + ph * 0.16, pw - 20, 'bold 26px Georgia, serif', '#f4dc90');
+      fitText(x, 'CARMEN', px + pw / 2, py + ph * 0.8, pw - 20, 'italic bold 24px Georgia, serif', '#ffffff');
+    });
+    poster(2, '#f0e2c0', (px, py, pw, ph) => {
+      x.fillStyle = '#e86a20'; x.fillRect(px, py + ph * 0.62, pw, ph * 0.38);
+      x.fillStyle = '#2a1a14';
+      for (let k = 0; k < 3; k++) { const cx = px + pw * (0.25 + k * 0.25); x.beginPath(); x.arc(cx, py + ph * 0.3, 8, 0, Math.PI * 2); x.fill(); x.beginPath(); x.moveTo(cx - 12, py + ph * 0.6); x.lineTo(cx, py + ph * 0.34); x.lineTo(cx + 12, py + ph * 0.6); x.fill(); }
+      fitText(x, 'GRAND BAL', px + pw / 2, py + ph * 0.74, pw - 12, 'bold 22px Georgia, serif', '#fff2d8');
+      fitText(x, 'SAMEDI', px + pw / 2, py + ph * 0.88, pw - 30, 'bold 16px Georgia, serif', '#2a1a14');
+    });
+    poster(3, '#141414', (px, py, pw, ph) => {
+      x.fillStyle = '#e8e4d8'; x.fillRect(px + 10, py + 30, pw - 20, ph * 0.46);
+      x.fillStyle = '#141414'; x.beginPath(); x.arc(px + pw / 2, py + 30 + ph * 0.2, 16, 0, Math.PI * 2); x.fill();
+      x.fillRect(px + pw / 2 - 18, py + 30 + ph * 0.3, 36, ph * 0.16);
+      fitText(x, 'CINÉMA', px + pw / 2, py + 16, pw - 16, 'bold 20px Georgia, serif', '#e8202a');
+      fitText(x, 'LE ROI', px + pw / 2, py + ph * 0.8, pw - 20, 'bold 26px Georgia, serif', '#ffffff');
+    });
+    // the tobacconist's red lozenge, a hotel's enamel plate, a street plate
+    {
+      const [px, py, pw, ph] = T.tabac;
+      x.fillStyle = '#c81c24';
+      x.beginPath(); x.moveTo(px + 6, py + ph / 2); x.lineTo(px + pw / 2, py + 4); x.lineTo(px + pw - 6, py + ph / 2); x.lineTo(px + pw / 2, py + ph - 4); x.fill();
+      fitText(x, 'TABAC', px + pw / 2, py + ph / 2 + 1, pw - 40, 'bold 20px Arial, sans-serif', '#ffffff');
+    }
+    board(x, T.hotel, '#1c3a8a', '#ffffff');
+    fitText(x, '★  HÔTEL DU QUAI  ★', 256, 480, 230, 'bold 24px Georgia, serif', '#ffffff');
+    {
+      const [px, py, pw, ph] = T.enamel;
+      x.fillStyle = '#ffffff'; rrect(x, px + 4, py + 6, pw - 8, ph - 12, 8); x.fill();
+      x.fillStyle = '#20408a'; rrect(x, px + 8, py + 10, pw - 16, ph - 20, 6); x.fill();
+      x.strokeStyle = '#3a8a5a'; x.lineWidth = 2; x.strokeRect(px + 14, py + 15, pw - 28, ph - 30);
+      fitText(x, 'PLACE', px + pw / 2, py + ph / 2 - 7, pw - 30, 'bold 11px Arial, sans-serif', '#ffffff');
+      fitText(x, "DE L'HORLOGE", px + pw / 2, py + ph / 2 + 8, pw - 26, 'bold 13px Arial, sans-serif', '#ffffff');
+    }
+    grain(x, w, h, rng, 5000, 0.06, 1.2);
   });
 }
 

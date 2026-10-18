@@ -169,12 +169,27 @@ export function quayTop(s, side) {
 }
 
 /**
+ * A road running along the wall at this bank point (a lane down to the
+ * water, not a bridge over it): the level of its sidewalk, else null.
+ */
+function laneAt(P, b) {
+  const nr = P.nearestRoad(b.bx + b.ox * 4, b.bz + b.oz * 4, 14);
+  if (!nr) return null;
+  const r = nr.road, i = nr.i;
+  if (r.flags[i] & F_BRIDGE) return null;
+  if (Math.abs(r.TX[i] * b.tx + r.TZ[i] * b.tz) < 0.85) return null;
+  return r.Y[i] + (r.rt.walk > 0 ? r.rt.curb : 0);
+}
+
+/**
  * OLD TOWN's riverside, planned: the promenade either side claimed (no
  * house on the river side of the quais), quay pieces (40 m each) with
  * their steps, ladders, lamps and plane trees, the parapet's colliders.
+ * o.keep: [[side, s0, s1]] stretches kept clear of trees and lamps (a mill).
  */
-export function planRiver(P) {
+export function planRiver(P, o = {}) {
   const occ = P.occ;
+  const kept = (side, t) => (o.keep || []).some(([sd, a, b]) => sd === side && t >= a && t <= b);
   // the stretch of river inside the district
   let s0 = null, s1 = null;
   for (let s = 0; s < RIVER_LEN; s += 4) {
@@ -202,7 +217,7 @@ export function planRiver(P) {
       const e = Math.min(s1, s + pieceLen);
       const mid = bankPt((s + e) / 2, side, WALL_D);
       if (!P.inside(mid.bx, mid.bz, -10)) continue;
-      const q = { type: 'quay', x: mid.bx, z: mid.bz, side, s0: s, s1: e, steps: [], ladders: [], lamps: [], trees: [] };
+      const q = { type: 'quay', x: mid.bx, z: mid.bz, side, s0: s, s1: e, steps: [], ladders: [], lamps: [], trees: [], lane: [], gaps: [] };
       // steps every couple of hundred metres (not by a bridge)
       if (stepNext >= s && stepNext < e) {
         let clear = true;
@@ -216,14 +231,14 @@ export function planRiver(P) {
       // lamps along the quay top, plane trees behind it
       for (let t = s + 8; t < e; t += 32) {
         const b = bankPt(t, side, WALL_D + 2.3);
-        if (roadNear(b.bx, b.bz, 3) || q.steps.some((x) => Math.abs(x - t) < 6)) continue;
+        if (roadNear(b.bx, b.bz, 3) || q.steps.some((x) => Math.abs(x - t) < 6) || kept(side, t)) continue;
         const { top } = quayTop(t, side);
         q.lamps.push(t);
         P.lamp({ x: b.bx, z: b.bz, y: top, hx: b.bx, hz: b.bz, hy: top + 4.5, color: '#ffcf8a', radius: 13, intensity: 0.9, halo: 2.4 });
       }
       for (let t = s + 4.5; t < e; t += 9) {
         const b = bankPt(t, side, WALL_D + TOP_W + 2.8);
-        if (roadNear(b.bx, b.bz, 3) || !P.inside(b.bx, b.bz, 2)) continue;
+        if (roadNear(b.bx, b.bz, 3) || !P.inside(b.bx, b.bz, 2) || kept(side, t)) continue;
         const y = natural(b.bx, b.bz);
         q.trees.push([b.bx, b.bz, y, 0.9 + P.rng() * 0.3, P.rng()]);
         P.collider({ kind: 'circle', x: b.bx, z: b.bz, r: 0.45, y0: y - 1, y1: y + 9 });
@@ -233,7 +248,9 @@ export function planRiver(P) {
       let run = null;
       const flush = (t1) => {
         if (!run) return;
-        const c = run.levee ? WALL_D + TOP_W / 2 : WALL_D + 0.75, hz = run.levee ? TOP_W / 2 + 0.25 : 0.85;
+        // (beside a lane only the parapet itself, on the wall's own line)
+        const c = run.lane ? WALL_D + 0.22 : run.levee ? WALL_D + TOP_W / 2 : WALL_D + 0.75;
+        const hz = run.lane ? 0.34 : run.levee ? TOP_W / 2 + 0.25 : 0.85;
         const a = bankPt(run.t0, side, c), b = bankPt(t1, side, c);
         const len = Math.hypot(b.bx - a.bx, b.bz - a.bz);
         if (len > 1) P.collider({ kind: 'box', x: (a.bx + b.bx) / 2, z: (a.bz + b.bz) / 2, hx: len / 2, hz, ry: Math.atan2(-(b.bz - a.bz), b.bx - a.bx), y0: run.yw - 2, y1: run.top + 1.1 });
@@ -242,7 +259,17 @@ export function planRiver(P) {
       for (let t = s; t <= e + 0.01; t += 2) {
         const b = bankPt(t, side, WALL_D);
         const blocked = (occ.get(b.bx, b.bz) & ROAD) || (occ.get(b.bx + b.ox * 1.5, b.bz + b.oz * 1.5) & ROAD);
-        if (blocked) { flush(t - 2); continue; }
+        if (blocked) {
+          // a lane along the wall keeps a parapet (a bridge's abutment doesn't)
+          const ly = laneAt(P, b);
+          if (ly === null) { flush(t - 2); continue; }
+          q.lane.push([t, ly]);
+          if (run && (!run.lane || t - run.t0 >= 18)) flush(t);
+          if (!run) run = { t0: t, yw: b.yw, top: ly, lane: true };
+          else run.top = Math.max(run.top, ly);
+          continue;
+        }
+        if (run && run.lane) flush(t);
         const qt = quayTop(t, side);
         const land = natural(b.bx + b.ox * (TOP_W + 1.5), b.bz + b.oz * (TOP_W + 1.5));
         const levee = qt.top - land > 0.35;
