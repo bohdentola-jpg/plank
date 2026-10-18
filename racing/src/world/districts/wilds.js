@@ -142,10 +142,13 @@ function loonLake(P) {
   const nI = Math.round((2 * R) / g) + 1;
   const x0 = cx0 - R, z0 = cz0 - R;
   const H = new Float32Array(nI * nI);
+  // (the exact ground: the plan's coarse grid smooths a basin out of shape,
+  // and the water would lie under the real banks)
+  const gx = exactGround(P);
   let mi = -1;
   for (let j = 0; j < nI; j++) for (let i = 0; i < nI; i++) {
     const k = j * nI + i;
-    H[k] = P.groundY(x0 + i * g, z0 + j * g);
+    H[k] = gx(x0 + i * g, z0 + j * g);
     // (the lowest ground near the basin's middle, not wherever the box dips)
     if (Math.hypot(i * g - R, j * g - R) < 110 && (mi < 0 || H[k] < H[mi])) mi = k;
   }
@@ -198,7 +201,7 @@ function loonLake(P) {
   const cxp = n.x + Math.sin(ry) * back, czp = n.z + Math.cos(ry) * back;
   const L = frame(cxp, n.y, czp, ry);
   // the tents on dry ground either side of the fire (never in the water, never on the road)
-  const dry = (lx, lz) => { const [px, pz] = L.xz(lx, lz); return P.groundY(px, pz) > surface + 0.7 && !(P.occ.get(px, pz) & ROAD); };
+  const dry = (lx, lz) => { const [px, pz] = L.xz(lx, lz); return gx(px, pz) > surface + 0.7 && !(P.occ.get(px, pz) & ROAD); };
   const tents = [];
   for (const [lx, lz, a] of [[-7, -1, 0.3], [7, -2, -0.4], [-8, 5, 1.2], [8, 4, -1.0], [-11, -6, 0.6], [11, -6, -0.2]]) {
     if (tents.length < 3 && dry(lx, lz) && dry(lx + 1.6, lz + 1.6) && dry(lx - 1.6, lz - 1.6)) tents.push([lx, lz, a]);
@@ -550,7 +553,8 @@ function lake3d(B, m, it) {
     seen.add(k);
     const x = x0 + i * g - g / 2, z = z0 + j * g - g / 2;
     if (B.groundY(x + g / 2, z + g / 2) > y + 1.2) return;
-    if (B.D.occ.get(x + g / 2, z + g / 2) & (ROAD | ITEM)) return;
+    // (not over a road; the lake's own cells are claimed, so ITEM can't be the test)
+    if (B.D.occ.get(x + g / 2, z + g / 2) & ROAD) return;
     acc.quadP([x, y, z + g], [x + g, y, z + g], [x + g, y, z], [x, y, z], [x / 20, z / 20, (x + g) / 20, (z + g) / 20]);
   };
   for (let k = 0; k < cells.length; k += 2) {

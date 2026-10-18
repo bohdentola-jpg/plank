@@ -294,7 +294,7 @@ export default {
     {id: 'miharashi', name: 'MIHARASHI LOOKOUT', x: -432, z: -1992, kind: 'lookout', district: 'kaido', hidden: true},
     {id: 'sawmill', name: 'NORTH WOODS SAWMILL', x: -2160, z: -3960, kind: 'sawmill', district: 'wilds'},
     {id: 'firelookout', name: 'FIRE LOOKOUT', x: -2104, z: -3291, kind: 'lookout', district: 'wilds'},
-    {id: 'loonlake', name: 'LOON LAKE CAMP', x: -2342, z: -4036, kind: 'camp', district: 'wilds', hidden: true},
+    {id: 'loonlake', name: 'LOON LAKE CAMP', x: -2344, z: -4038, kind: 'camp', district: 'wilds', hidden: true},
     {id: 'falls', name: 'HIDDEN FALLS', x: -1360, z: -4081, kind: 'falls', district: 'wilds', hidden: true},
   ],
 };
