@@ -20,6 +20,13 @@ const nodes = {
   bs_1: [2810, 1960], bs_2: [3010, 2400], bs_be: [3080, 2770], bs_east: [3450, 2420],
   // Halcyon Point
   pt_e: [2230, 3240], pt_n: [1560, 3060], pt_lh: [1500, 3700], pt_w: [1180, 3420],
+  // back roads: Dock Street behind the rail yard (the terminal to Old Town),
+  // the track down the shipyard's shore to the old wreck
+  hb_dm: [-2000, 1745], sy_wk: [-5560, 2612],
+  // Pier 9's back alley behind the shacks, the dune track to the cove
+  p9_bk: [880, 1872], p9_cv: [2160, 1724],
+  // Halcyon Point: the marina lane, the cove at the end of its trail
+  pt_mr: [1478, 3034], pt_cv: [1226, 3588],
 };
 
 const roads = [
@@ -65,6 +72,25 @@ const roads = [
   { id: 'pt_r2', type: 'coastal', a: 'pt_n', b: 'pt_w', pts: [[1250, 3200, 120]], name: 'POINT RD' },
   { id: 'pt_r3', type: 'coastal', a: 'pt_w', b: 'pt_lh', pts: [[1300, 3620, 80]], name: 'LIGHTHOUSE RD' },
   { id: 'pt_r4', type: 'coastal', a: 'pt_lh', b: 'pt_e', pts: [[1900, 3540, 120], [2160, 3380, 80]], name: 'POINT RD' },
+  // HARBOR DOCKS: Dock Street, the back way from the terminal behind the
+  // rail yard and the sheds up to Old Town, and Railway Avenue across the
+  // tracks from the terminal gate
+  { id: 'hb_dock1', type: 'street', a: 'wf_hw', b: 'hb_dm', name: 'DOCK ST', district: 'harbor', pts: [[-2706, 1872, 70], [-2600, 1786, 90], [-2300, 1762, 200]] },
+  { id: 'hb_dock2', type: 'street', a: 'hb_dm', b: 'ot_0_15', name: 'DOCK ST', district: 'harbor', pts: [[-1862, 1642, 90]] },
+  { id: 'hb_rail', type: 'street', a: 'wf_gate', b: 'hb_dm', name: 'RAILWAY AVE', district: 'harbor' },
+  // THE SHIPYARD: a dirt track along the shore past the last slipway to
+  // the wreck on the beach
+  { id: 'sy_wreck', type: 'dirt', a: 'sy_q1', b: 'sy_wk', name: 'WRECK BEACH TRACK', district: 'shipyard', pts: [[-5250, 2556, 90]] },
+  // PIER 9: a service alley behind the boardwalk's shacks (to a tiki bar
+  // nobody signposts), and a sandy track along the far end of the beach
+  { id: 'p9_alley', type: 'service', a: 'p9_a', b: 'p9_bk', name: 'BACK ALLEY', district: 'pier9', pts: [[780, 1879, 40]] },
+  { id: 'p9_cove', type: 'dirt', a: 'p9_c', b: 'p9_cv', name: 'DUNE TRACK', district: 'pier9', pts: [[1880, 1773, 80], [2060, 1738, 80]] },
+  // HALCYON POINT: down to the marina; Battery Road, a gravel short cut
+  // over the island's back past the old gun battery to the lighthouse; the
+  // trail from the west end down to a cove you can't see from the road
+  { id: 'pt_marina', type: 'service', a: 'pt_n', b: 'pt_mr', name: 'MARINA WAY', district: 'point' },
+  { id: 'pt_spine', type: 'gravel', a: 'pt_n', b: 'pt_lh', name: 'BATTERY RD', district: 'point', pts: [[1505, 3195, 90], [1432, 3330, 90], [1468, 3515, 90]] },
+  { id: 'pt_cove', type: 'dirt', a: 'pt_w', b: 'pt_cv', name: 'COVE TRAIL', district: 'point', pts: [[1162, 3498, 40], [1196, 3566, 40]] },
 ];
 
 export default {
