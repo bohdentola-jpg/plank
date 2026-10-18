@@ -6,7 +6,7 @@
 // Avenue, LANTERN SQUARE with its temple, seven-storey pagoda and night
 // market, the teahouse behind Jade Alley and a garden on a roof.
 import * as THREE from 'three';
-import { litMat, glowColorMat } from './builder.js';
+import { litMat, plainMat, glowColorMat } from './builder.js';
 import { cobbleTexture } from '../kit.js';
 import { plasterTex, brickTex, tileTex, metalTex } from './oldquarter/tex.js';
 import { ctWindows, ctShops, ctSigns, CTSHOP, CTS_V, CTS_H } from './oldquarter/cttex.js';
@@ -346,10 +346,11 @@ function mats(B) {
   return {
     plaster: B.mat('plaster', () => litMat({ map: plasterTex(), vertexColors: true, roughness: 0.9 }, { glow: 1.25 })),
     brick: B.mat('brick', () => litMat({ map: brickTex(), vertexColors: true, roughness: 0.9 }, { glow: 1.6 })),
-    tile: B.mat('tile', () => litMat({ map: tileTex(), vertexColors: true, roughness: 0.45, metalness: 0.15 })),
-    win: B.mat('win', () => { const t = ctWindows(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, vertexColors: true, roughness: 0.3, metalness: 0.1, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }, { night: 1.35 }); }),
+    // (roofs, windows and signs take no baked lamp light: lit by their own glow, and the bake is lighter for it)
+    tile: B.mat('tile', () => plainMat({ map: tileTex(), vertexColors: true, roughness: 0.45, metalness: 0.15 })),
+    win: B.mat('win', () => { const t = ctWindows(); return plainMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, vertexColors: true, roughness: 0.3, metalness: 0.1, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }, { night: 1.35 }); }),
     shop: B.mat('shop', () => { const t = ctShops(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, roughness: 0.45, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }, { night: 1.6 }); }),
-    sign: B.mat('sign', () => { const t = ctSigns(); const m = litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, roughness: 0.4, vertexColors: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }, { night: 2.4 }); return m; }),
+    sign: B.mat('sign', () => { const t = ctSigns(); const m = plainMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, roughness: 0.4, vertexColors: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }, { night: 2.4 }); return m; }),
     neon: B.mat('neon', () => { const m = glowColorMat('#ffffff', 2.6); m.vertexColors = true; m.side = THREE.DoubleSide; return m; }),
     lantern: B.mat('lantern', lanternMat),
     steam: B.mat('steam', steamMat),

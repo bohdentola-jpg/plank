@@ -9,7 +9,7 @@
 // THE OLD MILL with its turning wheel.
 import * as THREE from 'three';
 import { OLDTOWN } from '../map/areas/oldtown.js';
-import { litMat, glowColorMat } from './builder.js';
+import { litMat, plainMat, glowColorMat } from './builder.js';
 import { cobbleTexture } from '../kit.js';
 import { groundTexture } from '../../track/textures.js';
 import { cylinder, sphere } from './builder.js';
@@ -546,9 +546,10 @@ function mats(B) {
     plaster: B.mat('plaster', () => litMat({ map: plasterTex(), vertexColors: true, roughness: 0.92 }, { glow: 1.15 })),
     brick: B.mat('brick', () => litMat({ map: brickTex(), vertexColors: true, roughness: 0.9 }, { glow: 1.5 })),
     stone: B.mat('stone', () => litMat({ map: stoneTex(), vertexColors: true, roughness: 0.85 }, { glow: 1.1 })),
-    slate: B.mat('slate', () => litMat({ map: slateTex(), vertexColors: true, roughness: 0.55, metalness: 0.2 })),
-    tile: B.mat('tile', () => litMat({ map: tileTex(), vertexColors: true, roughness: 0.8 })),
-    win: B.mat('win', () => { const t = otWindows(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, vertexColors: true, roughness: 0.3, metalness: 0.1, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }, { night: 1.3 }); }),
+    // (roofs, windows and signs take no baked lamp light: high up, or lit by their own glow; the bake is lighter for it)
+    slate: B.mat('slate', () => plainMat({ map: slateTex(), vertexColors: true, roughness: 0.55, metalness: 0.2 })),
+    tile: B.mat('tile', () => plainMat({ map: tileTex(), vertexColors: true, roughness: 0.8 })),
+    win: B.mat('win', () => { const t = otWindows(); return plainMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, vertexColors: true, roughness: 0.3, metalness: 0.1, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }, { night: 1.3 }); }),
     shop: B.mat('shop', () => { const t = otShops(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, roughness: 0.45, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }, { night: 1.5 }); }),
     paint: B.mat('paint', () => litMat({ vertexColors: true, roughness: 0.7 })),
     metal: B.mat('metal', () => litMat({ map: metalTex(), vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.5 }, { shadow: false })),
@@ -557,7 +558,7 @@ function mats(B) {
     pave: B.mat('pave', () => litMat({ map: cobbleTexture(), roughness: 0.85, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -3 })),
     gravel: B.mat('gravel', () => litMat({ map: groundTexture('gravel'), color: 0xd8ccb4, roughness: 0.95, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -3 })),
     water: B.mat('water', () => litMat({ color: 0x2a5a78, roughness: 0.06, metalness: 0.3, emissive: 0x3a90d0, vertexColors: true }, { night: 0.45 })),
-    sign: B.mat('sign', () => { const t = otSigns(); return litMat({ map: t, emissive: 0xffffff, emissiveMap: t, roughness: 0.5, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }, { night: 1.4 }); }),
+    sign: B.mat('sign', () => { const t = otSigns(); return plainMat({ map: t, emissive: 0xffffff, emissiveMap: t, roughness: 0.5, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }, { night: 1.4 }); }),
   };
 }
 
