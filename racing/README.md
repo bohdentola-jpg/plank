@@ -163,19 +163,27 @@ Port Halcyon is one city with no seams. It covers about 12 by 10 km, with
   sound, and a pin on the map. Some are on no sign, at the end of a dirt
   road or under a bridge.
 - **M / the touchpad opens the map** of the whole city. L1/R1 zooms, and
-  ✕ fast travels to any place you've found. The pause menu has the map too,
+  ✕ fast travels to any place you've found, or to any race's start line. The pause menu has the map too,
   plus "back on the road", the garage, the camera and the music.
 - **Traffic** drives the real road network: in lane on the right, turning at
   junctions, and taking its turn at the crossings.
 - **The race tracks are places in it.** Every track is a route through
   these streets (see Tracks below), so you can cruise any of them.
+- **Race from the city.** Every track's start line stands under a column of
+  light, with a chequered square on the radar and the map. You can fast
+  travel to any of them. Pull up on a line and ✕ races that track in the car
+  you're driving: pick the type, rivals, skill and traffic. Afterwards
+  you're back in the city, past the line or past a sprint's finish. (A
+  story cruise has no start lines: the story's races are its events.)
 
 ## Racing
 
 - **Race length:** two to three minutes a race. A circuit's lap is a minute
   to a minute and a half of city streets, so circuits run two laps (three on
-  the short Skyline loop). Sprints run about a minute and a half end to end. A lap knockout lasts two laps (three on the Skyline), and a big field
-  loses more than one car a lap, so it's down to two for the last lap.
+  the short Skyline loop). Sprints run about a minute and a half end to
+  end. A lap knockout lasts two laps (three on the Skyline), and a big
+  field loses more than one car a lap, so it's down to two for the last
+  lap.
 - **Race types:** circuit, sprint, lap knockout, drag (manual shifting on a shift light, graded launches and upshifts),
   drift (angle × speed scoring with a multiplier chain that a crash wipes out),
   and time attack (a pro drives your exact car first; you chase the ghost and

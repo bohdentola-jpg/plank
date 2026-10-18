@@ -28,6 +28,7 @@ import { districtAt } from './ground.js';
 import { Garage } from './garage.js';
 import { Discoverer } from './discover.js';
 import { WorldMap } from './map2d.js';
+import { buildStarts, StartLights, startAt } from './starts.js';
 import { WorldTraffic } from './traffic.js';
 import { TrafficRender } from '../race/trafficModels.js';
 import { GARAGE } from './map/base.js';
@@ -153,6 +154,17 @@ export class WorldSession extends RaceSession {
     const st = this.start;
     await this.world.ensureAsync(st.x, st.z, 300, (f) => set(0.7 + f * 0.3, 'PAVING THE STREETS'), sliceMs);
     if (this.disposed) return;
+    // the race tracks' start lines, each under its column of light
+    {
+      const gen = buildStarts();
+      let r = gen.next(), t0 = performance.now();
+      while (!r.done) {
+        if (performance.now() - t0 > sliceMs) { await tick(); t0 = performance.now(); if (this.disposed) return; }
+        r = gen.next();
+      }
+      this.starts = r.value;
+      this.startLights = new StartLights(this.scene, this.starts);
+    }
     // the town's traffic
     if (this.opts.traffic !== false) {
       this.sim.traffic = new WorldTraffic(this.net, this.phys, { count: 34 });
@@ -181,7 +193,7 @@ export class WorldSession extends RaceSession {
    */
   async travelTo(target, progress = () => {}) {
     if (target.garage) { this.teleportToGarage(); return; }
-    const a = this.discoverer.arrival(target);
+    const a = target.arrival || this.discoverer.arrival(target);
     this.sim.frozen = true;
     this.state = 'travel';
     await this.world.ensureAsync(a.x, a.z, 300, (f) => progress(f), 60);
@@ -443,6 +455,8 @@ export class WorldSession extends RaceSession {
       this.updateAudio(dt);
       this.whereAmI();
       this.watchGarage(dt);
+      // pulled up on a race's start line? (the screen offers the race)
+      this.atStart = this.opts.noRaces || pv.speed > 8 ? null : startAt(this.starts, pv.x, pv.z);
       const found = this.discoverer?.tick(pv.x, pv.z, dt);
       if (found) {
         this.message(found.name, found.hidden ? 'SECRET SPOT FOUND' : 'DISCOVERED', { slot: 'center', dur: 3, color: found.hidden ? '#ff5ac8' : '#46e8ff' });
@@ -456,6 +470,7 @@ export class WorldSession extends RaceSession {
     if (!this.inGarage) this.bayLight.intensity = damp(this.bayLight.intensity, inside ? 14 : 0, 2, dt);
     if (this.inGarage) this.sim.physics(dt);      // (the traffic outside)
     this.trafficRender?.update(this.camera.cam);
+    this.startLights?.update(this.camera.cam, this.inGarage ? null : this.atStart);
     this.world.update(dt, this.camera.cam, [{ x: pv.x, z: pv.z, vx: pv.vx, vz: pv.vz }]);
     for (const m of this.messages) m.t += dt;
     this.messages = this.messages.filter((m) => m.t < m.dur);
@@ -514,6 +529,7 @@ export class WorldSession extends RaceSession {
 
   dispose() {
     this.disposed = true;
+    this.startLights?.dispose();
     super.dispose();
   }
 }

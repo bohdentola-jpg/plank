@@ -97,6 +97,7 @@ export class WorldHUD extends HUD {
       }
     }
     ctx.restore();
+    this.drawStarts(ctx, cx, cy, R, scale, ch, sh);
     ctx.save();
     ctx.translate(cx, cy);
     ctx.beginPath();
@@ -108,6 +109,33 @@ export class WorldHUD extends HUD {
     ctx.restore();
     // north (−z) on the rim
     text(ctx, 'N', cx - sh * (R - 10), cy + ch * (R - 10) + 4, { size: 11, color: C.dim, align: 'center', weight: 700 });
+  }
+
+  /** The race starts: a chequered square where one is in range, and the nearest beyond it on the rim. */
+  drawStarts(ctx, cx, cy, R, scale, ch, sh) {
+    const s = this.s;
+    if (!s.starts || s.opts.noRaces) return;
+    const pv = s.player.vehicle;
+    const flag = (x, y, k) => {
+      ctx.fillStyle = 'rgba(0,0,0,0.85)';
+      ctx.fillRect(x - k - 1.5, y - k - 1.5, k * 2 + 3, k * 2 + 3);
+      for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
+        ctx.fillStyle = (i + j) % 2 ? '#ffb03a' : '#fff';
+        ctx.fillRect(x - k + i * k, y - k + j * k, k, k);
+      }
+    };
+    let best = null, bd = 1600;
+    for (const st of s.starts) {
+      const dx = st.x - pv.x, dz = st.z - pv.z;
+      const x = scale * (-ch * dx + sh * dz), y = scale * (-sh * dx - ch * dz);
+      const r = Math.hypot(x, y);
+      if (r < R - 6) flag(cx + x, cy + y, st === s.atStart ? 6 : 4.5);
+      else {
+        const d = Math.hypot(dx, dz);
+        if (d < bd) { bd = d; best = { x, y, r }; }
+      }
+    }
+    if (best) flag(cx + best.x / best.r * (R - 4), cy + best.y / best.r * (R - 4), 3.5);
   }
 
   drawWhere(ctx) {

@@ -185,55 +185,7 @@ export class WorldScene {
 
   /** The whole map's ground at 32 m, and its lamps as points (built in slices). */
   async buildFar(onProgress = () => {}, sliceMs = 12) {
-    const per = 9, nCells = MX * MZ;
-    const pos = new Float32Array(nCells * per * per * 3);
-    const col = new Float32Array(nCells * per * per * 3);
-    const cid = new Float32Array(nCells * per * per);
-    const idx = new Uint32Array(nCells * (per - 1) * (per - 1) * 6);
-    const res = CELL / (per - 1);
-    const c = [0, 0, 0];
-    let v = 0, q = 0, done = 0;
-    let t0 = performance.now();
-    const H = new Float32Array(per * per);
-    for (let cz = CZ0; cz < CZ1; cz++) {
-      for (let cx = CX0; cx < CX1; cx++) {
-        const id = cellIndex(cx, cz);
-        const base = v;
-        for (let j = 0; j < per; j++) for (let i = 0; i < per; i++) H[j * per + i] = natural(cx * CELL + i * res, cz * CELL + j * res);
-        for (let j = 0; j < per; j++) {
-          for (let i = 0; i < per; i++) {
-            const x = cx * CELL + i * res, z = cz * CELL + j * res, h = H[j * per + i];
-            const hx = H[j * per + Math.min(per - 1, i + 1)] - H[j * per + Math.max(0, i - 1)];
-            const hz = H[Math.min(per - 1, j + 1) * per + i] - H[Math.max(0, j - 1) * per + i];
-            const ny = 2 * res / Math.hypot(hx, 2 * res, hz);
-            groundColor(x, z, h, ny, 0, c);
-            pos[v * 3] = x; pos[v * 3 + 1] = h - 0.4; pos[v * 3 + 2] = z;
-            col[v * 3] = c[0]; col[v * 3 + 1] = c[1]; col[v * 3 + 2] = c[2];
-            cid[v] = id;
-            v++;
-          }
-        }
-        for (let j = 0; j < per - 1; j++) {
-          for (let i = 0; i < per - 1; i++) {
-            const a = base + j * per + i, b = a + 1, cc = a + per, d = cc + 1;
-            idx[q++] = a; idx[q++] = cc; idx[q++] = b;
-            idx[q++] = b; idx[q++] = cc; idx[q++] = d;
-          }
-        }
-        done++;
-        if (performance.now() - t0 > sliceMs) {
-          onProgress(done / nCells * 0.85, 'SURVEYING THE CITY');
-          await new Promise((r) => setTimeout(r, 0));
-          t0 = performance.now();
-        }
-      }
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    g.setAttribute('cellId', new THREE.BufferAttribute(cid, 1));
-    g.setIndex(new THREE.BufferAttribute(idx, 1));
-    g.computeVertexNormals();
+    if (!FAR.ground) FAR.ground = await farGround(onProgress, sliceMs);
     const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, envMapIntensity: 0.3 });
     const mu = this.maskU;
     mat.onBeforeCompile = (sh) => {
@@ -246,7 +198,7 @@ export class WorldScene {
           if (texture2D(uMask, (mc + 0.5) / uMaskN).r > 0.5) transformed.y -= 4000.0;`);
     };
     mat.customProgramCacheKey = () => 'world-far-terrain';
-    const far = new THREE.Mesh(g, mat);
+    const far = new THREE.Mesh(FAR.ground, mat);
     far.frustumCulled = false;
     far.receiveShadow = false;
     this.scene.add(far);
@@ -257,7 +209,9 @@ export class WorldScene {
     if (this.ctx.districts?.farList.length) {
       onProgress(0.95, 'RAISING THE SKYLINE');
       await new Promise((r) => setTimeout(r, 0));
-      this.skyline = buildFarSkyline(this.ctx.districts.farList, (x, z) => cellIndex(Math.floor(x / CELL), Math.floor(z / CELL)), this.maskU);
+      const cellId = (x, z) => cellIndex(Math.floor(x / CELL), Math.floor(z / CELL));
+      this.skyline = buildFarSkyline(this.ctx.districts.farList, cellId, this.maskU, FAR.skyline);
+      FAR.skyline = this.skyline.geometry;
       this.scene.add(this.skyline);
     }
     onProgress(1, 'READY');
@@ -265,23 +219,8 @@ export class WorldScene {
 
   /** Every street lamp in town as a point of light (masked like the far ground). */
   buildFarLamps() {
-    const p = [], c = [], id = [];
-    for (const r of this.ctx.net.roads) {
-      for (const L of roadLamps(r)) {
-        p.push(L.hx, L.hy, L.hz);
-        c.push(L.color.r, L.color.g, L.color.b);
-        id.push(cellIndex(Math.floor(L.x / CELL), Math.floor(L.z / CELL)));
-      }
-    }
-    if (this.ctx.districts?.farLamps) for (const L of this.ctx.districts.farLamps()) {
-      p.push(L.hx, L.hy, L.hz);
-      c.push(L.color.r, L.color.g, L.color.b);
-      id.push(cellIndex(Math.floor(L.x / CELL), Math.floor(L.z / CELL)));
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
-    g.setAttribute('color', new THREE.Float32BufferAttribute(c, 3));
-    g.setAttribute('cellId', new THREE.Float32BufferAttribute(id, 1));
+    if (!FAR.lamps) FAR.lamps = farLampsGeometry(this.ctx);
+    const g = FAR.lamps;
     const mu = this.maskU;
     const mat = new THREE.ShaderMaterial({
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
@@ -521,6 +460,8 @@ export class WorldScene {
   dispose() {
     for (const c of this.cells.values()) if (c.state === 'ready') freeGeometry(c.out.group);
     this.cells.clear();
+    // (the far city's geometry is shared: only its materials go)
+    for (const m of [this.far, this.farLamps, this.skyline]) if (m) { this.scene.remove(m); m.material.dispose(); }
     // (the shared materials and their textures stay made for next time)
     this.scene.remove(this.group);
     disposeTree(this.scene);
@@ -537,6 +478,88 @@ function freeGeometry(root) {
     if (o.geometry) o.geometry.dispose();
     if (o.isInstancedMesh) o.dispose();
   });
+}
+
+// The far city (its ground, its street lamps, its skyline) never changes:
+// its geometry is made once a page and every WorldScene after the first
+// shares it (each with its own materials: the cell mask hiding it is per
+// scene), so a scene for a race or the city's again is up in a moment.
+const FAR = { ground: null, lamps: null, skyline: null };
+
+/** The whole map's ground at 32 m, coloured, one geometry (built in slices). */
+async function farGround(onProgress, sliceMs) {
+  const per = 9, nCells = MX * MZ;
+  const pos = new Float32Array(nCells * per * per * 3);
+  const col = new Float32Array(nCells * per * per * 3);
+  const cid = new Float32Array(nCells * per * per);
+  const idx = new Uint32Array(nCells * (per - 1) * (per - 1) * 6);
+  const res = CELL / (per - 1);
+  const c = [0, 0, 0];
+  let v = 0, q = 0, done = 0;
+  let t0 = performance.now();
+  const H = new Float32Array(per * per);
+  for (let cz = CZ0; cz < CZ1; cz++) {
+    for (let cx = CX0; cx < CX1; cx++) {
+      const id = cellIndex(cx, cz);
+      const base = v;
+      for (let j = 0; j < per; j++) for (let i = 0; i < per; i++) H[j * per + i] = natural(cx * CELL + i * res, cz * CELL + j * res);
+      for (let j = 0; j < per; j++) {
+        for (let i = 0; i < per; i++) {
+          const x = cx * CELL + i * res, z = cz * CELL + j * res, h = H[j * per + i];
+          const hx = H[j * per + Math.min(per - 1, i + 1)] - H[j * per + Math.max(0, i - 1)];
+          const hz = H[Math.min(per - 1, j + 1) * per + i] - H[Math.max(0, j - 1) * per + i];
+          const ny = 2 * res / Math.hypot(hx, 2 * res, hz);
+          groundColor(x, z, h, ny, 0, c);
+          pos[v * 3] = x; pos[v * 3 + 1] = h - 0.4; pos[v * 3 + 2] = z;
+          col[v * 3] = c[0]; col[v * 3 + 1] = c[1]; col[v * 3 + 2] = c[2];
+          cid[v] = id;
+          v++;
+        }
+      }
+      for (let j = 0; j < per - 1; j++) {
+        for (let i = 0; i < per - 1; i++) {
+          const a = base + j * per + i, b = a + 1, cc = a + per, d = cc + 1;
+          idx[q++] = a; idx[q++] = cc; idx[q++] = b;
+          idx[q++] = b; idx[q++] = cc; idx[q++] = d;
+        }
+      }
+      done++;
+      if (performance.now() - t0 > sliceMs) {
+        onProgress(done / nCells * 0.85, 'SURVEYING THE CITY');
+        await new Promise((r) => setTimeout(r, 0));
+        t0 = performance.now();
+      }
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.setAttribute('cellId', new THREE.BufferAttribute(cid, 1));
+  g.setIndex(new THREE.BufferAttribute(idx, 1));
+  g.computeVertexNormals();
+  return g;
+}
+
+/** Every street lamp's light as a point (the roads' and the districts'). */
+function farLampsGeometry(ctx) {
+  const p = [], c = [], id = [];
+  for (const r of ctx.net.roads) {
+    for (const L of roadLamps(r)) {
+      p.push(L.hx, L.hy, L.hz);
+      c.push(L.color.r, L.color.g, L.color.b);
+      id.push(cellIndex(Math.floor(L.x / CELL), Math.floor(L.z / CELL)));
+    }
+  }
+  if (ctx.districts?.farLamps) for (const L of ctx.districts.farLamps()) {
+    p.push(L.hx, L.hy, L.hz);
+    c.push(L.color.r, L.color.g, L.color.b);
+    id.push(cellIndex(Math.floor(L.x / CELL), Math.floor(L.z / CELL)));
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(c, 3));
+  g.setAttribute('cellId', new THREE.Float32BufferAttribute(id, 1));
+  return g;
 }
 
 function boxDist(cx, cz, x, z) {

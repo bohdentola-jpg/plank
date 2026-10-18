@@ -94,7 +94,8 @@ const roads = [
   { id: 'cw_l0', type: 'circuit', a: 'cw_g', b: 'cw_b', pts: [[-1460, -2150, 72]] },
   { id: 'cw_l1', type: 'circuit', a: 'cw_b', b: 'cw_c', pts: [[-1460, -2600, 225], [-1544, -2780, 33], [-1605, -2757, 33], [-1578, -2657, 68]] },
   { id: 'cw_l2', type: 'circuit', a: 'cw_c', b: 'cw_d', pts: [[-1803, -2637, 105], [-1859, -2540, 75]] },
-  { id: 'cw_l3', type: 'circuit', a: 'cw_d', b: 'cw_g', pts: [[-2009, -2540, 39], [-2022, -2465, 42], [-2117, -2441, 75], [-2147, -2355, 75], [-2090, -2286, 75], [-2000, -2294, 180]] },
+  // (the corkscrew drops harder than a circuit usually may)
+  { id: 'cw_l3', type: 'circuit', a: 'cw_d', b: 'cw_g', grade: 0.13, pts: [[-2009, -2540, 39], [-2022, -2465, 42], [-2117, -2441, 75], [-2147, -2355, 75], [-2090, -2286, 75], [-2000, -2294, 180]] },
   { id: 'cr_road1', type: 'highway', a: 'cw_1', b: 'cr_e', name: 'CRESTWOOD RD', pts: [[-1550, -1880, 300]] },
   { id: 'cr_road2', type: 'street', a: 'cr_e', b: 'u_0_0', name: 'CRESTWOOD RD' },
 ];

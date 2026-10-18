@@ -197,7 +197,8 @@ registerScreen('story', () => {
     const T = trackInfo(def).T, p = T.posAt(T.startS);
     go('world', {
       spec: story.spec(), look: story.look(), upgrades: story.up(), x: p.x, z: p.z, heading: p.heading, time: 'night',
-      noGarage: true, quitLabel: 'BACK TO THE GARAGE', onExit: () => go('story', {}),
+      // (your garage is the story's, and its races are the story's events)
+      noGarage: true, noRaces: true, quitLabel: 'BACK TO THE GARAGE', onExit: () => go('story', {}),
     });
   }
 

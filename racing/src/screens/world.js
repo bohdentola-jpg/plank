@@ -3,7 +3,11 @@
 // here and kept per car), choose night, dusk or day, then DRIVE OUT: the
 // camera comes round behind the car, the door rolls up and the city is out
 // there, no loading screen. Park back inside to get the garage again.
-// Params: { car, spec, look, upgrades, time, x, z, heading, budget, quitLabel, onExit, station, garage }
+// Every race track's start line stands under a column of light: pull up in
+// it and ✕ races that track in the car you're driving, and afterwards you're
+// back in the city past the line (or past a sprint's finish).
+// Params: { car, spec, look, upgrades, time, x, z, heading, budget, quitLabel, onExit, station, garage,
+//   noGarage (a story cruise: not your garage), noRaces (no start lines), traffic }
 // Dev: ?screen=world (garage start) · ?screen=world&car=silvio&x=700&z=790&heading=3.14 (on the road)
 import { registerScreen, game, go } from '../main.js';
 import { WorldSession } from '../world/session.js';
@@ -15,7 +19,8 @@ import { CARS, CAR_BY_ID } from '../car/cars.js';
 import { carStats } from '../car/stats.js';
 import { prFor } from '../story/state.js';
 import { PERF_PARTS, TIER_NAMES, BODY_PARTS, upgradesFor } from '../story/data.js';
-import { CLASS_COLORS, engineLabel } from './showroom.js';
+import { CLASS_COLORS, engineLabel, typesFor, TYPE_NAMES, SKILLS, pickRivals } from './showroom.js';
+import { knockLaps } from '../race/sim.js';
 import { CAM_MODES } from '../race/camera.js';
 import { C, panel, text, vText, paragraph, hints, statBar } from '../core/ui.js';
 import { Menu, uiSound } from '../core/menu.js';
@@ -42,6 +47,8 @@ registerScreen('world', () => {
   let t = 0;
   let mapV = null;              // the map open: { cx, cz, mpp, sel }
   let travel = null;            // fast travelling: { name, f }
+  let raceMenu = null;          // racing from a start line: { st, menu }
+  const rcfg = { type: null, opp: 5, skill: 2, traffic: true };
 
   const say = (s, color = C.accent) => { toast = { text: s, t: 0, color }; };
   const carId = () => session.player.spec.id;
@@ -65,6 +72,93 @@ registerScreen('world', () => {
     if (params.onExit) { params.onExit(); return; }
     go('radio', { station: params.station || 'cruise' });
   };
+
+  // ---------------------------------------------------------------- racing from a start line
+
+  const trafficOK = (def, type) => !!def.traffic && type !== 'drag';
+  function openRace(st) {
+    const def = st.def;
+    const types = typesFor(def);
+    if (!types.includes(rcfg.type)) rcfg.type = types[0];
+    if (rcfg.type === 'drag') rcfg.opp = 1;
+    rcfg.traffic = !!def.traffic;
+    const menu = new Menu([
+      {
+        label: 'RACE TYPE', type: 'choice',
+        get options() { return types.map((v) => ({ value: v, label: TYPE_NAMES[v] })); },
+        get: () => rcfg.type, set: (v) => { rcfg.type = v; if (v === 'drag') rcfg.opp = 1; },
+      },
+      {
+        label: 'RIVALS', type: 'choice',
+        get options() {
+          if (rcfg.type === 'timeattack' || rcfg.type === 'drift') return [{ value: rcfg.opp, label: rcfg.type === 'drift' ? 'POSTED SCORES' : 'NONE' }];
+          const max = rcfg.type === 'drag' ? 1 : 7, min = rcfg.type === 'knockout' ? 2 : 1;
+          return Array.from({ length: max - min + 1 }, (_, k) => ({ value: k + min, label: String(k + min) }));
+        },
+        get: () => rcfg.opp, set: (v) => { rcfg.opp = v; },
+      },
+      {
+        label: 'SKILL', type: 'choice', options: SKILLS.map((x, k) => ({ value: k, label: x.label })),
+        get: () => rcfg.skill, set: (v) => { rcfg.skill = v; },
+      },
+      {
+        label: 'TRAFFIC', type: 'choice',
+        get options() { return trafficOK(def, rcfg.type) ? [{ value: true, label: 'ON' }, { value: false, label: 'OFF' }] : [{ value: false, label: 'CLOSED ROAD' }]; },
+        get: () => trafficOK(def, rcfg.type) && rcfg.traffic, set: (v) => { rcfg.traffic = v; },
+      },
+      { label: 'START RACE', id: 'go' },
+      { label: 'KEEP CRUISING', id: 'cancel' },
+    ], { id: 'worldrace' });
+    raceMenu = { st, menu };
+    session.pause(true);
+    uiSound('select');
+  }
+
+  function startRace(st) {
+    const def = st.def;
+    const P = session.player;
+    const type = rcfg.type;
+    const opp = type === 'timeattack' || type === 'drift' ? 0 : type === 'drag' ? 1 : Math.max(type === 'knockout' ? 2 : 1, rcfg.opp);
+    const car = { spec: P.spec, look: P.look, upgrades: P.upgrades };
+    // afterwards: back in the city, past the line (or past a sprint's finish when you got there)
+    const back = (at) => ({ ...params, ...car, car: P.spec.id, x: at.x, z: at.z, heading: at.heading, time: session.def.time, traffic: session.opts.traffic !== false, garage: false });
+    go('race', {
+      trackDef: def, ...car, type,
+      laps: type === 'knockout' ? knockLaps(opp, def.laps) : def.laps || 3,
+      opponents: pickRivals(P.spec, opp, SKILLS[rcfg.skill].v, P.look?.paint, def.id + type + (Date.now() % 97)),
+      rubber: 1, traffic: trafficOK(def, type) && rcfg.traffic,
+      quitLabel: 'BACK TO THE CITY',
+      onDone: (res) => go('world', back(res && st.finish ? st.finish : st.start)),
+    });
+  }
+
+  function raceMenuUpdate(dt) {
+    const it = raceMenu.menu.update(dt);
+    if (it?.id === 'go') { const st = raceMenu.st; raceMenu = null; uiSound('select'); startRace(st); return; }
+    if (it?.id === 'cancel' || input.pressed('back') || input.pressed('pause')) { raceMenu = null; session.pause(false); uiSound('back'); }
+  }
+
+  function drawRacePrompt(ctx, st) {
+    const a = 0.75 + 0.25 * Math.sin(t * 5);
+    panel(ctx, 312, 520, 400, 64, { accent: C.accent, accentLen: 140, alpha: 0.88 });
+    vText(ctx, 'RACE HERE', 336, 552, 22, { color: '#fff' });
+    text(ctx, st.def.name, 338, 572, { size: 11, color: C.accent, weight: 900, spacing: 1.5 });
+    ctx.save(); ctx.globalAlpha = a;
+    hints(ctx, [['confirm', 'RACE']], { y: 552, x: 696 });
+    ctx.restore();
+  }
+
+  function drawRaceMenu(ctx) {
+    const { st, menu } = raceMenu;
+    ctx.fillStyle = 'rgba(0,6,20,0.5)';
+    ctx.fillRect(0, 0, 1024, 768);
+    panel(ctx, 290, 150, 460, 430, { accent: C.accent, accentLen: 200 });
+    vText(ctx, st.def.name, 320, 198, 26, { color: '#fff' });
+    text(ctx, `${typesFor(st.def).map((v) => TYPE_NAMES[v]).join('  ·  ')}`, 322, 220, { size: 11, color: C.accent, weight: 900, spacing: 2 });
+    paragraph(ctx, st.def.blurb || '', 322, 246, 396, { size: 11, color: C.dim, weight: 600, lineHeight: 15 });
+    menu.draw(ctx, 330, 330, 390, { rowH: 38, size: 18 });
+    hints(ctx, [['confirm', 'SELECT'], ['lr', 'ADJUST'], ['back', 'KEEP CRUISING']], { y: 740 });
+  }
 
   // ---------------------------------------------------------------- garage actions
 
@@ -186,7 +280,8 @@ registerScreen('world', () => {
     if (!session.map) { say('THE MAP IS STILL BEING DRAWN…', C.dim); return; }
     const v = session.player.vehicle;
     const places = allPlaces(session.districts);
-    mapV = { cx: v.x, cz: v.z, mpp: 5, sel: null, places, t: 0 };
+    const starts = params.noRaces ? [] : (session.starts || []).map((st) => ({ x: st.x, z: st.z, name: st.def.name, found: true, st }));
+    mapV = { cx: v.x, cz: v.z, mpp: 5, sel: null, places, starts, t: 0 };
     session.pause(true);
     uiSound('select');
   }
@@ -205,6 +300,7 @@ registerScreen('world', () => {
     let best = null, bd = 28 * mapV.mpp;
     const consider = (p) => { const d = Math.hypot(p.x - mapV.cx, p.z - mapV.cz); if (d < bd) { bd = d; best = p; } };
     for (const p of mapV.places) { p.found = discover.has(p.id); if (p.hidden && !p.found) continue; consider(p); }
+    for (const p of mapV.starts) consider(p);
     consider({ x: GARAGE.x, z: GARAGE.z, garage: true, name: 'YOUR GARAGE', found: true });
     mapV.sel = best;
     if (input.pressed('confirm') && best) {
@@ -215,7 +311,8 @@ registerScreen('world', () => {
       uiSound('select');
       if (target.garage) { session.travelTo(target); tab = 0; return; }
       travel = { name: target.name, f: 0 };
-      session.travelTo(target, (f) => { if (travel) travel.f = f; }).then(() => { travel = null; });
+      const to = target.st ? { ...target, arrival: target.st.arrive } : target;
+      session.travelTo(to, (f) => { if (travel) travel.f = f; }).then(() => { travel = null; });
       return;
     }
     if (input.pressed('back') || input.pressed('map') || input.pressed('pause')) { mapV = null; session.pause(false); uiSound('back'); }
@@ -223,7 +320,7 @@ registerScreen('world', () => {
 
   function drawMap(ctx) {
     const v = session.player.vehicle;
-    session.map.draw(ctx, mapV, { car: { x: v.x, z: v.z, heading: v.heading }, places: mapV.places, sel: mapV.sel, t: mapV.t });
+    session.map.draw(ctx, mapV, { car: { x: v.x, z: v.z, heading: v.heading }, places: mapV.places, starts: mapV.starts, sel: mapV.sel, t: mapV.t });
     // crosshair
     ctx.strokeStyle = 'rgba(255,255,255,0.75)';
     ctx.lineWidth = 1.5;
@@ -268,7 +365,7 @@ registerScreen('world', () => {
         player: { spec: player.spec, look: player.look, upgrades: player.upgrades, name: 'YOU' },
         time: p.time || G.time, garage: fromGarage, start, budget: p.budget ? Number(p.budget) : undefined,
         traffic: p.traffic === undefined ? undefined : !(p.traffic === false || p.traffic === '0' || p.traffic === 'false'),
-        noGarage: !!p.noGarage,
+        noGarage: !!p.noGarage, noRaces: !!p.noRaces,
         slice: Number(p.slice || game.query.get('slice') || 0) || undefined,
       });
       await session.load(game.renderer.gl, (f, l) => { loading = { f, label: l }; });
@@ -290,6 +387,7 @@ registerScreen('world', () => {
       if (toast) { toast.t += dt; if (toast.t > 2.4) toast = null; }
       if (travel) return;
       if (mapV) { mapUpdate(dt); return; }
+      if (raceMenu) { raceMenuUpdate(dt); return; }
       if (pauseMenu) {
         const it = pauseMenu.update(dt);
         if (input.pressed('pause') || input.pressed('back') || it?.id === 'resume') { pauseMenu = null; session.pause(false); uiSound('back'); return; }
@@ -312,6 +410,9 @@ registerScreen('world', () => {
         session.enterGarage();
         tab = 0;
         uiSound('select');
+      } else if (session.atStart && !params.noRaces && input.pressed('confirm')) {
+        openRace(session.atStart);
+        return;
       } else if (input.pressed('map')) {
         openMap();
         return;
@@ -355,7 +456,7 @@ registerScreen('world', () => {
           panel(ctx, 362, 600, 300, 54, { accent: C.cyan, accentLen: 90, alpha: 0.85 });
           vText(ctx, 'YOUR GARAGE', 390, 634, 18, { color: '#fff' });
           hints(ctx, [['confirm', 'GO IN']], { y: 627, x: 646 });
-        }
+        } else if (session.atStart && !params.noRaces && !pauseMenu && !raceMenu) drawRacePrompt(ctx, session.atStart);
       }
       if (toast) {
         const a = clamp(Math.min(toast.t * 6, (2.4 - toast.t) * 3), 0, 1);
@@ -363,6 +464,7 @@ registerScreen('world', () => {
         text(ctx, toast.text, 512, 700, { size: 15, color: toast.color, weight: 900, spacing: 2, align: 'center', outline: 3 });
         ctx.restore();
       }
+      if (raceMenu) drawRaceMenu(ctx);
       if (pauseMenu) {
         ctx.fillStyle = 'rgba(0,0,0,0.55)';
         ctx.fillRect(0, 0, 1024, 768);

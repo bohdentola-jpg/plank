@@ -113,7 +113,7 @@ export class WorldMap {
 
   /**
    * Draw the map. view: { cx, cz (world point at the middle), mpp (metres per
-   * screen pixel) }. o: { car: {x, z, heading}, places: [{…, found}], sel, t }
+   * screen pixel) }. o: { car: {x, z, heading}, places: [{…, found}], starts: [{x, z, name}], sel, t }
    */
   draw(ctx, view, o) {
     const SW = 1024, SH = 768;
@@ -190,6 +190,20 @@ export class WorldMap {
       ctx.stroke();
       if (p.found && (sel || view.mpp < 7)) text(ctx, p.name, x + 12, y + 4, { size: sel ? 13 : 10, color: sel ? '#fff' : 'rgba(230,240,255,0.85)', weight: 800, spacing: 1, outline: 3 });
       else if (!p.found && sel) text(ctx, '???', x + 12, y + 4, { size: 13, color: '#fff', weight: 800, outline: 3 });
+    }
+    // the race starts (chequered squares, the track's name close up)
+    for (const p of o.starts || []) {
+      const x = X(p.x), y = Z(p.z);
+      if (x < -20 || x > SW + 20 || y < -20 || y > SH + 20) continue;
+      const sel = o.sel === p;
+      const k = sel ? 6 : 4.5;
+      ctx.fillStyle = sel ? '#fff' : 'rgba(0,0,0,0.85)';
+      ctx.fillRect(x - k - 2, y - k - 2, k * 2 + 4, k * 2 + 4);
+      for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
+        ctx.fillStyle = (i + j) % 2 ? '#ffb03a' : '#fff';
+        ctx.fillRect(x - k + i * k, y - k + j * k, k, k);
+      }
+      if (sel || view.mpp < 4.5) text(ctx, p.name, x + 11, y + 4, { size: sel ? 13 : 10, color: sel ? '#fff' : '#ffd08a', weight: 900, spacing: 1, outline: 3 });
     }
     // your garage
     {

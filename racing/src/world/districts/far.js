@@ -13,8 +13,18 @@ const SEG = 8;
 /**
  * list: far shapes ({ shape, x, z, y, w, d, h, ry, r, color, lit, cell }).
  * cellId(x, z) → the cell's index in the mask. maskU: { uMask, uMaskN }.
+ * geo: the skyline's geometry made already (it never changes: a scene after
+ * the first shares it and only makes its own material).
  */
-export function buildFarSkyline(list, cellId, maskU) {
+export function buildFarSkyline(list, cellId, maskU, geo = null) {
+  const mesh = new THREE.Mesh(geo || farSkylineGeometry(list, cellId), farSkylineMaterial(maskU));
+  mesh.frustumCulled = false;
+  mesh.matrixAutoUpdate = false;
+  return mesh;
+}
+
+/** The skyline's shapes in one geometry. */
+export function farSkylineGeometry(list, cellId) {
   let nv = 0, ni = 0;
   for (const f of list) {
     if (f.shape === 'cyl') { nv += SEG * 4 + SEG + 1; ni += SEG * 6 + SEG * 3; }
@@ -89,6 +99,11 @@ export function buildFarSkyline(list, cellId, maskU) {
   g.setIndex(new THREE.BufferAttribute(idx.subarray(0, q), 1));
   g.computeVertexNormals();
   g.computeBoundingSphere();
+  return g;
+}
+
+/** Its material: plain colours, lit windows at night, each cell hidden by the scene's mask. */
+function farSkylineMaterial(maskU) {
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0.05, envMapIntensity: 0.4 });
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uMask = maskU.uMask;
@@ -119,8 +134,5 @@ export function buildFarSkyline(list, cellId, maskU) {
         }`);
   };
   mat.customProgramCacheKey = () => 'world-far-skyline';
-  const mesh = new THREE.Mesh(g, mat);
-  mesh.frustumCulled = false;
-  mesh.matrixAutoUpdate = false;
-  return mesh;
+  return mat;
 }
