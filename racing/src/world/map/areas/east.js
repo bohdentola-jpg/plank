@@ -3,7 +3,11 @@
 // north–south through the desert from the canyon country to the cliffs over
 // the bay, crossing the I-9's end; RED ROCK CANYON (a road along the canyon
 // floor and back along its rim); GHOST TOWN's main street loop; and DRY
-// LAKE's salt flat and its drag strip.
+// LAKE's salt flat and its drag strip. Dirt and gravel backroads lead off to
+// the hidden places: the Array Rd into the HIGH DESERT (the radio array, and
+// the Silo Rd to the old missile silo), the Dutchman Rd to the mine under
+// the mesa, the arch overlook, the Mine Hill Rd over Ghost Town, and the
+// Borax Rd across to the lake.
 import { grid } from '../helpers.js';
 
 const ES = grid('es', {

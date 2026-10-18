@@ -40,6 +40,40 @@ export function saguaro(acc, x, y, z, s, seed) {
   }
 }
 
+// a triangle wound to face away from the point o
+function triOut(acc, A, B, C, o) {
+  const ux = B[0] - A[0], uy = B[1] - A[1], uz = B[2] - A[2], vx = C[0] - A[0], vy = C[1] - A[1], vz = C[2] - A[2];
+  const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+  const dot = nx * ((A[0] + B[0] + C[0]) / 3 - o[0]) + ny * ((A[1] + B[1] + C[1]) / 3 - o[1]) + nz * ((A[2] + B[2] + C[2]) / 3 - o[2]);
+  const i0 = acc.v(A[0], A[1], A[2], 0, 0), i1 = acc.v(B[0], B[1], B[2], 1, 0), i2 = acc.v(C[0], C[1], C[2], 0.5, 1);
+  if (dot >= 0) acc.tri(i0, i1, i2); else acc.tri(i0, i2, i1);
+}
+
+/** A spiky pom-pom: a jittered octahedron core with five spikes (three-sided pyramids). */
+function pompom(acc, x, y, z, s, seed) {
+  const c = [x, y, z], r = 0.3 * s;
+  const P = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]].map((d, i) => {
+    const k = r * (0.85 + hash1(seed, i, 5) * 0.3);
+    return [x + d[0] * k, y + d[1] * k * 0.9, z + d[2] * k];
+  });
+  for (const a of [0, 1]) for (const b of [2, 3]) for (const d of [4, 5]) triOut(acc, P[a], P[b], P[d], c);
+  for (let q = 0; q < 5; q++) {
+    // one straight up, four round the sides tilted up
+    const an = (q / 4) * TAU + hash1(seed, q, 77) * 0.9, el = q === 4 ? 1.45 : 0.3 + hash1(seed, q, 78) * 0.45;
+    const dx = Math.cos(an) * Math.cos(el), dy = Math.sin(el), dz = Math.sin(an) * Math.cos(el);
+    // two vectors square to the spike
+    let sx = -dz, sy = 0, sz = dx;
+    const sl = Math.hypot(sx, sz) || 1;
+    sx /= sl; sz /= sl;
+    if (Math.hypot(dx, dz) < 0.05) { sx = 1; sz = 0; }
+    const ux = dy * sz - dz * sy, uy = dz * sx - dx * sz, uz = dx * sy - dy * sx;
+    const b0 = [x + dx * r * 0.5, y + dy * r * 0.5, z + dz * r * 0.5], rb = 0.13 * s, len = (0.55 + hash1(seed, q, 79) * 0.2) * s;
+    const T = [x + dx * len, y + dy * len, z + dz * len];
+    const B = [0, 1, 2].map((k) => { const a = (k / 3) * TAU; return [b0[0] + (sx * Math.cos(a) + ux * Math.sin(a)) * rb, b0[1] + (sy * Math.cos(a) + uy * Math.sin(a)) * rb, b0[2] + (sz * Math.cos(a) + uz * Math.sin(a)) * rb]; });
+    for (let k = 0; k < 3; k++) triOut(acc, B[k], B[(k + 1) % 3], T, b0);
+  }
+}
+
 /** A Joshua tree: a shaggy trunk forking into arms, spiky clusters at the tips. */
 export function joshua(acc, x, y, z, s, seed) {
   const tips = [];
@@ -49,11 +83,10 @@ export function joshua(acc, x, y, z, s, seed) {
     let dx = dir[0] * 0.5 + Math.cos(a) * lean, dy = dir[1] * 0.6 + 0.8, dz = dir[2] * 0.5 + Math.sin(a) * lean;
     const l = Math.hypot(dx, dy, dz);
     dx /= l; dy /= l; dz /= l;
-    const mid = [p[0] + dx * len * 0.5 + (hash1(seed, k, 3) - 0.5) * 0.3, p[1] + dy * len * 0.5, p[2] + dz * len * 0.5 + (hash1(seed, k, 4) - 0.5) * 0.3];
     const end = [p[0] + dx * len, p[1] + dy * len, p[2] + dz * len];
     paintMix(acc, '#6a5a44', '#857058', hash1(seed, k, 5));
-    tube(acc, [p, mid, end], [r, r * 0.88, r * 0.78], 5, false);
-    const kids = depth > 0 ? (hash1(seed, k, 6) < 0.7 ? 2 : depth > 1 ? 1 : 2) : 0;
+    tube(acc, [p, end], [r, r * 0.8], 5, false);
+    const kids = depth > 0 ? (hash1(seed, k, 6) < (depth > 1 ? 0.5 : 0.6) ? 2 : 1) : 0;
     if (!kids) { tips.push([end, [dx, dy, dz], r]); return; }
     for (let q = 0; q < kids; q++) grow(end, [dx, dy, dz], len * (0.62 + hash1(seed, k * 7 + q, 7) * 0.25), r * 0.74, depth - 1, k * 3 + q + 1);
   };
@@ -62,20 +95,14 @@ export function joshua(acc, x, y, z, s, seed) {
   const base = [x, y - 0.3, z], top = [x + (hash1(seed, 8) - 0.5) * 0.4, y + trunkH, z + (hash1(seed, 7) - 0.5) * 0.4];
   tube(acc, [base, top], [0.36 * s, 0.28 * s], 6, false);
   const n = hash1(seed, 11) < 0.25 ? 1 : 2 + (hash1(seed, 12) < 0.3 ? 1 : 0);
-  const depth = s > 0.9 ? 2 : 1;
+  const depth = s > 1.05 ? 2 : 1;
   for (let k = 0; k < n; k++) grow(top, [0, 1, 0], (1.4 + hash1(seed, 13 + k) * 0.9) * s, 0.24 * s, depth, k + 1);
   // the tips: a skirt of dead leaves, a burst of green spikes
   for (const [p, d, r] of tips) {
     paint(acc, '#6b6040');
-    cylinder(acc, p[0], p[1] - 0.35 * s, p[2], r * 1.9, 0.45 * s, 6, { r2: r * 1.5 });
+    tube(acc, [[p[0], p[1] - 0.4 * s, p[2]], [p[0], p[1] + 0.1 * s, p[2]]], [r * 1.9, r * 1.4], 5, false);
     paintMix(acc, '#5d6e34', '#6e7e40', hash1(seed, Math.round(p[0] * 10)));
-    blob(acc, p[0] + d[0] * 0.15, p[1] + 0.2 * s, p[2] + d[2] * 0.15, 0.42 * s, 0.4 * s, 0.42 * s, 0, seed + Math.round(p[1] * 31), 0.35, 1);
-    for (let q = 0; q < 4; q++) {
-      const a = (q / 4) * TAU + hash1(seed, q, 77) * 0.8;
-      const ex = p[0] + Math.cos(a) * 0.55 * s, ez = p[2] + Math.sin(a) * 0.55 * s, ey = p[1] + (0.45 + hash1(seed, q, 78) * 0.3) * s;
-      paint(acc, '#56682e');
-      tube(acc, [[p[0], p[1] + 0.2 * s, p[2]], [ex, ey, ez]], [0.13 * s, 0.01], 3, false);
-    }
+    pompom(acc, p[0] + d[0] * 0.15, p[1] + 0.25 * s, p[2] + d[2] * 0.15, s, seed + Math.round(p[1] * 31));
   }
 }
 
