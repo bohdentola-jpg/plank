@@ -15,7 +15,7 @@ export default {
   nodes: {
     otx_port: [-1852.5, 311.0, 4.4],
     otx_mill: [-2071.2, -398.4],
-    ctx_jade: [-220, 1437],
+    ctx_jade: [-220, 1418],
   },
   roads: [
     { id: 'otx_port', type: 'cobble', a: 'ot_3_5', b: 'otx_port', pts: [[-1819.0, 380.0, 8, 4.9]], name: 'QUAI DU PETIT PORT', district: 'oldtown' },

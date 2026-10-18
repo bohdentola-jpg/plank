@@ -175,7 +175,7 @@ export function statue(K, x, y, z, ry, h = 2.6) {
 // ------------------------------------------------------------------ bridges
 
 /** A stone bridge over a road's deck. it: { road (id), grand }. */
-export function bridge(K, B, it) {
+export function* bridge(K, B, it) {
   const r = B.net.byId.get(it.road);
   const L = r && bridgeLayout(r);
   if (!L) return;
@@ -238,6 +238,7 @@ export function bridge(K, B, it) {
       quadFacing(S, [a2.x, Y(s0) - 0.28, a2.z], [b2.x, Y(s1) - 0.28, b2.z], [b.x, Y(s1) - 0.28, b.z], [a.x, Y(s0) - 0.28, a.z], [0, -1, 0], [0, 0, 1, 0.1]);
     }
   }
+  yield;
   // the vaults under the arches
   S.col = [stone[0] * 0.7, stone[1] * 0.7, stone[2] * 0.68];
   for (const A of L.arches) {
@@ -274,8 +275,10 @@ export function bridge(K, B, it) {
       }
     }
   }
+  yield;
   // the balustrade: coping in stone; dark backing, plinth and balusters close up
   for (const side of [1, -1]) {
+    if (side < 0) yield;
     const inner = side * (L.reach - 0.13), outer = side * (L.w + 0.14);
     for (let s = r.S[L.i0] + 0.2; s < r.S[L.i1] - 0.2; s += 2) {
       const s1 = Math.min(r.S[L.i1] - 0.2, s + 2);
@@ -309,6 +312,7 @@ export function bridge(K, B, it) {
       box(S, p.x, Y(s) + 1.42, p.z, 0.95, 0.14, 0.95, ry, { u: 1.2 });
     }
   }
+  yield;
   // lamps (the plan put their light here) and the Grand Bridge's statues
   for (const lp of L.lamps) {
     const p = posAt(lp.s, lp.side * (L.reach + 0.18));
