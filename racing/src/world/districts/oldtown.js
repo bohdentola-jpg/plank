@@ -27,6 +27,7 @@ import { roadLamps } from '../build/roads.js';
 import { CELL } from '../terrain.js';
 import { makeRng } from '../../core/util.js';
 import { natural } from '../terrain.js';
+import { Acc } from '../build/geo.js';
 
 const G = OLDTOWN;
 const [R0x, R0z] = G.R0;
@@ -727,11 +728,52 @@ function* garden(K, B, it) {
   for (const [x, z, ry] of it.benches) bench(K, x, g, z, ry);
 }
 
+/**
+ * Run the builders once on sample pieces into throwaway accumulators, at
+ * load: their code is compiled then, not in the first cell built while
+ * driving (that made one long step).
+ */
+function* warmCode(B) {
+  const M = mats(B);
+  const K = { M, near: {} };
+  for (const k of Object.keys(M)) K[k] = new Acc(true);
+  for (const k of ['stone', 'paint', 'leaf', 'glow', 'metal', 'plaster', 'win', 'slate', 'tile', 'trim', 'stoneHi']) K.near[k] = new Acc(true);
+  const fakeB = { anim() {}, group: { add() {} }, D: B.D };
+  const base = { x: 0, z: 0, w: 10, d: 14, ry: 0, y0: -1, gy: 0.1, lit: 0.5, seed: 7, trim: [0.9, 0.9, 0.9], door: [0.2, 0.3, 0.2], col: [0.9, 0.85, 0.8], roofCol: [0.5, 0.5, 0.55], boxes: 0.5, ped: true, shops: [0, 3, 14], shopK: 0 };
+  const rect = { x: 0, z: 0, w: 10, d: 14, ry: 0 };
+  const samples = [
+    { kind: 'haus', wall: 'stone', nf: 5, fh: 3.2, gf: 4.6, roof: 'mansard', roofMat: 'slate', hotel: true },
+    { kind: 'plaster', wall: 'plaster', nf: 3, fh: 3.1, gf: 4.2, roof: 'gable', roofMat: 'tile', shut: 2 },
+    { kind: 'brick', wall: 'brick', nf: 3, fh: 3.0, gf: 4.0, roof: 'fgable', roofMat: 'slate' },
+    { kind: 'timber', wall: 'plaster', nf: 2, fh: 2.9, gf: 3.9, roof: 'hip', roofMat: 'tile' },
+    { kind: 'corner', wall: 'stone', nf: 4, fh: 3.2, gf: 4.6, roof: 'pyr', roofMat: 'slate', turret: true, dome: 'copper', plate: true },
+  ];
+  for (const sm of samples) {
+    const poly = rectPoly(0, 0, 10, 14, 0);
+    const edges = sm.kind === 'corner' ? ['s', 'c', 'w', 'p'] : ['s', 'p', 'b', 'w'];
+    house(K, { ...base, ...sm, poly, edges, rect });
+    yield;
+  }
+  boat(K, { x: 0, z: 0, ry: 0, y: 0, kind: 'barge', len: 28, seed: 3, lit: 0.6 }, makeRng(1));
+  boat(K, { x: 0, z: 0, ry: 0, y: 0, kind: 'cafe', len: 30, seed: 4, lit: 1, wallSide: 1, gap: 0.5, gangY: 1 }, makeRng(2));
+  lampPost(K, 0, 0, 0, 'double', 0);
+  gasLamp(K, { x: 0, y: 0, z: 0, hy: 4.4, ry: 0 });
+  kiosk(K, 0, 0, 0, 0); morris(K, 0, 0, 0, 0); bollard(K, 0, 0, 0); bookBox(K, 0, 0, 0, 0, true); bench(K, 0, 0, 0, 0);
+  sceneryTree(K, { kind: 'poplar', x: 0, y: 0, z: 0, s: 1, seed: 0.3 });
+  planeTree(K, 0, 0, 0, 1, 0.5);
+  yield;
+  cathedral(K, { x: 0, z: 0, g: 0, ry: 0 });
+  yield;
+  clockTower(K, fakeB, { x: 0, z: 0, g: 0, ry: 0 }, M);
+  mill(K, fakeB, { x: 0, z: 0, g: 0, ry: 0, w: 18, d: 12, wheel: -1.5, levee: 9.7, lit: 0.5 }, M);
+  portWalls(K, { runs: [{ pts: [[0, 0, 0, 1.2, 1, 0], [0, 4, 0, 1.2, 1, 0], [0, 8, 0, 1.3, 1, 0]] }] });
+}
+
 export default {
   id: 'oldtown',
   plan,
   scatter,
-  warm(B) { mats(B); },
+  warm(B) { mats(B); return warmCode(B); },
   build,
 };
 

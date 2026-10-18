@@ -18,6 +18,8 @@ import { bush, broadTree, cross } from './oldquarter/geo.js';
 import { roadLamps } from '../build/roads.js';
 import { CELL } from '../terrain.js';
 import { makeRng } from '../../core/util.js';
+import { Acc } from '../build/geo.js';
+import { rectPoly } from './oldquarter/geo.js';
 
 // ------------------------------------------------------------------ the quarter's places
 
@@ -481,7 +483,7 @@ function market(K, it) {
   for (const [x, z] of it.posts) {
     K.paint.col = [0.6, 0.08, 0.06];
     cylinder(K.paint, x, g - 0.2, z, 0.14, 7.2, 6);
-    lanternString(K.lantern, K.near.paint, [it.x, g + 13.4, it.z], [x, g + 6.9, z], 1.4, 2.0, x);
+    lanternString(K.lantern, K.near.trim, [it.x, g + 13.4, it.z], [x, g + 6.9, z], 1.4, 2.6, x);
   }
 }
 
@@ -507,14 +509,52 @@ function roofGarden(K, it) {
   for (const lz of [-2, 0, 2]) { const a = W(-2.8, lz), b = W(2.8, lz); K.paint.beam(a[0], top + 2.6, a[1], b[0], top + 2.6, b[1], 0.1, 0.1); }
   for (let k = 0; k < 12; k++) { const p = W(-2.6 + k * 0.47, (k % 2 ? 1 : -1) * 1.1); cross(K.neon, p[0], top + 2.4, p[1], 0.07, 0.14); }
   const A = W(-L.w / 2 + 0.5, -L.d / 2 + 0.5), Bq = W(L.w / 2 - 0.5, L.d / 2 - 0.5);
-  lanternString(K.lantern, K.near.paint, [A[0], top + 3, A[1]], [Bq[0], top + 3, Bq[1]], 0.6, 1.8, 3);
+  lanternString(K.lantern, K.near.trim, [A[0], top + 3, A[1]], [Bq[0], top + 3, Bq[1]], 0.6, 2.4, 3);
   void tank;
+}
+
+/**
+ * Run the builders once on sample pieces into throwaway accumulators, at
+ * load: their code is compiled then, not in the first cell built while
+ * driving (that made one long step).
+ */
+function* warmCode(B) {
+  const M = mats(B);
+  const K = { M, near: {}, lanternFn: lantern };
+  for (const k of Object.keys(M)) K[k] = new Acc(true);
+  for (const k of ['paint', 'leaf', 'metal', 'win', 'tile', 'neon', 'trim']) K.near[k] = new Acc(true);
+  K.lanternNear = new Acc(true); K.steam = new Acc(true);
+  const poly = rectPoly(0, 0, 10, 14, 0), rect = { x: 0, z: 0, w: 10, d: 14, ry: 0 };
+  const signs = [{ k: 0, kind: 'v', a: 0.8, y: 6, h: 5, w: 1.2, tile: 1, neon: [1, 0.3, 0.8] }, { k: 0, kind: 'h', a: 5, y: 4.5, w: 4, tile: 2, neon: [0.2, 0.9, 1] }];
+  const base = { x: 0, z: 0, w: 10, d: 14, ry: 0, y0: -1, gy: 0.1, lit: 0.5, seed: 11, col: [0.8, 0.5, 0.4], trim: [0.8, 0.8, 0.75], rail: [0.2, 0.4, 0.3], tileCol: [0.2, 0.5, 0.3], shops: [0, 4, 9], shopK: 0, poly, rect, edges: ['s', 'w', 'b', 'p'], signs };
+  for (const sm of [
+    { kind: 'ten', wall: 'brick', nf: 5, fh: 3.2, gf: 4.3, fire: true, tank: true },
+    { kind: 'shop', wall: 'plaster', nf: 3, fh: 3.4, gf: 4.4 },
+    { kind: 'mod', wall: 'plaster', nf: 6, fh: 3.0, gf: 4.3, billboard: 3 },
+    { kind: 'rest', wall: 'plaster', nf: 2, fh: 3.4, gf: 4.8 },
+  ]) {
+    ctHouse(K, { ...base, ...sm });
+    yield;
+  }
+  roofGarden(K, { ...base, kind: 'ten', nf: 5, fh: 3.2, gf: 4.3 });
+  lanternString(K.lanternNear, K.near.trim, [0, 8, 0], [12, 8, 0], 1.5, 2.9, 0);
+  const rng = makeRng(9);
+  dressLantern(K, { x: 0, y: 0, z: 0, hx: 0.6, hy: 5, hz: 0 });
+  clutter(K, 0, 0, 0, 0, rng); vent(K, 0, 0, 0, 0, rng); phoneBooth(K, 0, 0, 0, 0);
+  marketStall(K, 0, 0, 0, 0, [0.8, 0.1, 0.1], rng);
+  steam(K.steam, 0, 1, 0, 4);
+  yield;
+  gate(K, { x: 0, z: 0, g: 0, ry: 0, half: 8.1, outer: 11.7, grand: true });
+  yield;
+  temple(K, { x: 0, z: 0, g: 0, ry: 0, w: 80, d: 118, pagoda: [-28, -42] });
+  yield;
+  teahouse(K, { x: 0, z: 0, g: 0, ry: 0, w: 50, d: 34 });
 }
 
 export default {
   id: 'chinatown',
   plan,
-  warm(B) { mats(B); },
+  warm(B) { mats(B); return warmCode(B); },
   build,
 };
 
