@@ -120,8 +120,10 @@ registerScreen('world', () => {
     const type = rcfg.type;
     const opp = type === 'timeattack' || type === 'drift' ? 0 : type === 'drag' ? 1 : Math.max(type === 'knockout' ? 2 : 1, rcfg.opp);
     const car = { spec: P.spec, look: P.look, upgrades: P.upgrades };
-    // afterwards: back in the city, past the line (or past a sprint's finish when you got there)
-    const back = (at) => ({ ...params, ...car, car: P.spec.id, x: at.x, z: at.z, heading: at.heading, time: session.def.time, traffic: session.opts.traffic !== false, garage: false });
+    // afterwards: back in the city, past the line (or past a sprint's finish when you got there),
+    // at the same time of day (taken now: this screen and its session are gone by then)
+    const time = session.def.time, traffic = session.opts.traffic !== false;
+    const back = (at) => ({ ...params, ...car, car: P.spec.id, x: at.x, z: at.z, heading: at.heading, time, traffic, garage: false });
     go('race', {
       trackDef: def, ...car, type,
       laps: type === 'knockout' ? knockLaps(opp, def.laps) : def.laps || 3,

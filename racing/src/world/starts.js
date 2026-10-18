@@ -73,7 +73,7 @@ export class StartLights {
     this.starts = starts;
     const n = starts.length;
     this.colMat = new THREE.MeshBasicMaterial({
-      map: columnTex(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+      map: columnTex(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
     });
     const cg = new THREE.CylinderGeometry(3.2, 4.6, 170, 20, 1, true);
     cg.translate(0, 85, 0);
@@ -109,16 +109,16 @@ export class StartLights {
     this.scene = scene;
   }
 
-  /** Fade each one by how far the camera is (dim when you're standing in it, gone past ~2.6 km). */
+  /** Fade each one by how far the camera is (dim when you're on its line, gone past ~2.6 km; only its outside is drawn, so from in it there's nothing in the way). */
   update(cam, hot = null) {
     const p = cam.position;
     this.starts.forEach((st, i) => {
       const d = Math.hypot(st.x - p.x, st.z - p.z);
-      const near = Math.min(1, Math.max(0.12, (d - 12) / 70));
+      const near = Math.min(1, Math.max(0.05, (d - 10) / 110));
       const far = Math.min(1, Math.max(0, (2600 - d) / 700));
       const pulse = st === hot ? 1.25 + 0.25 * Math.sin(performance.now() / 160) : 1;
       this.cols.setColorAt(i, tmp.copy(AMBER).multiplyScalar(near * far * 0.9 * pulse));
-      this.pads.setColorAt(i, tmp.copy(AMBER).multiplyScalar(Math.min(1, d < 900 ? 1.6 : 0) * pulse));
+      this.pads.setColorAt(i, tmp.copy(AMBER).multiplyScalar(d < 900 ? 1.1 * pulse : 0));
     });
     this.cols.instanceColor.needsUpdate = true;
     this.pads.instanceColor.needsUpdate = true;
