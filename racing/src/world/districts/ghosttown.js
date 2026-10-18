@@ -80,6 +80,7 @@ export default {
   },
 
   *build(B, items) {
+    yield;   // the cell's scatter was made in this same slice: start on a fresh one
     const tick = clock(3);
     const wire = [];
     for (const it of items) {

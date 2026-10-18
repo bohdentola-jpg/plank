@@ -81,6 +81,7 @@ export default {
   },
 
   *build(B, items) {
+    yield;   // the cell's scatter was made in this same slice: start on a fresh one
     const tick = clock(3);
     for (const it of items) {
       if (buildScatter(B, it)) { if (tick()) yield; continue; }
@@ -230,6 +231,8 @@ function mine(P) {
   P.add({ type: 'mine', x, z, ry, y: y0, w: 30, d: 36, map: 'yard' });
   const c = Math.cos(ry), s = Math.sin(ry);
   const at = (lx, lz) => [x + lx * c + lz * s, z - lx * s + lz * c];
+  const [tx, tz] = at(-13, 21);
+  P.claim(tx, tz, 13, 13, ry);
   for (const [lx, lz, w, dd, h] of MINE_SOLIDS) {
     const [cx, cz] = at(lx, lz);
     P.collider({ kind: 'box', x: cx, z: cz, hx: w / 2, hz: dd / 2, ry, y0: y0 - 2, y1: y0 + h });
@@ -241,7 +244,7 @@ function mine(P) {
 
 // the mine's solid parts (local frame; +z back toward the road's end): the rock
 // face round the portal, the hoist shack, the boiler, the tailings heap
-const MINE_SOLIDS = [[0, -5.4, 12, 6, 9], [10, 4, 5.4, 5.4, 3.6], [11, -3, 3, 2.4, 2.2], [-15, 9, 11, 8, 3]];
+const MINE_SOLIDS = [[0, -5.4, 12, 6, 9], [10, 4, 5.4, 5.4, 3.6], [11, -3, 3, 2.4, 2.2], [-13, 21, 10, 10, 3.5]];
 // the rails run out of the portal and off to the side, to the tailings
 const railAt = (k) => [-k * 0.62, -1.5 + k * 0.78];
 
@@ -504,10 +507,11 @@ function* buildMine(B, it) {
   for (let k = 0; k < 9; k++) { const [lx0, lz0] = railAt(12.5 + hash1(it.n, k) * 2); const [qx, qz] = at(lx0 + ux * (3.4 + hash1(it.n, k, 1) * 1.6), lz0 + uz * (3.4 + hash1(it.n, k, 1) * 1.6)); boulder(ore, qx, B.groundY(qx, qz) - 0.1, qz, 0.25 + hash1(it.n, k, 2) * 0.3, it.n + k, '#7a6a5a'); }
   // the tailings: a heap of pale waste rock at the end of the line
   {
-    const [tx, tz] = at(-15, 9);
+    // on the flat beside the road's end, where the rails run out
+    const [tx, tz] = at(-13, 21);
     const g3 = B.footY(tx, tz, 12, 12, rry);
-    paint(ore, '#b8a088');
-    drum(ore, tx, g3.lo - 0.6, tz, 6.5, 1.6, 3.4 + (g3.hi - g3.lo) * 0.3, 9, it.n * 3, 0.15, { top: true });
+    paint(ore, '#a89078');
+    drum(ore, tx, g3.lo - 0.6, tz, 6.0, 1.8, 3.4 + Math.min(1.5, (g3.hi - g3.lo) * 0.3), 9, it.n * 3, 0.15, { top: true });
   }
   yield;
   // the hoist shack (plank walls, a tin roof), a rusted boiler, drums, crates

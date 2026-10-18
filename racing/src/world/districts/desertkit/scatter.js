@@ -51,16 +51,21 @@ export const seedOf = (S) => Math.floor(S.rng() * 1e6);
 
 /**
  * Rock ledges along steep ground (mesa cliffs, canyon walls): chunky strata
- * blocks set into the slope, facing down it, their bands lined up with the
- * world's height. tones: hex colours to pick from.
+ * blocks set into the slope, facing down it. Their tops sit on the world's
+ * height bands (band m apart) and each band keeps its colour, so neighbouring
+ * blocks line up into continuous layers. tones: hex colours, one per band.
  */
-export function cliffLedges(S, tones, every = 9, minSlope = 0.7, size = 1) {
+export function cliffLedges(S, tones, every = 8, minSlope = 0.75, band = 6) {
   const G = cellGround(S);
+  const nt = tones.length;
   for (const [x, z] of S.points(every, { r: 2, roadPad: true, jitter: 0.6 })) {
     const sl = G.slope(x, z);
     if (sl.g < minSlope) continue;
     const y = G.h(x, z);
-    S.add({ type: 'ledge', x, z, y, ry: Math.atan2(sl.dx, sl.dz), w: S.range(7, 12) * size, h: S.range(4, 9) * size, d: S.range(4, 7) * size, tone: tones[Math.floor(S.rng() * tones.length)], k: S.range(0.85, 1.1) });
+    const k = Math.floor(y / band);
+    const top = (k + 1) * band + (S.rng() - 0.5) * 0.6;
+    const h = top - y + band * S.range(0.9, 1.5);
+    S.add({ type: 'ledge', x, z, y: top - h * 0.4, ry: Math.atan2(sl.dx, sl.dz), w: S.range(8, 13), h, d: S.range(5, 8), tone: tones[((k % nt) + nt) % nt], k: S.range(0.92, 1.06) });
   }
 }
 

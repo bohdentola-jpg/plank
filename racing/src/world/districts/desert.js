@@ -49,6 +49,7 @@ export default {
   },
 
   *build(B, items) {
+    yield;   // the cell's scatter was made in this same slice: start on a fresh one
     const tick = clock(3);
     const wire = [];
     for (const it of items) {
@@ -110,7 +111,7 @@ function planRoute99(P) {
     const gy = setPiece(P, { type: 'gas', ...sg, map: 'building' },
       [{ x: 0, z: -9, w: 15, d: 10, h: 5 }, { x: -19, z: 14, w: 1.2, d: 1.2, h: 9 }],
       [{ shape: 'box', x: 0, z: 3, w: 22, d: 12, h: 1.1, dy: 6.3, color: '#e8e4dc' }, { shape: 'box', x: 0, z: -9, w: 15, d: 10, h: 5.6, color: '#d8d2c4', lit: 0.4 }]);
-    for (const [lx, lz] of [[-6, 0], [6, 0], [-6, 6], [6, 6]]) lampAt(P, sg, gy, lx, lz, 5.1, '#f4f8ff', 15, 1.25, 0);
+    for (const [lx, lz] of [[-6, 0], [6, 0], [-6, 6], [6, 6]]) lampAt(P, sg, gy, lx, lz, 4.9, '#f4f8ff', 14, 0.7, 0);
     lampAt(P, sg, gy, 0, -3, 3.8, '#fff0d0', 10, 0.7, 0);
     lampAt(P, sg, gy, -19, 14, 7, '#ff8060', 9, 0.4, 1.2);
     for (const lz of [0.5, 5.5]) addBox(P, sg, gy, 0, lz, 13, 1.2, 1.4);
@@ -640,7 +641,7 @@ function* gas(B, it) {
   for (const sx of [1, -1]) {
     for (let k = 0; k < 2; k++) { const [px, pz] = at(sx * (cw / 2 + 0.02), cz0 - cd / 4 + k * cd / 2); panel(signs, px, y + ch + 0.05, pz, ry + sx * Math.PI / 2, cd / 2, 1.0, uvOf(R.fascia)); }
   }
-  for (const lz of [cz0 - 3, cz0 + 3]) for (const lx of [-6, 6]) { const [px, pz] = at(lx, lz); flat(signs, px, y + ch - 0.02, pz, 8, 4.5, ry, uvOf(R.canopyLight), true); }
+  for (const lz of [cz0 - 3, cz0 + 3]) for (const lx of [-6, 6]) { const [px, pz] = at(lx, lz); flat(signs, px, y + ch - 0.02, pz, 5, 2.4, ry, uvOf(R.canopyLight), true); }
   // ---- pump islands
   for (const lz of [0.5, 5.5]) {
     const [ix, iz] = at(0, lz);
@@ -1049,7 +1050,15 @@ function* arrayBase(B, it) {
   const g = B.footY(bx, bz, 22, 12, ry);
   paint(acc, '#e4e6e6');
   box(acc, bx, g.lo - 0.5, bz, 22, g.hi - g.lo + 6.5, 12, ry);
-  for (let k = 0; k < 5; k++) { const [px, pz] = at(-6 - 8 + k * 4, -6 + 6.02); panel(signs, px, g.hi + 2.6, pz, ry, 3.6, 1.8, uvOf(R.ctrlWin)); }
+  // lit windows all round, a blue band under the roof line
+  for (let k = 0; k < 5; k++) {
+    const [px, pz] = at(-6 - 8 + k * 4, -6 + 6.02); panel(signs, px, g.hi + 2.6, pz, ry, 3.6, 1.8, uvOf(R.ctrlWin));
+    if (k % 2) continue;
+    const [qx, qz] = at(-6 - 8 + k * 4, -6 - 6.02); panel(signs, qx, g.hi + 2.6, qz, ry + Math.PI, 3.6, 1.8, uvOf(R.ctrlWin));
+  }
+  for (const sd of [1, -1]) { const [px, pz] = at(-6 + sd * 11.02, -6 + sd * 2); panel(signs, px, g.hi + 2.6, pz, ry + sd * Math.PI / 2, 3.6, 1.8, uvOf(R.ctrlWin)); }
+  paint(acc, '#2e5a7e');
+  box(acc, bx, g.hi + 5.4, bz, 22.3, 0.8, 12.3, ry);
   paint(acc, '#8a8e92');
   for (const lx of [-12, -2]) { const [px, pz] = at(lx, -8); box(acc, px, g.hi + 6, pz, 2.6, 1.4, 2.6, ry); }
   paint(acc, '#f0f0ec');

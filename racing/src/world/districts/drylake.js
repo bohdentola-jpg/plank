@@ -8,7 +8,7 @@
 // of the strip the pits: pop-up tents, haulers and race cars, fuel trailers,
 // tyre stacks, string lights. Donut marks on the salt; out on the north
 // shore, the old speed-trials shack.
-import { box, cylinder, cone, gable, drape } from './builder.js';
+import { box, cylinder, gable, hip, drape } from './builder.js';
 import { MAT, paint, paintMix, obox, panel, flat, hcyl, disc, clock, reachOf, hash1, TAU } from './desertkit/kit.js';
 import { uvOf, RD } from './desertkit/tex.js';
 import { car, drumBarrel, tyres, crate, stringLights, mast, beacon, animUV, floodlight } from './desertkit/props.js';
@@ -48,6 +48,7 @@ export default {
   },
 
   *build(B, items) {
+    yield;   // the cell's scatter was made in this same slice: start on a fresh one
     const tick = clock(3);
     for (const it of items) {
       if (buildScatter(B, it)) { if (tick()) yield; continue; }
@@ -502,7 +503,7 @@ function pitStall(B, it) {
   for (const [a, b] of [[-2.9, -2.9], [2.9, -2.9], [2.9, 2.9], [-2.9, 2.9]]) { const [px, pz] = at(1.5 + a, 1.5 + b); box(pa, px, y, pz, 0.07, 2.5, 0.07, ry); }
   paint(pa, team);
   box(pa, cx, y + 2.5, cz, 6.2, 0.2, 6.2, ry);
-  cone(pa, cx, y + 2.7, cz, 4.3, 0.7, 4);
+  hip(pa, cx, y + 2.6, cz, 6.0, 6.0, 0.8, ry, { over: 0.1 });
   if (hash1(seed, 1) < 0.5) { const [px, pz] = at(1.5, 4.62); panel(dg, px, y + 2.1, pz, ry, 6.0, 0.6, uvOf(RD.tent)); }
   // the race car under it (a dragster or a door car), tyres, tools, a cart
   const [rx, rz] = at(1.5, 1.5);
