@@ -21,28 +21,25 @@ export function paint(mat, col) {
   const c = typeof col === 'number' ? new THREE.Color(col) : null;
   return { mat, col: c ? [c.r, c.g, c.b] : col, isPaint: true, views: new WeakMap() };
 }
-function tinted(acc, col) {
-  const fns = new Map();
-  return new Proxy(acc, {
-    get(t, k) {
-      const v = t[k];
-      if (typeof v !== 'function') return v;
-      let w = fns.get(k);
-      if (!w) {
-        w = (...a) => {
-          const prev = t.col;
-          t.col = col;
-          try { return v.apply(t, a); } finally { t.col = prev; }
-        };
-        fns.set(k, w);
-      }
-      return w;
-    },
-  });
+/**
+ * An accumulator in a paint's colour: draws through the shared one with its
+ * colour set for the call, then puts the colour back (so paints and raw
+ * users of one material can interleave). Plain methods, no allocation.
+ */
+class PaintAcc {
+  constructor(acc, col) { this.a = acc; this.pc = col; }
+  get count() { return this.a.count; }
+  v(x, y, z, u, w) { const a = this.a, p = a.col; a.col = this.pc; const i = a.v(x, y, z, u, w); a.col = p; return i; }
+  tri(i, j, k) { this.a.tri(i, j, k); }
+  quad(i, j, k, l) { this.a.quad(i, j, k, l); }
+  quadP(P0, P1, P2, P3, uv) { const a = this.a, p = a.col; a.col = this.pc; a.quadP(P0, P1, P2, P3, uv); a.col = p; }
+  box(x, y, z, w, h, d, ry, uvScale, top) { const a = this.a, p = a.col; a.col = this.pc; a.box(x, y, z, w, h, d, ry, uvScale, top); a.col = p; }
+  cyl(x, y, z, r, h, seg, r2) { const a = this.a, p = a.col; a.col = this.pc; a.cyl(x, y, z, r, h, seg, r2); a.col = p; }
+  beam(ax, ay, az, bx, by, bz, w, h) { const a = this.a, p = a.col; a.col = this.pc; a.beam(ax, ay, az, bx, by, bz, w, h); a.col = p; }
 }
 function view(m, acc) {
   let p = m.views.get(acc);
-  if (!p) { p = tinted(acc, m.col); m.views.set(acc, p); }
+  if (!p) { p = new PaintAcc(acc, m.col); m.views.set(acc, p); }
   return p;
 }
 export const A = (B, m) => (m.isPaint ? view(m, B.acc(m.mat)) : B.acc(m));
