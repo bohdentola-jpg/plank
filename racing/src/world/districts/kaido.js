@@ -40,7 +40,7 @@ function mats(B) {
     props: B.mat('props', () => litMat({ vertexColors: true, roughness: 0.7, metalness: 0.08 })),
     lattice: B.mat('lattice', () => litMat({ map: latticeTex(), roughness: 0.95, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })),
     signs: B.mat('signs', () => litMat({ map: kaidoSignTex(), emissive: 0xffffff, emissiveMap: kaidoSignTex(), roughness: 0.55 }, { night: 0.32 })),
-    vend: B.mat('vend', () => { const t = vendingTex(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, roughness: 0.4 }, { night: 1.7 }); }),
+    vend: B.mat('vend', () => { const t = vendingTex(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, roughness: 0.4 }, { night: 0.95 }); }),
     tea: B.mat('tea', () => { const t = teaWallTex(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, roughness: 0.85 }, { night: 1.4 }); }),
     tile: B.mat('tile', () => litMat({ map: tileTex(), roughness: 0.7, metalness: 0.15 })),
     stone: B.mat('stone', () => litMat({ map: stoneTex(), roughness: 0.92 })),
@@ -160,6 +160,8 @@ function lookout(P) {
   const x = n.x - e.dx * 9, z = n.z - e.dz * 9;
   const y = n.y;
   P.claim(x, z, 14, 10, ry);
+  // the view: no trees on the slope in front of the railing
+  P.claim(x, z + 48, 70, 80, ry);
   P.add({ type: 'lookout', x, z, ry, y, w: 14, d: 10, map: 'plaza' });
   P.collider({ kind: 'box', x, z: z + 5.5, hx: 7, hz: 0.3, ry, y0: y - 2, y1: y + 1.2 });
   P.lamp({ x, z, y, hx: x, hz: z, hy: y + 2.2, color: '#ffc890', radius: 7, intensity: 0.5, halo: 0.8 });
@@ -185,11 +187,10 @@ function scatter(S) {
   useGround(S);
   const field = roadField(S.net, S.cx, S.cz);
   const lit = lampTest(S);
-  const kaidoRoad = (r) => r.rt.id === 'mountain' || r.rt.id === 'dirt' || r.rt.id === 'gravel';
   // the roadside
   for (const it of bends(S, { mirrors: true, rMax: 55 })) S.add(it);
   for (const it of poles(S, 'upole', { every: 40, off: 3.0, wires: true, free: true, filter: (r) => r.rt.id === 'mountain' })) S.add(it);
-  for (const it of cuts(S, 'lattice', { minRise: 3.2, filter: kaidoRoad })) S.add(it);
+  for (const it of cuts(S, 'lattice', { minRise: 3.2, filter: (r) => r.rt.id === 'mountain' })) S.add(it);
   // the forest: sugi in plantation rows (each stand its own row angle), bamboo in patches, the odd clearing
   const sp = 6.2;
   const x0 = S.x0, z0 = S.z0;

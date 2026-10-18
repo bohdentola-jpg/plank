@@ -38,6 +38,7 @@ function mats(B) {
     lodge: B.mat('lodge', () => { const t = lodgeTex(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, roughness: 0.85 }, { night: 1.4 }); }),
     glowWarm: B.mat('glowWarm', () => litMat({ color: 0xf2dcb0, emissive: 0xffa040, roughness: 0.5 }, { night: 2.6 })),
     glowCold: B.mat('glowCold', () => litMat({ color: 0xdfe8f0, emissive: 0xcfe0ff, roughness: 0.4 }, { night: 2.4 })),
+    glass: B.mat('glass', () => litMat({ color: 0x6a5440, emissive: 0xffa040, roughness: 0.25 }, { night: 0.85 })),
     concrete: B.mat('concrete', () => litMat({ color: 0x9a9890, roughness: 0.9 })),
     dome: B.mat('dome', () => plainMat({ color: 0xeef1f4, roughness: 0.35, metalness: 0.35, envMapIntensity: 0.9 })),
     slit: B.mat('slit', () => plainMat({ color: 0x281410, emissive: 0xff5a28, roughness: 0.8 }, { night: 2.6 })),
@@ -492,7 +493,7 @@ function lodge3d(B, m, it) {
   gable(props, cx, ly + 7.6, cz, 20, 12, 6.5, ry, { over: 1.4, u: 2 });
   // the A-frame: a tall glazed triangle on the front, glowing
   const Pf = frame(cx, ly, cz, ry);
-  const glow = B.acc(m.glowWarm);
+  const glow = B.acc(m.glass);
   const a0 = Pf(-5, 0.6, 6.25), a1 = Pf(5, 0.6, 6.25), apex = Pf(0, 12.8, 6.25);
   const gi = [glow.v(...a0, 0, 0), glow.v(...a1, 1, 0), glow.v(...apex, 0.5, 1)];
   glow.tri(gi[0], gi[1], gi[2]);
@@ -633,6 +634,15 @@ function iceCave3d(B, m, it) {
   const face = B.acc(m.face), rocks = B.acc(m.rock);
   // the mouth: a rock wall with an arch in it, facing the trail
   archWall(face, x, y - 1, z, 22, 15, 3, 7, 3.5, ry, { u: 6 });
+  // crags along its top and boulders heaped at its sides: an outcrop, not a wall
+  for (const [lx, lz, dy, s] of [[-9, -2.5, 12.5, 7], [-2, -3, 13.5, 6], [6, -2.5, 13, 7.5], [11, -2, 9, 5], [-12, -1, 6, 5.5]]) {
+    const q = L.xz(lx, lz);
+    F.crag(rocks, q[0], y + dy, q[1], s, (lx + 20) / 40, PAL.rock, PAL.rockDark, PAL.snow);
+  }
+  for (const [lx, lz, s] of [[-13.5, 1.5, 3.2], [13.5, 1.5, 3.6], [-15, -3, 4.2], [15, -3, 3.8], [-8, 3.5, 1.6], [9, 3.2, 1.4]]) {
+    const q = L.xz(lx, lz);
+    F.rock(rocks, q[0], B.groundY(q[0], q[1]), q[1], s, 0.85, (lx + 20) / 40, PAL.rock, PAL.rockDark, PAL.snow, 0.7);
+  }
   // the passage behind: walls, a vaulted roof, the back wall
   const Pp = frame(x, y - 1, z, ry);
   const depth = 22, hw = 3.5;
