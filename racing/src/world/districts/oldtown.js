@@ -527,16 +527,18 @@ function planMill(P) {
   const W = (lx, lz) => [b.bx + lx * c + lz * s, b.bz - lx * s + lz * c];
   const g = natural(b.bx, b.bz);
   const levee = dc - (WALL_D + TOP_W);
-  P.add({ type: 'mill', map: 'building', x: b.bx, z: b.bz, g, ry, w, d, wheel: -1.5, levee, lit: 0.55 });
+  P.add({ type: 'mill', map: 'building', x: b.bx, z: b.bz, g, ry, w, d, wheelZ: 2.9, levee, lit: 0.55 });
   P.collider({ kind: 'box', x: b.bx, z: b.bz, hx: w / 2, hz: d / 2, ry, y0: g - 2, y1: g + 16 });
-  const [px, pz] = W(-3.5, (d / 2 + levee) / 2);
-  P.collider({ kind: 'box', x: px, z: pz, hx: 5.6, hz: (levee - d / 2) / 2, ry, y0: g - 2, y1: g + 6 });
+  // the wheel, its pit and the flume on the downstream end, out to the levee
+  const [px, pz] = W(w / 2 + 1.2, (levee - 0.6) / 2);
+  P.collider({ kind: 'box', x: px, z: pz, hx: 1.25, hz: (levee + 0.6) / 2, ry, y0: g - 2, y1: g + 6 });
   P.far({ x: b.bx, z: b.bz, y: g - 1, w, d, h: 10.6, ry, color: '#8a8276', lit: 0.25 });
   P.far({ x: b.bx, z: b.bz, y: g + 9.6, w: w * 0.96, d: d * 0.6, h: 4, ry, color: '#8a4a34', lit: 0 });
-  const [dx, dz] = W(w / 2 + 0.5, 1.5);
+  const [dx, dz] = W(w / 2 + 0.6, -4.3);
   P.lamp({ x: dx, z: dz, y: g, hx: dx, hz: dz, hy: g + 2.6, color: '#ffc27a', radius: 12, intensity: 0.95, halo: 1.6 });
-  const [fx, fz] = W(-1.5, levee - 0.8);
-  P.lamp({ x: fx, z: fz, y: g, hx: fx, hz: fz, hy: g + 1.2, color: '#ffd8a8', radius: 11, intensity: 1.0, halo: 0 });
+  // a light on the wheel from the towpath's end
+  const [fx, fz] = W(w / 2 + 6, 2.9);
+  P.lamp({ x: fx, z: fz, y: g, hx: fx, hz: fz, hy: g + 1.2, color: '#ffd8a8', radius: 11, intensity: 0.9, halo: 0 });
   P.landmark({ id: 'mill', name: 'THE OLD MILL', x: b.bx, z: b.bz, r: 35, kind: 'mill', hidden: true });
 }
 
@@ -765,7 +767,7 @@ function* warmCode(B) {
   cathedral(K, { x: 0, z: 0, g: 0, ry: 0 });
   yield;
   clockTower(K, fakeB, { x: 0, z: 0, g: 0, ry: 0 }, M);
-  mill(K, fakeB, { x: 0, z: 0, g: 0, ry: 0, w: 18, d: 12, wheel: -1.5, levee: 9.7, lit: 0.5 }, M);
+  mill(K, fakeB, { x: 0, z: 0, g: 0, ry: 0, w: 18, d: 12, wheelZ: 2.9, levee: 9.7, lit: 0.5 }, M);
   portWalls(K, { runs: [{ pts: [[0, 0, 0, 1.2, 1, 0], [0, 4, 0, 1.2, 1, 0], [0, 8, 0, 1.3, 1, 0]] }] });
 }
 

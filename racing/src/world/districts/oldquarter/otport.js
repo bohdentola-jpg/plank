@@ -87,12 +87,14 @@ export function mill(K, B, it, M) {
   const ch = W2(hw - 2.2, -1.2);
   S.col = [0.6, 0.56, 0.5];
   box(S, ch[0], g + wallH + 2, ch[1], 0.9, 5.2, 0.9, it.ry, { u: 1 });
-  // windows: small and square, three floors, a few lit (it's an inn now)
+  // windows: small and square, three floors, a few lit (it's an inn now); (each face
+  // runs counter-clockwise seen from above, so its quads face out)
   const rng = mulberry(Math.floor(it.x * 7 + it.z * 13));
   const win = K.win;
+  const WZ = it.wheelZ ?? 2.9, R = 2.7, ay = g + 2.25, wx = hw + 0.95;
   const faces = [
-    { a: [hw, hd], b: [-hw, hd], n: [0, 1] }, { a: [-hw, -hd], b: [hw, -hd], n: [0, -1] },
-    { a: [hw, -hd], b: [hw, hd], n: [1, 0] }, { a: [-hw, hd], b: [-hw, -hd], n: [-1, 0] },
+    { a: [-hw, hd], b: [hw, hd], n: [0, 1] }, { a: [hw, -hd], b: [-hw, -hd], n: [0, -1] },
+    { a: [hw, hd], b: [hw, -hd], n: [1, 0] }, { a: [-hw, -hd], b: [-hw, hd], n: [-1, 0] },
   ];
   for (const f of faces) {
     const len = Math.hypot(f.b[0] - f.a[0], f.b[1] - f.a[1]);
@@ -102,10 +104,10 @@ export function mill(K, B, it, M) {
       const y0 = g + (fi === 0 ? 1.2 : fl[0] + (fi - 1) * 3 + 0.9);
       for (let k = 0; k < nb; k++) {
         const a = (k + 0.5) * len / nb;
-        // the river face's ground floor is the wheel's; the end with the door keeps its middle
-        if (f.n[1] === 1 && fi === 0) continue;
-        if (f.n[0] === 1 && fi === 0 && Math.abs(a - len / 2) < 1.6) continue;
         const lx = f.a[0] + tx * a, lz = f.a[1] + tz * a;
+        // the levee hides the river face's ground floor; the downstream end has its door and the wheel
+        if (f.n[1] === 1 && fi === 0) continue;
+        if (f.n[0] === 1 && (fi === 0 || (fi === 1 && lz > -0.4))) continue;
         const ox = f.n[0] * 0.05, oz = f.n[1] * 0.05;
         const lit = rng() < it.lit;
         win.col = [0.42, 0.3, 0.2];
@@ -114,16 +116,16 @@ export function mill(K, B, it, M) {
       }
     }
   }
-  // the door on the downstream end, the inn's board over it, a lantern
+  // the door on the downstream end (the land side of it), the inn's board over it, a lantern
   {
-    const A = at(hw + 0.05, g, 0.8), Bq = at(hw + 0.05, g, -0.8);
+    const A = at(hw + 0.05, g, -1.7), Bq = at(hw + 0.05, g, -3.3);
     win.col = [0.36, 0.2, 0.12];
     win.quadP(A, Bq, [Bq[0], g + 2.8, Bq[2]], [A[0], g + 2.8, A[2]], otwUV('door_lit'));
-    const s0 = at(hw + 0.12, g + 3.05, 2.6), s1 = at(hw + 0.12, g + 3.05, -2.6);
-    K.sign.quadP(s0, s1, [s1[0], g + 4.0, s1[2]], [s0[0], g + 4.0, s0[2]], otsgUV('moulin'));
-    const lp = at(hw + 0.5, g + 2.7, 1.5);
+    const s0 = at(hw + 0.12, g + 3.05, -0.3), s1 = at(hw + 0.12, g + 3.05, -4.7);
+    K.sign.quadP(s0, s1, [s1[0], g + 3.85, s1[2]], [s0[0], g + 3.85, s0[2]], otsgUV('moulin'));
+    const lp = at(hw + 0.5, g + 2.7, -4.3);
     N.paint.col = IRON;
-    N.paint.beam(...at(hw, g + 3.0, 1.5), lp[0], lp[1] + 0.3, lp[2], 0.05, 0.05);
+    N.paint.beam(...at(hw, g + 3.0, -4.3), lp[0], lp[1] + 0.3, lp[2], 0.05, 0.05);
     K.glow.col = [1, 1, 1];
     box(K.glow, lp[0], lp[1] - 0.25, lp[2], 0.24, 0.36, 0.24, it.ry, { u: 1 });
   }
@@ -137,53 +139,47 @@ export function mill(K, B, it, M) {
     gable(K.tile, p[0], g + wallH + 2.4, p[1], 2.2, 2.4, 1.3, it.ry + Math.PI / 2, { over: 0.25, endAcc: S, u: 2 });
     win.col = [0.36, 0.24, 0.16];
     const A = at(lx + 0.65, g + wallH, -hd + 0.07), Bq = at(lx - 0.65, g + wallH, -hd + 0.07);
-    win.quadP(Bq, A, [A[0], g + wallH + 1.9, A[2]], [Bq[0], g + wallH + 1.9, Bq[2]], otwUV('door'));
+    win.quadP(A, Bq, [Bq[0], g + wallH + 1.9, Bq[2]], [A[0], g + wallH + 1.9, A[2]], otwUV('door'));
     N.paint.col = [0.3, 0.2, 0.12];
     N.paint.beam(...at(lx, g + wallH + 2.25, -hd + 1), ...at(lx, g + wallH + 2.25, -hd - 1.1), 0.18, 0.18);
     N.paint.col = IRON;
     N.paint.beam(...at(lx, g + wallH + 2.15, -hd - 1.0), ...at(lx, g + wallH + 0.9, -hd - 1.0), 0.03, 0.03);
   }
-  // millstones leaning by the door, a bench
-  for (const [lz, r] of [[2.6, 0.75], [3.4, 0.68]]) {
-    const p = at(hw + 0.55, g + r, lz);
+  const o = F.P(0, 0, 0);
+  const dir = (lx, lz) => { const p = F.P(lx, 0, lz); return [p[0] - o[0], 0, p[2] - o[2]]; };
+  // millstones leaning by the door
+  for (const [lz, r] of [[-4.4, 0.62], [-5.2, 0.55]]) {
+    const p = at(hw + 0.45, g + r, lz);
     S.col = [0.6, 0.58, 0.55];
-    const ax = F.P(1, 0, 0), o = F.P(0, 0, 0);
-    const ux = ax[0] - o[0], uz = ax[2] - o[2];
-    const acc = S;
-    // a disc standing on edge: its faces point along the wall's normal
-    const seg = 10, th = 0.28;
+    const [ux, , uz] = dir(1, 0), [vx, , vz] = dir(0, 1);
+    const seg = 10, th = 0.22;
     for (let q = 0; q < seg; q++) {
       const a0 = (q / seg) * Math.PI * 2, a1 = ((q + 1) / seg) * Math.PI * 2;
-      const tz = F.P(0, 0, 1);
-      const vx = tz[0] - o[0], vz = tz[2] - o[2];
       const pt = (a, off) => [p[0] + vx * Math.cos(a) * r + ux * off, p[1] + Math.sin(a) * r, p[2] + vz * Math.cos(a) * r + uz * off];
-      quadFacing(acc, pt(a0, -th), pt(a1, -th), pt(a1, th), pt(a0, th), [vx * Math.cos((a0 + a1) / 2), Math.sin((a0 + a1) / 2), vz * Math.cos((a0 + a1) / 2)]);
-      quadFacing(acc, pt(a0, th), pt(a1, th), [p[0] + ux * th, p[1], p[2] + uz * th], [p[0] + ux * th, p[1], p[2] + uz * th], [ux, 0, uz]);
+      quadFacing(S, pt(a0, -th), pt(a1, -th), pt(a1, th), pt(a0, th), [vx * Math.cos((a0 + a1) / 2), Math.sin((a0 + a1) / 2), vz * Math.cos((a0 + a1) / 2)]);
+      quadFacing(S, pt(a0, th), pt(a1, th), [p[0] + ux * th, p[1], p[2] + uz * th], [p[0] + ux * th, p[1], p[2] + uz * th], [ux, 0, uz]);
     }
   }
-  // the wheel pit (stone kerb, dark water), the flume out of the levee on trestles
-  const wx = it.wheel, R = 2.7, ay = g + 2.25, wz = hd + 0.95;
+  // the wheel pit against the downstream end (a stone kerb round dark water)
+  const lv = it.levee;
   {
     S.col = [0.72, 0.68, 0.6];
-    const x0 = wx - 3.4, x1 = wx + 3.4, z0 = hd + 0.1, z1 = hd + 1.9;
-    for (const [a, b, n] of [[[x0, z1], [x1, z1], [0, 1]], [[x1, z0], [x1, z1], [1, 0]], [[x0, z1], [x0, z0], [-1, 0]]]) {
-      const nn = F.P(n[0], 0, n[1]), o = F.P(0, 0, 0);
-      quadFacing(S, at(a[0], g - 0.6, a[1]), at(b[0], g - 0.6, b[1]), at(b[0], g + 0.35, b[1]), at(a[0], g + 0.35, a[1]), [nn[0] - o[0], 0, nn[2] - o[2]]);
+    const x0 = hw + 0.1, x1 = hw + 1.9, z0 = WZ - 3.3, z1 = WZ + 3.3;
+    for (const [a, b, n] of [[[x1, z0], [x1, z1], dir(1, 0)], [[x0, z0], [x1, z0], dir(0, -1)], [[x0, z1], [x1, z1], dir(0, 1)]]) {
+      quadFacing(S, at(a[0], g - 0.6, a[1]), at(b[0], g - 0.6, b[1]), at(b[0], g + 0.35, b[1]), at(a[0], g + 0.35, a[1]), n);
     }
     K.water.col = [0.7, 0.75, 0.8];
     quadFacing(K.water, at(x0, g - 0.25, z0), at(x1, g - 0.25, z0), at(x1, g - 0.25, z1), at(x0, g - 0.25, z1), [0, 1, 0]);
-    // the tail race: a stone channel down along the levee's foot to a culvert
-    const t0 = x1, t1 = x1 + 6.5, lv = it.levee;
+    // the tail race: a channel from the pit to a culvert in the levee's face
     K.water.col = [0.8, 0.85, 0.9];
-    quadFacing(K.water, at(t0, g - 0.3, z0 + 0.3), at(t1, g - 0.3, lv - 0.2), at(t1 + 1.2, g - 0.3, lv - 0.2), at(t0 + 0.2, g - 0.3, z1), [0, 1, 0]);
+    quadFacing(K.water, at(x1 - 0.2, g - 0.3, WZ + 1.0), at(x1 - 0.2, g - 0.3, WZ + 2.4), at(hw + 5.2, g - 0.3, lv - 0.2), at(hw + 3.9, g - 0.3, lv - 0.2), [0, 1, 0]);
     win.col = [0.6, 0.6, 0.6];
-    const cA = at(t1 + 1.3, g - 0.4, lv - 0.03), cB = at(t1 - 0.3, g - 0.4, lv - 0.03);
-    const nn = F.P(0, 0, -1), o = F.P(0, 0, 0);
-    quadFacing(win, cA, cB, [cB[0], g + 1.4, cB[2]], [cA[0], g + 1.4, cA[2]], [nn[0] - o[0], 0, nn[2] - o[2]], otwUV('a_dark'));
+    const cA = at(hw + 5.4, g - 0.4, lv - 0.03), cB = at(hw + 3.7, g - 0.4, lv - 0.03);
+    quadFacing(win, cA, cB, [cB[0], g + 1.4, cB[2]], [cA[0], g + 1.4, cA[2]], dir(0, -1), otwUV('a_dark'));
   }
   {
-    // the flume: from a sluice in the levee's face to the wheel's upstream side
-    const a = [wx - 7.4, lv0(it)], b = [wx - R - 0.15, wz];
+    // the flume: out of a sluice in the levee's face, straight to the wheel's river side
+    const a = [wx, lv0(it)], b = [wx, WZ + R + 0.15];
     const y0 = g + 2.35, y1 = g + 2.2;
     const dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz), px = -dz / l * 0.48, pz = dx / l * 0.48;
     const Pw = K.paint;
@@ -193,8 +189,7 @@ export function mill(K, B, it, M) {
     // floor (underside dark), the two sides (both faces)
     quadFacing(Pw, c0(-1, ya(0), 0), c0(1, ya(0), 0), c0(1, ya(1), 1), c0(-1, ya(1), 1), [0, -1, 0]);
     for (const sx of [-1, 1]) {
-      const nn = F.P(px * sx, 0, pz * sx), o = F.P(0, 0, 0);
-      const n = [nn[0] - o[0], 0, nn[2] - o[2]];
+      const n = dir(px * sx, pz * sx);
       quadFacing(Pw, c0(sx, ya(0), 0), c0(sx, ya(1), 1), c0(sx, ya(1) + 0.55, 1), c0(sx, ya(0) + 0.55, 0), n);
       quadFacing(Pw, c0(sx * 0.92, ya(0), 0), c0(sx * 0.92, ya(1), 1), c0(sx * 0.92, ya(1) + 0.55, 1), c0(sx * 0.92, ya(0) + 0.55, 0), [-n[0], 0, -n[2]]);
     }
@@ -209,36 +204,33 @@ export function mill(K, B, it, M) {
     Pw.col = [0.26, 0.18, 0.12];
     const sp = c0(0, ya(0), 0);
     box(Pw, sp[0], ya(0) - 0.2, sp[2], 1.6, 1.6, 0.3, it.ry + Math.atan2(dx, dz), { u: 1 });
-    // water spilling onto the wheel: a sheet down its upstream side to the pit
+    // water spilling onto the wheel: a sheet down its river side into the pit
     K.water.col = [0.95, 0.97, 1];
-    const sx0 = wx - R - 0.2;
     for (let q = 0; q < 3; q++) {
-      const a0 = Math.PI * (1 + q / 6), a1 = Math.PI * (1 + (q + 1) / 6);
-      const p0 = [wx + Math.cos(a0) * (R + 0.15), ay + Math.sin(a0) * (R + 0.15) + (q === 0 ? 0.25 : 0)], p1 = [wx + Math.cos(a1) * (R + 0.15), ay + Math.sin(a1) * (R + 0.15)];
-      const nn = F.P(-1, 0, 0), o = F.P(0, 0, 0);
-      quadFacing(K.water, at(p0[0], p0[1], wz - 0.55), at(p1[0], p1[1], wz - 0.55), at(p1[0], p1[1], wz + 0.55), at(p0[0], p0[1], wz + 0.55), [nn[0] - o[0], 0.3, nn[2] - o[2]]);
+      const a0 = -Math.PI * q / 6, a1 = -Math.PI * (q + 1) / 6, rr = R + 0.15;
+      const p0 = [WZ + Math.cos(a0) * rr, ay + Math.sin(a0) * rr + (q === 0 ? 0.25 : 0)], p1 = [WZ + Math.cos(a1) * rr, ay + Math.sin(a1) * rr];
+      const nz = dir(0, 1);
+      quadFacing(K.water, at(wx - 0.55, p0[1], p0[0]), at(wx + 0.55, p0[1], p0[0]), at(wx + 0.55, p1[1], p1[0]), at(wx - 0.55, p1[1], p1[0]), [nz[0], 0.3, nz[2]]);
     }
-    void sx0;
   }
-  // the axle into the wall, its bearing block
+  // the axle out of the wall, its bearing block
   N.paint.col = [0.2, 0.18, 0.16];
-  N.paint.beam(...at(wx, ay, hd - 0.1), ...at(wx, ay, wz + 0.95), 0.3, 0.3);
+  N.paint.beam(...at(hw - 0.1, ay, WZ), ...at(hw + 1.9, ay, WZ), 0.3, 0.3);
   // the wheel: its own mesh, turning
   const acc = new Acc(true);
   wheelGeo(acc, R, 1.3, 16);
   const mesh = new THREE.Mesh(acc.toGeometry(true), M.paint);
   mesh.matrixAutoUpdate = true;
-  const wp = at(wx, ay, wz);
+  const wp = at(wx, ay, WZ);
   mesh.position.set(wp[0], wp[1], wp[2]);
-  // local z (the axle) along the wall's normal; local x along the wall
-  const ax = F.P(0, 0, 1), o = F.P(0, 0, 0);
-  const azx = ax[0] - o[0], azz = ax[2] - o[2];
+  // the mesh's local z (its axle) along the mill's local x (out of the end wall)
+  const [ex, , ez] = dir(1, 0);
   mesh.rotation.order = 'YXZ';
-  mesh.rotation.y = Math.atan2(azx, azz);
-  // the upstream side (local −x of the mill) goes down
+  mesh.rotation.y = Math.atan2(ex, ez);
+  // its river side (the mill's local +z) goes down
   const lxw = [Math.cos(mesh.rotation.y), -Math.sin(mesh.rotation.y)];
-  const up = F.P(-1, 0, 0);
-  const spin = lxw[0] * (up[0] - o[0]) + lxw[1] * (up[2] - o[2]) > 0 ? -1 : 1;
+  const [rx, , rz] = dir(0, 1);
+  const spin = lxw[0] * rx + lxw[1] * rz > 0 ? -1 : 1;
   B.group.add(mesh);
   B.anim((t, dt, dist) => { if (dist < 320) mesh.rotation.z = spin * t * 0.55; });
 }
