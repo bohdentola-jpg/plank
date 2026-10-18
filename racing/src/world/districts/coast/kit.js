@@ -561,7 +561,7 @@ function itemBox(it) {
   const add = (x, z) => { if (x < x0) x0 = x; if (x > x1) x1 = x; if (z < z0) z0 = z; if (z > z1) z1 = z; };
   if (Array.isArray(it.pts)) for (const p of it.pts) add(p[0], p[1]);
   for (const k of ['a', 'b']) if (Array.isArray(it[k])) add(it[k][0], it[k].length > 2 ? it[k][2] : it[k][1]);
-  const r = Math.max(it.w || 0, it.d || 0, it.len || 0, it.L || 0) * 0.6 + 8;
+  const r = Math.max(it.w || 0, it.d || 0, it.len || 0, it.L || 0) * 0.6 + 16;
   return [x0 - r, z0 - r, x1 + r, z1 + r];
 }
 

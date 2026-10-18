@@ -310,7 +310,7 @@ function planMotel(P, S) {
   const g = P.groundRange(x, z, 72, 46, ry);
   const y1 = P.groundY(x, z) + 0.2;
   P.claim(x, z, 72, 46, ry);
-  P.add({ type: 'motel', x, z, ry, y0: g.lo - 1, y1 });
+  P.add({ type: 'motel', x, z, ry, y0: g.lo - 1, y1, w: 72, d: 46 });
   const F = frame(x, 0, z, ry);
   const put = (lx, lz, w, d, h) => { const q = F(lx, 0, lz); P.collider({ kind: 'box', x: q[0], z: q[2], hx: w / 2, hz: d / 2, ry, y0: g.lo - 1, y1: y1 + h }); };
   put(-27, 11, 12, 9, 5);          // the office
