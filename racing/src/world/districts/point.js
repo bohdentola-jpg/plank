@@ -14,7 +14,7 @@ import { makeRng } from '../../core/util.js';
 import { U } from '../kit.js';
 import { litMat, box, cylinder, gable, sphere, drape } from './builder.js';
 import { Acc } from '../build/geo.js';
-import { mats, C, col, frame, frame3, lbox, tube, panel, seedOf, groundStrip, coneC, disc, bulb, windTree, mixC } from './coast/kit.js';
+import { mats, C, col, frame, frame3, lbox, tube, panel, seedOf, groundStrip, coneC, windTree, mixC } from './coast/kit.js';
 import { signAtlas } from './coast/tex.js';
 import { homeMats, rockLump, rockPile, stoneWall, picket, cottage, car, lampPost, blob } from './coast/home.js';
 
@@ -263,7 +263,9 @@ function planMarina(P, S) {
   if (lane) {
     const p = lane.posAt(lane.length - 10);
     const sx = p.x + lane.LX[p.i] * 7.5, sz = p.z + lane.LZ[p.i] * 7.5;
-    P.add({ type: 'msign', x: sx, z: sz, ry: Math.atan2(-lane.LX[p.i], -lane.LZ[p.i]) });
+    const sry = Math.atan2(-lane.LX[p.i], -lane.LZ[p.i]);
+    P.add({ type: 'msign', x: sx, z: sz, ry: sry });
+    P.collider({ kind: 'box', x: sx, z: sz, hx: 1.6, hz: 0.2, ry: sry, y0: P.groundY(sx, sz) - 1, y1: P.groundY(sx, sz) + 3 });
     for (let k = 0; k < 4; k++) {
       const q = lane.posAt(lane.length - 14 - k * 6);
       const px = q.x - lane.LX[q.i] * 8.8, pz = q.z - lane.LZ[q.i] * 8.8;
@@ -318,7 +320,9 @@ function planVillage(P, S) {
   if (r) {
     const p = r.posAt(60);
     const sx = p.x - r.LX[p.i] * 10, sz = p.z - r.LZ[p.i] * 10;
-    P.add({ type: 'ptsign', x: sx, z: sz, ry: Math.atan2(r.TX[p.i], r.TZ[p.i]) + Math.PI });
+    const sry = Math.atan2(r.TX[p.i], r.TZ[p.i]) + Math.PI;
+    P.add({ type: 'ptsign', x: sx, z: sz, ry: sry });
+    P.collider({ kind: 'box', x: sx, z: sz, hx: 2.3, hz: 0.25, ry: sry, y0: P.groundY(sx, sz) - 1, y1: P.groundY(sx, sz) + 3 });
   }
 }
 
@@ -358,6 +362,7 @@ function planBattery(P, S) {
   }
   const sg = F(18, 0, -40);
   P.add({ type: 'battery', part: 'sign', x: sg[0], z: sg[2], ry, y: P.groundY(sg[0], sg[2]) });
+  P.collider({ kind: 'box', x: sg[0], z: sg[2], hx: 1.4, hz: 0.2, ry, y0: P.groundY(sg[0], sg[2]) - 1, y1: P.groundY(sg[0], sg[2]) + 3 });
   const lp = F(0, 0, -10.6);
   P.lamp({ x: lp[0], z: lp[2], hx: lp[0], hy: P.groundY(lp[0], lp[2]) + 2.6, hz: lp[2], color: '#ffb870', radius: 10, intensity: 0.6, halo: 0.9 });
   S.battery = { x, z };
@@ -385,6 +390,8 @@ function planCove(P, S) {
   // the beach: the glowing surf, driftwood, a boat on the sand, the sign
   P.add({ type: 'surf', x: 1220, z: 3610 });
   P.add({ type: 'beachkit', x: 1212, z: 3596 });
+  P.collider({ kind: 'circle', x: 1232, z: 3580, r: 0.3, y0: 0, y1: 4 });
+  for (const [x, z] of [[1222, 3592], [1226, 3588.5], [1230, 3585]]) P.collider({ kind: 'circle', x, z, r: 0.25, y0: 0, y1: 4 });
   P.collider({ kind: 'box', x: 1226, z: 3598, hx: 0.8, hz: 2.2, ry: 0.5, y0: 0, y1: 2.5 });
   // rocks at either end
   for (const [x, z, s] of [[1166, 3532, 3.2], [1158, 3550, 2.4], [1268, 3668, 3.0], [1282, 3678, 2.2], [1250, 3655, 1.8]]) {
@@ -411,6 +418,19 @@ function planCottages(P, S) {
     P.collider({ kind: 'box', x: L.x, z: L.z, hx: L.w / 2 - 0.5, hz: L.d / 2 - 0.5, ry: L.ry, y0: g.lo - 1, y1: g.hi + floors * 3.2 + 4 });
     P.far({ x: L.x, z: L.z, y: g.lo - 1, w: L.w - 1, d: L.d - 1, h: g.hi - g.lo + floors * 3.2 + 3, ry: L.ry, color: it.tint, lit: 0.3 });
     const c = Math.cos(L.ry), s = Math.sin(L.ry);
+    // the picket fence (a gap at the gate) and the mailbox: solid
+    {
+      const w = L.w - 1, d = L.d - 1;
+      const fz = d / 2 + Math.max(2.5, L.setback * 0.65), gx = -w * 0.18;
+      const at = (lx, lz) => [L.x + lx * Math.cos(L.ry) + lz * Math.sin(L.ry), L.z - lx * Math.sin(L.ry) + lz * Math.cos(L.ry)];
+      const y = g.lo;
+      for (const [a, b] of [[-w / 2 - 1.5, gx - 0.8], [gx + 0.8, w / 2 + 1.5]]) {
+        const c = at((a + b) / 2, fz);
+        P.collider({ kind: 'box', x: c[0], z: c[1], hx: (b - a) / 2, hz: 0.12, ry: L.ry, y0: y - 1, y1: g.hi + 1.1 });
+      }
+      const mb = at(gx + 1.6, fz + 0.6);
+      P.collider({ kind: 'circle', x: mb[0], z: mb[1], r: 0.25, y0: y - 1, y1: g.hi + 1.4 });
+    }
     // the porch light
     const lx = -(L.w - 1) * 0.18, lz = (L.d - 1) / 2 + 0.4;
     const hx = L.x + lx * c + lz * s, hz = L.z - lx * s + lz * c;
@@ -1445,7 +1465,6 @@ function beachkit(B, M, it, uv) {
   const sx = 1232, sz = 3580, sy = B.groundY(sx, sz);
   pa.box(sx, sy - 0.3, sz, 0.14, 2.4, 0.14);
   panel(B.acc(M.sign), sx, sy + 1.9, sz + 0.1, 2.6, 2.6 * 110 / 500, Math.PI * 0.9, uv.cove, true);
-  void bulb;
 }
 
 export { boatModel, hullShape };

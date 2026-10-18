@@ -13,10 +13,9 @@
 import * as THREE from 'three';
 import { makeRng } from '../../core/util.js';
 import { U } from '../kit.js';
-import { litMat, box, cylinder, gable, hip, drape } from './builder.js';
+import { litMat, box, cylinder, drape } from './builder.js';
 import { mats, cmat, C, col, frame, lbox, tube, panel, seedOf, groundStrip, coneC, windTree, chaseBulb } from './coast/kit.js';
-import { signAtlas } from './coast/tex.js';
-import { motelTexture } from './coast/tex.js';
+import { signAtlas, motelTexture } from './coast/tex.js';
 import { homeMats, rockLump, stoneWall, cottage, glassHouse, car, lampPost, blob } from './coast/home.js';
 
 const WIND = [0.92, -0.38];             // off the sea: the cypress lean inland
@@ -125,7 +124,7 @@ export default {
     if (S.vista) P.landmark({ id: 'bs_vista', name: 'BAYSHORE VISTA POINT', x: S.vista.x, z: S.vista.z, r: 30, kind: 'lookout' });
     if (S.motel) P.landmark({ id: 'bs_motel', name: 'SEA BREEZE MOTEL', x: S.motel.x, z: S.motel.z, r: 40, kind: 'motel' });
     if (S.rock) P.landmark({ id: 'bs_rock', name: 'SUNSET ROCK', x: S.rock.x, z: S.rock.z, r: 30, hidden: true, kind: 'lookout' });
-    if (S.stacks) P.landmark({ id: 'bs_stacks', name: 'THE THREE SISTERS', x: S.stacks.x, z: S.stacks.z, r: 60, hidden: true, kind: 'rocks' });
+    if (S.stacks) P.landmark({ id: 'bs_stacks', name: 'THE THREE SISTERS', x: S.stacks.x, z: S.stacks.z, r: 60, kind: 'rocks' });
   },
 
   scatter(S) {
@@ -235,6 +234,7 @@ function planBridge(P, S) {
     if (Math.abs(s - m.S1) < 10 || Math.abs(s - m.S2) < 10) continue;
     const sd = k % 2 ? 1 : -1;
     const head = m.at(s, sd * 6.6, 0), post = m.at(s, sd * 10.2, 0);
+    P.collider({ kind: 'circle', x: post[0], z: post[2], r: 0.3, y0: m.deckY(s) - 2, y1: m.deckY(s) + 10 });
     P.lamp({ x: post[0], z: post[2], hx: head[0], hy: m.deckY(s) + 9.2, hz: head[2], color: SODIUM, radius: 24, intensity: 1.0, halo: 1.8 });
   }
   // the anchorages
@@ -362,6 +362,9 @@ function planRock(P, S) {
   P.collider({ kind: 'circle', x: x + 3, z: z - 4.5, r: 0.9, y0: y - 1, y1: y + 14 });
   P.collider({ kind: 'box', x: x + 3 * Math.sin(ry), z: z + 3 * Math.cos(ry), hx: 3.3, hz: 2.6, ry, y0: y - 6, y1: y + 1.2 });
   P.lamp({ x: x + 6, z: z + 3, hx: x + 6, hy: y + 2.4, hz: z + 3, color: '#ffb870', radius: 10, intensity: 0.7, halo: 1.2 });
+  P.collider({ kind: 'circle', x: x + 6, z: z + 3, r: 0.25, y0: y - 1, y1: y + 3 });
+  const sp = [x - 4.5 * Math.cos(ry) - 4 * Math.sin(ry), z + 4.5 * Math.sin(ry) - 4 * Math.cos(ry)];
+  P.collider({ kind: 'box', x: sp[0], z: sp[1], hx: 1.4, hz: 0.2, ry, y0: y - 1, y1: y + 3 });
   // an old camper van parked at the end of the track
   const vx = ex - 4, vz = ez + 10;
   if (P.isFree(vx, vz, 3, 6, 1.2, { pad: 0.2 })) {
