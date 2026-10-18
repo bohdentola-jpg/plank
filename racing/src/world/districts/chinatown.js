@@ -355,6 +355,8 @@ function mats(B) {
     lantern: B.mat('lantern', lanternMat),
     steam: B.mat('steam', steamMat),
     paint: B.mat('paint', () => litMat({ vertexColors: true, roughness: 0.7 })),
+    // (the same paint, unlit by the lamps: roofs, tanks, cornices, sign brackets, wires)
+    trim: B.mat('trim', () => plainMat({ vertexColors: true, roughness: 0.7 })),
     metal: B.mat('metal', () => litMat({ map: metalTex(), vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.5 }, { shadow: false })),
     leaf: B.mat('leaf', () => litMat({ vertexColors: true, roughness: 0.85, flatShading: true })),
     pave: B.mat('pave', () => litMat({ map: cobbleTexture(), vertexColors: true, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -3 })),
@@ -367,7 +369,7 @@ function kit(B) {
   const K = {};
   for (const [k, m] of Object.entries(M)) { m.name = 'ct:' + k; K[k] = B.acc(m); }
   K.near = {};
-  for (const k of ['paint', 'leaf', 'metal', 'win', 'tile', 'neon']) K.near[k] = B.near(M[k]);
+  for (const k of ['paint', 'leaf', 'metal', 'win', 'tile', 'neon', 'trim']) K.near[k] = B.near(M[k]);
   K.lanternNear = B.near(M.lantern);
   K.steam = B.near(M.steam);
   K.lanternFn = lantern;
@@ -392,7 +394,7 @@ function* build(B, items) {
     } else if (it.type === 'strings') {
       // the lanterns themselves close up only (the strings' lamps light the street from afar)
       const L = { ...K, lantern: K.lanternNear };
-      for (const [ax, ay, az, bx, by, bz, sag] of it.list) lanternString(L.lantern, K.near.paint, [ax, ay, az], [bx, by, bz], sag, 2.9, ax * 0.1);
+      for (const [ax, ay, az, bx, by, bz, sag] of it.list) lanternString(L.lantern, K.near.trim, [ax, ay, az], [bx, by, bz], sag, 2.9, ax * 0.1);
     } else if (it.type === 'pave') {
       // (a strip at a time: draping the square in one go is too long a step)
       K.pave.col = [0.78, 0.46, 0.4];

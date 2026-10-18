@@ -90,9 +90,12 @@ function streetFace(K, it, f, e, top, rng, k) {
   N.stone.col = stoneCol;
   bandFU(N.stone, f, -0.05, len + 0.05, it.gy + it.gf - 0.1, 0.32, 0, 0.14);
   if (it.roof !== 'fgable') {
-    bandFU(S, f, -0.2, len + 0.2, top - 0.2, 0.5, 0, 0.42);
-    S.col = [stoneCol[0] * 0.8, stoneCol[1] * 0.8, stoneCol[2] * 0.8];
-    fquad(S, f, 0, len, top - 0.55, top - 0.2, 0.2, [0, 0, len / 2.4, 0.15]);
+    // (the cornice, up at the eaves, takes no lamp light)
+    const Sh = K.stoneHi || S;
+    Sh.col = stoneCol;
+    bandFU(Sh, f, -0.2, len + 0.2, top - 0.2, 0.5, 0, 0.42);
+    Sh.col = [stoneCol[0] * 0.8, stoneCol[1] * 0.8, stoneCol[2] * 0.8];
+    fquad(Sh, f, 0, len, top - 0.55, top - 0.2, 0.2, [0, 0, len / 2.4, 0.15]);
   }
   // upper floors: a window to a bay, a sill band per floor
   const want = it.kind === 'brick' ? 2.25 : grand ? 2.75 : 2.5;
@@ -142,9 +145,10 @@ function streetFace(K, it, f, e, top, rng, k) {
       }
     } else if (!balcony && grand) {
       // (sill bands on the stone apartment blocks only)
-      N.stone.col = stoneCol;
-      bandFU(N.stone, f, 0, len, ys - 0.14, 0.12, 0, 0.1);
-      if (noble && !it.ped) bandFU(N.stone, f, 0, len, ys + wh + 0.05, 0.14, 0, 0.12);
+      const Ns = fl > 1 && N.stoneHi ? N.stoneHi : N.stone;
+      Ns.col = stoneCol;
+      bandFU(Ns, f, 0, len, ys - 0.14, 0.12, 0, 0.1);
+      if (noble && !it.ped) bandFU(Ns, f, 0, len, ys + wh + 0.05, 0.14, 0, 0.12);
     }
     if (balcony) {
       N.stone.col = stoneCol;
@@ -246,7 +250,7 @@ const hex = (h) => [parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 1
 
 /** A painted board on an iron bracket, out from the wall over the pavement (close up only). */
 function bladeSign(K, f, a, y, t) {
-  const N = K.near;
+  const N = K.near.trim ? { ...K.near, paint: K.near.trim } : K.near;
   N.paint.col = [0.1, 0.1, 0.1];
   N.paint.quadP(f.P(a, y + 0.76, 1.1), f.P(a, y + 0.76, 0), f.P(a, y + 0.82, 0), f.P(a, y + 0.82, 1.1));
   N.paint.quadP(f.P(a, y + 0.76, 0), f.P(a, y + 0.76, 1.1), f.P(a, y + 0.82, 1.1), f.P(a, y + 0.82, 0));
@@ -290,8 +294,9 @@ function sideFace(K, it, f, top, rng, full) {
     }
   }
   if (full) {
-    K.stone.col = it.baseCol || [0.92, 0.88, 0.8];
-    bandFU(K.stone, f, -0.2, f.len + 0.2, top - 0.2, 0.5, 0, 0.42);
+    const Sh = K.stoneHi || K.stone;
+    Sh.col = it.baseCol || [0.92, 0.88, 0.8];
+    bandFU(Sh, f, -0.2, f.len + 0.2, top - 0.2, 0.5, 0, 0.42);
   }
 }
 
@@ -365,7 +370,7 @@ function dormers(K, it, top, a, rng) {
 /** A dormer: its front standing back from the cornice, a little pitched cap. */
 function dormer(K, f, am, y, w, h, rng, it) {
   const N = K.near;
-  const D = N.stone;
+  const D = N.stoneHi || N.stone;
   D.col = it.dormerCol || [0.88, 0.86, 0.8];
   const o = -0.3, hw = w / 2 + 0.16;
   fquad(D, f, am - hw, am + hw, y, y + h, o, [0, 0, 0.6, 0.7]);
@@ -414,8 +419,9 @@ function steppedGable(K, it, top, rise, rng) {
 /** Chimney stacks on the party walls, a pot or two on each (pots close up). */
 function chimneys(K, it, yTop, rng) {
   const n = it.poly.length;
-  const C = it.wall === 'brick' ? K.brick : K.plaster;
-  C.col = it.wall === 'brick' ? it.col : [0.8, 0.74, 0.66];
+  // (stacks and pots, up on the roofs: plain, no lamp light baked on them)
+  const C = K.trim || (it.wall === 'brick' ? K.brick : K.plaster);
+  C.col = it.wall === 'brick' ? [it.col[0] * 0.62, it.col[1] * 0.36, it.col[2] * 0.3] : [0.72, 0.66, 0.58];
   let made = 0;
   const yb = it.gy + it.gf + Math.max(0, it.nf - 1) * it.fh;
   for (let k = 0; k < n && made < 2; k++) {
@@ -428,7 +434,9 @@ function chimneys(K, it, yTop, rng) {
     N.paint.col = [0.62, 0.36, 0.25];
     if (rng() < 0.5) {
       const pp = f.P(am, yTop + 1.1, -0.45);
-      cylinder(N.paint, pp[0], pp[1], pp[2], 0.13, 0.45, 4, { r2: 0.1 });
+      const Np = N.trim || N.paint;
+      Np.col = [0.62, 0.36, 0.25];
+      cylinder(Np, pp[0], pp[1], pp[2], 0.13, 0.45, 4, { r2: 0.1 });
     }
     made++;
   }

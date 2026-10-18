@@ -56,10 +56,13 @@ function streetFace(K, it, f, top, rng, k) {
   P.col = it.trim;
   bandFU(P, f, -0.05, len + 0.05, it.gy + it.gf - 0.35, 0.4, 0, 0.18, 2);
   if (it.kind === 'ten' || it.kind === 'mod') {
-    bandFU(P, f, -0.25, len + 0.25, top + 0.2, 0.7, 0, 0.6, 2);
+    // (up at the roofline: no lamp light baked on it)
+    const Tr = K.trim || P;
+    Tr.col = it.trim;
+    bandFU(Tr, f, -0.25, len + 0.25, top + 0.2, 0.7, 0, 0.6, 2);
     // the brackets under it, as a dark dentil strip
-    P.col = [it.trim[0] * 0.5, it.trim[1] * 0.5, it.trim[2] * 0.5];
-    fquad(P, f, -0.2, len + 0.2, top - 0.15, top + 0.2, 0.42, [0, 0, len / 0.6, 1]);
+    Tr.col = [it.trim[0] * 0.5, it.trim[1] * 0.5, it.trim[2] * 0.5];
+    fquad(Tr, f, -0.2, len + 0.2, top - 0.15, top + 0.2, 0.42, [0, 0, len / 0.6, 1]);
   }
   // upper floors
   if (it.kind === 'mod') {
@@ -186,12 +189,13 @@ function vSign(K, f, s) {
     q(out1 - t, out1 + t, s.y, s.y + s.h);
     q(out0 - t, out0 + t, s.y, s.y + s.h);
   }
-  K.paint.col = [0.12, 0.12, 0.13];
-  K.paint.quadP(f.P(s.a, s.y + s.h - 0.34, out0 + 0.1), f.P(s.a, s.y + s.h - 0.34, 0), f.P(s.a, s.y + s.h - 0.26, 0), f.P(s.a, s.y + s.h - 0.26, out0 + 0.1));
-  K.paint.quadP(f.P(s.a, s.y + s.h - 0.34, 0), f.P(s.a, s.y + s.h - 0.34, out0 + 0.1), f.P(s.a, s.y + s.h - 0.26, out0 + 0.1), f.P(s.a, s.y + s.h - 0.26, 0));
+  const Tr = K.trim || K.paint;
+  Tr.col = [0.12, 0.12, 0.13];
+  Tr.quadP(f.P(s.a, s.y + s.h - 0.34, out0 + 0.1), f.P(s.a, s.y + s.h - 0.34, 0), f.P(s.a, s.y + s.h - 0.26, 0), f.P(s.a, s.y + s.h - 0.26, out0 + 0.1));
+  Tr.quadP(f.P(s.a, s.y + s.h - 0.34, 0), f.P(s.a, s.y + s.h - 0.34, out0 + 0.1), f.P(s.a, s.y + s.h - 0.26, out0 + 0.1), f.P(s.a, s.y + s.h - 0.26, 0));
   // the side edge strips (the box's thickness), dark
-  K.paint.col = [0.1, 0.1, 0.1];
-  K.paint.quadP(P(out1, s.y, -1), P(out1, s.y, 1), P(out1, s.y + s.h, 1), P(out1, s.y + s.h, -1));
+  Tr.col = [0.1, 0.1, 0.1];
+  Tr.quadP(P(out1, s.y, -1), P(out1, s.y, 1), P(out1, s.y + s.h, 1), P(out1, s.y + s.h, -1));
 }
 
 /** A fire escape: a landing at each floor over two bays, stairs between them, a drop ladder. */
@@ -302,6 +306,8 @@ function backFace(K, it, f, top, rng, full) {
 // ------------------------------------------------------------------ roofs
 
 function roof(K, it, top, rng) {
+  // (the roofs take no baked lamp light: K.trim, a plain material)
+  K = K.trim ? { ...K, paint: K.trim, near: { ...K.near, paint: K.near.trim || K.near.paint } } : K;
   const poly = it.poly;
   const yr = top + (it.kind === 'shop' ? 0 : 1.0);
   K.paint.col = [0.3, 0.3, 0.32];

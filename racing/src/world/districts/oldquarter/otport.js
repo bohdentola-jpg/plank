@@ -381,7 +381,7 @@ export function bookBox(K, x, y, z, ry, open) {
  * flared seat under its glass and a cap with a finial (close up only).
  */
 export function gasLamp(K, L) {
-  const N = K.near.paint;
+  const N = K.near.trim || K.near.paint;
   N.col = IRON;
   const x = L.x, y = L.y, z = L.z, hy = L.hy;
   // (a hundred-odd of these a cell: kept to some forty vertices each)

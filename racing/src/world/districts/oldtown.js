@@ -552,6 +552,9 @@ function mats(B) {
     win: B.mat('win', () => { const t = otWindows(); return plainMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, vertexColors: true, roughness: 0.3, metalness: 0.1, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }, { night: 1.3 }); }),
     shop: B.mat('shop', () => { const t = otShops(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, roughness: 0.45, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }, { night: 1.5 }); }),
     paint: B.mat('paint', () => litMat({ vertexColors: true, roughness: 0.7 })),
+    // (unlit by the lamps, to keep the bake light: chimneys, lamp irons, signs' boards, high trim)
+    trim: B.mat('trim', () => plainMat({ vertexColors: true, roughness: 0.7 })),
+    stoneHi: B.mat('stoneHi', () => plainMat({ map: stoneTex(), vertexColors: true, roughness: 0.85 })),
     metal: B.mat('metal', () => litMat({ map: metalTex(), vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.5 }, { shadow: false })),
     glow: B.mat('glow', () => { const m = glowColorMat('#ffc27a', 3.2); m.side = THREE.DoubleSide; return m; }),
     leaf: B.mat('leaf', () => litMat({ vertexColors: true, roughness: 0.85, flatShading: true })),
@@ -567,7 +570,7 @@ function kit(B) {
   const K = {};
   for (const [k, m] of Object.entries(M)) { m.name = 'ot:' + k; K[k] = B.acc(m); }
   K.near = {};
-  for (const k of ['stone', 'paint', 'leaf', 'glow', 'metal', 'plaster', 'win', 'slate', 'tile']) K.near[k] = B.near(M[k]);
+  for (const k of ['stone', 'paint', 'leaf', 'glow', 'metal', 'plaster', 'win', 'slate', 'tile', 'trim', 'stoneHi']) K.near[k] = B.near(M[k]);
   K.M = M;
   return K;
 }
