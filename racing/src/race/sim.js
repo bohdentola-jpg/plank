@@ -9,8 +9,9 @@ import { clamp } from '../core/util.js';
 import { TUNE } from '../core/tune.js';
 
 /** Laps for a lap knockout with this many rivals: two or three, whatever the
- *  field (a big field loses more than one car a lap), so it stays short. */
-export const knockLaps = (rivals) => Math.min(3, Math.max(2, rivals | 0));
+ *  field (a big field loses more than one car a lap), and no more than the
+ *  track's own race (`most`: its laps), so it stays short. */
+export const knockLaps = (rivals, most = 3) => Math.min(Math.max(2, most), Math.max(2, rivals | 0));
 
 /** A rival's temperament from their name: the same driver races the same way every time. */
 function personality(name) {
@@ -172,7 +173,8 @@ export class RaceSim {
         if (r.out && r.parked) continue;
         const v = r.vehicle;
         const env = {
-          ground: (x, z) => {
+          // (a race on the world's own roads asks the world for its ground)
+          ground: this.opts.ground ? (x, z) => this.opts.ground(x, z, r) : (x, z) => {
             const g = T.ground(x, z, r.hint, r._g || (r._g = {}));
             r.hint = g.i;
             return g;
@@ -221,6 +223,13 @@ export class RaceSim {
         // the weight shifting as a drift kicks in (or swings across)
         if (v.hopped) { v.hopped = false; this.emit('drifthop', { id: r.id }); }
         this.walls(r);
+        // and the world's solid things (posts, piers, whatever stands by the road)
+        if (this.opts.collide && TUNE.wallCollisions) {
+          const was = r.scraping, at = r.scrapePoint;
+          const hit = this.opts.collide(r);
+          if (!hit) { r.scraping = was; r.scrapePoint = at; }
+          else if (hit.impact > 2) this.emit('wallhit', { id: r.id, impact: hit.impact, x: hit.x, z: hit.z, y: v.y });
+        }
       }
       const R = this.racers;
       for (let a = 0; a < R.length; a++) {
@@ -399,7 +408,7 @@ export class RaceSim {
     }
     // knockout: the last racers to complete each lap are eliminated — one a
     // lap, or more in a big field, so it's down to two for the final lap
-    // (races stay three laps at most)
+    // (races stay three laps at most, two on the longer circuits)
     if (this.type === 'knockout' && L < this.laps) {
       const done = (this.knockLap[L] = this.knockLap[L] || []);
       if (!done.length) {

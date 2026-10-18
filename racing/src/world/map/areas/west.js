@@ -14,17 +14,17 @@ const nodes = {
   cg_end: [-4290, -1255],
   lk_n1: [-4250, -2120], lk_n2: [-3500, -2620], lk_n3: [-2850, -2560], lk_ne: [-2240, -1800, 111.2],
   // Ironwood Park
-  iw_n: [-3650, -1000], iw_s: [-3800, -400], iw_a: [-3350, -560], iw_b: [-3350, -900], iw_c: [-4050, -900], iw_d: [-4050, -560],
+  iw_n: [-3807, -950], iw_s: [-3672, -575], iw_d: [-4108, -534], iw_c: [-4100, -834],
   // the farms
   ml_1: [-2900, 130], ml_2: [-4700, 230], fm_1: [-5400, 100], fm_2: [-5600, -700], fm_3: [-4900, 1000],
   fm_4: [-3700, 900], fm_5: [-3400, 1380], fm_6: [-4300, 1500],
   af_a: [-5650, 640], af_b: [-4760, 520],
   // the redwoods
-  rh_1: [-4900, -2050, 133.2], rh_2: [-5150, -2700], rw_g: [-5050, -2980],
-  rw_a: [-5300, -3050], rw_b: [-4750, -3150], rw_c: [-4650, -3650], rw_d: [-5350, -3750],
+  rh_1: [-4900, -2050, 133.2], rh_2: [-5150, -2700], rw_g: [-4850, -2990],
+  rw_a: [-4847, -3080], rw_b: [-5284, -3161], rw_c: [-4751, -3585], rw_d: [-4686, -3125],
   // Crestwood
-  cw_1: [-1900, -2050], cw_g: [-1750, -2250],
-  cw_a: [-2150, -2350], cw_b: [-1350, -2300], cw_c: [-1300, -2800], cw_d: [-2100, -2850],
+  cw_1: [-1900, -2050], cw_g: [-1760, -2230],
+  cw_b: [-1460, -2397], cw_c: [-1704, -2646], cw_d: [-1940, -2540],
   cr_e: [-1250, -1720, 79.7],
 };
 
@@ -48,12 +48,13 @@ const roads = [
   { id: 'cg_road', type: 'gravel', a: 'lk_s2', b: 'cg_end', name: 'PINECONE CAMP RD', district: 'lake', pts: [[-3740, -1100, 30], [-3900, -1122, 80], [-4060, -1162, 80], [-4180, -1205, 60]] },
   // Ironwood Park: the circuit, its gate off the shore road and the back gate
   { id: 'iw_gate', type: 'street', a: 'lk_s2', b: 'iw_n' },
-  { id: 'iw_l1', type: 'circuit', a: 'iw_n', b: 'iw_b', pts: [[-3450, -1000, 40]] },
-  { id: 'iw_l2', type: 'circuit', a: 'iw_b', b: 'iw_a', pts: [[-3250, -760, 70]] },
-  { id: 'iw_l3', type: 'circuit', a: 'iw_a', b: 'iw_s', pts: [[-3500, -420, 50]] },
-  { id: 'iw_l4', type: 'circuit', a: 'iw_s', b: 'iw_d', pts: [[-3950, -420, 40]] },
-  { id: 'iw_l5', type: 'circuit', a: 'iw_d', b: 'iw_c', pts: [[-4180, -720, 90]] },
-  { id: 'iw_l6', type: 'circuit', a: 'iw_c', b: 'iw_n', pts: [[-3900, -1010, 40]] },
+  // (the grand prix layout: the main straight east, a fast right, a left, the
+  // long double-apex right, the back straight west, the hairpin, a tight
+  // infield of lefts and rights and the last corner onto the straight)
+  { id: 'iw_l1', type: 'circuit', a: 'iw_n', b: 'iw_s', pts: [[-3590, -950, 105], [-3539, -809, 135], [-3416, -752, 105], [-3384, -575, 83]] },
+  { id: 'iw_l2', type: 'circuit', a: 'iw_s', b: 'iw_d', pts: [[-3954, -575, 390]] },
+  { id: 'iw_l3', type: 'circuit', a: 'iw_d', b: 'iw_c', pts: [[-4244, -497, 33], [-4262, -563, 33], [-4152, -612, 45], [-4152, -702, 53], [-4100, -756, 53]] },
+  { id: 'iw_l4', type: 'circuit', a: 'iw_c', b: 'iw_n', pts: [[-4100, -950, 60]] },
   { id: 'iw_back', type: 'service', a: 'iw_s', b: 'ml_2', pts: [[-4000, 0, 120]] },
   // Mill Road: out of Old Town's west bank, under the I-9 at the farms
   { id: 'ml_road1', type: 'highway', a: 'ot_0_4', b: 'ml_1', name: 'MILL RD' },
@@ -81,20 +82,25 @@ const roads = [
   { id: 'rh_2', type: 'highway', a: 'rh_1', b: 'rh_2', name: 'REDWOOD HWY', pts: [[-5050, -2380, 300]] },
   { id: 'rh_3', type: 'highway', a: 'rh_2', b: 'rw_g', name: 'REDWOOD HWY' },
   { id: 'rw_gate', type: 'street', a: 'rw_g', b: 'rw_a' },
-  { id: 'rw_l1', type: 'circuit', a: 'rw_a', b: 'rw_b', pts: [[-5000, -3000, 60]] },
-  { id: 'rw_l2', type: 'circuit', a: 'rw_b', b: 'rw_c', pts: [[-4550, -3400, 90]] },
-  { id: 'rw_l3', type: 'circuit', a: 'rw_c', b: 'rw_d', pts: [[-5000, -3850, 120]] },
-  { id: 'rw_l4', type: 'circuit', a: 'rw_d', b: 'rw_a', pts: [[-5500, -3400, 90]] },
+  // (the pit straight west, the hairpin, the esses down through the trees,
+  // the long back straight, the climb through a left-right flick and the
+  // double-apex sweeper onto the pit straight)
+  { id: 'rw_l1', type: 'circuit', a: 'rw_a', b: 'rw_b', pts: [[-5350, -3080, 33], [-5350, -3149, 33]] },
+  { id: 'rw_l2', type: 'circuit', a: 'rw_b', b: 'rw_c', pts: [[-5188, -3177, 75], [-5177, -3290, 90], [-5087, -3342, 83], [-5087, -3447, 90], [-5006, -3515, 105], [-4982, -3647, 68]] },
+  { id: 'rw_l3', type: 'circuit', a: 'rw_c', b: 'rw_d', pts: [[-4544, -3530, 48], [-4583, -3386, 68], [-4564, -3312, 68], [-4615, -3174, 135]] },
+  { id: 'rw_l4', type: 'circuit', a: 'rw_d', b: 'rw_a', pts: [[-4750, -3080, 105]] },
   // Crestwood: from the lake's north-east corner, and from Uptown
   { id: 'cw_road', type: 'highway', a: 'lk_ne', b: 'cw_1', name: 'CRESTWOOD RD', grade: 0.12 },
-  { id: 'cw_gate', type: 'street', a: 'cw_1', b: 'cw_g', grade: 0.12, blend: 50 },
-  { id: 'cw_l0', type: 'circuit', a: 'cw_g', b: 'cw_b', pts: [[-1500, -2200, 80]] },
-  { id: 'cw_l1', type: 'circuit', a: 'cw_b', b: 'cw_c', pts: [[-1150, -2550, 90]] },
-  { id: 'cw_l2', type: 'circuit', a: 'cw_c', b: 'cw_d', pts: [[-1700, -2950, 90], [-1850, -2650, 60]] },
-  { id: 'cw_l3', type: 'circuit', a: 'cw_d', b: 'cw_a', pts: [[-2300, -2650, 90]] },
-  { id: 'cw_l4', type: 'circuit', a: 'cw_a', b: 'cw_g', pts: [[-1950, -2250, 60]] },
-  { id: 'cr_road1', type: 'highway', a: 'cw_1', b: 'cr_e', name: 'CRESTWOOD RD', pts: [[-1550, -1880, 300]], grade: 0.12, blend: 50 },
-  { id: 'cr_road2', type: 'street', a: 'cr_e', b: 'u_0_0', name: 'CRESTWOOD RD', grade: 0.15, blend: 40 },
+  { id: 'cw_gate', type: 'street', a: 'cw_1', b: 'cw_g', grade: 0.12 },
+  // (the main straight north over the blind crest, the hairpin, the back
+  // straight, the sweepers, the climb to the corkscrew, the carousel, the
+  // kink and the bottom straight)
+  { id: 'cw_l0', type: 'circuit', a: 'cw_g', b: 'cw_b', pts: [[-1460, -2150, 72]] },
+  { id: 'cw_l1', type: 'circuit', a: 'cw_b', b: 'cw_c', pts: [[-1460, -2600, 225], [-1544, -2780, 33], [-1605, -2757, 33], [-1578, -2657, 68]] },
+  { id: 'cw_l2', type: 'circuit', a: 'cw_c', b: 'cw_d', pts: [[-1803, -2637, 105], [-1859, -2540, 75]] },
+  { id: 'cw_l3', type: 'circuit', a: 'cw_d', b: 'cw_g', pts: [[-2009, -2540, 39], [-2022, -2465, 42], [-2117, -2441, 75], [-2147, -2355, 75], [-2090, -2286, 75], [-2000, -2294, 180]] },
+  { id: 'cr_road1', type: 'highway', a: 'cw_1', b: 'cr_e', name: 'CRESTWOOD RD', pts: [[-1550, -1880, 300]], grade: 0.12 },
+  { id: 'cr_road2', type: 'street', a: 'cr_e', b: 'u_0_0', name: 'CRESTWOOD RD', grade: 0.15 },
 ];
 
 export default {
@@ -104,6 +110,6 @@ export default {
     { id: 'ironworks', name: 'IRONWOOD WORKS', x: -3650, z: -720, kind: 'industry', district: 'ironworks' },
     { id: 'airfield', name: 'OLD AIRFIELD', x: -5200, z: 600, kind: 'airfield', district: 'farmland' },
     { id: 'drivein', name: 'STARLITE DRIVE-IN', x: -3300, z: 1450, kind: 'drivein', district: 'farmland' },
-    { id: 'winery', name: 'CRESTWOOD WINERY', x: -1700, z: -2550, kind: 'winery', district: 'crestwood' },
+    { id: 'winery', name: 'CRESTWOOD WINERY', x: -1620, z: -2930, kind: 'winery', district: 'crestwood' },
   ],
 };

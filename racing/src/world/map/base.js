@@ -87,6 +87,14 @@ export const ZONES = [
   { id: 'summit', kind: 'peak', x: 1250, z: -4700, r: 1300, h: 760 },
   { id: 'ridge', kind: 'ridge', path: [[1500, -3700], [2500, -3500], [3400, -3250], [4300, -2900]], width: 520, h: 330 },
   { id: 'kaido', kind: 'hills', poly: [[-1200, -4200], [500, -4200], [500, -1750], [-1200, -1750]], y: 160, amp: 90, scale: 520, edge: 500 },
+  // the lake's north shore: a long slope up from the water to the range
+  // (the North Shore Road climbs along it instead of hitting the massif)
+  { id: 'northshore', kind: 'slope', poly: [[-4750, -2950], [-2050, -2950], [-2050, -2150], [-4750, -2150]], y0: 72, y1: 200, dir: [0, -1], edge: 260 },
+  // the raceways in the hills sit on their own rolling ground (the range must
+  // not lift a grand prix circuit by hundreds of metres, and the shore's
+  // slope comes before them so it can't tilt Crestwood's west side)
+  { id: 'crestwoodring', kind: 'hills', poly: [[-2450, -3200], [-1000, -3200], [-1000, -2000], [-2450, -2000]], y: 150, amp: 34, scale: 300, edge: 280 },
+  { id: 'redwoodring', kind: 'hills', poly: [[-5700, -4000], [-4350, -4000], [-4350, -2850], [-5700, -2850]], y: 125, amp: 22, scale: 340, edge: 320 },
   // east: the plains out of town, then the desert
   { id: 'plains', kind: 'hills', poly: [[950, -1750], [2900, -1750], [2900, 1650], [950, 1650]], y: 22, amp: 18, scale: 800, edge: 400 },
   { id: 'desert', kind: 'mesas', poly: [[2900, -2600], [6200, -2600], [6200, 4400], [3300, 4400], [3300, 1300], [2900, 1300]], y: 86, amp: 120, terrace: 26, scale: 650, edge: 600 },
@@ -132,8 +140,9 @@ export const DISTRICTS = [
   { id: 'ridgeline', name: 'RIDGELINE', style: 'ridgeline', poly: [[1300, -3950], [4800, -3950], [4800, -2700], [1300, -2700]] },
   { id: 'kaido', name: 'KAIDO PASS', style: 'kaido', poly: [[-1400, -4300], [1300, -4300], [1300, -1750], [-1400, -1750]] },
   { id: 'crestwood', name: 'CRESTWOOD HILLS', style: 'crestwood', poly: [[-2700, -3100], [-1400, -3100], [-1400, -1750], [-2700, -1750]] },
+  // (the park before the lake: its circuit reaches up to the south shore road)
+  { id: 'ironworks', name: 'IRONWOOD PARK', style: 'ironworks', poly: [[-4400, -995], [-3050, -995], [-3050, -330], [-4400, -330]] },
   { id: 'lake', name: 'HALCYON LAKE', style: 'lake', poly: [[-4700, -2900], [-2700, -2900], [-2200, -1750], [-2200, -560], [-4700, -900]] },
-  { id: 'ironworks', name: 'IRONWOOD PARK', style: 'ironworks', poly: [[-4400, -1050], [-3050, -1050], [-3050, -330], [-4400, -330]] },
   { id: 'redwood', name: 'REDWOOD FOREST', style: 'redwood', poly: [[-6200, -5600], [-4300, -5600], [-4300, -1300], [-6200, -1300]] },
   { id: 'farmland', name: 'WEST FARMS', style: 'farmland', poly: [[-6200, -1300], [-2350, -1300], [-2350, 1650], [-6200, 1650]] },
   { id: 'wilds', name: 'THE NORTH WOODS', style: 'wilds', poly: [[-4300, -5600], [200, -5600], [200, -4300], [-1400, -4300], [-1400, -3100], [-4300, -3100]] },

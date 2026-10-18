@@ -75,7 +75,8 @@ export class WorldSim {
     while (this.physAcc >= PHYS_DT && steps < 19) {
       this.physAcc -= PHYS_DT;
       steps++;
-      if (this.frozen) continue;
+      // (with the car held still, the town still goes about its business)
+      if (this.frozen) { if (this.traffic) this.traffic.step(PHYS_DT, this); continue; }
       for (const r of this.racers) {
         const v = r.vehicle;
         const env = r._env || (r._env = {

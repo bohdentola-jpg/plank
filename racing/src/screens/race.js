@@ -5,6 +5,7 @@
 // Dev: ?screen=race&track=downtown&car=lancet&opponents=kaze,suprano,m3
 import { registerScreen, game, go } from '../main.js';
 import { RaceSession } from '../race/session.js';
+import { WorldRaceSession } from '../world/racesession.js';
 import { HUD } from '../race/hud.js';
 import { drawReplayOSD } from '../race/replayOsd.js';
 import { TRACK_BY_ID, TRACKS } from '../track/tracks.js';
@@ -128,7 +129,9 @@ registerScreen('race', () => {
       const def = p.trackDef || TRACK_BY_ID[p.track] || TRACKS[0];
       const spec = p.spec || CAR_BY_ID[p.car] || CAR_BY_ID.lancet;
       if (typeof p.opponents === 'string') p.opponents = p.opponents.split(',').filter(Boolean);
-      session = new RaceSession({
+      // (every track is a place in the world now; a definition without a course races the old way)
+      const Session = def.world ? WorldRaceSession : RaceSession;
+      session = new Session({
         track: def, type: p.type || def.type, laps: p.laps ? Number(p.laps) : def.laps,
         player: { spec, look: p.look || {}, upgrades: p.upgrades || {}, name: p.playerName || 'YOU' },
         opponents: ['timeattack', 'drift'].includes(p.type || def.type) ? [] : buildOpponents(p, spec),

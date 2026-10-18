@@ -122,15 +122,15 @@ function wall(acc, r, idxs, lat, dy0, dy1, facing, vLen = 4) {
  * use, which is slow): done while loading so driving into a new kind of
  * road never stalls a frame.
  */
-export function* warmRoads(net) {
+export function* warmRoads(net, wet = false) {
   const types = new Map();
   for (const r of net.roads) types.set(r.rt.id, r.rt);
   for (const rt of types.values()) {
-    K.roadMat(rt, false);
+    K.roadMat(rt, wet);
     if (rt.shoulder > 0) { if (rt.shoulderSurface === 'curb') kerbMat(); else if (rt.shoulderSurface !== 'road') K.shoulderMat(rt.shoulderSurface); }
     yield;
   }
-  K.junctionMat(false); K.cobbleJunctionMat(); K.sidewalkMat(); K.curbMat(); K.medianMat(); K.shoulderMat('gravel');
+  K.junctionMat(wet); K.cobbleJunctionMat(); K.sidewalkMat(); K.curbMat(); K.medianMat(); K.shoulderMat('gravel');
   yield;
   K.concreteMat(); K.darkConcreteMat(); K.steelMat(); K.poleMat(); K.stoneMat(); K.woodMat(); K.haloMat(); K.terrainMat();
   paintMat();
@@ -338,6 +338,17 @@ function bridgeDeck(batch, r, idxs, reach, res) {
 }
 
 /** Where a road's bridge/viaduct piers stand (cached): every ~34 m off the ground. */
+const _sb = [];
+/** Is (x, z) clear of every road at grade under a deck at `top` (a pier may stand there)? */
+function clearBelow(r, x, z, top) {
+  if (!r.net) return true;
+  for (const c of r.net.surfaces(x, z, _sb)) {
+    if (c.road === r || c.h > top - 3) continue;
+    if (c.zone === 'road' || c.zone === 'shoulder') return false;
+  }
+  return true;
+}
+
 export function roadPiers(r) {
   if (r._piers) return r._piers;
   const out = [];
@@ -350,7 +361,9 @@ export function roadPiers(r) {
     const ground = natural(r.X[i], r.Z[i]);
     if (top - ground < 1.5) continue;
     const offs = r.rt.hw > 7 ? [-r.rt.hw * 0.55, r.rt.hw * 0.55] : [0];
-    const cols = offs.map((o) => ({ x: r.X[i] + r.LX[i] * o, z: r.Z[i] + r.LZ[i] * o }));
+    // never a column standing in a road below (a median will do)
+    const cols = offs.map((o) => ({ x: r.X[i] + r.LX[i] * o, z: r.Z[i] + r.LZ[i] * o })).filter((c) => clearBelow(r, c.x, c.z, top));
+    if (!cols.length) continue;
     out.push({ i, top, ground, ry: Math.atan2(r.TX[i], r.TZ[i]), cols });
   }
   r._piers = out;

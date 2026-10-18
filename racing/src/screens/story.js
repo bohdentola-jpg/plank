@@ -12,6 +12,7 @@ import { buildCarModel } from '../car/model.js';
 import { CARS, CAR_BY_ID } from '../car/cars.js';
 import { carStats } from '../car/stats.js';
 import { TRACK_BY_ID } from '../track/tracks.js';
+import { trackInfo } from './trackmap.js';
 import { story, EVENT_BY_ID, prFor } from '../story/state.js';
 import {
   CHAPTERS, EVENTS, RIVALS, PERF_PARTS, TIER_NAMES, BODY_PARTS, STARTERS, DEALER_CLASS_UNLOCK, GARAGE_SLOTS,
@@ -192,9 +193,11 @@ registerScreen('story', () => {
     story.save();
     const ev = EVENTS.find((e) => e.ch === story.s.chapter && TRACK_BY_ID[e.track]) || EVENTS[0];
     const def = TRACK_BY_ID[ev.track];
-    go('roam', {
-      track: def.reverseOf || def.id, spec: story.spec(), look: story.look(), upgrades: story.up(),
-      noRaces: true, quitLabel: 'BACK TO THE GARAGE', onExit: () => go('story', {}),
+    // out on the streets where this chapter's races are
+    const T = trackInfo(def).T, p = T.posAt(T.startS);
+    go('world', {
+      spec: story.spec(), look: story.look(), upgrades: story.up(), x: p.x, z: p.z, heading: p.heading, time: 'night',
+      noGarage: true, quitLabel: 'BACK TO THE GARAGE', onExit: () => go('story', {}),
     });
   }
 
@@ -213,8 +216,8 @@ registerScreen('story', () => {
 
   // ---------------------------------------------------------------- racing
   function lapsFor(ev, def) {
-    if (ev.type === 'knockout') return knockLaps(ev.rivals);
-    if (ev.type === 'timeattack') return def.type === 'sprint' ? 1 : 3;
+    if (ev.type === 'knockout') return knockLaps(ev.rivals, def.laps);
+    if (ev.type === 'timeattack') return def.type === 'sprint' ? 1 : def.laps || 3;
     return ev.laps || def.laps || 3;
   }
 

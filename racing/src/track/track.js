@@ -51,7 +51,10 @@ export class Track {
     this.offSurface = def.offSurface || 'grass';
     this.terrain = null;
     this.startS = def.startS ?? (this.closed ? 40 : 30);
-    this.finishS = this.closed ? this.startS : this.length - (def.finishPad ?? 60);
+    // (a drag ends its distance from the line, however long the strip runs on)
+    this.finishS = this.closed ? this.startS
+      : def.dragLength ? Math.min(this.startS + def.dragLength, this.length - 30)
+      : this.length - (def.finishPad ?? 60);
     this._buildGrid();
   }
 
