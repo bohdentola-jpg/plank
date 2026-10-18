@@ -7,7 +7,9 @@ import * as THREE from 'three';
 import { CELL, natural } from '../../terrain.js';
 import { sstep } from '../../geom.js';
 import { lampsInBox } from '../../build/roads.js';
-import { Acc } from '../../build/geo.js';
+import { Acc, Batch } from '../../build/geo.js';
+import { Scatter } from '../planner.js';
+import { Builder } from '../builder.js';
 
 const GRID = 4;   // the terrain's near grid (m)
 
@@ -350,6 +352,36 @@ export function* ownMesh(B, acc) {
   m.updateMatrix();
   B.group.add(m);
   acc.p = acc.uv = acc.c = acc.idx = null;
+}
+
+/**
+ * While the game loads (a pack's warm), run its scatter and build once on a
+ * cell of its district and throw the results away: the first cell built
+ * while driving then doesn't pay for compiling the pack's code (several
+ * times slower the first time through: a hitch). A generator (yields
+ * between steps). The cell: where the pack planned something, else the
+ * district's middle.
+ */
+export function* warmUp(B, pack, districtId) {
+  const D = B.D, d = D.byId?.get(districtId);
+  if (!d || !pack.scatter || !pack.build) return;
+  let cx = Math.floor((d.box.x0 + d.box.x1) / 2 / CELL), cz = Math.floor((d.box.z0 + d.box.z1) / 2 / CELL);
+  for (const [k, items] of D.items || []) {
+    if (!items.some((it) => it.pack === pack.id)) continue;
+    [cx, cz] = k.split(',').map(Number);
+    break;
+  }
+  yield;
+  B.terrain.grid(cx, cz, 4);
+  yield;
+  const S = new Scatter(D, d, pack, cx, cz);
+  try { pack.scatter(S); } catch { return; }
+  yield;
+  const out = { batch: new Batch(), nearBatch: new Batch(), group: new THREE.Group(), colliders: [], lamps: [], anims: [] };
+  const B2 = new Builder(D, cx, cz, pack, out);
+  const planned = (D.items?.get(`${cx},${cz}`) || []).filter((it) => it.pack === pack.id);
+  try { for (const _ of pack.build(B2, [...planned, ...S.items])) yield; } catch { /* (only warming up) */ }
+  out.group.traverse((o) => o.geometry?.dispose());
 }
 
 /**

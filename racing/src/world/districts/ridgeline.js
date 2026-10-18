@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import { litMat, plainMat, box, gable, cylinder, cone, lattice, drape } from './builder.js';
 import { shoulderMat } from '../kit.js';
 import { Acc } from '../build/geo.js';
-import { lin, mixc, mulc, frame, roadField, lampTest, levelness, useGround, cellPoints, ownAcc, ownMesh } from './peaks/util.js';
+import { lin, mixc, mulc, frame, roadField, lampTest, levelness, useGround, cellPoints, ownAcc, ownMesh, warmUp } from './peaks/util.js';
 import * as F from './peaks/flora.js';
 import { bends, poles, cuts, drapeCut, eachOwnedSample } from './peaks/roadside.js';
 import { cellUV, board } from './peaks/parts.js';
@@ -447,7 +447,7 @@ export default {
   id: 'ridgeline',
   plan,
   scatter,
-  warm(B) { mats(B); },
+  *warm(B) { mats(B); yield* warmUp(B, this, 'ridgeline'); },
   build,
 };
 

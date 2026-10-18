@@ -10,7 +10,7 @@
 import * as THREE from 'three';
 import { litMat, plainMat, box, prism, gable, cylinder, cone, drape } from './builder.js';
 import { shoulderMat } from '../kit.js';
-import { lin, mixc, mulc, frame, roadField, hash01, lampTest, levelness, useGround, cellPoints, ownAcc, ownMesh } from './peaks/util.js';
+import { lin, mixc, mulc, frame, roadField, hash01, lampTest, levelness, useGround, cellPoints, ownAcc, ownMesh, warmUp } from './peaks/util.js';
 import * as F from './peaks/flora.js';
 import { bends, poles, cuts, drapeCut } from './peaks/roadside.js';
 import { cellUV, board, curveMirror, lampPost, utilityPole, railing, bench } from './peaks/parts.js';
@@ -579,7 +579,7 @@ export default {
   id: 'kaido',
   plan,
   scatter,
-  warm(B) { mats(B); },
+  *warm(B) { mats(B); yield* warmUp(B, this, 'kaido'); },
   build,
 };
 
