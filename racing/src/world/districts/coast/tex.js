@@ -659,3 +659,194 @@ export function brickTexture() {
     return { map: toTex(c), emi: toTex(e) };
   });
 }
+
+// ------------------------------------------------------------------ houses
+
+/**
+ * Painted clapboard with sash windows (shutters either side), near white so
+ * the vertices tint it any colour: 16 m × 4 m a tile (one storey), four
+ * windows, some lit.
+ */
+export function cottageTexture() {
+  return once('cottage', () => {
+    const W = 1024, H = 256, PX = 64;
+    const c = cnv(W, H), e = cnv(W, H);
+    const x = c.getContext('2d'), ex = e.getContext('2d');
+    const rng = makeRng('coast-cottage');
+    x.fillStyle = '#f4f2ec';
+    x.fillRect(0, 0, W, H);
+    ex.fillStyle = '#000';
+    ex.fillRect(0, 0, W, H);
+    // the boards: a shadow line under each lap
+    for (let y = 10; y < H; y += 13) {
+      x.fillStyle = 'rgba(0,0,0,0.13)';
+      x.fillRect(0, y, W, 2);
+      x.fillStyle = 'rgba(255,255,255,0.35)';
+      x.fillRect(0, y + 2, W, 1);
+    }
+    // a skirting board at the floor line
+    x.fillStyle = 'rgba(0,0,0,0.12)';
+    x.fillRect(0, H - 10, W, 10);
+    const lit = [true, false, true, true];
+    for (let k = 0; k < 4; k++) {
+      const wx = k * 4 * PX + 1.45 * PX, ww = 1.1 * PX, wy = 0.75 * PX, wh = 1.55 * PX;
+      // shutters
+      x.fillStyle = 'rgba(40,60,70,0.75)';
+      x.fillRect(wx - 0.5 * PX, wy - 4, 0.42 * PX, wh + 8);
+      x.fillRect(wx + ww + 0.08 * PX, wy - 4, 0.42 * PX, wh + 8);
+      x.fillStyle = 'rgba(0,0,0,0.25)';
+      for (let s = 0; s < 6; s++) { x.fillRect(wx - 0.5 * PX + 3, wy + 6 + s * wh / 6, 0.42 * PX - 6, 2); x.fillRect(wx + ww + 0.08 * PX + 3, wy + 6 + s * wh / 6, 0.42 * PX - 6, 2); }
+      // the frame and glass
+      x.fillStyle = '#fbfaf6';
+      x.fillRect(wx - 6, wy - 6, ww + 12, wh + 12);
+      const on = lit[k];
+      x.fillStyle = on ? '#f6d698' : '#26313a';
+      x.fillRect(wx, wy, ww, wh);
+      if (on) {
+        // a curtain, the light behind it
+        x.fillStyle = 'rgba(200,120,60,0.35)';
+        x.fillRect(wx, wy, ww * 0.28, wh);
+        ex.fillStyle = '#ffc77a';
+        ex.globalAlpha = 0.75 + rng() * 0.25;
+        ex.fillRect(wx, wy, ww, wh);
+        ex.globalAlpha = 1;
+      } else {
+        x.fillStyle = 'rgba(160,190,210,0.25)';
+        x.beginPath(); x.moveTo(wx, wy + wh * 0.7); x.lineTo(wx + ww * 0.6, wy); x.lineTo(wx + ww, wy); x.lineTo(wx, wy + wh); x.fill();
+      }
+      // the sashes
+      x.fillStyle = '#fbfaf6';
+      x.fillRect(wx, wy + wh / 2 - 3, ww, 6);
+      x.fillRect(wx + ww / 2 - 2, wy, 4, wh);
+      // the sill
+      x.fillStyle = '#e8e6e0';
+      x.fillRect(wx - 10, wy + wh + 6, ww + 20, 7);
+      x.fillStyle = 'rgba(0,0,0,0.25)';
+      x.fillRect(wx - 10, wy + wh + 13, ww + 20, 3);
+    }
+    streaks(x, 0, 0, W, H, rng, 50, '70,60,50', 0.12);
+    speckle(x, 0, 0, W, H, rng, 6000, 0.06);
+    return { map: toTex(c), emi: toTex(e) };
+  });
+}
+
+/**
+ * A modern house's glass wall: floor-to-ceiling panes in thin dark frames
+ * (1.6 m modules), a slab edge at the floor, warm rooms behind some of
+ * them. 16 m × 4 m a tile.
+ */
+export function glassTexture() {
+  return once('glasshouse', () => {
+    const W = 1024, H = 256, PX = 64;
+    const c = cnv(W, H), e = cnv(W, H);
+    const x = c.getContext('2d'), ex = e.getContext('2d');
+    const rng = makeRng('coast-glass');
+    ex.fillStyle = '#000';
+    ex.fillRect(0, 0, W, H);
+    // the sky in the glass, darker low down
+    const g = x.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#6d8296');
+    g.addColorStop(1, '#2a3440');
+    x.fillStyle = g;
+    x.fillRect(0, 0, W, H);
+    const n = 10, mw = W / n;
+    for (let k = 0; k < n; k++) {
+      const x0 = k * mw;
+      const on = rng() < 0.55;
+      if (on) {
+        const t = rng();
+        x.fillStyle = t < 0.6 ? '#e8c890' : '#d8d0c0';
+        x.fillRect(x0, 0.35 * PX, mw, H - 0.6 * PX);
+        // furniture shadows
+        x.fillStyle = 'rgba(60,40,30,0.5)';
+        x.fillRect(x0 + rng() * mw * 0.5, H - 0.25 * PX - 0.8 * PX, mw * (0.3 + rng() * 0.4), 0.8 * PX);
+        ex.fillStyle = t < 0.6 ? '#ffc880' : '#fff0d8';
+        ex.globalAlpha = 0.55 + rng() * 0.45;
+        ex.fillRect(x0, 0.35 * PX, mw, H - 0.6 * PX);
+        ex.globalAlpha = 1;
+        // a lamp's pool of light
+        ex.fillStyle = 'rgba(255,220,160,0.6)';
+        ex.beginPath(); ex.arc(x0 + mw * (0.3 + rng() * 0.4), H * 0.55, 0.5 * PX, 0, Math.PI * 2); ex.fill();
+      } else {
+        // reflections
+        x.fillStyle = 'rgba(255,255,255,0.08)';
+        x.beginPath(); x.moveTo(x0, H * 0.8); x.lineTo(x0 + mw * 0.7, 0); x.lineTo(x0 + mw, 0); x.lineTo(x0 + mw * 0.2, H); x.lineTo(x0, H); x.fill();
+      }
+      // the mullion
+      x.fillStyle = '#1c1e20';
+      x.fillRect(x0, 0, 5, H);
+    }
+    // the slab edge and the ceiling line
+    x.fillStyle = '#d6d2c8';
+    x.fillRect(0, H - 0.25 * PX, W, 0.25 * PX);
+    x.fillStyle = '#1c1e20';
+    x.fillRect(0, 0.3 * PX, W, 4);
+    x.fillStyle = '#e6e2d8';
+    x.fillRect(0, 0, W, 0.3 * PX);
+    return { map: toTex(c), emi: toTex(e) };
+  });
+}
+
+/**
+ * A motel's row of rooms: a door, its number, a picture window with drawn
+ * curtains (most lit), on painted block. 16 m × 4 m a tile (four rooms).
+ */
+export function motelTexture() {
+  return once('motel', () => {
+    const W = 1024, H = 256, PX = 64;
+    const c = cnv(W, H), e = cnv(W, H);
+    const x = c.getContext('2d'), ex = e.getContext('2d');
+    const rng = makeRng('coast-motel');
+    x.fillStyle = '#f2efe8';
+    x.fillRect(0, 0, W, H);
+    ex.fillStyle = '#000';
+    ex.fillRect(0, 0, W, H);
+    // painted block courses
+    x.fillStyle = 'rgba(0,0,0,0.06)';
+    for (let y = 0; y < H; y += 13) x.fillRect(0, y, W, 1.5);
+    const curtains = ['#e89a7a', '#d8b878', '#c8a0c0', '#e8c8a0'];
+    for (let k = 0; k < 4; k++) {
+      const x0 = k * 4 * PX;
+      // the door
+      const dx = x0 + 0.5 * PX, dw = 0.95 * PX, dh = 2.15 * PX, dy = H - dh - 4;
+      x.fillStyle = ['#2a6a8a', '#c8503a', '#3a8a6a', '#d8a83a'][k];
+      x.fillRect(dx, dy, dw, dh);
+      x.fillStyle = 'rgba(0,0,0,0.2)';
+      x.fillRect(dx + 6, dy + 8, dw - 12, dh * 0.4);
+      x.fillRect(dx + 6, dy + dh * 0.52, dw - 12, dh * 0.4);
+      x.fillStyle = '#d8c060';
+      x.beginPath(); x.arc(dx + dw - 10, dy + dh * 0.5, 3, 0, Math.PI * 2); x.fill();
+      // the number plaque over it
+      x.fillStyle = '#20242a';
+      x.fillRect(dx + dw * 0.25, dy - 22, dw * 0.5, 16);
+      x.fillStyle = '#f4e8c8';
+      x.font = 'bold 13px Arial, sans-serif';
+      x.textAlign = 'center';
+      x.textBaseline = 'middle';
+      x.fillText(String(10 + k + Math.floor(rng() * 4) * 4), dx + dw / 2, dy - 14);
+      // the window: curtains drawn, lit behind
+      const wx = x0 + 1.85 * PX, ww = 1.75 * PX, wy = 0.95 * PX, wh = 1.25 * PX;
+      x.fillStyle = '#e8e4dc';
+      x.fillRect(wx - 6, wy - 6, ww + 12, wh + 12);
+      const on = rng() < 0.75;
+      const cc = curtains[k];
+      x.fillStyle = on ? cc : '#3a3236';
+      x.fillRect(wx, wy, ww, wh);
+      x.fillStyle = 'rgba(0,0,0,0.12)';
+      for (let f = 0; f < 9; f++) x.fillRect(wx + f * ww / 9, wy, 3, wh);
+      if (on) {
+        ex.fillStyle = cc;
+        ex.globalAlpha = 0.85;
+        ex.fillRect(wx, wy, ww, wh);
+        ex.globalAlpha = 1;
+      }
+      // the air conditioner under it
+      x.fillStyle = '#c8c4bc';
+      x.fillRect(wx + ww * 0.6, wy + wh + 14, 0.7 * PX, 0.4 * PX);
+      x.fillStyle = 'rgba(0,0,0,0.3)';
+      for (let f = 0; f < 5; f++) x.fillRect(wx + ww * 0.6 + 4, wy + wh + 18 + f * 4, 0.7 * PX - 8, 1.5);
+    }
+    streaks(x, 0, 0, W, H, rng, 60, '80,70,60', 0.12);
+    return { map: toTex(c), emi: toTex(e) };
+  });
+}

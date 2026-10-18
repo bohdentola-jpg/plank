@@ -47,7 +47,7 @@ const SIGNS = [
   ...SHOPS.map(([id, t], k) => ({ id, w: 300, h: 72, text: t, style: k % 2 ? 'box' : 'neon', glow: NEON[(k + 3) % NEON.length], bg: k % 2 ? PASTEL[(k + 2) % PASTEL.length] : null, fg: '#2a1a12', fgGlow: '#3a2010' })),
   ...HOTELS.map(([id, t], k) => ({ id, w: 460, h: 100, text: t, style: 'neon', glow: NEON[k % NEON.length] })),
 ];
-const atlas = () => signAtlas('pier9', SIGNS, 1024, 1024, 0.74);
+const atlas = () => signAtlas('pier9', SIGNS, 1024, 1024, 0.67);
 const UV = () => atlas().uv;
 
 function pmats(B) {

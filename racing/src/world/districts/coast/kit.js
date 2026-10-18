@@ -149,6 +149,30 @@ function beamMat() {
   return m;
 }
 
+/**
+ * Soft light that breathes (bioluminescent surf, a lantern's glow on the
+ * water): additive, night only, each patch on its own slow beat (its seed
+ * in uv.x).
+ */
+function pulseMat() {
+  const m = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uNight = U.night;
+    sh.uniforms.uTime = U.time;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying float vSeed;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSeed = uv.x;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uNight;\nuniform float uTime;\nvarying float vSeed;')
+      .replace('#include <opaque_fragment>', `float p = 0.5 + 0.5 * sin(uTime * (0.7 + vSeed * 0.9) + vSeed * 37.0);
+        outgoingLight *= uNight * (0.25 + 0.75 * p * p);
+        #include <opaque_fragment>`);
+  };
+  m.customProgramCacheKey = () => 'coast-pulse';
+  m.userData.castShadow = false;
+  return m;
+}
+
 /** The coast's shared materials (any pack: same objects). */
 export function mats(B) {
   return {
@@ -172,6 +196,7 @@ export function mats(B) {
     beam: cmat(B, 'beam', beamMat),
     flicker: cmat(B, 'flicker', flickerMat),
     chase: cmat(B, 'chase', chaseMat),
+    pulse: cmat(B, 'pulse', pulseMat),
   };
 }
 

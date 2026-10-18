@@ -27,6 +27,8 @@ const nodes = {
   p9_bk: [880, 1872], p9_cv: [2160, 1724],
   // Halcyon Point: the marina lane, the cove at the end of its trail
   pt_mr: [1478, 3034], pt_cv: [1226, 3588],
+  // Bayshore: the end of the track along the cliffs south of the bridge
+  bs_lk: [3292, 3528],
 };
 
 const roads = [
@@ -91,6 +93,9 @@ const roads = [
   { id: 'pt_marina', type: 'service', a: 'pt_n', b: 'pt_mr', name: 'MARINA WAY', district: 'point' },
   { id: 'pt_spine', type: 'gravel', a: 'pt_n', b: 'pt_lh', name: 'BATTERY RD', district: 'point', pts: [[1505, 3195, 90], [1432, 3330, 90], [1468, 3515, 90]] },
   { id: 'pt_cove', type: 'dirt', a: 'pt_w', b: 'pt_cv', name: 'COVE TRAIL', district: 'point', pts: [[1162, 3498, 40], [1196, 3566, 40]] },
+  // BAYSHORE: a dirt track off the bridge head, south along the cliff tops
+  // to Sunset Rock and its view back at the bridge
+  { id: 'bs_rock', type: 'dirt', a: 'bs_be', b: 'bs_lk', name: 'SUNSET ROCK RD', district: 'bayshore', pts: [[3130, 2950, 80], [3190, 3200, 100], [3250, 3400, 80]] },
 ];
 
 export default {
