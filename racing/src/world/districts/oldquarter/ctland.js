@@ -71,16 +71,16 @@ export function steam(S, x, y, z, n = 5, size = 1.4, rise = 2.6, seed = 0) {
   }
 }
 
-const RINGS = [[-0.08, 0.15, 1], [-0.15, 0.22, 0], [-0.42, 0.31, 0], [-0.69, 0.22, 0], [-0.76, 0.15, 1]];
+const RINGS = [[-0.1, 0.17, 1], [-0.3, 0.31, 0], [-0.56, 0.3, 0], [-0.76, 0.16, 1]];
 const RED = [1, 0.13, 0.08], GOLD = [1, 0.72, 0.22];
 
 /**
- * One paper lantern hung from (x, y, z): a lathe of seven rings (shared
- * vertices: ~45 a lantern), gold caps, a tassel. ph: its swing phase; s: size.
+ * One paper lantern hung from (x, y, z): a lathe of four rings of five
+ * (shared vertices: ~23 a lantern), gold caps, a tassel. ph: its swing phase; s: size.
  */
 export function lantern(L, x, y, z, ph, s = 1, body = RED) {
   const n0 = L.count;
-  const seg = 6;
+  const seg = 5;
   const ids = [];
   for (const [dy, r, gold] of RINGS) {
     const row = [];
@@ -424,17 +424,13 @@ export function vent(K, x, y, z, ry, rng) {
 /** Dress a road's red street lantern: a curved bracket, a pagoda cap, a gilt finial (close up). */
 export function dressLantern(K, L) {
   const N = K.near;
-  // a red base, the post carried on up to a gilt arm over the head, a green pagoda cap
+  // a red base, a gilt arm out over the head, a green pagoda cap (some fifty vertices)
   N.paint.col = [0.6, 0.06, 0.05];
-  cylinder(N.paint, L.x, L.y, L.z, 0.17, 1.0, 6, { r2: 0.1 });
+  cylinder(N.paint, L.x, L.y, L.z, 0.17, 1.0, 5, { r2: 0.1 });
   N.paint.col = [0.75, 0.55, 0.15];
-  cylinder(N.paint, L.x, L.hy - 0.45, L.z, 0.06, 0.45, 4);
   N.paint.beam(L.x, L.hy - 0.03, L.z, L.hx, L.hy - 0.03, L.hz, 0.07, 0.07);
-  cylinder(N.paint, L.hx, L.hy - 0.18, L.hz, 0.36, 0.05, 6);
   N.tile.col = GREEN_T;
-  cone(N.tile, L.hx, L.hy - 0.14, L.hz, 0.46, 0.38, 6);
-  N.paint.col = [0.85, 0.65, 0.2];
-  cylinder(N.paint, L.hx, L.hy + 0.2, L.hz, 0.04, 0.22, 4);
+  cone(N.tile, L.hx, L.hy - 0.16, L.hz, 0.46, 0.5, 5);
 }
 
 /** A teahouse pavilion: two storeys of lattice behind red columns, a turned-up roof; a moon gate. */
@@ -498,7 +494,7 @@ export function teahouse(K, it) {
     K.paint.col = [0.5, 0.49, 0.46];
     cone(K.paint, p[0], p[1] + 1.36, p[2], 0.48, 0.4, 4);
   }
-  for (const [lx, lz] of [[-3, 3], [3, 3], [-6, 8], [6, 7]]) {
+  for (const [lx, lz] of [[-3, 3], [3, 3], [9.5, 0.5], [12, 4.5]]) {
     const p = F.P(lx, 0, lz);
     K.near.paint.col = [0.3, 0.12, 0.06];
     cylinder(K.near.paint, p[0], p[1], p[2], 0.6, 0.75, 8, { top: true });

@@ -7,7 +7,7 @@
 import { box, prism, cylinder, cone, sphere } from '../builder.js';
 import { natural } from '../../terrain.js';
 import { ROAD } from '../occ.js';
-import { bankPt, WALL_D, TOP_W, bridgeLayout, archY, riverPt } from './river.js';
+import { bankPt, WALL_D, TOP_W, BENCH, bridgeLayout, archY, riverPt } from './river.js';
 import { otwUV, otsUV, otsgUV } from './ottex.js';
 import { metalUV } from './tex.js';
 import { lantern, catenary, cross, wire } from './geo.js';
@@ -86,14 +86,14 @@ export function quay(K, B, it) {
     if (p.road || q.road) continue;
     // the paved quay top, its edge on the land side
     K.pave.col = [1, 1, 1];
-    const pv0 = p.stepGap || q.stepGap ? 0.45 : 1.6;
+    const pv0 = p.stepGap || q.stepGap ? 0.45 : BENCH;
     quadFacing(K.pave, at(p, pv0, p.top + 0.02), at(q, pv0, q.top + 0.02), at(q, TOP_W, q.top + 0.02), at(p, TOP_W, p.top + 0.02), [0, 1, 0], [u0 * 2.4 / 4, 0, u1 * 2.4 / 4, TOP_W / 4]);
     quadFacing(S, at(p, TOP_W, Math.min(p.yg, p.top) - 0.6), at(q, TOP_W, Math.min(q.yg, q.top) - 0.6), at(q, TOP_W, q.top + 0.02), at(p, TOP_W, p.top + 0.02), toLand(p), [u0, 0, u1, 0.5]);
     if (p.stepGap || q.stepGap) continue;
     // the parapet: a stone bench along its land side, the wall, a coping on top
     S.col = [0.84, 0.8, 0.72];
-    quadFacing(S, at(p, 1.6, p.top), at(q, 1.6, q.top), at(q, 1.6, q.top + 0.45), at(p, 1.6, p.top + 0.45), toLand(p), [u0, 0, u1, 0.2]);
-    quadFacing(S, at(p, 0.58, p.top + 0.45), at(q, 0.58, q.top + 0.45), at(q, 1.6, q.top + 0.45), at(p, 1.6, p.top + 0.45), [0, 1, 0], [u0, 0, u1, 0.4]);
+    quadFacing(S, at(p, BENCH, p.top - 0.3), at(q, BENCH, q.top - 0.3), at(q, BENCH, q.top + 0.45), at(p, BENCH, p.top + 0.45), toLand(p), [u0, 0, u1, 0.3]);
+    quadFacing(S, at(p, 0.58, p.top + 0.45), at(q, 0.58, q.top + 0.45), at(q, BENCH, q.top + 0.45), at(p, BENCH, p.top + 0.45), [0, 1, 0], [u0, 0, u1, BENCH / 2.4]);
     quadFacing(S, at(p, 0.58, p.top + 0.45), at(q, 0.58, q.top + 0.45), at(q, 0.58, q.top + 0.85), at(p, 0.58, p.top + 0.85), toLand(p), [u0, 0, u1, 0.17]);
     S.col = [0.92, 0.89, 0.82];
     quadFacing(S, at(p, -0.1, p.top + 0.85), at(q, -0.1, q.top + 0.85), at(q, 0.58, q.top + 0.85), at(p, 0.58, p.top + 0.85), [0, 1, 0], [u0, 0, u1, 0.3]);
@@ -136,7 +136,7 @@ export function quay(K, B, it) {
   for (const s of it.lamps || []) {
     const p = bankPt(s, side, WALL_D + 2.3);
     const top = pts.reduce((a, q) => (Math.abs(q.s - s) < Math.abs(a.s - s) ? q : a), pts[0]).top;
-    lampPost(K, p.bx, top, p.bz, 'double', Math.atan2(-p.tz, p.tx));
+    lampPost(K, p.bx, top + 0.45, p.bz, 'double', Math.atan2(-p.tz, p.tx));
   }
 }
 

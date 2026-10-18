@@ -5,12 +5,12 @@
 // with their posters, cast-iron bollards, the bouquinistes' boxes on the
 // parapets — and the cast-iron dress of the gas lamps along the streets.
 import * as THREE from 'three';
-import { box, cylinder, cone, sphere, gable } from '../builder.js';
+import { box, cylinder, sphere, gable } from '../builder.js';
 import { Acc } from '../../build/geo.js';
 import { quadFacing } from './riverbuild.js';
 import { otwUV, otsgUV } from './ottex.js';
 import { metalUV } from './tex.js';
-import { frame, lantern } from './geo.js';
+import { frame } from './geo.js';
 
 const IRON = [0.08, 0.1, 0.09];
 
@@ -377,25 +377,26 @@ export function bookBox(K, x, y, z, ry, open) {
 }
 
 /**
- * A road's gas lamp, dressed: the fluted cast-iron base, a ladder bar, the
- * lantern's cage round its glass and a cap with a finial (close up only).
+ * A road's gas lamp, dressed: the fluted cast-iron base, a ladder bar, a
+ * flared seat under its glass and a cap with a finial (close up only).
  */
 export function gasLamp(K, L) {
   const N = K.near.paint;
   N.col = IRON;
   const x = L.x, y = L.y, z = L.z, hy = L.hy;
-  // (a hundred-odd of these a cell: kept to some eighty vertices each)
-  cylinder(N, x, y, z, 0.2, 1.2, 6, { r2: 0.1 });
-  const a = L.ry || 0, ca = Math.cos(a), sa = Math.sin(a);
-  N.beam(x - ca * 0.42, hy - 1.55, z + sa * 0.42, x + ca * 0.42, hy - 1.55, z - sa * 0.42, 0.05, 0.05);
-  cylinder(N, x, hy - 0.95, z, 0.1, 0.2, 4, { r2: 0.27 });
-  // the cap: a pyramid square to the glass, a finial
-  const r = 0.34, y0 = hy - 0.2, y1 = hy + 0.2;
+  // (a hundred-odd of these a cell: kept to some forty vertices each)
+  cylinder(N, x, y, z, 0.2, 1.2, 5, { r2: 0.1 });
+  // the cap: a pyramid square to the glass, drawn up to a finial
+  const r = 0.34, y0 = hy - 0.2, y1 = hy + 0.45;
   for (const [ax, az, bx, bz] of [[-1, 1, 1, 1], [1, 1, 1, -1], [1, -1, -1, -1], [-1, -1, -1, 1]]) {
     const i0 = N.v(x + ax * r, y0, z + az * r), i1 = N.v(x + bx * r, y0, z + bz * r), i2 = N.v(x, y1, z);
     N.tri(i0, i1, i2);
   }
-  cylinder(N, x, y1 - 0.02, z, 0.03, 0.24, 3);
+  // the seat under the glass
+  const q = 0.24, ys = hy - 0.78;
+  for (const [ax, az, bx, bz] of [[-1, 1, 1, 1], [1, 1, 1, -1], [1, -1, -1, -1], [-1, -1, -1, 1]]) {
+    const i0 = N.v(x + bx * q, ys, z + bz * q), i1 = N.v(x + ax * q, ys, z + az * q), i2 = N.v(x, ys - 0.22, z);
+    N.tri(i0, i1, i2);
+  }
 }
 
-export { lantern };

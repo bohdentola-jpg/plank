@@ -8,7 +8,7 @@
 import { makeRng } from '../../../core/util.js';
 import { box, cylinder, cone, sphere } from '../builder.js';
 import { edgeFace, fquad, fwall, fbox, flat, cross } from './geo.js';
-import { band } from './othouse.js';
+import { bandFU } from './othouse.js';
 import { ctwUV, ctShopUV, ctsVUV, ctsHUV, CTSHOP } from './cttex.js';
 import { metalUV } from './tex.js';
 
@@ -54,9 +54,9 @@ function streetFace(K, it, f, top, rng, k) {
   const P = K.paint;
   // over the shops: a fascia; at the top: a bracketed cornice (tenements) or an eave (shophouses)
   P.col = it.trim;
-  band(P, f, -0.05, len + 0.05, it.gy + it.gf - 0.35, 0.4, 0, 0.18, 2);
+  bandFU(P, f, -0.05, len + 0.05, it.gy + it.gf - 0.35, 0.4, 0, 0.18, 2);
   if (it.kind === 'ten' || it.kind === 'mod') {
-    band(P, f, -0.25, len + 0.25, top + 0.2, 0.7, 0, 0.6, 2);
+    bandFU(P, f, -0.25, len + 0.25, top + 0.2, 0.7, 0, 0.6, 2);
     // the brackets under it, as a dark dentil strip
     P.col = [it.trim[0] * 0.5, it.trim[1] * 0.5, it.trim[2] * 0.5];
     fquad(P, f, -0.2, len + 0.2, top - 0.15, top + 0.2, 0.42, [0, 0, len / 0.6, 1]);
@@ -71,7 +71,7 @@ function streetFace(K, it, f, top, rng, k) {
       for (let q = 0; q < nseg; q++) fquad(K.win, f, q * sw + 0.08, (q + 1) * sw - 0.08, yb + 0.7, yb + 0.7 + it.fh * 0.62, 0.04, ctwUV(winTile(rng, it.lit, 'mod')));
     }
   } else {
-    const { nb, bw } = bays(len, it.kind === 'shop' ? 2.6 : 2.2);
+    const { nb, bw } = bays(len, it.kind === 'shop' ? 2.6 : 2.45);
     for (let fl = 1; fl <= it.nf; fl++) {
       const yb = it.gy + it.gf + (fl - 1) * it.fh;
       K.win.col = it.kind === 'shop' ? it.trim : [1, 1, 1];
@@ -83,7 +83,7 @@ function streetFace(K, it, f, top, rng, k) {
           fquad(K.win, f, a - 0.6, a + 0.6, yb + 0.15, yb + 2.55, 0.04, ctwUV(lit ? ['d_lit', 'd_red', 'd_green'][Math.floor(rng() * 3)] : 'd_dark'));
         }
         P.col = [0.82, 0.8, 0.74];
-        band(P, f, 0.1, len - 0.1, yb - 0.05, 0.16, 0, 1.1, 2);
+        bandFU(P, f, 0.1, len - 0.1, yb - 0.05, 0.16, 0, 1.1, 2);
         K.metal.col = it.rail;
         fquad(K.metal, f, 0.1, len - 0.1, yb + 0.11, yb + 1.15, 1.08, metalUV(1, len, 1.6));
         if (fl === it.nf || rng() < 0.4) pent(K, f, 0, len, yb + it.fh - 0.15, 1.3, it.tileCol);
@@ -134,7 +134,7 @@ function streetFace(K, it, f, top, rng, k) {
 /** A tiled pent roof along a face: out `d` and down, its ends turned up (green glaze or red). */
 export function pent(K, f, a0, a1, y, d, col) {
   const T = K.tile, P = K.paint;
-  const n = 4, drop = d * 0.5;
+  const n = 2, drop = d * 0.5;
   for (let q = 0; q < n; q++) {
     const s0 = a0 + (a1 - a0) * q / n, s1 = a0 + (a1 - a0) * (q + 1) / n;
     const lift = (s) => { const t = Math.abs((s - a0) / (a1 - a0) * 2 - 1); return Math.pow(t, 4) * 0.45; };
@@ -149,7 +149,7 @@ export function pent(K, f, a0, a1, y, d, col) {
   }
   // a ridge tile along the wall
   T.col = [col[0] * 0.8, col[1] * 0.8, col[2] * 0.8];
-  fbox(T, f, (a0 + a1) / 2, y - 0.05, 0, a1 - a0 + 0.2, 0.2, 0.25, { u: 2 });
+  fquad(T, f, a0 - 0.1, a1 + 0.1, y - 0.05, y + 0.15, 0.25, [0, 0, (a1 - a0) / 2, 0.1]);
 }
 
 /** A neon tube round a rectangle on a face. */
@@ -187,8 +187,8 @@ function vSign(K, f, s) {
     q(out0 - t, out0 + t, s.y, s.y + s.h);
   }
   K.paint.col = [0.12, 0.12, 0.13];
-  const pa = f.P(s.a, s.y + s.h - 0.3, 0), pb = f.P(s.a, s.y + s.h - 0.3, out0 + 0.1);
-  K.paint.beam(pa[0], pa[1], pa[2], pb[0], pb[1], pb[2], 0.08, 0.08);
+  K.paint.quadP(f.P(s.a, s.y + s.h - 0.34, out0 + 0.1), f.P(s.a, s.y + s.h - 0.34, 0), f.P(s.a, s.y + s.h - 0.26, 0), f.P(s.a, s.y + s.h - 0.26, out0 + 0.1));
+  K.paint.quadP(f.P(s.a, s.y + s.h - 0.34, 0), f.P(s.a, s.y + s.h - 0.34, out0 + 0.1), f.P(s.a, s.y + s.h - 0.26, out0 + 0.1), f.P(s.a, s.y + s.h - 0.26, 0));
   // the side edge strips (the box's thickness), dark
   K.paint.col = [0.1, 0.1, 0.1];
   K.paint.quadP(P(out1, s.y, -1), P(out1, s.y, 1), P(out1, s.y + s.h, 1), P(out1, s.y + s.h, -1));
@@ -196,7 +196,8 @@ function vSign(K, f, s) {
 
 /** A fire escape: a landing at each floor over two bays, stairs between them, a drop ladder. */
 function fireEscape(K, f, it, rng) {
-  const N = K.near, M = K.metal;
+  // (close up only: past a few hundred metres it is a hatching nobody sees)
+  const N = K.near, M = K.near.metal;
   const w = Math.min(f.len - 0.6, 4.6), a0 = it.fireA ?? Math.max(0.3, (f.len - w) / 2), a1 = a0 + w;
   const dep = 1.25;
   M.col = [0.16, 0.16, 0.17];
@@ -214,8 +215,6 @@ function fireEscape(K, f, it, rng) {
       const o0 = 0.15, o1 = 0.85;
       const A = f.P(s0, y, o0), B = f.P(s0, y, o1), C = f.P(s1, yn, o1), D = f.P(s1, yn, o0);
       M.quadP(A, B, C, D, metalUV(2, 0.7, 0.7));
-      // a rail along its outer side
-      M.quadP(f.P(s0, y, o1), f.P(s1, yn, o1), f.P(s1, yn + 0.9, o1), f.P(s0, y + 0.9, o1), metalUV(1, Math.abs(s1 - s0), 1.6));
     }
   }
   // the drop ladder under the lowest landing
@@ -276,7 +275,9 @@ function fruitStand(K, f, a0, a1, y, rng) {
 }
 
 function backFace(K, it, f, top, rng, full) {
-  const { nb, bw } = bays(f.len, full ? 2.4 : 3.2);
+  // (a back on the block's interior is seen by nobody: only a side on a street or alley is dressed)
+  if (!full) return;
+  const { nb, bw } = bays(f.len, 2.6);
   const Wn = full ? K.win : K.near.win;
   Wn.col = [1, 1, 1];
   for (let fl = 1; fl <= it.nf; fl++) {
@@ -367,10 +368,10 @@ export function hipUp(T, P, x, y, z, w, d, rise, ry, col) {
     }
   };
   P.col = [0.5, 0.08, 0.06];
-  slope([-hw, hd], [hw, hd], [-r, 0], [r, 0]);
-  slope([hw, -hd], [-hw, -hd], [r, 0], [-r, 0]);
-  slope([hw, hd], [hw, -hd], [r, 0], [r, 0], 2);
-  slope([-hw, -hd], [-hw, hd], [-r, 0], [-r, 0], 2);
+  slope([-hw, hd], [hw, hd], [-r, 0], [r, 0], 2);
+  slope([hw, -hd], [-hw, -hd], [r, 0], [-r, 0], 2);
+  slope([hw, hd], [hw, -hd], [r, 0], [r, 0], 1);
+  slope([-hw, -hd], [-hw, hd], [-r, 0], [-r, 0], 1);
   // the ridge and its end flourishes
   T.col = [col[0] * 0.75, col[1] * 0.75, col[2] * 0.75];
   const m = W(0, 0, rise);
@@ -386,11 +387,8 @@ export function tank(K, x, y, z) {
   const P = K.paint;
   P.col = [0.2, 0.2, 0.21];
   box(P, x, y, z, 2.4, 2.2, 2.4, 0, { u: 1, top: false, faces: 'fb' });
-  box(P, x, y, z, 2.4, 2.2, 2.4, 0, { u: 1, top: false, faces: 'lr' });
   P.col = [0.45, 0.33, 0.24];
-  cylinder(P, x, y + 2.2, z, 1.7, 3.2, 8, { u: 0.5 });
-  P.col = [0.18, 0.18, 0.18];
-  cylinder(P, x, y + 3.6, z, 1.73, 0.1, 8);
+  cylinder(P, x, y + 2.2, z, 1.7, 3.2, 6, { u: 0.5 });
   P.col = [0.3, 0.26, 0.22];
-  cone(P, x, y + 5.4, z, 1.85, 1.0, 8);
+  cone(P, x, y + 5.4, z, 1.85, 1.0, 6);
 }

@@ -3,8 +3,8 @@
 // at their nodes (by id) or cross them (cross: true).
 //
 //   QUAI DU PETIT PORT: off the west quai where Rue 5 stops short of the
-//     river, a cobbled lane down along the water to the boatmen's landing
-//     under the Grand Bridge's first arch (a dead end: the café barge).
+//     river, a cobbled lane down along the water, below the quai, to the
+//     boatmen's landing against the Grand Bridge (a dead end: the café barge).
 //   TOWPATH and MILL BRIDGE: the back way out of town along the east bank,
 //     up the old towpath past the weir to the mill, over the mill's narrow
 //     bridge to River Road on the far bank.

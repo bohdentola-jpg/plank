@@ -189,6 +189,7 @@ function plan(P) {
   planPlaces(P);
   // corner blocks (chamfered on the bigger streets, now and then a turret)
   const big = (r) => r.rt.id !== 'cobble';
+  const MK = blockRect(PLACES.market);
   for (const C of corners(P, { size: [11, 15], water: true, chamfer: (Q) => (Q.rng() < 0.45 ? 2.6 + Q.rng() * 1.4 : 0) })) {
     const ch = C.chamfer;
     const edges = edgeKinds(P, C.poly, ch > 0 ? ch * Math.SQRT2 : 0);
@@ -200,19 +201,22 @@ function plan(P) {
       if (it.roof === 'pyr') it.turret = true;
       it.dome = P.rng() < 0.5 ? 'copper' : 'slate';
       it.shops = null;
+      // the corners round the market square carry its enamelled name
+      it.plate = Math.hypot(C.x - MK.x, C.z - MK.z) < 150;
     }
   }
   // houses wall to wall along every street
   for (const r of P.roads()) {
     if (RURAL.has(r.rt.id) || r.spec.id.startsWith('otx_')) continue;
-    const grand = r.rt.id === 'street' || r.rt.id === 'avenue' || r.rt.id === 'boulevard' || /QUAI/.test(r.name || '');
+    const quai = /QUAI/.test(r.name || '');
+    const grand = r.rt.id === 'street' || r.rt.id === 'avenue' || r.rt.id === 'boulevard' || quai;
     for (const sd of [1, -1]) {
       for (const L of frontage(P, r, sd, { width: grand ? [9, 15] : [6.5, 12.5], depth: grand ? [13, 17] : [10, 15], water: true })) {
         const kind = character(P, L, grand ? 'grand' : '');
         const nu = Math.max(1, Math.round(L.w / 4.8));
         const shops = [];
         for (let u = 0; u < nu; u++) shops.push(P.rng() < (grand ? 0.85 : 0.6) ? pickShop(P, grand ? 1.6 : 1) : -1);
-        makeHouse(P, L, null, null, kind, { shops, shopK: 0 });
+        makeHouse(P, L, null, null, kind, { shops, shopK: 0, hotel: quai && kind === 'haus' && P.rng() < 0.12 });
       }
     }
   }
@@ -249,10 +253,10 @@ function planPlaces(P) {
     far(64, 0, 12, 44, 33); far(77, 0, 14, 24, 33); far(64, 0, 12.4, 12.4, 38);
     far(64, 0, 10.4, 10.4, 64, 38, 'cone');
     // floodlights: the west front, the flanks, the transept ends, the apse, the spire
-    for (const lz of [-10, 0, 10]) { const [lx2, lz2] = W(-7, lz); P.lamp({ x: lx2, z: lz2, y: g, hx: lx2, hz: lz2, hy: g + 1.2, color: '#ffcf9a', radius: 30, intensity: 1.25, halo: 0 }); }
+    for (const lz of [-10, 0, 10]) { const [lx2, lz2] = W(-7, lz); P.lamp({ x: lx2, z: lz2, y: g, hx: lx2, hz: lz2, hy: g + 1.2, color: '#ffcf9a', radius: 26, intensity: 0.62, halo: 0 }); }
     for (const [lx, lz, r] of [[30, 20, 24], [30, -20, 24], [64, 29, 24], [64, -29, 24], [100, 0, 22], [64, 0, 12]]) {
       const [px, pz] = W(lx, lz);
-      P.lamp({ x: px, z: pz, y: g, hx: px, hz: pz, hy: lx === 64 && lz === 0 ? g + 27 : g + 1.2, color: '#ffcf9a', radius: r, intensity: 1.1, halo: 0 });
+      P.lamp({ x: px, z: pz, y: g, hx: px, hz: pz, hy: lx === 64 && lz === 0 ? g + 27 : g + 1.2, color: '#ffcf9a', radius: r, intensity: 0.62, halo: 0 });
     }
     P.landmark({ id: 'cathedral', name: "ST. CECILIA'S", x: W(46, 0)[0], z: W(46, 0)[1], r: 70, kind: 'cathedral' });
   }
@@ -299,7 +303,7 @@ function planPlaces(P) {
     P.far({ shape: 'cone', x: tx, z: tz, y: g + 49, w: 5, d: 5, r: 2.6, h: 9, color: '#506a6c', lit: 0 });
     for (const [lx, lz] of [[-9, -9], [9, -9], [9, 9], [-9, 9]]) {
       const [px, pz] = [tx + lx * CR + lz * SR, tz - lx * SR + lz * CR];
-      P.lamp({ x: px, z: pz, y: g, hx: px, hz: pz, hy: g + 1, color: '#ffd0a0', radius: 16, intensity: 1.1, halo: 0 });
+      P.lamp({ x: px, z: pz, y: g, hx: px, hz: pz, hy: g + 1, color: '#ffd0a0', radius: 14, intensity: 0.55, halo: 0 });
     }
     P.landmark({ id: 'clocktower', name: 'THE CLOCK TOWER', x: tx, z: tz, r: 50, kind: 'tower' });
     P.landmark({ id: 'market', name: "PLACE DE L'HORLOGE", x: R.x, z: R.z, r: 60, kind: 'square' });
@@ -354,6 +358,7 @@ function planPlaces(P) {
     for (const [du, dv] of [[-12, -12], [12, -12], [-12, 12], [12, 12]]) { const [lx, lz] = at(um + du, vm + dv); it.lamps.push([lx, lz]); lamp(P, lx, lz, g, 4.2, { radius: 12 }); }
     for (const [du, dv, r] of [[-9, -6, 0], [9, -6, 0], [-9, 6, Math.PI], [9, 6, Math.PI]]) { const [px, pz] = at(um + du, vm + dv); it.benches.push([px, pz, RY + r]); }
     P.add(it);
+    P.landmark({ id: 'bastion', name: 'JARDIN DU BASTION', x: R.x, z: R.z, r: 50, kind: 'park' });
   }
 }
 
@@ -501,12 +506,9 @@ function planPort(P, RV) {
     if (gangY !== null) q.gaps.push(sg - 1, sg + 1);
   }
   P.add({ type: 'boat', kind: 'cafe', len: L, x: m.x, z: m.z, y: m.y, ry, seed: 1789, lit: 1, wallSide: gangY !== null ? wallSide : 0, gap: WALL_D - dc - beam / 2, gangY });
-  for (const ds of [-5, 5]) {
-    const p = mooring(PORT.barge + ds, PORT.side, WALL_D - 1.6);
-    P.lamp({ x: p.x, z: p.z, y: m.y + 1.2, hx: p.x, hz: p.z, hy: m.y + 3.6, color: '#ffbe78', radius: 15, intensity: 1.15, halo: 0 });
-  }
+  // (its windows light it; a lantern at the bow's mast top shows from the bridge)
   const bow = mooring(PORT.barge - L / 2 + 1.8, PORT.side, dc);
-  P.lamp({ x: bow.x, z: bow.z, y: m.y + 1.2, hx: bow.x, hz: bow.z, hy: m.y + 6.0, color: '#ffd29a', radius: 10, intensity: 0.9, halo: 1.8 });
+  P.lamp({ x: bow.x, z: bow.z, y: m.y + 1.2, hx: bow.x, hz: bow.z, hy: m.y + 6.0, color: '#ffd29a', radius: 8, intensity: 0.45, halo: 1.4 });
   P.landmark({ id: 'petitport', name: 'LE PETIT PORT', x: m.x, z: m.z, r: 35, kind: 'cafe', hidden: true });
 }
 
@@ -612,7 +614,7 @@ function* build(B, items) {
     } else if (it.type === 'tree') {
       sceneryTree(K, it);
     }
-    if (performance.now() - t0 > 2.5) { yield; t0 = performance.now(); }
+    if (performance.now() - t0 > 1.5) { yield; t0 = performance.now(); }
   }
   yield;
   dressGasLamps(B, K);
@@ -644,11 +646,11 @@ function sceneryTree(K, it) {
     K.leaf.col = [0.26 + rng() * 0.05, 0.4 + rng() * 0.06, 0.18];
     sphere(K.leaf, it.x, it.y + 9 * it.s, it.z, 1.7 * it.s, 6, { sy: 3.4 });
   } else if (it.kind === 'fruit') {
-    broadTree(K.paint, K.leaf, it.x, it.y, it.z, it.s * 0.75, rng, [0.36, 0.48, 0.2], { bark: [0.4, 0.32, 0.24], trunk: 1.8, lumps: 2, crown: 0.9 });
+    broadTree(K.paint, K.leaf, it.x, it.y, it.z, it.s * 0.75, rng, [0.36, 0.48, 0.2], { bark: [0.4, 0.32, 0.24], trunk: 1.8, lumps: 1, crown: 1.1 });
   } else if (it.kind === 'oak') {
-    broadTree(K.paint, K.leaf, it.x, it.y, it.z, it.s * 1.3, rng, [0.22, 0.34, 0.15], { bark: [0.36, 0.32, 0.26], trunk: 3.0, lumps: 3, crown: 1.1 });
+    broadTree(K.paint, K.leaf, it.x, it.y, it.z, it.s * 1.3, rng, [0.22, 0.34, 0.15], { bark: [0.36, 0.32, 0.26], trunk: 3.0, lumps: 2, crown: 1.2 });
   } else {
-    broadTree(K.paint, K.leaf, it.x, it.y, it.z, it.s, rng, [0.3, 0.42, 0.18], { bark: [0.5, 0.46, 0.38], trunk: 3.2, lumps: 3, crown: 0.95 });
+    broadTree(K.paint, K.leaf, it.x, it.y, it.z, it.s, rng, [0.3, 0.42, 0.18], { bark: [0.5, 0.46, 0.38], trunk: 3.2, lumps: 2, crown: 1.05 });
   }
 }
 

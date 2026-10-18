@@ -73,6 +73,11 @@ export function bankPt(s, side, d) {
 export const WALL_D = HALF + 0.4;
 /** How wide the paved quay top is (from the wall back to the bank's full height). */
 export const TOP_W = 6.4;
+/**
+ * How far the stone bench along the parapet reaches back from the wall (as
+ * far as the bank still dips towards the water: the car keeps off it).
+ */
+export const BENCH = 3.6;
 
 // ------------------------------------------------------------------ bridges
 
@@ -234,7 +239,7 @@ export function planRiver(P, o = {}) {
         if (roadNear(b.bx, b.bz, 3) || q.steps.some((x) => Math.abs(x - t) < 6) || kept(side, t)) continue;
         const { top } = quayTop(t, side);
         q.lamps.push(t);
-        P.lamp({ x: b.bx, z: b.bz, y: top, hx: b.bx, hz: b.bz, hy: top + 4.5, color: '#ffcf8a', radius: 13, intensity: 0.9, halo: 2.4 });
+        P.lamp({ x: b.bx, z: b.bz, y: top + 0.45, hx: b.bx, hz: b.bz, hy: top + 4.95, color: '#ffcf8a', radius: 13, intensity: 0.9, halo: 2.4 });
       }
       for (let t = s + 4.5; t < e; t += 9) {
         const b = bankPt(t, side, WALL_D + TOP_W + 2.8);
@@ -249,8 +254,8 @@ export function planRiver(P, o = {}) {
       const flush = (t1) => {
         if (!run) return;
         // (beside a lane only the parapet itself, on the wall's own line)
-        const c = run.lane ? WALL_D + 0.22 : run.levee ? WALL_D + TOP_W / 2 : WALL_D + 0.75;
-        const hz = run.lane ? 0.34 : run.levee ? TOP_W / 2 + 0.25 : 0.85;
+        const c = run.lane ? WALL_D + 0.22 : run.levee ? WALL_D + TOP_W / 2 : WALL_D + BENCH / 2;
+        const hz = run.lane ? 0.34 : run.levee ? TOP_W / 2 + 0.25 : BENCH / 2 + 0.05;
         const a = bankPt(run.t0, side, c), b = bankPt(t1, side, c);
         const len = Math.hypot(b.bx - a.bx, b.bz - a.bz);
         if (len > 1) P.collider({ kind: 'box', x: (a.bx + b.bx) / 2, z: (a.bz + b.bz) / 2, hx: len / 2, hz, ry: Math.atan2(-(b.bz - a.bz), b.bx - a.bx), y0: run.yw - 2, y1: run.top + 1.1 });

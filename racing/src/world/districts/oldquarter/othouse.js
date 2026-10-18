@@ -10,7 +10,7 @@
 import { makeRng } from '../../../core/util.js';
 import { box, gable, hip, cylinder, sphere } from '../builder.js';
 import { edgeFace, fquad, fwall, fbox, mansard, pyramid, flat, polyOK } from './geo.js';
-import { otwUV, otsUV, OTS } from './ottex.js';
+import { otwUV, otsUV, otsgUV, OTS } from './ottex.js';
 import { metalUV } from './tex.js';
 
 // shop tiles that put out an awning and terrace tables
@@ -25,6 +25,12 @@ const isGrand = (it) => it.kind === 'haus' || it.kind === 'corner';
 export function band(acc, f, a0, a1, y, h, o, d, U = 2.4) {
   acc.quadP(f.P(a0, y, o + d), f.P(a1, y, o + d), f.P(a1, y + h, o + d), f.P(a0, y + h, o + d), [a0 / U, y / U, a1 / U, (y + h) / U]);
   acc.quadP(f.P(a0, y + h, o + d), f.P(a1, y + h, o + d), f.P(a1, y + h, o), f.P(a0, y + h, o), [a0 / U, 0, a1 / U, d / U]);
+  acc.quadP(f.P(a0, y, o), f.P(a1, y, o), f.P(a1, y, o + d), f.P(a0, y, o + d), [a0 / U, 0, a1 / U, d / U]);
+}
+
+/** A band above eye level: its front and its underside (the top is never seen from the street). */
+export function bandFU(acc, f, a0, a1, y, h, o, d, U = 2.4) {
+  acc.quadP(f.P(a0, y, o + d), f.P(a1, y, o + d), f.P(a1, y + h, o + d), f.P(a0, y + h, o + d), [a0 / U, y / U, a1 / U, (y + h) / U]);
   acc.quadP(f.P(a0, y, o), f.P(a1, y, o), f.P(a1, y, o + d), f.P(a0, y, o + d), [a0 / U, 0, a1 / U, d / U]);
 }
 
@@ -82,9 +88,9 @@ function streetFace(K, it, f, e, top, rng, k) {
   // string course over the shop floor, the cornice under the eaves
   const N = K.near;
   N.stone.col = stoneCol;
-  band(N.stone, f, -0.05, len + 0.05, it.gy + it.gf - 0.1, 0.32, 0, 0.14);
+  bandFU(N.stone, f, -0.05, len + 0.05, it.gy + it.gf - 0.1, 0.32, 0, 0.14);
   if (it.roof !== 'fgable') {
-    band(S, f, -0.2, len + 0.2, top - 0.2, 0.5, 0, 0.42);
+    bandFU(S, f, -0.2, len + 0.2, top - 0.2, 0.5, 0, 0.42);
     S.col = [stoneCol[0] * 0.8, stoneCol[1] * 0.8, stoneCol[2] * 0.8];
     fquad(S, f, 0, len, top - 0.55, top - 0.2, 0.2, [0, 0, len / 2.4, 0.15]);
   }
@@ -111,21 +117,21 @@ function streetFace(K, it, f, e, top, rng, k) {
       if (noble && it.ped) {
         // a pediment over each window of the noble floor
         N.stone.col = stoneCol;
-        band(N.stone, f, a - ww / 2 - 0.25, a + ww / 2 + 0.25, ys + wh + 0.04, 0.16, 0, 0.18);
+        bandFU(N.stone, f, a - ww / 2 - 0.25, a + ww / 2 + 0.25, ys + wh + 0.04, 0.16, 0, 0.18);
         pediment(N.stone, f, a, ys + wh + 0.2, ww + 0.5, 0.4);
       }
       if (boxes > 0 && !balcony && rng() < 0.5) {
         boxes--;
         N.paint.col = [0.16, 0.2, 0.14];
-        band(N.paint, f, a - ww / 2 - 0.05, a + ww / 2 + 0.05, ys - 0.1, 0.24, 0.02, 0.24, 1);
+        bandFU(N.paint, f, a - ww / 2 - 0.05, a + ww / 2 + 0.05, ys - 0.1, 0.24, 0.02, 0.24, 1);
         N.leaf.col = FLOWERS[Math.floor(rng() * FLOWERS.length)];
-        band(N.leaf, f, a - ww / 2, a + ww / 2, ys + 0.14, 0.2, 0.04, 0.28, 1);
+        fquad(N.leaf, f, a - ww / 2, a + ww / 2, ys + 0.12, ys + 0.36, 0.27, [0, 0, 1, 1]);
       }
     }
     if (timber) {
       const P = K.paint;
       P.col = [0.22, 0.14, 0.09];
-      band(P, f, 0, len, yb - 0.12, 0.24, 0, 0.06, 1);
+      bandFU(P, f, 0, len, yb - 0.12, 0.24, 0, 0.06, 1);
       for (let b = 0; b <= nb; b++) {
         const a = Math.min(len - 0.12, Math.max(0.12, b * bw));
         fquad(P, f, a - 0.11, a + 0.11, yb + 0.12, yb + it.fh - 0.12, 0.05, [0, 0, 0.2, 1]);
@@ -134,18 +140,22 @@ function streetFace(K, it, f, e, top, rng, k) {
         braceQ(N.paint, f, b * bw + 0.15, yb + 0.15, b * bw + bw * 0.3, yb + 0.58, 0.05);
         braceQ(N.paint, f, (b + 1) * bw - 0.15, yb + 0.15, (b + 1) * bw - bw * 0.3, yb + 0.58, 0.05);
       }
-    } else if (!balcony) {
+    } else if (!balcony && grand) {
+      // (sill bands on the stone apartment blocks only)
       N.stone.col = stoneCol;
-      band(N.stone, f, 0, len, ys - 0.14, 0.12, 0, 0.1);
-      if (noble && !it.ped) band(N.stone, f, 0, len, ys + wh + 0.05, 0.14, 0, 0.12);
+      bandFU(N.stone, f, 0, len, ys - 0.14, 0.12, 0, 0.1);
+      if (noble && !it.ped) bandFU(N.stone, f, 0, len, ys + wh + 0.05, 0.14, 0, 0.12);
     }
     if (balcony) {
       N.stone.col = stoneCol;
-      band(N.stone, f, 0.15, len - 0.15, ys - 0.2, 0.16, 0, 0.78);
+      bandFU(N.stone, f, 0.15, len - 0.15, ys - 0.2, 0.16, 0, 0.78);
       railing(N.metal, f, 0.25, len - 0.25, ys - 0.04, 0.95, 0.76);
     }
   }
   groundFloor(K, it, f, e, rng, k);
+  // an enamelled hotel board over the shops, a street plate on a corner
+  if (it.hotel && e === 's' && len > 7 && K.sign) fquad(K.sign, f, len / 2 - 1.1, len / 2 + 1.1, it.gy + it.gf + 0.02, it.gy + it.gf + 0.57, 0.18, otsgUV('hotel'));
+  if (it.plate && e === 'c' && K.sign) fquad(K.sign, f, len / 2 - 0.42, len / 2 + 0.42, it.gy + it.gf + 0.12, it.gy + it.gf + 0.54, 0.05, otsgUV('enamel'));
 }
 
 function pediment(acc, f, a, y, w, rise) {
@@ -211,13 +221,14 @@ function awning(K, f, a0, a1, y, depth, rng) {
   const striped = rng() < 0.4;
   const c2 = [0.92, 0.9, 0.84];
   const drop = depth * 0.42, val = 0.32;
-  const n = striped ? Math.max(3, Math.round((a1 - a0) / 0.6)) : 1;
+  const n = striped ? Math.max(3, Math.round((a1 - a0) / 0.75)) : 1;
   for (let q = 0; q < n; q++) {
     const s0 = a0 + (a1 - a0) * q / n, s1 = a0 + (a1 - a0) * (q + 1) / n;
     A.col = striped && q % 2 ? c2 : c1;
     A.quadP(f.P(s0, y - drop, depth), f.P(s1, y - drop, depth), f.P(s1, y, 0.05), f.P(s0, y, 0.05));
-    A.quadP(f.P(s0, y - drop - val, depth), f.P(s1, y - drop - val, depth), f.P(s1, y - drop, depth), f.P(s0, y - drop, depth));
   }
+  A.col = c1;
+  A.quadP(f.P(a0, y - drop - val, depth), f.P(a1, y - drop - val, depth), f.P(a1, y - drop, depth), f.P(a0, y - drop, depth));
   // the underside and the valance's back, in shade
   A.col = [c1[0] * 0.45, c1[1] * 0.45, c1[2] * 0.45];
   A.quadP(f.P(a1, y - drop, depth - 0.02), f.P(a0, y - drop, depth - 0.02), f.P(a0, y, 0.03), f.P(a1, y, 0.03));
@@ -237,13 +248,29 @@ const hex = (h) => [parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 1
 function bladeSign(K, f, a, y, t) {
   const N = K.near;
   N.paint.col = [0.1, 0.1, 0.1];
-  fbox(N.paint, f, a, y + 0.78, 0, 0.05, 0.05, 1.1, { u: 1 });
-  const p = f.P(a, y, 0.68);
+  N.paint.quadP(f.P(a, y + 0.76, 1.1), f.P(a, y + 0.76, 0), f.P(a, y + 0.82, 0), f.P(a, y + 0.82, 1.1));
+  N.paint.quadP(f.P(a, y + 0.76, 0), f.P(a, y + 0.76, 1.1), f.P(a, y + 0.82, 1.1), f.P(a, y + 0.82, 0));
+  if (t === 14 && K.sign) {
+    // the tobacconist's red lozenge, both faces
+    for (const sd of [1, -1]) {
+      const o0 = 0.25, o1 = 1.15;
+      const A = f.P(a + sd * 0.02, y - 0.05, sd > 0 ? o1 : o0), Bq = f.P(a + sd * 0.02, y - 0.05, sd > 0 ? o0 : o1);
+      K.sign.quadP(A, Bq, [Bq[0], y + 0.4, Bq[2]], [A[0], y + 0.4, A[2]], otsgUV('tabac'));
+    }
+    return;
+  }
+  // the board: both faces, the gilt panel on each
   N.paint.col = OTS[t] ? hex(OTS[t].frame) : [0.3, 0.1, 0.1];
-  box(N.paint, p[0], p[1], p[2], 0.06, 0.72, 0.8, f.ry, { u: 1 });
+  for (const sd of [1, -1]) {
+    // (running inward on the +a face, outward on the −a one: each faces away from the board)
+    const o0 = sd > 0 ? 1.08 : 0.28, o1 = sd > 0 ? 0.28 : 1.08;
+    N.paint.quadP(f.P(a + sd * 0.03, y, o0), f.P(a + sd * 0.03, y, o1), f.P(a + sd * 0.03, y + 0.72, o1), f.P(a + sd * 0.03, y + 0.72, o0));
+  }
   N.paint.col = [0.85, 0.68, 0.3];
-  const q = f.P(a, y + 0.22, 0.68);
-  box(N.paint, q[0], q[1], q[2], 0.08, 0.26, 0.44, f.ry, { u: 1, faces: 'lr', top: false });
+  for (const sd of [1, -1]) {
+    const o0 = sd > 0 ? 0.9 : 0.46, o1 = sd > 0 ? 0.46 : 0.9;
+    N.paint.quadP(f.P(a + sd * 0.045, y + 0.22, o0), f.P(a + sd * 0.045, y + 0.22, o1), f.P(a + sd * 0.045, y + 0.48, o1), f.P(a + sd * 0.045, y + 0.48, o0));
+  }
 }
 
 /** A side or courtyard face: windows in every other bay ('w': a side on a street gets them all). */
@@ -264,7 +291,7 @@ function sideFace(K, it, f, top, rng, full) {
   }
   if (full) {
     K.stone.col = it.baseCol || [0.92, 0.88, 0.8];
-    band(K.stone, f, -0.2, f.len + 0.2, top - 0.2, 0.5, 0, 0.42);
+    bandFU(K.stone, f, -0.2, f.len + 0.2, top - 0.2, 0.5, 0, 0.42);
   }
 }
 
@@ -325,9 +352,9 @@ function dormers(K, it, top, a, rng) {
     if (e === 'p') continue;
     const f = edgeFace(it.poly[k], it.poly[(k + 1) % n]);
     if (f.len < 2.6) continue;
-    const back = e === 'b';
-    if (back && rng() < 0.5) continue;
-    const { nb, bw } = bays(f.len, back ? 7 : 2.8);
+    // (none on the backs: the courtyards don't see them)
+    if (e === 'b') continue;
+    const { nb, bw } = bays(f.len, 3.8);
     for (let b = 0; b < nb; b++) {
       if (nb > 3 && b % 2) continue;
       dormer(K, f, (b + 0.5) * bw, top + 0.15, Math.min(1.2, bw * 0.5), 1.7, rng, it);
@@ -399,10 +426,9 @@ function chimneys(K, it, yTop, rng) {
     box(C, p[0], yb, p[2], L, yTop + 1.1 - yb, 0.9, f.ry, { u: 2 });
     const N = K.near;
     N.paint.col = [0.62, 0.36, 0.25];
-    const np = L > 1.6 ? 2 : 1;
-    for (let q = 0; q < np; q++) {
-      const pp = f.P(am - L / 2 + (q + 0.5) * L / np, yTop + 1.1, -0.45);
-      cylinder(N.paint, pp[0], pp[1], pp[2], 0.12, 0.45, 4, { r2: 0.09 });
+    if (rng() < 0.5) {
+      const pp = f.P(am, yTop + 1.1, -0.45);
+      cylinder(N.paint, pp[0], pp[1], pp[2], 0.13, 0.45, 4, { r2: 0.1 });
     }
     made++;
   }

@@ -83,7 +83,7 @@ function makeBuilding(P, L, poly, edges, kind, o = {}) {
     it.col = jit(P, brick ? pick(P, BRICK) : pick(P, PAINT));
     it.nf = 3 + Math.floor(P.rng() * 3); it.fh = 3.2; it.gf = 4.3;
     it.trim = pick(P, TRIM);
-    it.fire = !o.rear && L.w > 6.5 && P.rng() < 0.7;
+    it.fire = !o.rear && L.w > 6.5 && P.rng() < 0.4;
     it.tank = !o.rear && P.rng() < 0.16;
   } else if (kind === 'shop') {
     it.wall = 'plaster'; it.col = jit(P, pick(P, BRIGHT));
@@ -142,7 +142,7 @@ function makeBuilding(P, L, poly, edges, kind, o = {}) {
   P.far({ x: L.x, z: L.z, y: gy - 1.5, w: L.w, d: L.d, h: top + 1.5, ry: L.ry ?? 0, color: fc, lit: 0.48 });
   // the brightest signs throw their colour on the street (and show from afar)
   for (const s of it.signs) {
-    if (s.kind !== 'v' || P.rng() > 0.16) continue;
+    if (s.kind !== 'v' || P.rng() > 0.09) continue;
     const c = Math.cos(L.ry), sn = Math.sin(L.ry);
     const lx = -L.w / 2 + s.a, lz = L.d / 2 + 1.0;
     const x = L.x + lx * c + lz * sn, z = L.z - lx * sn + lz * c;
@@ -172,9 +172,9 @@ function planStrings(P) {
       const y = (a.y + b.y) / 2 + (alley ? 5.6 : 7.2) + P.rng() * 1.2;
       const sag = alley ? 0.9 : t === 'avenue' ? 2.3 : 1.6;
       list.push([a.x, y, a.z, b.x, y, b.z, sag]);
-      if (k % 2 === 0) {
+      if (k % 3 === 0) {
         const mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2;
-        P.lamp({ x: mx, z: mz, y: a.y, hx: mx, hz: mz, hy: y - sag - 0.6, color: '#ff4a32', radius: alley ? 8 : 10, intensity: 0.7, halo: 1.6 });
+        P.lamp({ x: mx, z: mz, y: a.y, hx: mx, hz: mz, hy: y - sag - 0.6, color: '#ff4a32', radius: alley ? 8 : 10, intensity: 0.65, halo: 1.0 });
       }
     }
     if (!list.length) continue;
@@ -235,7 +235,15 @@ function planSquare(P) {
   P.add(M);
   P.landmark({ id: 'lantern', name: 'LANTERN SQUARE', x: M.x, z: M.z, r: 80, kind: 'square' });
   // the east end: trees in planters, benches, by Grant Ave
-  const E = { type: 'plaza', x: SQ.x1 - 28, z: (SQ.z0 + SQ.z1) / 2, g, trees: [] };
+  const E = { type: 'plaza', x: SQ.x1 - 28, z: (SQ.z0 + SQ.z1) / 2, g, trees: [], posts: [] };
+  // lantern posts along the square's north and south sides
+  for (const z of [SQ.z0 + 4, SQ.z1 - 4]) {
+    for (let x = SQ.x1 - 30; x > SQ.x0 + 92; x -= 24) {
+      E.posts.push([x, z]);
+      P.collider({ kind: 'circle', x, z, r: 0.25, y0: g - 1, y1: g + 5 });
+      P.lamp({ x, z, y: g, hx: x, hz: z, hy: g + 4.3, color: '#ff7a50', radius: 13, intensity: 0.75, halo: 1.1 });
+    }
+  }
   for (let z = SQ.z0 + 12; z < SQ.z1 - 6; z += 18) for (const x of [SQ.x1 - 46, SQ.x1 - 14]) { E.trees.push([x, z]); P.collider({ kind: 'circle', x, z, r: 1.2, y0: g - 1, y1: g + 7 }); }
   P.add(E);
 }
@@ -246,7 +254,7 @@ function planGates(P) {
   const g = r ? r.posAt(GATE.z - 565).y : 6.1;
   P.add({ type: 'gate', x: GATE.x, z: GATE.z, g, ry: 0, half: 8.1, outer: 11.7, grand: true });
   for (const sx of [-1, 1]) for (const [cx, rr] of [[8.1, 0.65], [11.7, 0.6]]) P.collider({ kind: 'circle', x: GATE.x + sx * cx, z: GATE.z, r: rr, y0: g - 1, y1: g + 10 });
-  for (const sx of [-1, 1]) P.lamp({ x: GATE.x + sx * 6, z: GATE.z, y: g, hx: GATE.x + sx * 6, hz: GATE.z, hy: g + 6.2, color: '#ff4a2a', radius: 12, intensity: 0.9, halo: 2.2 });
+  for (const sx of [-1, 1]) P.lamp({ x: GATE.x + sx * 6, z: GATE.z, y: g, hx: GATE.x + sx * 6, hz: GATE.z, hy: g + 6.2, color: '#ff4a2a', radius: 12, intensity: 0.7, halo: 1.3 });
   P.far({ x: GATE.x, z: GATE.z, y: g + 6, w: 27, d: 2.4, h: 6, color: '#2a6a44', lit: 0 });
   P.landmark({ id: 'gate', name: 'DRAGON GATE', x: GATE.x, z: GATE.z, r: 40, kind: 'gate' });
   const w = P.net.byId.get('c_h_3_16');
@@ -258,13 +266,14 @@ function planGates(P) {
 /** The teahouse court at the end of Jade Alley (hidden), the garden on a roof by it. */
 function planTeahouse(P) {
   const g = 6.0;
-  P.add({ type: 'teahouse', x: TEA.x, z: TEA.z, g, ry: Math.PI, w: TEA.w, d: TEA.d });
+  // (ry 0: its local −z, the moon gate's side, is north, where the alley comes in)
+  P.add({ type: 'teahouse', x: TEA.x, z: TEA.z, g, ry: 0, w: TEA.w, d: TEA.d });
   // its walls (all but the moon gate) and the pavilion
   const hw = TEA.w / 2, hd = TEA.d / 2;
   for (const [cx, cz, w, d] of [[TEA.x, TEA.z + hd, TEA.w, 0.6], [TEA.x - hw, TEA.z, 0.6, TEA.d], [TEA.x + hw, TEA.z, 0.6, TEA.d], [TEA.x - hw / 2 - 1.6, TEA.z - hd, hw - 3.2, 0.6], [TEA.x + hw / 2 + 1.6, TEA.z - hd, hw - 3.2, 0.6]]) {
     P.collider({ kind: 'box', x: cx, z: cz, hx: w / 2, hz: d / 2, ry: 0, y0: g - 1, y1: g + 5 });
   }
-  P.collider({ kind: 'box', x: TEA.x, z: TEA.z - hd + 9 + 0, hx: 7.2, hz: 4.2, ry: 0, y0: g - 1, y1: g + 11 });
+  P.collider({ kind: 'box', x: TEA.x, z: TEA.z + hd - 9, hx: 7.2, hz: 4.2, ry: 0, y0: g - 1, y1: g + 11 });
   P.lamp({ x: TEA.x, z: TEA.z, y: g, hx: TEA.x, hz: TEA.z, hy: g + 3.5, color: '#ffb070', radius: 16, intensity: 1, halo: 0 });
   P.lamp({ x: TEA.x, z: TEA.z - hd - 2, y: g, hx: TEA.x, hz: TEA.z - hd - 2, hy: g + 4.5, color: '#ff5a3a', radius: 9, intensity: 0.8, halo: 1.8 });
   P.landmark({ id: 'teahouse', name: 'JADE TEAHOUSE', x: TEA.x, z: TEA.z, r: 30, kind: 'teahouse', hidden: true });
@@ -382,15 +391,32 @@ function* build(B, items) {
     } else if (it.type === 'strings') {
       // the lanterns themselves close up only (the strings' lamps light the street from afar)
       const L = { ...K, lantern: K.lanternNear };
-      for (const [ax, ay, az, bx, by, bz, sag] of it.list) lanternString(L.lantern, K.near.paint, [ax, ay, az], [bx, by, bz], sag, 2.1, ax * 0.1);
+      for (const [ax, ay, az, bx, by, bz, sag] of it.list) lanternString(L.lantern, K.near.paint, [ax, ay, az], [bx, by, bz], sag, 2.9, ax * 0.1);
     } else if (it.type === 'pave') {
+      // (a strip at a time: draping the square in one go is too long a step)
       K.pave.col = [0.78, 0.46, 0.4];
-      drape(K.pave, B, it.poly, { lift: 0.07, step: 6, uv: 3 });
+      const xs = it.poly.map((p) => p[0]), zs = it.poly.map((p) => p[1]);
+      const x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
+      const n = Math.max(1, Math.round((x1 - x0) / 40));
+      for (let q = 0; q < n; q++) {
+        const a = x0 + (x1 - x0) * q / n, b = x0 + (x1 - x0) * (q + 1) / n;
+        drape(K.pave, B, [[a, z1], [b, z1], [b, z0], [a, z0]], { lift: 0.07, step: 6, uv: 3 });
+        yield;
+      }
+      t0 = performance.now();
     } else if (it.type === 'temple') {
       temple(K, it);
     } else if (it.type === 'market') {
       market(K, it);
     } else if (it.type === 'plaza') {
+      for (const [x, z] of it.posts || []) {
+        K.paint.col = [0.62, 0.07, 0.05];
+        cylinder(K.paint, x, it.g - 0.2, z, 0.13, 4.6, 6, { r2: 0.08 });
+        K.paint.col = [0.8, 0.6, 0.18];
+        cylinder(K.paint, x, it.g + 4.2, z, 0.3, 0.06, 6, { top: true });
+        K.lantern.col = [1, 1, 1];
+        lantern(K.lantern, x, it.g + 4.15, z, x * 0.3, 1.25);
+      }
       for (const [x, z] of it.trees) {
         K.paint.col = [0.55, 0.1, 0.08];
         cylinder(K.paint, x, it.g - 0.2, z, 1.1, 0.75, 8, { top: true });
@@ -408,9 +434,10 @@ function* build(B, items) {
         else clutter(K, x, y, z, ry, rng);
       }
     }
-    if (performance.now() - t0 > 2.5) { yield; t0 = performance.now(); }
+    if (performance.now() - t0 > 1.5) { yield; t0 = performance.now(); }
   }
   // dress the road builder's red street lanterns standing in this cell
+  yield;
   dressLamps(B, K);
 }
 
