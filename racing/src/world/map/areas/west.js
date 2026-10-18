@@ -117,7 +117,7 @@ export default {
   id: 'west', nodes, roads,
   landmarks: [
     { id: 'dam', name: 'HALCYON DAM', x: -2430, z: -1050, kind: 'dam', district: 'lake' },
-    { id: 'ironworks', name: 'IRONWOOD WORKS', x: -3650, z: -720, kind: 'industry', district: 'ironworks' },
+    { id: 'ironworks', name: 'IRONWOOD WORKS', x: -3700, z: -650, kind: 'industry', district: 'ironworks' },
     { id: 'airfield', name: 'OLD AIRFIELD', x: -5200, z: 600, kind: 'airfield', district: 'farmland' },
     { id: 'drivein', name: 'STARLITE DRIVE-IN', x: -3300, z: 1450, kind: 'drivein', district: 'farmland', hidden: true },
     { id: 'winery', name: 'CRESTWOOD WINERY', x: -1620, z: -2930, kind: 'winery', district: 'crestwood' },

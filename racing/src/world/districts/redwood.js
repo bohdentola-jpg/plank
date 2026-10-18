@@ -906,7 +906,7 @@ export default {
 
   *build(B, items) {
     const M = mats(B);
-    let n = 0;
+    let t0 = performance.now();
     for (const it of items) {
       switch (it.type) {
         case 'giant': redwood(B.acc(M.bark), B.acc(M.leaf), it.x, it.y, it.z, it.h, it.r, it.t, { leaf: '#1e3a24', leaf2: '#2e5230' }); break;
@@ -922,9 +922,9 @@ export default {
         }
         case 'rock': rock(B.near(M.stone), it.x, it.y, it.z, it.s, it.t, '#7a7a6e'); break;
         case 'mist': buildMist(B, M, it); break;
-        case 'grandfather': buildGrandfather(B, M, it); yield; break;
+        case 'grandfather': buildGrandfather(B, M, it); yield; t0 = performance.now(); break;
         case 'ranger': buildRanger(B, M, it); break;
-        case 'lodge': buildLodge(B, M, it); yield; break;
+        case 'lodge': buildLodge(B, M, it); yield; t0 = performance.now(); break;
         case 'cabin': buildCabin(B, M, it); break;
         case 'curio': buildCurio(B, M, it); break;
         case 'lookout': buildLookout(B, M, it); break;
@@ -932,11 +932,11 @@ export default {
         case 'sign': buildSign(B, M, it); break;
         case 'picnic': picnicTable(B.acc(M.paint), it.x, it.y, it.z, it.ry, '#6a4a30'); break;
         case 'camper': camper(B.acc(M.paint), B.acc(M.lamp), it.x, B.groundY(it.x, it.z), it.z, it.ry, '#e8e2d0', '#2a6a4a'); break;
-        case 'pits': buildPits(B, M, it); yield; break;
+        case 'pits': buildPits(B, M, it); yield; t0 = performance.now(); break;
         case 'r-gravel': buildGravel(B, M, it); break;
         case 'r-tyres': buildTyres(B, M, it); break;
         case 'r-wall': buildWall(B, M, it, ST); break;
-        case 'stand': buildStand(B, M, { ...it, kind: 'timber' }, ST); yield; break;
+        case 'stand': yield* buildStand(B, M, { ...it, kind: 'timber' }, ST); yield; t0 = performance.now(); break;
         case 'r-mast': buildMast(B, M, { ...it, kind: 'wood' }, ST); break;
         case 'r-gantry': buildGantry(B, M, it, ST); break;
         case 'r-start': buildStartLine(B, M, it); break;
@@ -946,7 +946,8 @@ export default {
         case 'r-pole': buildPole(B, M, it); break;
         default: break;
       }
-      if (++n % 24 === 0) yield;
+      // (a step stays short: yield every few milliseconds)
+      if (performance.now() - t0 > 3) { yield; t0 = performance.now(); }
     }
   },
 };

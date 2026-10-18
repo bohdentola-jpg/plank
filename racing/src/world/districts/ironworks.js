@@ -712,12 +712,15 @@ function buildHolder(B, M, it) {
   const n = 12, R = r + 1.6;
   for (let k = 0; k < n; k++) {
     const a = (k / n) * Math.PI * 2;
-    lattice2(paint, [it.x + Math.cos(a) * R, gy - 0.5, it.z + Math.sin(a) * R], [it.x + Math.cos(a) * R, gy + h + 4, it.z + Math.sin(a) * R], 1.2, { bar: 0.1, bay: 3 });
+    lattice2(paint, [it.x + Math.cos(a) * R, gy - 0.5, it.z + Math.sin(a) * R], [it.x + Math.cos(a) * R, gy + h + 4, it.z + Math.sin(a) * R], 1.2, { bar: 0.12, bay: 4.6 });
   }
   for (const fy of [h * 0.35, h * 0.7, h + 3.6]) {
     for (let k = 0; k < n; k++) {
       const a0 = (k / n) * Math.PI * 2, a1 = ((k + 1) / n) * Math.PI * 2;
-      lattice2(paint, [it.x + Math.cos(a0) * R, gy + fy, it.z + Math.sin(a0) * R], [it.x + Math.cos(a1) * R, gy + fy, it.z + Math.sin(a1) * R], 0.8, { bar: 0.08, bay: 3 });
+      const A = [it.x + Math.cos(a0) * R, gy + fy, it.z + Math.sin(a0) * R], Bq = [it.x + Math.cos(a1) * R, gy + fy, it.z + Math.sin(a1) * R];
+      beam(paint, A, Bq, 0.35, 0.7);
+      // a diagonal brace in each bay below the top ring
+      if (fy < h) beam(paint, A, [Bq[0], gy + fy - h * 0.33, Bq[2]], 0.1, 0.1);
     }
   }
   col(plate, WHITE); col(paint, WHITE);
@@ -1014,34 +1017,34 @@ export default {
   *build(B, items) {
     const M = mats(B);
     const anims = B.out.anims;
-    let n = 0;
+    let t0 = performance.now();
     for (const it of items) {
       switch (it.type) {
         case 'r-gravel': buildGravel(B, M, it); break;
         case 'r-tyres': buildTyres(B, M, it); break;
         case 'r-wall': buildWall(B, M, it, ST); break;
-        case 'stand': buildStand(B, M, { ...it, kind: 'steel' }, ST); yield; break;
+        case 'stand': yield* buildStand(B, M, { ...it, kind: 'steel' }, ST); yield; t0 = performance.now(); break;
         case 'r-mast': buildMast(B, M, it, ST); break;
         case 'r-gantry': buildGantry(B, M, it, ST); break;
         case 'r-start': buildStartLine(B, M, it); break;
         case 'r-board': buildBoard(B, M, it); break;
         case 'r-marshal': buildMarshal(B, M, it, ST); break;
-        case 'pits': buildPits(B, M, it); yield; break;
+        case 'pits': buildPits(B, M, it); yield; t0 = performance.now(); break;
         case 'r-paddock': buildPaddock(B, M, it); break;
-        case 'furnace': buildFurnace(B, M, it); yield; break;
+        case 'furnace': buildFurnace(B, M, it); yield; t0 = performance.now(); break;
         case 'stove': buildStove(B, M, it); break;
         case 'catcher': buildCatcher(B, M, it); break;
         case 'skip': buildSkip(B, M, it); break;
         case 'pipe': buildPipe(B, M, it); break;
-        case 'gasmain': buildGasMain(B, M, it); yield; break;
-        case 'conveyor': buildConveyor(B, M, it); yield; break;
-        case 'holder': buildHolder(B, M, it); yield; break;
+        case 'gasmain': buildGasMain(B, M, it); yield; t0 = performance.now(); break;
+        case 'conveyor': buildConveyor(B, M, it); yield; t0 = performance.now(); break;
+        case 'holder': buildHolder(B, M, it); yield; t0 = performance.now(); break;
         case 'stack': buildStack(B, M, it, anims); break;
         case 'flare': buildFlare(B, M, it, anims); break;
         case 'shed': buildShed(B, M, it); break;
         case 'engine': buildEngineHouse(B, M, it); break;
         case 'heap': buildHeap(B, M, it); break;
-        case 'rails': buildRails(B, M, it); yield; break;
+        case 'rails': buildRails(B, M, it); yield; t0 = performance.now(); break;
         case 'gantrycrane': buildGantryCrane(B, M, it); break;
         case 'loco': buildLoco(B, M, it); break;
         case 'ladle': {
@@ -1053,7 +1056,7 @@ export default {
         }
         case 'tower': buildTower(B, M, it); break;
         case 'stockhouse': buildStockhouse(B, M, it); break;
-        case 'coke': buildCoke(B, M, it); yield; break;
+        case 'coke': buildCoke(B, M, it); yield; t0 = performance.now(); break;
         case 'quench': buildQuench(B, M, it); break;
         case 'r-pole': buildPole(B, M, it); break;
         case 'scrap': buildScrap(B, M, it); break;
@@ -1072,7 +1075,8 @@ export default {
         case 'drums': { const p = B.near(M.paint); drum(p, it.x, it.y - 0.1, it.z, it.t < 0.5 ? '#7a3a24' : '#3a5a7a'); drum(p, it.x + 0.7, it.y - 0.1, it.z + 0.2, '#5a4a3a'); break; }
         default: break;
       }
-      if (++n % 16 === 0) yield;
+      // (a step stays short: yield every few milliseconds)
+      if (performance.now() - t0 > 3) { yield; t0 = performance.now(); }
     }
   },
 };

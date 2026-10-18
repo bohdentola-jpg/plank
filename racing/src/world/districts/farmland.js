@@ -14,7 +14,7 @@ import { litMat, glowColorMat, box, cylinder, cone, gable } from './builder.js';
 import { concreteTexture, toTex } from '../../track/textures.js';
 import { makeRng } from '../../core/util.js';
 import { Acc } from '../build/geo.js';
-import { ROAD } from './occ.js';
+import { ROAD, MARGIN, ITEM } from './occ.js';
 import { owns, toWorld, lin, mixc, hash2, rectPoly } from './westkit/util.js';
 import { Fr, tube, lathe, beam, lattice2, gambrel, quonset, drapeUV, col, fence, wallAlong } from './westkit/geo.js';
 import { bandAtlas, windowPane, corrugatedTex, roofTex, signAtlas, text, speckle, streaks, cvs, once } from './westkit/tex.js';
@@ -421,7 +421,7 @@ function planFarmstead(P, lot, k) {
     P.collider({ kind: 'box', x: px, z: pz, hx: 1.0, hz: 2.6, ry: lot.ry + Math.PI / 2, y0: P.groundY(px, pz) - 1, y1: P.groundY(px, pz) + 2 });
   }
   const [qx, qz] = at(-flip * 26, 8);
-  P.add({ type: 'bales', x: qx, z: qz, ry: lot.ry, n: 4 + Math.floor(P.rng() * 5), seed: P.rng() });
+  P.add({ type: 'bales', x: qx, z: qz, ry: lot.ry, count: 4 + Math.floor(P.rng() * 5), seed: P.rng() });
   P.collider({ kind: 'box', x: qx, z: qz, hx: 5, hz: 2, ry: lot.ry, y0: P.groundY(qx, qz) - 1, y1: P.groundY(qx, qz) + 2 });
   // the yard: gravel; a paddock fence; the farm stand sign at the road for one in three
   P.add({ type: 'yard', x: lot.x, z: lot.z, ry: lot.ry, w: 60, d: 46, map: 'yard' });
@@ -444,11 +444,22 @@ function planFields(P) {
     for (let x = b.x0 + G / 2; x < b.x1; x += G) {
       const cx = x + P.range(-25, 25), cz = z + P.range(-25, 25);
       if (!mine(cx, cz)) continue;
-      const n = P.nearestRoad(cx, cz, 400);
-      const ry = n ? n.ry + (P.rng() < 0.5 ? 0 : Math.PI / 2) : P.range(0, Math.PI);
+      // square to the nearest lane (or to the county's survey grid out in the middle)
+      const n = P.nearestRoad(cx, cz, 160);
+      const ry = (n ? n.ry : 0.13) + (P.rng() < 0.5 ? 0 : Math.PI / 2);
+      // (a few points first: the full test only where they're all clear)
+      const coarse = (w, d) => {
+        for (let i = -2; i <= 2; i++) {
+          for (let j = -2; j <= 2; j++) {
+            const [px, pz] = toWorld(cx, cz, ry, i * (w / 4 + 2.5), j * (d / 4 + 2.5));
+            if (P.occ.get(px, pz) & (ROAD | MARGIN | ITEM)) return false;
+          }
+        }
+        return true;
+      };
       let placed = null;
       for (const [w, d] of [[160, 150], [140, 120], [110, 100], [80, 70]]) {
-        if (P.isFree(cx, cz, w, d, ry, { pad: 5, roadPad: true })) { placed = [w, d]; break; }
+        if (coarse(w, d) && P.isFree(cx, cz, w, d, ry, { pad: 5, roadPad: true })) { placed = [w, d]; break; }
       }
       if (!placed) continue;
       const [w, d] = placed;
@@ -480,7 +491,7 @@ function planFields(P) {
         const [px, pz] = toWorld(cx, cz, ry, P.range(-w / 4, w / 4), P.range(-d / 4, d / 4));
         P.add({ type: 'windmill', x: px, z: pz, ry: ry + P.range(-1, 1), h: P.range(9, 12), seed: P.rng() });
         P.collider({ kind: 'circle', x: px, z: pz, r: 1.4, y0: P.groundY(px, pz) - 1, y1: P.groundY(px, pz) + 13 });
-        P.add({ type: 'cows', x: px + 12, z: pz + 6, n: 3 + Math.floor(P.rng() * 5), seed: P.rng() });
+        P.add({ type: 'cows', x: px + 12, z: pz + 6, count: 3 + Math.floor(P.rng() * 5), seed: P.rng() });
       }
     }
   }
@@ -968,7 +979,7 @@ function buildBales(B, M, it) {
   const paint = B.near(M.paint);
   const rng = makeRng('bales' + it.x.toFixed(1));
   const F = new Fr(it.x, 0, it.z, it.ry);
-  for (let k = 0; k < it.n; k++) {
+  for (let k = 0; k < it.count; k++) {
     const lx = -4 + (k % 4) * 2.2, lz = Math.floor(k / 4) * 1.8 - 1;
     const x = F.wx(lx, lz), z = F.wz(lx, lz);
     if (it.seed < 0.5) hayRound(paint, x, B.groundY(x, z) - 0.05, z, it.ry + Math.PI / 2, 0.75, rng() < 0.5 ? '#c8a54e' : '#b8984a');
@@ -988,7 +999,7 @@ function buildFieldBales(B, M, it) {
 function buildCows(B, M, it) {
   const paint = B.near(M.paint);
   const rng = makeRng('cows' + it.x.toFixed(1));
-  for (let k = 0; k < it.n; k++) {
+  for (let k = 0; k < it.count; k++) {
     const x = it.x + (rng() - 0.5) * 24, z = it.z + (rng() - 0.5) * 18, a = rng() * 6.28;
     const y = B.groundY(x, z);
     const F = new Fr(x, y, z, a);
@@ -1248,7 +1259,7 @@ export default {
   *build(B, items) {
     const M = mats(B);
     const anims = B.out.anims;
-    let n = 0;
+    let t0 = performance.now();
     for (const it of items) {
       switch (it.type) {
         case 'field': buildField(B, M, it); break;
@@ -1257,7 +1268,7 @@ export default {
         case 'crossing': buildCrossing(B, M, it); break;
         case 'flasher': buildFlasher(B, M, it, anims); break;
         case 'tpole': buildTelegraph(B, M, it); break;
-        case 'silos': buildSilos(B, M, it); yield; break;
+        case 'silos': buildSilos(B, M, it); yield; t0 = performance.now(); break;
         case 'headhouse': buildHeadhouse(B, M, it); break;
         case 'bin': buildBin(B, M, it); break;
         case 'loadshed': buildLoadShed(B, M, it); break;
@@ -1308,14 +1319,15 @@ export default {
           break;
         }
         case 'wreck': buildWreck(B, M, it); break;
-        case 'drivein': buildDriveIn(B, M, it); yield; break;
+        case 'drivein': buildDriveIn(B, M, it); yield; t0 = performance.now(); break;
         case 'dfence': buildDriveFence(B, M, it); break;
         case 'marquee': buildMarquee(B, M, it); break;
         case 'sign': buildSign(B, M, it); break;
         case 'r-pole': buildPole(B, M, { ...it, kind: it.kind === 'yard' ? 'steel' : it.kind }); if (it.kind === 'yard') box(B.near(M.yard), it.x, B.groundY(it.x, it.z) + it.h - 0.14, it.z, 0.8, 0.06, 0.36, 0, { u: 1, faces: '', top: false, bottom: true }); break;
         default: break;
       }
-      if (++n % 20 === 0) yield;
+      // (a step stays short: yield every few milliseconds)
+      if (performance.now() - t0 > 3) { yield; t0 = performance.now(); }
     }
   },
 };

@@ -175,7 +175,7 @@ export function planRunoffs(P, lap, o = {}) {
       return edge + Math.max(2, widths[k] * Math.max(0.15, t));
     };
     const poly = stripPoly(lap, s0, s1, sd, edge, wAt, 6);
-    P.add({ type: 'r-gravel', x: poly[0][0], z: poly[0][1], poly, map: 'track' });
+    P.add({ type: 'r-gravel', x: poly[0][0], z: poly[0][1], poly, strip: true, map: 'track' });
     P.occ.markPoly(poly, ITEM);
     if (o.wall !== false) {
       const line = lapLine(lap, s0 + 6, s1 - 6, sd, (s) => wAt(s) + 0.9, 6);
@@ -203,7 +203,30 @@ export function planWall(P, lap, s0, s1, sd, lat, o = {}) {
 
 /** A gravel trap (or any lap strip) laid on the ground. */
 export function buildGravel(B, M, it) {
-  drapeUV(B.acc(it.mat === 'asphalt' ? M.asphalt : M.gravel), B, it.poly, { lift: 0.07, step: 6, uv: it.mat === 'asphalt' ? 6 : 3 });
+  const acc = B.acc(it.mat === 'asphalt' ? M.asphalt : M.gravel);
+  const uv = it.mat === 'asphalt' ? 6 : 3;
+  if (!it.strip) { drapeUV(acc, B, it.poly, { lift: 0.07, step: 6, uv }); return; }
+  // a strip (stripPoly's order: the inner edge, then the outer edge back): quads across it
+  const n = it.poly.length / 2;
+  const inner = it.poly.slice(0, n), outer = it.poly.slice(n).reverse();
+  const lat = Math.max(1, Math.ceil(Math.max(...inner.map((p, k) => Math.hypot(outer[k][0] - p[0], outer[k][1] - p[1]))) / 6));
+  const rows = [];
+  for (let k = 0; k < n; k++) {
+    const a = inner[k], b = outer[k], row = [];
+    for (let j = 0; j <= lat; j++) {
+      const x = a[0] + (b[0] - a[0]) * (j / lat), z = a[1] + (b[1] - a[1]) * (j / lat);
+      row.push(acc.v(x, B.groundY(x, z) + 0.07, z, x / uv, z / uv));
+    }
+    rows.push(row);
+  }
+  // wind each quad to face up whichever way the strip runs
+  const up = (() => { const a = inner[0], b = inner[Math.min(1, n - 1)], c = outer[0]; return (b[1] - a[1]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[1] - a[1]) > 0; })();
+  for (let k = 0; k < n - 1; k++) {
+    for (let j = 0; j < lat; j++) {
+      const a = rows[k][j], b = rows[k + 1][j], c = rows[k + 1][j + 1], d = rows[k][j + 1];
+      if (up) { acc.tri(a, b, c); acc.tri(a, c, d); } else { acc.tri(a, c, b); acc.tri(a, d, c); }
+    }
+  }
 }
 
 /** A tyre wall along it.pts: three tyres high, its face toward the track. */
@@ -292,7 +315,7 @@ export function buildWall(B, M, it, st) {
  * A grandstand facing local +z (the track) at (x, z) turned ry: w long, d
  * deep, n tiers rising to the back; kind 'steel' | 'timber' | 'classic'.
  */
-export function buildStand(B, M, it, st, wallAcc) {
+export function* buildStand(B, M, it, st, wallAcc) {
   const F = new Fr(it.x, 0, it.z, it.ry);
   const g = B.footY(it.x, it.z, it.w, it.d, it.ry);
   const y0 = g.hi + 0.6;
@@ -323,6 +346,7 @@ export function buildStand(B, M, it, st, wallAcc) {
     if (((it.seed || 0) * 7 + k) % 5 !== 0) {
       crowd.quadP(F.p(-cwide / 2, yk + ht, cz), F.p(cwide / 2, yk + ht, cz), F.p(cwide / 2, yk + ht + 1.25, cz), F.p(-cwide / 2, yk + ht + 1.25, cz), [0, vRow[0], cwide / 8, vRow[1]]);
     }
+    if (k % 4 === 3) yield;
   }
   // the back and the sides
   const top = y0 + it.h;
@@ -351,13 +375,14 @@ export function buildStand(B, M, it, st, wallAcc) {
       paint.tri(ia, im, ib); paint.tri(ia, ib, im);
     }
   }
+  yield;
   // the roof's supports
   col(paint, lin(kind === 'timber' ? '#5a4030' : st.steel || '#8a3a24'));
   const nc = Math.max(2, Math.round(w / 12));
   for (let k = 0; k <= nc; k++) {
     const lx = -w / 2 + (w * k) / nc;
     if (kind === 'steel') {
-      lattice2(paint, F.p(lx, y0, -d / 2 - 0.3), F.p(lx, top + 0.2, -d / 2 - 0.3), 0.7, { bar: 0.08 });
+      lattice2(paint, F.p(lx, y0, -d / 2 - 0.3), F.p(lx, top + 0.2, -d / 2 - 0.3), 0.7, { bar: 0.09, bay: 2.6 });
       beam(paint, F.p(lx, top + 0.1, -d / 2 - 0.3), F.p(lx, top - 0.5, d / 2 - 1.6), 0.25, 0.4);
     } else {
       beam(paint, F.p(lx, y0, -d / 2 - 0.3), F.p(lx, top + 0.2, -d / 2 - 0.3), 0.45, 0.45);
@@ -544,7 +569,7 @@ export function planPitStraight(P, lap, o) {
       if (P.isFree(qx, qz, pitW, 26, pry, { pad: 0.5 })) {
         P.claim(qx, qz, pitW, 26, pry);
         const n = Math.max(2, Math.floor((pitW - 10) / 23));
-        P.add({ type: 'r-paddock', x: qx, z: qz, ry: pry, w: pitW, d: 26, n, map: 'plaza' });
+        P.add({ type: 'r-paddock', x: qx, z: qz, ry: pry, w: pitW, d: 26, trucks: n, map: 'plaza' });
         for (let k = 0; k < n; k++) {
           const [tx, tz] = toWorld(qx, qz, pry, -pitW / 2 + 14 + k * 23, -4);
           const gy = P.groundY(tx, tz);
@@ -567,7 +592,7 @@ export function planPitStraight(P, lap, o) {
     lane.push([[p.x + p.lx * R * a, p.z + p.lz * R * a], [p.x + p.lx * R * b, p.z + p.lz * R * b]]);
   }
   const lanePoly = [...lane.map((q) => q[0]), ...lane.slice().reverse().map((q) => q[1])];
-  P.add({ type: 'r-gravel', mat: 'asphalt', x: lanePoly[0][0], z: lanePoly[0][1], poly: lanePoly, map: 'track' });
+  P.add({ type: 'r-gravel', mat: 'asphalt', x: lanePoly[0][0], z: lanePoly[0][1], poly: lanePoly, strip: true, map: 'track' });
   P.occ.markPoly(lanePoly, ITEM);
   // the start
   const sp = at(o.start ?? S0 + 120);
@@ -670,7 +695,7 @@ export function buildPaddock(B, M, it) {
   const paint = B.acc(M.paint);
   const teams = ['#c8161e', '#1d4fa8', '#f0a818', '#1b1b1d', '#2f9a4a', '#e6e6e6', '#ff6a00', '#5a2a8a'];
   const k0 = Math.abs(Math.round(it.x * 0.37 + it.z * 0.11));
-  for (let k = 0; k < (it.n || 6); k++) {
+  for (let k = 0; k < (it.trucks || 6); k++) {
     const lx = -it.w / 2 + 14 + k * 23;
     const x = F.wx(lx, -4), z = F.wz(lx, -4);
     const y = B.groundY(x, z);

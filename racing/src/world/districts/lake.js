@@ -606,7 +606,7 @@ function scatter(S) {
 
 // ------------------------------------------------------------------ build
 
-function buildDam(B, M, it) {
+function* buildDam(B, M, it) {
   const ry = it.ry;
   const F = new Fr(it.x, 0, it.z, ry);
   const stone = B.acc(M.stone), dam = B.acc(M.dam), paint = B.acc(M.paint);
@@ -633,6 +633,7 @@ function buildDam(B, M, it) {
       dam.tri(vid[a][b], vid[a][b + 1], vid[a + 1][b + 1]);
     }
   }
+  yield;
   // --- the crest: a platform from the road's walls out to the face's edge, a walk beyond
   col(stone, lin('#c9c5ba'));
   const edgeZ = (lx) => (Math.abs(lx) <= SPAN ? zc(lx) + 0.3 : 13);
@@ -660,6 +661,7 @@ function buildDam(B, M, it) {
     const pp = F.p(lx, TOP, zc(lx) + 0.4);
     beam(paint, pp, [pp[0], TOP + 1.05, pp[2]], 0.08, 0.08);
   }
+  yield;
   // --- lamp posts on the crest walls (art deco: a fluted post, a glass globe)
   const glow = B.acc(M.lamp);
   col(paint, lin('#2c3236'));
@@ -673,6 +675,7 @@ function buildDam(B, M, it) {
       cylinder(paint, x, Y + 5.32, z, 0.18, 0.2, 6, { top: true });
     }
   }
+  yield;
   // --- the spillway: gate piers at the face's top, a hoist house across their tops
   const pz = zc(0) - 5;
   col(stone, lin('#bcb8ad'));
@@ -708,6 +711,7 @@ function buildDam(B, M, it) {
       void p11;
     }
   }
+  yield;
   // the plunge pool: water from the toe to where the river begins, foam where it lands
   const water = B.acc(M.water);
   const pool = [];
@@ -724,6 +728,7 @@ function buildDam(B, M, it) {
     const z0 = zf(a, 25) - 0.5, z1 = z0 + 16 + Math.abs(a) * 0.3;
     foam.quadP(F.p(a + 4, 25.12, z0), F.p(a, 25.12, z0), F.p(a, 25.12, z1), F.p(a + 4, 25.12, z1), [0, 0, 1, 2]);
   }
+  yield;
   // --- the powerhouse at the toe (east of the spillway), transformers on its roof
   const ph = { lx: 27, lz: 58 };
   col(wall, WHITE);
@@ -743,6 +748,7 @@ function buildDam(B, M, it) {
     cylinder(paint, x, gy - 0.5, z, 0.14, hy - gy, 6);
     F.box(cool, lx, hy - 0.4, lz - 0.6, 1.6, 0.9, 0.3, {}, 0);
   }
+  yield;
   // --- the intake towers in the lake, footbridges to the crest wall
   for (const [lx, lz] of [[-34, -56], [38, -54]]) {
     const [x, , z] = F.p(lx, 0, lz);
@@ -1157,7 +1163,7 @@ export default {
 
   *build(B, items) {
     const M = mats(B);
-    let n = 0;
+    let t0 = performance.now();
     for (const it of items) {
       switch (it.type) {
         case 'pine': pine(B.acc(M.bark), B.acc(M.leaf), it.x, it.y, it.z, it.h, it.t); break;
@@ -1166,7 +1172,7 @@ export default {
         case 'rock': rock(B.acc(M.stone), it.x, it.y, it.z, it.s, it.t, '#9a968e'); break;
         case 'log': fallenLog(B.near(M.bark), B.near(M.leaf), it.x, it.y, it.z, it.L, it.r, it.ang, it.t); break;
         case 'reeds': buildReeds(B, M, it); break;
-        case 'dam': buildDam(B, M, it); yield; break;
+        case 'dam': yield* buildDam(B, M, it); yield; t0 = performance.now(); break;
         case 'marinaLot': buildMarinaLot(B, M, it); break;
         case 'pier': buildPier(B, M, it); break;
         case 'boathouse': buildBoathouse(B, M, it); break;
@@ -1195,7 +1201,8 @@ export default {
         }
         default: break;
       }
-      if (++n % 24 === 0) yield;
+      // (a step stays short: yield every few milliseconds)
+      if (performance.now() - t0 > 3) { yield; t0 = performance.now(); }
     }
   },
 };

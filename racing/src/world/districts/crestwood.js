@@ -415,6 +415,42 @@ function planFarms(P) {
   }
 }
 
+/** Dry-stone walls along the lanes, behind their cypress: solid, in pieces. */
+function planStoneWalls(P) {
+  for (const [id, sds, s0, cut] of [['cw_winery', [1, -1], 30, 40], ['cw_villa', [1], 60, 30], ['cw_road', [1, -1], 40, 40], ['cr_road1', [1, -1], 60, 60]]) {
+    const r = P.net.byId.get(id);
+    if (!r) continue;
+    const reach = r.rt.hw + r.rt.shoulder + r.rt.walk;
+    for (const sd of sds) {
+      let run = [];
+      const flush = () => {
+        if (run.length > 2) {
+          for (let k = 0; k < run.length - 1; k += 8) {
+            const pts = run.slice(k, Math.min(run.length, k + 9));
+            if (pts.length < 2) continue;
+            P.add({ type: 'swall', x: pts[0][0], z: pts[0][1], pts });
+            for (let j = 0; j < pts.length - 1; j++) {
+              const a = pts[j], b = pts[j + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+              const gy = P.groundY(a[0], a[1]);
+              P.collider({ kind: 'box', x: (a[0] + b[0]) / 2, z: (a[1] + b[1]) / 2, hx: 0.35, hz: L / 2 + 0.1, ry: Math.atan2(b[0] - a[0], b[1] - a[1]), y0: gy - 1, y1: gy + 1.1 });
+            }
+          }
+        }
+        run = [];
+      };
+      for (let s = s0; s < r.length - cut; s += 6) {
+        const p = r.posAt(s);
+        const off = reach + 5;
+        const x = p.x + r.LX[p.i] * sd * off, z = p.z + r.LZ[p.i] * sd * off;
+        if (!mine(x, z) || !P.isFree(x, z, 1.2, 1.2, 0, { pad: 0, roadPad: true })) { flush(); continue; }
+        P.claim(x, z, 1.2, 1.2, 0);
+        run.push([x, z]);
+      }
+      flush();
+    }
+  }
+}
+
 /** Cypress along the main roads in clumps, the circuit's gate road lined. */
 function planRoadTrees(P) {
   for (const id of ['cw_road', 'cr_road1', 'lk_north4', 'cw_gate']) {
@@ -810,6 +846,7 @@ export default {
     planVilla(P);
     planFarms(P);
     planRoadTrees(P);
+    planStoneWalls(P);
     planVineyards(P);
   },
 
@@ -819,7 +856,7 @@ export default {
 
   *build(B, items) {
     const M = mats(B);
-    let n = 0;
+    let t0 = performance.now();
     for (const it of items) {
       switch (it.type) {
         case 'vineyard': buildVineyard(B, M, it); break;
@@ -828,7 +865,7 @@ export default {
         case 'oak': oak(B.acc(M.trunk), B.acc(M.leaf), it.x, it.y, it.z, it.s, it.t, { leaf: '#4a5a2a', leaf2: '#5e6e34' }); break;
         case 'bush': bush(B.near(M.leaf), it.x, it.y, it.z, it.s, it.t, '#5a6a34'); break;
         case 'rock': rock(B.near(M.stone), it.x, it.y, it.z, it.s, it.t, '#b8ac94'); break;
-        case 'chateau': buildChateau(B, M, it); yield; break;
+        case 'chateau': buildChateau(B, M, it); yield; t0 = performance.now(); break;
         case 'tower': buildTower(B, M, it); break;
         case 'barrel': buildBarrel(B, M, it); break;
         case 'tasting': buildTasting(B, M, it); break;
@@ -844,14 +881,26 @@ export default {
         case 'villa': buildVilla(B, M, it); break;
         case 'terrace': buildTerrace(B, M, it); break;
         case 'gate': buildGate(B, M, it); break;
+        case 'swall': {
+          const stone = B.acc(M.stone);
+          col(stone, lin('#b4a688'));
+          const gy = (x, z) => B.groundY(x, z);
+          wallAlong(stone, it.pts, (x, z) => gy(x, z) - 0.3, (x, z) => gy(x, z) + 0.95, { u: 2, both: true });
+          for (let k = 0; k < it.pts.length - 1; k++) {
+            const a = it.pts[k], b = it.pts[k + 1];
+            beam(stone, [a[0], gy(a[0], a[1]) + 1.0, a[1]], [b[0], gy(b[0], b[1]) + 1.0, b[1]], 0.55, 0.12);
+          }
+          col(stone, WHITE);
+          break;
+        }
         case 'cascina': buildCascina(B, M, it); break;
         case 'tractor': tractor(B.acc(M.paint), it.x, B.groundY(it.x, it.z), it.z, it.ry, '#c83a22'); break;
         case 'sign': buildSign(B, M, it); break;
-        case 'pits': buildPits(B, M, it); yield; break;
+        case 'pits': buildPits(B, M, it); yield; t0 = performance.now(); break;
         case 'r-gravel': buildGravel(B, M, it); break;
         case 'r-tyres': buildTyres(B, M, it); break;
         case 'r-wall': buildWall(B, M, it, ST); break;
-        case 'stand': buildStand(B, M, { ...it, kind: 'classic' }, ST); yield; break;
+        case 'stand': yield* buildStand(B, M, { ...it, kind: 'classic' }, ST); yield; t0 = performance.now(); break;
         case 'r-mast': buildMast(B, M, { ...it, kind: 'pole' }, ST); break;
         case 'r-gantry': buildGantry(B, M, it, ST); break;
         case 'r-start': buildStartLine(B, M, it); break;
@@ -861,7 +910,8 @@ export default {
         case 'r-pole': buildPole(B, M, it); break;
         default: break;
       }
-      if (++n % 20 === 0) yield;
+      // (a step stays short: yield every few milliseconds)
+      if (performance.now() - t0 > 3) { yield; t0 = performance.now(); }
     }
   },
 };
