@@ -30,6 +30,11 @@ const nodes = {
   gt_a: [3700, 1050], gt_b: [4110, 1060], gt_c: [4150, 1460], gt_d: [3730, 1560],
   // Dry Lake
   dl_w: [4780, 240], dl_a: [4900, 300], dl_b: [6000, 300], dl_n: [5450, -300], dl_s: [5450, 900],
+  // backroads: the Array Rd down into the High Desert's basin (and the silo
+  // up a side valley), the Dutchman mine under the mesa, the arch overlook,
+  // the mine hill over Ghost Town, the Borax Rd from Ghost Town to the lake
+  ar_1: [5520, -2780], ar_j: [5870, -3780], ar_end: [5945, -4740], si_end: [5470, -4655],
+  mn_end: [3818, -2186], ov_end: [4652, -2004], hf_top: [4540, 1572],
 };
 
 const roads = [
@@ -72,6 +77,20 @@ const roads = [
   { id: 'dl_n2', type: 'gravel', a: 'dl_n', b: 'dl_b', pts: [[5950, -200, 200]] },
   { id: 'dl_s1', type: 'gravel', a: 'dl_w', b: 'dl_s', pts: [[5000, 800, 200]] },
   { id: 'dl_s2', type: 'gravel', a: 'dl_s', b: 'dl_b', pts: [[5950, 800, 200]] },
+  // ---- backroads
+  // the High Desert: off the Rim Rd, north and down into the empty basin to the
+  // radio array; a dirt spur climbs a side valley to the old missile silo
+  { id: 'ar_r1', type: 'gravel', a: 'rr_r1', b: 'ar_1', name: 'ARRAY RD', district: 'highlands', pts: [[5300, -2400, 220]] },
+  { id: 'ar_r2', type: 'gravel', a: 'ar_1', b: 'ar_j', name: 'ARRAY RD', district: 'highlands', pts: [[5720, -3220, 260]] },
+  { id: 'ar_r3', type: 'gravel', a: 'ar_j', b: 'ar_end', name: 'ARRAY RD', district: 'highlands', pts: [[5930, -4250, 260]] },
+  { id: 'si_road', type: 'dirt', a: 'ar_j', b: 'si_end', name: 'SILO RD', district: 'highlands', pts: [[5700, -4080, 140], [5545, -4420, 140]] },
+  // Red Rock: the Dutchman mine road west from Route 99 to the mesa's foot
+  { id: 'mn_road', type: 'dirt', a: 'r99_n2', b: 'mn_end', name: 'DUTCHMAN RD', district: 'redrock', pts: [[4040, -2128, 160]] },
+  // the overlook over the arch, off the Rim Rd
+  { id: 'ov_road', type: 'dirt', a: 'rr_r2', b: 'ov_end', name: 'ARCH OVERLOOK', district: 'redrock' },
+  // Ghost Town: up the mine hill to the headframe; the Borax Rd east to the lake
+  { id: 'hf_road', type: 'dirt', a: 'gt_c', b: 'hf_top', name: 'MINE HILL RD', district: 'ghosttown', pts: [[4330, 1480, 120]] },
+  { id: 'bx_road', type: 'dirt', a: 'gt_b', b: 'dl_s', name: 'BORAX RD', district: 'ghosttown', pts: [[4700, 1080, 300], [5200, 1150, 220]] },
 ];
 
 export default {
