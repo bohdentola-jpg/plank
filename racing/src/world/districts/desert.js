@@ -111,7 +111,7 @@ function planRoute99(P) {
     const gy = setPiece(P, { type: 'gas', ...sg, map: 'building' },
       [{ x: 0, z: -9, w: 15, d: 10, h: 5 }, { x: -19, z: 14, w: 1.2, d: 1.2, h: 9 }],
       [{ shape: 'box', x: 0, z: 3, w: 22, d: 12, h: 1.1, dy: 6.3, color: '#e8e4dc' }, { shape: 'box', x: 0, z: -9, w: 15, d: 10, h: 5.6, color: '#d8d2c4', lit: 0.4 }]);
-    for (const [lx, lz] of [[-6, 0], [6, 0], [-6, 6], [6, 6]]) lampAt(P, sg, gy, lx, lz, 4.9, '#f4f8ff', 14, 0.7, 0);
+    for (const [lx, lz] of [[-6, 0], [6, 0], [-6, 6], [6, 6]]) lampAt(P, sg, gy, lx, lz, 4.9, '#f4f8ff', 14, 0.4, 0);
     lampAt(P, sg, gy, 0, -3, 3.8, '#fff0d0', 10, 0.7, 0);
     lampAt(P, sg, gy, -19, 14, 7, '#ff8060', 9, 0.4, 1.2);
     for (const lz of [0.5, 5.5]) addBox(P, sg, gy, 0, lz, 13, 1.2, 1.4);
@@ -630,10 +630,10 @@ function* gas(B, it) {
   const pa = B.acc(MAT.paint(B)), signs = B.acc(MAT.signs(B)), stucco = B.acc(MAT.stucco(B));
   // ---- the canopy (lit underneath), columns, fascia
   const cw = 22, cd = 12, ch = 5.3, cz0 = 3;
-  paint(pa, '#e2ded6');
+  paint(pa, '#cfcbc3');
   for (const lx of [-8, 0, 8]) for (const lz of [-1.5, 7.5]) { const [px, pz] = at(lx, lz); box(pa, px, y - 0.2, pz, 0.5, ch + 0.2, 0.5, ry); }
   const [cx, cz] = at(0, cz0);
-  paint(pa, '#f2efe8');
+  paint(pa, '#d6d2ca');
   box(pa, cx, y + ch, cz, cw, 1.1, cd, ry);
   for (const [lz, r2] of [[cz0 + cd / 2 + 0.02, 0], [cz0 - cd / 2 - 0.02, Math.PI]]) {
     for (let k = 0; k < 4; k++) { const [px, pz] = at(-cw / 2 + cw / 8 + k * cw / 4, lz); panel(signs, px, y + ch + 0.05, pz, ry + r2, cw / 4, 1.0, uvOf(R.fascia)); }

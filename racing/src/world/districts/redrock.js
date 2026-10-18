@@ -510,8 +510,8 @@ function* buildMine(B, it) {
     // on the flat beside the road's end, where the rails run out
     const [tx, tz] = at(-13, 21);
     const g3 = B.footY(tx, tz, 12, 12, rry);
-    paint(ore, '#a89078');
-    drum(ore, tx, g3.lo - 0.6, tz, 6.0, 1.8, 3.4 + Math.min(1.5, (g3.hi - g3.lo) * 0.3), 9, it.n * 3, 0.15, { top: true });
+    paint(ore, '#8a765e');
+    drum(ore, tx, g3.lo - 0.6, tz, 6.4, 2.8, 3.0 + Math.min(1.2, (g3.hi - g3.lo) * 0.3), 9, it.n * 3, 0.22, { top: true });
   }
   yield;
   // the hoist shack (plank walls, a tin roof), a rusted boiler, drums, crates

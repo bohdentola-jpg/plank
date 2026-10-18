@@ -55,7 +55,7 @@ export default {
       switch (it.type) {
         case 'flood': floodMast(B, it); break;
         case 'tower': timingTower(B, it); break;
-        case 'bleach': bleachers(B, it); break;
+        case 'bleach': yield* bleachers(B, it, tick); break;
         case 'gantry': gantry(B, it); break;
         case 'tree': xmasTree(B, it); break;
         case 'board': distBoard(B, it); break;
@@ -288,7 +288,7 @@ function timingTower(B, it) {
   panel(dg, b2x, y + 2.6, b2z, ry + Math.PI / 2, 6.4, 2.1, uvOf(RD.sponsorB));
 }
 
-function bleachers(B, it) {
+function* bleachers(B, it, tick) {
   const { x, z, ry, w } = it;
   const c = Math.cos(ry), s = Math.sin(ry);
   const at = (lx, lz) => [x + lx * c + lz * s, z - lx * s + lz * c];
@@ -322,9 +322,10 @@ function bleachers(B, it) {
   for (const sd of [1, -1]) { const [ex, ez] = at(sd * (w / 2 + 0.05), 0.2); tn.quadP(...endTri(ex, ez, y, ry, sd)); }
   const dg = B.acc(MAT.drag(B));
   for (let k = 0; k < Math.floor(w / 9); k++) { const [px, pz] = at(-w / 2 + 4.5 + k * 9, -3.4); panel(dg, px, y + 2.2, pz, ry + Math.PI, 8.4, 2.1, uvOf(k % 2 ? RD.sponsorA : RD.sponsorB)); }
-  // the crowd: torsos and heads in their shirts, sparse
+  // the crowd: torsos and heads in their shirts, sparse (a row a slice at most)
   const crowd = B.near(MAT.paint(B));
   for (let r = 0; r < 8; r++) {
+    if (tick()) yield;
     for (let k = 0; k < w / 0.7; k++) {
       if (hash1(it.n, r, k) < 0.66) continue;
       const lx = -w / 2 + 0.4 + k * 0.7 + (hash1(it.n, r, k + 1) - 0.5) * 0.2, lz = 3.6 - r * 0.95 - 0.1;
