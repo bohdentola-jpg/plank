@@ -919,11 +919,11 @@ function mats(B) {
   const signs = dtSignsTex();
   // one sign material: painted markings never glow, street blades a little
   const blades = Object.fromEntries(Object.values(STREET_SIGN).concat(['s_blank']).map((k) => [k, 0.45]));
-  const signGlow = glowOf(signs, DT_SIGN_RECTS, { heli: 0, stairs: 0, grate: 0, crossing: 0, ...blades }, 'dtsigns-glow');
+  const signGlow = glowOf(signs, DT_SIGN_RECTS, { heli: 0, stairs: 0, grate: 0, ...blades }, 'dtsigns-glow');
   // a lit crown is the curtain wall with every window on (shaders.js)
   const curtain = m('curtain', () => windowMat(curtainTex(), { key: 'dt-curtain', tint: true, ...CURTAIN, pal: PAL, occ: [0.18, 0.72], dense: 0.93, sparse: 0.05, rough: 0.22, metal: 0.55, env: 1.25, night: 1.35, crown: { hex: '#cfe2ff', k: 1.55 } }));
   const paintCar = m('paintCar', () => litMat({ vertexColors: true, roughness: 0.35, metalness: 0.5, envMapIntensity: 1.0 }));
-  const leaf = sharedMat(B, 'leaf', () => litMat({ vertexColors: true, roughness: 0.9, flatShading: true }, { glow: 0.7 }));
+  const leaf = sharedMat(B, 'leaf', () => litMat({ vertexColors: true, roughness: 0.9, flatShading: true }, { glow: 0.45 }));
   // every LED strip, lit edge and neon: one material, its colour per vertex
   const glo = sharedMat(B, 'glo', () => nightGlowVC(4));
   const lit = (hex, k) => { const c = new THREE.Color(hex); return [c.r * k / 4, c.g * k / 4, c.b * k / 4]; };

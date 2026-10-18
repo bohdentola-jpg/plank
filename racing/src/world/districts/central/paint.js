@@ -454,20 +454,44 @@ const DT_SIGNS = [
   ['subway', 256, 80], ['parkP', 128, 128], ['busstop', 96, 128], ['ad0', 128, 256], ['ad1', 128, 256], ['ad2', 128, 256], ['ad3', 128, 256],
   ['news', 256, 128], ['heli', 256, 256], ['stairs', 128, 256], ['grate', 128, 128], ['parking', 96, 320], ['crossing', 384, 96],
 ];
-export const CORP = ['ORION CAPITAL', 'STERLING & HOLT', 'PACIFIC MUTUAL', 'BANK OF THE BAY', 'NORTHGATE', 'HALCYON TRUST', 'VANTAGE', 'ONE PLAZA'];
+export const CORP = ['ORION CAPITAL', 'STERLING & HOLT', 'HARBORVIEW MUTUAL', 'HALCYON & BAY', 'NORTHGATE', 'HALCYON TRUST', 'VANTAGE', 'ONE PLAZA'];
 export const STREET_SIGN = { 'MAIN ST': 's_main', 'CENTRAL AVE': 's_central', '1ST AVE': 's_1st', '5TH AVE': 's_5th', 'UNION ST': 's_union', 'NORTH AVE': 's_north', 'HARBOR AVE': 's_harbor' };
 
-function shelf(list, W) {
+/**
+ * Pack an atlas' signs ([name, w, h] px) into a W × W canvas: tallest first,
+ * each as low as it fits on the skyline of those placed so far.
+ */
+function pack(list, W) {
+  let sky = [{ x: 0, w: W, y: 0 }];
   const out = {};
-  let px = 0, py = 0, rowH = 0;
-  for (const [name, w, h] of list) {
-    if (px + w > W) { px = 0; py += rowH; rowH = 0; }
-    out[name] = [px, py, w, h];
-    px += w; rowH = Math.max(rowH, h);
+  const items = list.map(([name, w, h], i) => ({ name, w, h, i })).sort((a, b) => b.h - a.h || b.w - a.w || a.i - b.i);
+  for (const it of items) {
+    let best = null;
+    for (let s = 0; s < sky.length && sky[s].x + it.w <= W; s++) {
+      let y = 0, cover = 0;
+      for (let k = s; k < sky.length && cover < it.w; k++) { y = Math.max(y, sky[k].y); cover += sky[k].w; }
+      if (!best || y < best.y) best = { x: sky[s].x, y };
+    }
+    if (!best || best.y + it.h > W) throw new Error(`sign atlas: no room for ${it.name}`);
+    out[it.name] = [best.x, best.y, it.w, it.h];
+    // the skyline: cut the segments under it, add its top
+    const x0 = best.x, x1 = best.x + it.w, next = [{ x: x0, w: it.w, y: best.y + it.h }];
+    for (const g of sky) {
+      const gx1 = g.x + g.w;
+      if (gx1 <= x0 || g.x >= x1) { next.push(g); continue; }
+      if (g.x < x0) next.push({ x: g.x, w: x0 - g.x, y: g.y });
+      if (gx1 > x1) next.push({ x: x1, w: gx1 - x1, y: g.y });
+    }
+    next.sort((a, b) => a.x - b.x);
+    sky = [];
+    for (const g of next) {
+      const l = sky[sky.length - 1];
+      if (l && l.y === g.y && l.x + l.w === g.x) l.w += g.w; else sky.push({ ...g });
+    }
   }
   return out;
 }
-export const DT_SIGN_RECTS = shelf(DT_SIGNS, 1024);
+export const DT_SIGN_RECTS = pack(DT_SIGNS, 1024);
 /**
  * A sign atlas' glow map (one material for lit and unlit signs): the atlas,
  * with the named signs dimmed to their level (0: never lit, a painted
@@ -865,8 +889,9 @@ const UT_SIGNS = [
   ['aw0', 128, 128], ['aw1', 128, 128], ['aw2', 128, 128], ['aw3', 128, 128], ['aw4', 128, 128],
   ['u_park', 256, 48], ['u_madison', 256, 48], ['u_lincoln', 256, 48], ['u_terrace', 256, 48], ['u_concourse', 256, 48], ['u_blank', 256, 48],
   ['victory', 512, 80], ['plaque', 128, 96], ['canopy0', 256, 64], ['canopy1', 256, 64], ['canopy2', 256, 64], ['mews', 256, 64],
+  ['boathouse', 384, 80],
 ];
-export const UT_SIGN_RECTS = shelf(UT_SIGNS, 1024);
+export const UT_SIGN_RECTS = pack(UT_SIGNS, 1024);
 export const UT_STREET_SIGN = { 'PARK BLVD': 'u_park', 'MADISON BLVD': 'u_madison', 'LINCOLN BLVD': 'u_lincoln', 'TERRACE AVE': 'u_terrace', 'GRAND CONCOURSE': 'u_concourse' };
 export const AWNINGS = 5;
 
@@ -919,9 +944,10 @@ export function utSignsTex() {
       x.fillStyle = '#e8c870'; for (let k = 0; k < 4; k++) x.fillRect(px + 20, py + 26 + k * 14, w - 40, 5);
     }
     text('canopy0', 'TWO PARK ROW', 'bold 30px Georgia, serif', '#e8d8a8', '#1f3a2a');
-    text('canopy1', 'THE DAKOTA', 'bold 30px Georgia, serif', '#e8d8a8', '#3a1a1a');
+    text('canopy1', 'THE LANCASTER', 'bold 30px Georgia, serif', '#e8d8a8', '#3a1a1a');
     text('canopy2', '900 MADISON', 'bold 30px Georgia, serif', '#e8d8a8', '#1a1f3a');
     text('mews', 'BELGRAVE MEWS', 'bold 30px Georgia, serif', '#1a1a1a', '#e8e0cc', { border: '#1a1a1a' });
+    text('boathouse', 'THE BOATHOUSE', 'bold 46px Georgia, serif', '#f4ecd0', '#1f4a32', { border: '#d8c890' });
     void rng;
     x.textAlign = 'left';
     return toTex(c, { repeat: false });

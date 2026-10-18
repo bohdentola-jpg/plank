@@ -10,8 +10,9 @@
 // obelisk at the Concourse's head, park lamps, its wall and railings, and
 // Park Drive winding through. The Concourse rides under the Victory Arch.
 // Hidden: Belgrave Mews, a cobbled lane of carriage houses behind the
-// terraces (off 4th Street, the block's middle).
-import { litMat, drape, ribbon } from './builder.js';
+// terraces (off 4th Street, the block's middle), and the Boathouse on the
+// park's pond, down a gravel lane off Park Drive.
+import { litMat, drape, ribbon, hip } from './builder.js';
 import { poleMat, darkConcreteMat } from '../kit.js';
 import { groundTexture } from '../../track/textures.js';
 import { windowMat, signalMat, blinkMat, nightGlowVC, chaseMat, waterMat, sharedMat } from './central/shaders.js';
@@ -121,6 +122,7 @@ export default {
         case 'sf': drawFurniture(B, it, M); break;
         case 'carriage': drawCarriage(B, it, M); break;
         case 'coach': drawCoachHouse(B, it, M); break;
+        case 'boathouse': drawBoathouse(B, it, M); break;
         default: break;
       }
       // (a few milliseconds a step: the streamer runs a step a frame)
@@ -185,6 +187,9 @@ function planPark(P, ctx) {
   pk.pond = pond;
   P.add({ type: 'pond', x: pcx, z: pcz, poly: pond, gy: P.groundY(pcx, pcz), map: 'water' });
   pk.keep.push([pcx, pcz, 60]);
+  // the boathouse on the pond's east shore, at the end of Boathouse Lane
+  // (its front looks back up the lane, its dock runs out over the water)
+  const boat = planBoathouse(P, pk, P.groundY(pcx, pcz));
   // the paths: round the pond, gate to gate, the Mall up to the bandstand
   const bx = at(0.82, 0.48), sGate = at(0.82, 1.0), nGate = at(0.82, 0.0);
   const loop = [];
@@ -206,7 +211,7 @@ function planPark(P, ctx) {
     const keep = [];
     let cur = [];
     for (const q of resamplePts(p.pts, 3)) {
-      const onRoad = P.occ.get(q[0], q[1]) & 1;
+      const onRoad = (P.occ.get(q[0], q[1]) & 1) || (boat && boat.covers(q[0], q[1], 2));
       if (onRoad) { if (cur.length > 1) keep.push(cur); cur = []; continue; }
       cur.push(q);
     }
@@ -254,6 +259,7 @@ function planPark(P, ctx) {
     const x = rect.x0 + 18, z = rect.z1 - 18;
     const gy = P.groundY(x, z);
     P.add({ type: 'obelisk', x, z, gy, h: 34 });
+    P.landmark({ id: 'ut_obelisk', name: 'THE OBELISK', x, z, r: 20, kind: 'monument' });
     P.collider({ kind: 'box', x, z, hx: 3.2, hz: 3.2, ry: 0, y0: gy - 1, y1: gy + 34 });
     P.far({ shape: 'box', x, z, y: gy - 1, w: 3, d: 3, h: 35, color: '#c8bca4', lit: 0 });
     for (const [a, b] of [[-1, -1], [1, 1]]) P.lamp({ x: x + a * 5, z: z + b * 5, hy: gy + 0.4, color: '#ffe0b0', radius: 10, intensity: 0.8, halo: 0 });
@@ -277,17 +283,20 @@ function planPark(P, ctx) {
       lampAt(q[0] - dz / l * off, q[1] + dx / l * off);
     });
   }
-  const drive = P.net.byId.get('xc_parkdrive');
-  if (drive) {
-    for (let s = drive.trim0 + 20, k = 0; s < drive.length - drive.trim1 - 10; s += 32, k++) {
+  const drive = P.net.byId.get('xc_parkdrive'), drive2 = P.net.byId.get('xc_parkdrive_s');
+  for (const r of [drive, drive2, P.net.byId.get('xc_boatlane')]) {
+    if (!r) continue;
+    const step = r === drive || r === drive2 ? 32 : 26;
+    for (let s = r.trim0 + 16, k = 0; s < r.length - r.trim1 - 8; s += step, k++) {
       const side = k % 2 ? 1 : -1;
-      const p = drive.posAt(s, side * (drive.rt.hw + drive.rt.shoulder + 1.6));
+      const p = r.posAt(s, side * (r.rt.hw + r.rt.shoulder + 1.6));
       lampAt(p.x, p.z);
     }
   }
   // the wall: a stone kerb and railings round the park, open at the gates
   const gates = [nGate, sGate, at(0, 1), at(0, 0.15), at(1, 0.2)];
-  if (drive) gates.push([drive.X[0], drive.Z[0]], [drive.X[drive.N - 1], drive.Z[drive.N - 1]]);
+  if (drive) gates.push([drive.X[0], drive.Z[0]]);
+  if (drive2) gates.push([drive2.X[drive2.N - 1], drive2.Z[drive2.N - 1]]);
   const wallRun = (ax, az, bx2, bz2) => {
     // split at gates (an 8 m gap round each), then by cell (each its own item)
     const len = Math.hypot(bx2 - ax, bz2 - az), tx = (bx2 - ax) / len, tz = (bz2 - az) / len;
@@ -326,6 +335,51 @@ function planPark(P, ctx) {
     P.collider({ kind: 'box', x, z, hx: 1.1, hz: 3.6, ry: Math.PI / 2, y0: y - 1, y1: y + 2.6 });
   }
   void ctx;
+}
+
+/**
+ * THE BOATHOUSE (hidden): Park Drive's gravel lane ends at it, on the pond's
+ * east shore: a timber pavilion on a stone plinth under a copper hip roof,
+ * a lantern cupola, string lights along its eaves, rowboats at its dock.
+ */
+function planBoathouse(P, pk, wy) {
+  const nb = P.net.nodes.get('xc_boat'), na = P.net.nodes.get('xc_pk');
+  if (!nb || !na) return null;
+  const fl = Math.hypot(na.x - nb.x, na.z - nb.z) || 1;
+  const fx = (na.x - nb.x) / fl, fz = (na.z - nb.z) / fl;
+  const ry = Math.atan2(fx, fz);
+  const w = 16, d = 10, dock = 9;
+  // its back on the shore: where the lane's line meets the pond
+  let shore = Infinity;
+  for (let i = 0; i < pk.pond.length; i++) {
+    const a = pk.pond[i], b = pk.pond[(i + 1) % pk.pond.length];
+    const ex = b[0] - a[0], ez = b[1] - a[1], den = -fx * ez + fz * ex;
+    if (Math.abs(den) < 1e-9) continue;
+    const t = ((a[0] - nb.x) * ez - (a[1] - nb.z) * ex) / den;
+    const u = ((a[0] - nb.x) * -fz + (a[1] - nb.z) * fx) / den;
+    if (t > 0 && u >= 0 && u <= 1) shore = Math.min(shore, t);
+  }
+  const back = shore < 40 ? Math.max(6 + d, shore) : 7 + d;
+  const x = nb.x - fx * (back - d / 2), z = nb.z - fz * (back - d / 2);
+  const gy = P.groundY(x, z);
+  const c = Math.cos(ry), sn = Math.sin(ry);
+  const covers = (qx, qz, pad) => {
+    const dx = qx - x, dz = qz - z;
+    const lx = dx * c - dz * sn, lz = dx * sn + dz * c;
+    return Math.abs(lx) < w / 2 + pad && lz < d / 2 + pad && lz > -d / 2 - dock - pad;
+  };
+  P.claim(x - fx * dock / 2, z - fz * dock / 2, w + 2, d + dock + 2, ry);
+  P.add({ type: 'boathouse', x, z, ry, w, d, gy, wy, dock, map: 'building' });
+  P.collider({ kind: 'box', x, z, hx: w / 2, hz: d / 2, ry, y0: gy - 1, y1: gy + 9 });
+  const kx = x - fx * (d / 2 + dock / 2), kz = z - fz * (d / 2 + dock / 2);
+  P.collider({ kind: 'box', x: kx, z: kz, hx: 3, hz: dock / 2, ry, y0: wy - 1, y1: wy + 0.75 });
+  // the porch lamp, the dock's lantern, the cupola's glow
+  P.lamp({ x: x + fx * (d / 2 + 1.5), z: z + fz * (d / 2 + 1.5), hy: gy + 3.6, color: '#ffcf8a', radius: 16, intensity: 0.95, halo: 1 });
+  P.lamp({ x: x - fx * (d / 2 + dock - 0.6), z: z - fz * (d / 2 + dock - 0.6), hy: wy + 2.6, color: '#ffc070', radius: 12, intensity: 0.9, halo: 1.2 });
+  P.far({ shape: 'box', x, z, y: gy, w, d, h: 6.6, ry, color: '#d8ccb0', lit: 0.3 });
+  pk.keep.push([x, z, 13], [kx, kz, 7]);
+  P.landmark({ id: 'ut_boathouse', name: 'THE BOATHOUSE', x, z, r: 25, hidden: true, kind: 'boathouse' });
+  return { x, z, covers };
 }
 
 function resamplePts(pts, step) {
@@ -406,7 +460,7 @@ function planArch(P, ctx) {
     const cx = p.x + r.LX[i] * lat, cz = p.z + r.LZ[i] * lat;
     P.collider({ kind: 'box', x: cx, z: cz, hx: pier / 2, hz: depth / 2, ry, y0: gy - 2, y1: gy + H });
     P.claim(cx, cz, pier + 2, depth + 4, ry);
-    for (const fz of [-1, 1]) P.lamp({ x: cx + r.TX[i] * fz * (depth / 2 + 4), z: cz + r.TZ[i] * fz * (depth / 2 + 4), hy: gy + 0.5, color: '#ffe6c0', radius: 18, intensity: 1, halo: 0 });
+    for (const fz of [-1, 1]) P.lamp({ x: cx + r.TX[i] * fz * (depth / 2 + 4), z: cz + r.TZ[i] * fz * (depth / 2 + 4), hy: gy + 0.5, color: '#ffe6c0', radius: 16, intensity: 0.55, halo: 0 });
   }
   // (each box collider: hx across the road, hz along it; ry is the road's heading)
   P.far({ shape: 'box', x: p.x, z: p.z, y: gy - 2, w: 2 * (half + pier), d: depth, h: H + 2, ry, color: '#d4c8b0', lit: 0 });
@@ -434,7 +488,7 @@ function planMews(P, ctx) {
           P.add({ type: 'coach', x: p.x, z: p.z, ry, w, d: 10, gy: g.lo, h: 7.2, tint: P.pick(MASON), door: P.pick(DOOR), seed: Math.floor(P.rng() * 180), map: 'building' });
           P.collider({ kind: 'box', x: p.x, z: p.z, hx: w / 2, hz: 5, ry, y0: g.lo - 1, y1: g.hi + 8 });
           P.far({ x: p.x, z: p.z, y: g.lo - 1, w, d: 10, h: 9, ry, color: '#8a5a44', lit: 0.25 });
-          if (P.rng() < 0.6) P.lamp({ x: p.x, z: p.z, hx: p.x + Math.sin(ry) * 5.4, hz: p.z + Math.cos(ry) * 5.4, hy: g.lo + 3, color: '#ffc070', radius: 7, intensity: 0.8, halo: 1 });
+          if (P.rng() < 0.35) P.lamp({ x: p.x, z: p.z, hx: p.x + Math.sin(ry) * 5.4, hz: p.z + Math.cos(ry) * 5.4, hy: g.lo + 3, color: '#ffc070', radius: 7, intensity: 0.6, halo: 1 });
         }
         s += w + 0.05;
       }
@@ -821,7 +875,7 @@ function mats(B) {
   const deco = m('deco', () => windowMat(decoTex(), { key: 'ut-deco', tint: true, ...DECO, pal: WARM, occ: [0.35, 0.8], dense: 0.72, sparse: 0.14, curtains: true, tv: 0.04, perWindow: true, rough: 0.8, metal: 0.02, env: 0.4, night: 1.2, crown: { hex: '#ffd890', k: 1.83 } }));
   // plain-coloured iron, slate, copper: colours of the trim material
   const trim = m('trim', () => litMat({ vertexColors: true, roughness: 0.6, metalness: 0.15 }));
-  const leaf = sharedMat(B, 'leaf', () => litMat({ vertexColors: true, roughness: 0.9, flatShading: true }, { glow: 0.7 }));
+  const leaf = sharedMat(B, 'leaf', () => litMat({ vertexColors: true, roughness: 0.9, flatShading: true }, { glow: 0.45 }));
   // gold crown edges and warm lamp glass: one glowing material
   const glo = sharedMat(B, 'glo', () => nightGlowVC(4));
   const lit = (hex, k) => { const c = new THREE.Color(hex); return [c.r * k / 4, c.g * k / 4, c.b * k / 4]; };
@@ -842,7 +896,10 @@ function mats(B) {
     steel: paint(trim, 0xa8adb2),
     pole: poleMat(),
     wood: paint(trim, 0x6e5038),
-    ashlar: m('ashlar', () => litMat({ map: ashlarTex(), roughness: 0.85 }, { glow: 2.4 })),
+    cream: paint(trim, 0xe6dcc2),
+    boatGreen: paint(trim, 0x1f4a32),
+    boatRed: paint(trim, 0x8a2a22),
+    ashlar: m('ashlar', () => litMat({ map: ashlarTex(), roughness: 0.85 }, { glow: 1.9 })),
     slate: paint(trim, 0x3a4048),
     copper: paint(trim, 0x5f9e88),
     trim,
@@ -856,7 +913,7 @@ function mats(B) {
     chase: m('chase', () => chaseMat(3.4, 7)),
     signal: sharedMat(B, 'signal', () => signalMat(28)),
     lawn: m('lawn', () => litMat({ map: groundTexture('grass'), color: 0xb8c8a0, roughness: 0.95, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }, { glow: 2.2 })),
-    path: m('path', () => litMat({ map: hexTex(), roughness: 0.85, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }, { glow: 2.4 })),
+    path: m('path', () => litMat({ map: hexTex(), roughness: 0.85, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }, { glow: 1.6 })),
     pond: m('pond', () => waterMat(pondTex())),
     trunk: paint(leaf, 0x4a3a2c),
     leaf,
@@ -1510,6 +1567,86 @@ function drawCarriage(B, it, M) {
   for (const sd of [-1, 1]) w.cyl(x - fx * 0.8 + Math.cos(ry) * sd * 0.85, y + 0.55, z - fz * 0.8 - Math.sin(ry) * sd * 0.85, 0.55, 0.08, 10);
 }
 
+function drawBoathouse(B, it, M) {
+  const { x, z, ry, w, d, gy, wy, dock } = it;
+  const fx = Math.sin(ry), fz = Math.cos(ry);
+  const W = toWorld(x, z, ry);
+  const top = gy + 0.8, eave = top + 3.8;
+  // a stone plinth, cream timber walls, the copper hip roof
+  walls(A(B, M.ashlar), x, gy - 1.4, z, w + 0.6, 2.2, d + 0.6, ry, 3, 3);
+  lid(A(B, M.ashlar), x, top, z, w + 0.6, d + 0.6, ry, 3);
+  walls(A(B, M.cream), x, top, z, w, eave - top, d, ry, 2, 2);
+  hip(A(B, M.copper), x, eave, z, w, d, 2.8, ry, { over: 0.9 });
+  // a green band under the eaves, corner posts
+  walls(A(B, M.boatGreen), x, eave - 0.45, z, w + 0.08, 0.45, d + 0.08, ry, 2, 2);
+  for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+    const [px, pz] = W(a * (w / 2 + 0.05), b * (d / 2 + 0.05));
+    A(B, M.boatGreen).box(px, top, pz, 0.36, eave - top, 0.36, ry);
+  }
+  // lit windows all round: the door and windows to the lane, tall arches to the water
+  const warm = A(B, M.warm);
+  const face = (lx, lz, fr, ww, y0, h) => {
+    const [px, pz] = W(lx, lz);
+    panel(warm, px, y0, pz, ww, h, ry + fr);
+  };
+  for (const k of [-2, -1, 1, 2]) face(k * 3.2, d / 2 + 0.04, 0, 1.6, top + 1.0, 1.9);
+  for (const k of [-1, 0, 1]) face(k * 4.6, -d / 2 - 0.04, Math.PI, 3.0, top + 0.4, 3.0);
+  for (const sd of [-1, 1]) for (const k of [-1, 1]) face(sd * (w / 2 + 0.04), k * 2.4, sd * Math.PI / 2, 1.5, top + 1.0, 1.9);
+  {
+    const [px, pz] = W(0, d / 2 + 0.06);
+    panel(A(B, M.boatGreen), px, top, pz, 1.8, 2.7, ry);
+    panel(warm, px + fx * 0.02, top + 2.75, pz + fz * 0.02, 1.8, 0.5, ry);
+    panel(A(B, M.sign), px + fx * 0.04, eave - 0.42, pz + fz * 0.04, 5.6, 1.17, ry, M.uv('boathouse'));
+    // steps up to the door
+    A(B, M.ashlar).box(px + fx * 1.1, gy - 0.2, pz + fz * 1.1, 3.0, 0.5, 1.4, ry);
+    A(B, M.ashlar).box(px + fx * 0.5, gy - 0.2, pz + fz * 0.5, 3.0, 0.85, 1.0, ry);
+  }
+  // the lantern cupola on the ridge
+  {
+    const cy = eave + 2.3;
+    walls(A(B, M.cream), x, cy, z, 1.8, 1.4, 1.8, ry, 2, 2);
+    for (const fr of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+      const ox = Math.sin(ry + fr) * 0.92, oz = Math.cos(ry + fr) * 0.92;
+      panel(warm, x + ox, cy + 0.25, z + oz, 1.2, 0.9, ry + fr);
+    }
+    hip(A(B, M.copper), x, cy + 1.4, z, 1.8, 1.8, 1.2, ry, { over: 0.25 });
+  }
+  // string lights along the long eaves
+  const gl = A(B, M.led);
+  for (const sd of [-1, 1]) {
+    for (let k = 0; k <= 10; k++) {
+      const [px, pz] = W(-w / 2 + (k / 10) * w, sd * (d / 2 + 0.95));
+      gl.box(px, eave - 0.35 - 0.12 * Math.sin((k / 10) * Math.PI * 3) ** 2, pz, 0.16, 0.16, 0.16);
+    }
+  }
+  // the dock: planks on posts out over the water, a lantern at its end
+  const wood = A(B, M.wood);
+  const [kx, kz] = W(0, -d / 2 - dock / 2);
+  wood.box(kx, wy + 0.42, kz, 6, 0.24, dock, ry);
+  for (const a of [-1, 1]) {
+    for (let q = 0; q <= 3; q++) {
+      const [px, pz] = W(a * 2.7, -d / 2 - (q / 3) * (dock - 0.4) - 0.2);
+      wood.cyl(px, wy - 0.6, pz, 0.14, 1.05, 5);
+    }
+  }
+  {
+    const [px, pz] = W(2.4, -d / 2 - dock + 0.6);
+    A(B, M.metal).cyl(px, wy + 0.66, pz, 0.07, 2.2, 5);
+    A(B, M.warm).box(px, wy + 2.6, pz, 0.36, 0.48, 0.36);
+    A(B, M.metal).box(px, wy + 3.08, pz, 0.48, 0.1, 0.48);
+  }
+  // rowboats tied up either side of it
+  const hulls = [M.cream, M.boatGreen, M.boatRed];
+  [[-4.6, -3.0, 0.08], [4.7, -5.6, -0.1], [-4.4, -7.4, 0.15]].forEach(([lx, lz, a], k) => {
+    const [px, pz] = W(lx, -d / 2 + lz);
+    const hull = A(B, hulls[k]);
+    hull.box(px, wy + 0.02, pz, 1.25, 0.42, 3.7, ry + a);
+    const bow = Math.sin(ry + a), bowz = Math.cos(ry + a);
+    hull.box(px + bow * 2.0, wy + 0.06, pz + bowz * 2.0, 0.7, 0.36, 0.5, ry + a);
+    A(B, M.wood).box(px, wy + 0.3, pz, 1.05, 0.08, 0.32, ry + a);
+  });
+}
+
 function drawCoachHouse(B, it, M) {
   const { x, z, ry, w, d, gy, h } = it;
   const acc = A(B, M.mats.row);
@@ -1523,9 +1660,16 @@ function drawCoachHouse(B, it, M) {
   tr.box(x + fx * (d / 2 + 0.02), gy, z + fz * (d / 2 + 0.02), Math.min(3.4, w - 2), 3.1, 0.12, ry);
   tr.col = [0.85, 0.82, 0.74];
   tr.box(x + fx * (d / 2 + 0.25), gy + h - 0.6, z + fz * (d / 2 + 0.25), w + 0.1, 0.6, 0.5, ry);
-  tr.col = [0.18, 0.32, 0.14];
-  tr.box(x + fx * (d / 2 + 0.06) + Math.cos(ry) * (w / 2 - 1), gy + 0.5, z + fz * (d / 2 + 0.06) - Math.sin(ry) * (w / 2 - 1), 1.6, h - 1.6, 0.14, ry);
   tr.col = [1, 1, 1];
+  {
+    // ivy climbing one corner: leafy clumps against the wall
+    const lf = A(B, M.leaf);
+    lf.col = [0.1, 0.2, 0.08];
+    const side = it.seed % 2 ? 1 : -1;
+    const ix = x + fx * (d / 2 + 0.3) + Math.cos(ry) * side * (w / 2 - 1.1), iz = z + fz * (d / 2 + 0.3) - Math.sin(ry) * side * (w / 2 - 1.1);
+    for (let k = 0; k < 3; k++) blob(lf, ix - Math.cos(ry) * side * k * 0.35, gy + 1.2 + k * 1.9, iz + Math.sin(ry) * side * k * 0.35, 1.0 - k * 0.12, 1.3, 0.45, 5, 3);
+    lf.col = [1, 1, 1];
+  }
   lid(A(B, M.roof), x, gy + h, z, w, d, ry, 4);
   panel(A(B, M.warm), x + fx * (d / 2 + 0.05), gy + 3.6, z + fz * (d / 2 + 0.05), 1.2, 1.6, ry);
 }
