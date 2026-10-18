@@ -12,7 +12,7 @@
 // the wreck of the MARY KESTREL. Lit sodium orange, not the terminal's white.
 import { makeRng } from '../../core/util.js';
 import { litMat, box, cylinder, gable, lattice } from './builder.js';
-import { C, col, frame, frame3, lbox, lbeam, fbox, tube, panel, seedOf, groundStrip, cmat, coneC, spark, arcPanel, catenary, beamLine } from './coast/kit.js';
+import { C, col, frame, frame3, lbox, lbeam, fbox, tube, panel, seedOf, groundStrip, cmat, coneC, spark, arcPanel, catenary, beamLine, warmBuilders } from './coast/kit.js';
 import { signAtlas, cladTexture, brickTexture, officeTexture, scaffoldTexture } from './coast/tex.js';
 import { portMats, quayEdge, hull, hullFrames, container, randomBox, truck, mast, tugBoat, capUp } from './coast/port.js';
 import { polyAtX, pieces, mid, frame2, shoreRuns } from './coast/geo.js';
@@ -123,7 +123,11 @@ export default {
     if (S.wreck) P.landmark({ id: 'sy_wreck', name: 'WRECK OF THE MARY KESTREL', x: S.wreck.x, z: S.wreck.z, r: 60, hidden: true, kind: 'wreck' });
   },
 
-  warm(B) { smats(B); UV(); },
+  *warm(B) {
+    const M = smats(B), uv = UV();
+    yield;
+    yield* warmBuilders(B, this, BUILD, M, uv);
+  },
 
   *build(B, items) {
     const M = smats(B);
@@ -133,9 +137,9 @@ export default {
       const fn = BUILD[it.type];
       if (fn) {
         const r = fn(B, M, it, uv);
-        if (r && r[Symbol.iterator]) yield* r;
+        if (r && r[Symbol.iterator]) { yield* r; yield; t0 = performance.now(); continue; }
       }
-      if (performance.now() - t0 > 2) { yield; t0 = performance.now(); }
+      if (performance.now() - t0 > 1) { yield; t0 = performance.now(); }
     }
   },
 };
@@ -417,7 +421,8 @@ function planNorth(P, S) {
         if (!P.isFree(px, pz, 16, 6, 0, { roadPad: true, pad: 1 })) continue;
         const y0 = P.groundY(px, pz);
         const n = 4 + Math.floor(P.rng() * 4);
-        P.add({ type: 'plates', x: px, z: pz, y0, n, kind: P.rng() < 0.3 ? 'profiles' : 'plates' });
+        // (count, not n: the planner numbers every item with its own n)
+        P.add({ type: 'plates', x: px, z: pz, y0, count: n, kind: P.rng() < 0.3 ? 'profiles' : 'plates' });
         P.claim(px, pz, 16, 6, 0);
         P.collider({ kind: 'box', x: px, z: pz, hx: 7, hz: 2.2, ry: 0, y0: y0 - 1, y1: y0 + n * 0.5 + 1 });
       }
@@ -1245,7 +1250,7 @@ function plates(B, M, it) {
     // bundles of angle bars on A-frame racks
     col(st, C('#4a4c50'));
     for (const dx of [-5, 0, 5]) { lbeam(st, frame(x, y0, z, 0), [dx, 0, -2], [dx, 2.6, 0], 0.2); lbeam(st, frame(x, y0, z, 0), [dx, 0, 2], [dx, 2.6, 0], 0.2); }
-    for (let k = 0; k < it.n; k++) {
+    for (let k = 0; k < it.count; k++) {
       col(st, [0.45 + rng() * 0.15, 0.25 + rng() * 0.08, 0.15]);
       st.box(x, y0 + 1 + k * 0.32, z - 1.6 + (k % 3) * 1.1, 13, 0.3, 0.8);
     }
@@ -1253,7 +1258,7 @@ function plates(B, M, it) {
   }
   for (let s = 0; s < 2; s++) {
     const cx = x + (s ? 3.6 : -3.6);
-    for (let k = 0; k < it.n; k++) {
+    for (let k = 0; k < it.count; k++) {
       const r = 0.42 + rng() * 0.18;
       col(st, [r, r * 0.55, r * 0.35]);
       st.box(cx + (rng() - 0.5) * 0.4, y0 + 0.2 + k * 0.42, z + (rng() - 0.5) * 0.3, 6.2, 0.38, 3.8, (rng() - 0.5) * 0.06);

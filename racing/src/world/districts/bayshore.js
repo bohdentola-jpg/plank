@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import { makeRng } from '../../core/util.js';
 import { U } from '../kit.js';
 import { litMat, box, cylinder, drape } from './builder.js';
-import { mats, cmat, C, col, frame, lbox, tube, panel, seedOf, groundStrip, coneC, windTree, chaseBulb } from './coast/kit.js';
+import { mats, cmat, C, col, frame, lbox, tube, panel, seedOf, groundStrip, coneC, windTree, chaseBulb, warmBuilders } from './coast/kit.js';
 import { signAtlas, motelTexture } from './coast/tex.js';
 import { homeMats, rockLump, stoneWall, cottage, glassHouse, car, lampPost, blob } from './coast/home.js';
 
@@ -63,7 +63,7 @@ function bmats(B) {
   Object.assign(M, homeMats(B));
   M.sign = B.mat('sign', () => { const t = atlas(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, roughness: 0.6 }, { night: 1.35 }); });
   M.flood = cmat(B, 'flood', floodMat);
-  M.motel = B.mat('motel', () => { const t = motelTexture(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, vertexColors: true, roughness: 0.8, envMapIntensity: 0.3 }, { night: 1.15 }); });
+  M.motel = B.mat('motel', () => { const t = motelTexture(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, vertexColors: true, roughness: 0.8, envMapIntensity: 0.3 }, { night: 0.8, glow: 1.4 }); });
   return M;
 }
 
@@ -153,7 +153,11 @@ export default {
     }
   },
 
-  warm(B) { bmats(B); UV(); },
+  *warm(B) {
+    const M = bmats(B), uv = UV();
+    yield;
+    yield* warmBuilders(B, this, BUILD, M, uv);
+  },
 
   *build(B, items) {
     const M = bmats(B);
@@ -161,8 +165,12 @@ export default {
     let t0 = performance.now();
     for (const it of items) {
       const fn = BUILD[it.type];
-      if (fn) fn(B, M, it, uv);
-      if (performance.now() - t0 > 2) { yield; t0 = performance.now(); }
+      if (fn) {
+        // (a big piece builds in slices: its builder yields between them)
+        const r = fn(B, M, it, uv);
+        if (r && r[Symbol.iterator]) { yield* r; yield; t0 = performance.now(); continue; }
+      }
+      if (performance.now() - t0 > 1) { yield; t0 = performance.now(); }
     }
   },
 };
@@ -295,7 +303,7 @@ function planVista(P, S) {
 // ------------------------------------------------------------------ the motel
 
 function planMotel(P, S) {
-  const f = findFree(P, 3210, 2472, 72, 46, { pad: 1 }, 60);
+  const f = findFree(P, 3215, 2452, 72, 46, { pad: 1 }, 60);
   if (!f) return;
   const { x, z, ry } = f;
   const g = P.groundRange(x, z, 72, 46, ry);
@@ -319,19 +327,19 @@ function planMotel(P, S) {
   // the walkway lights along the rooms, lamps over the car park, the pool
   for (let lx = -24; lx <= 16; lx += 8) {
     const q = F(lx, 0, -8.6);
-    P.lamp({ x: q[0], z: q[2], hx: q[0], hy: y1 + 2.8, hz: q[2], color: '#ffd8a0', radius: 9, intensity: 0.7, halo: 0.8 });
+    P.lamp({ x: q[0], z: q[2], hx: q[0], hy: y1 + 2.8, hz: q[2], color: '#ffd8a0', radius: 6, intensity: 0.3, halo: 0.7 });
     const q2 = F(lx + 4, 0, -8.6);
-    P.lamp({ x: q2[0], z: q2[2], hx: q2[0], hy: y1 + 6.0, hz: q2[2], color: '#ffd8a0', radius: 9, intensity: 0.6, halo: 0.8 });
+    P.lamp({ x: q2[0], z: q2[2], hx: q2[0], hy: y1 + 6.0, hz: q2[2], color: '#ffd8a0', radius: 6, intensity: 0.3, halo: 0.7 });
   }
   for (const lx of [-16, 16]) {
     const q = F(lx, 0, 16);
-    P.lamp({ x: q[0], z: q[2], hx: q[0], hy: y1 + 7.5, hz: q[2], color: SODIUM, radius: 22, intensity: 1.0, halo: 1.6 });
+    P.lamp({ x: q[0], z: q[2], hx: q[0], hy: y1 + 7.5, hz: q[2], color: SODIUM, radius: 18, intensity: 0.6, halo: 1.4 });
     P.collider({ kind: 'circle', x: q[0], z: q[2], r: 0.3, y0: g.lo - 1, y1: y1 + 8 });
   }
   const pool = F(-2, 0, 9.5);
   P.lamp({ x: pool[0], z: pool[2], hx: pool[0], hy: y1 + 1, hz: pool[2], color: '#4ae8e0', radius: 12, intensity: 0.8, halo: 0 });
   const off = F(-27, 0, 16);
-  P.lamp({ x: off[0], z: off[2], hx: off[0], hy: y1 + 3.6, hz: off[2], color: '#ffe0a0', radius: 12, intensity: 0.8, halo: 1.2 });
+  P.lamp({ x: off[0], z: off[2], hx: off[0], hy: y1 + 3.6, hz: off[2], color: '#ffe0a0', radius: 8, intensity: 0.45, halo: 1.0 });
   // cars nosed in at the rooms
   const rng = P.rng;
   for (let k = 0; k < 9; k++) {
@@ -366,7 +374,7 @@ function planRock(P, S) {
   const sp = [x - 4.5 * Math.cos(ry) - 4 * Math.sin(ry), z + 4.5 * Math.sin(ry) - 4 * Math.cos(ry)];
   P.collider({ kind: 'box', x: sp[0], z: sp[1], hx: 1.4, hz: 0.2, ry, y0: y - 1, y1: y + 3 });
   // an old camper van parked at the end of the track
-  const vx = ex - 4, vz = ez + 10;
+  const vx = ex - 13, vz = ez - 3;
   if (P.isFree(vx, vz, 3, 6, 1.2, { pad: 0.2 })) {
     P.add({ type: 'van', x: vx, z: vz, ry: 1.2 });
     P.collider({ kind: 'box', x: vx, z: vz, hx: 1.1, hz: 2.6, ry: 1.2, y0: y - 1, y1: y + 2.6 });
@@ -479,10 +487,10 @@ const BUILD = {
     lbox(pa, F, it.ry, 0, 1.45, 0, 2.0, 1.1, 5.0, {});
     col(pa, C('#f4f0e6'));
     lbox(pa, F, it.ry, 0, 2.55, 0, 1.9, 0.12, 4.6, {});
-    col(gl, C('#ffc070', 1.6));
-    for (const sd of [-1, 1]) lbox(gl, F, it.ry, sd * 1.01, 1.6, -0.6, 0.03, 0.6, 2.6, {});
-    col(gl, C('#fff2d8', 1.2));
-    lbox(gl, F, it.ry, 0, 1.5, 2.51, 1.6, 0.7, 0.03, {});
+    col(gl, C('#ffc070', 0.7));
+    for (const sd of [-1, 1]) lbox(gl, F, it.ry, sd * 1.01, 1.7, -0.6, 0.03, 0.45, 1.8, {});
+    col(pa, C('#1d2a33'));
+    lbox(pa, F, it.ry, 0, 1.5, 2.51, 1.6, 0.7, 0.03, {});
   },
   stack: seaStack,
   drive(B, M, it) {
@@ -521,7 +529,7 @@ const BUILD = {
     const dc = B.acc(M.decal);
     const rng = makeRng(`bi${it.x.toFixed(1)},${it.z.toFixed(1)}`);
     const n = 7;
-    const c = it.t < 0.5 ? [0.6, 0.12, 0.4] : [0.28, 0.4, 0.16];
+    const c = it.t < 0.35 ? [0.42, 0.16, 0.3] : [0.24, 0.34, 0.13];
     dc.col = c;
     const ctr = dc.v(it.x, B.groundY(it.x, it.z) + 0.07, it.z, 0.5, 0.5);
     const ring = [];
@@ -537,7 +545,7 @@ const BUILD = {
 
 // ------------------------------------------------------------------ the towers
 
-function tower(B, M, it) {
+function* tower(B, M, it) {
   const m = bridgeModel(B.net);
   const fl = B.acc(M.flood), cn = B.acc(M.conc), bl = B.acc(M.blink), gl = B.acc(M.glow), pa = B.acc(M.paint);
   const { s, deck } = it;
@@ -551,6 +559,7 @@ function tower(B, M, it) {
   col(pa, C('#2a2e2c'));
   lbox(pa, F, ry, 0, -0.6, 0, 30.2, 1.6, 12.2, {});
   for (const sd of [1, -1]) { const q = F(sd * 15, 0, 0); cylinder(pa, q[0], -0.6, q[2], 6.05, 1.6, 12, {}); }
+  yield;
   // the legs: stepped back as they rise (Halcyon red)
   const legs = [[3.5, 30, 4.4, 6.4], [30, 58, 4.0, 5.8], [58, 84, 3.6, 5.2], [84, m.YS - 2, 3.2, 4.6]];
   col(fl, C(RED));
@@ -576,6 +585,7 @@ function tower(B, M, it) {
     const o = F(sd * 15.3, 65.6, 0);
     bl.box(o[0], o[1], o[2], 0.5, 0.5, 0.5);
   }
+  yield;
   // the portal struts: one under the deck, three over it
   const ups = [deck + Math.max(18, 56 - deck), 77, m.YS - 5.5];
   col(fl, C(RED));
@@ -593,7 +603,7 @@ function tower(B, M, it) {
 
 // ------------------------------------------------------------------ the spans
 
-function span(B, M, it) {
+function* span(B, M, it) {
   const m = bridgeModel(B.net);
   const fl = B.acc(M.flood), gl = B.acc(M.glow), pa = B.acc(M.paint);
   const { s0, s1 } = it;
@@ -609,6 +619,7 @@ function span(B, M, it) {
       if (s >= b) break;
     }
   }
+  yield;
   // the necklace bulbs
   col(gl, C('#fff2d8', 3));
   for (let s = Math.ceil(m.SA / 12) * 12; s < s1; s += 12) {
@@ -631,6 +642,7 @@ function span(B, M, it) {
       fl.beam(top[0], top[1], top[2], bot[0], bot[1], bot[2], 0.14, 0.14);
     }
   }
+  yield;
   // the stiffening truss under the deck edges, floor beams across
   const ta = Math.max(m.TA, s0), tb = Math.min(m.TB, s1);
   if (tb > ta) {
@@ -659,6 +671,7 @@ function span(B, M, it) {
       }
     }
   }
+  yield;
   // lamp posts on the truss, their heads out over the lanes
   let k = 0;
   for (let s = m.TA + 8; s < m.TB - 4; s += 45, k++) {
@@ -771,7 +784,7 @@ function vista(B, M, it, uv) {
 
 // ------------------------------------------------------------------ the motel
 
-function motel(B, M, it, uv) {
+function* motel(B, M, it, uv) {
   const { x, z, ry, y1 } = it;
   const rng = makeRng(seedOf(it));
   const F = frame(x, y1, z, ry);
@@ -788,7 +801,7 @@ function motel(B, M, it, uv) {
     const q = F(cx, 0, cz);
     col(cn, C('#a8a294'));
     box(cn, q[0], it.y0, q[2], w + 0.3, y1 - it.y0, d + 0.3, R, { u: 2 });
-    col(mo, C('#f4ead8'));
+    col(mo, C('#e2d6c0'));
     box(mo, q[0], y1, q[2], w, 6.4, d, R, { u: 16, v: 3.2, top: false });
     col(pa, C('#3a6a7a'));
     box(pa, q[0], y1 + 6.4, q[2], w + 1.4, 0.5, d + 3.4, R, {});
@@ -809,14 +822,16 @@ function motel(B, M, it, uv) {
     col(cn, C('#c8c2b4'));
     for (let k = 0; k < 10; k++) lbox(cn, G, R, -w / 2 - 4.0 + k * 0.35, k * 0.3, d / 2 + 1.2, 0.4, 0.25, 1.4, {});
   };
+  yield;
   wing(-4, -15.5, 46, 11, 0);
+  yield;
   // the side wing faces the courtyard (turned to face local -x)
   {
     const R = ry - Math.PI / 2;
     const q = F(26.5, 0, -3);
     col(cn, C('#a8a294'));
     box(cn, q[0], it.y0, q[2], 11.3, y1 - it.y0, 31.3, ry, { u: 2 });
-    col(mo, C('#f4ead8'));
+    col(mo, C('#e2d6c0'));
     box(mo, q[0], y1, q[2], 11, 6.4, 31, ry, { u: 16, v: 3.2, top: false });
     col(pa, C('#3a6a7a'));
     box(pa, q[0], y1 + 6.4, q[2], 14.4, 0.5, 32.4, ry, {});
@@ -830,6 +845,7 @@ function motel(B, M, it, uv) {
     col(gl, C('#ffe0a8', 2.2));
     for (let lx = -13.5; lx < 15.5; lx += 4) for (const y of [2.5, 5.7]) { const p = G(lx - 1.1, y, 5.6); gl.box(p[0], p[1], p[2], 0.25, 0.25, 0.15); }
   }
+  yield;
   // the office: big windows, a canted roof, its neon
   const op = F(-27, 0, 11);
   col(cn, C('#a8a294'));
@@ -853,6 +869,7 @@ function motel(B, M, it, uv) {
   gl.quadP(pw[3], pw[2], pw[1], pw[0]);
   col(rf, C('#f4f0e6'));
   for (let k = 0; k < 3; k++) { const p = F(-7 + k * 5, 0, 5.2); coneC(rf, p[0], py + 1.9, p[2], 1.3, 0.5, 8); rf.box(p[0], py + 0.1, p[2], 0.06, 1.85, 0.06); }
+  yield;
   // the pylon: a tall pole, the big neon board, the arrow chasing, VACANCY
   const pl = F(31, 0, 21);
   const ly = B.groundY(pl[0], pl[2]);

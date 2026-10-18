@@ -14,7 +14,7 @@ import { makeRng } from '../../core/util.js';
 import { litMat, box, cylinder, gable, lattice, drape } from './builder.js';
 import { Acc } from '../build/geo.js';
 import { roadLamps } from '../build/roads.js';
-import { mats, cmat, C, col, frame, lbox, lbeam, tube, panel, seedOf, groundStrip, coneC, disc, bulb, stringLights, beamLine, palm, chaseBulb, spark } from './coast/kit.js';
+import { mats, cmat, C, col, frame, lbox, lbeam, tube, panel, seedOf, groundStrip, coneC, disc, bulb, stringLights, beamLine, palm, chaseBulb, spark, warmBuilders } from './coast/kit.js';
 import { signAtlas, decoTexture, shackTexture, shackUV, SHACK_KINDS } from './coast/tex.js';
 import { frame2 } from './coast/geo.js';
 
@@ -54,7 +54,8 @@ function pmats(B) {
   const M = mats(B);
   M.sign = B.mat('sign', () => { const t = atlas(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, roughness: 0.6 }, { night: 1.35 }); });
   M.deco = B.mat('deco', () => { const t = decoTexture(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, vertexColors: true, roughness: 0.8 }, { night: 1.0 }); });
-  M.shack = B.mat('shack', () => { const t = shackTexture(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, roughness: 0.75 }, { night: 1.1 }); });
+  // (the stalls stand under the boardwalk's lamps: a soft hand with both glows)
+  M.shack = B.mat('shack', () => { const t = shackTexture(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, roughness: 0.75 }, { night: 0.7, glow: 1.3 }); });
   return M;
 }
 
@@ -97,7 +98,11 @@ export default {
     }
   },
 
-  warm(B) { pmats(B); UV(); },
+  *warm(B) {
+    const M = pmats(B), uv = UV();
+    yield;
+    yield* warmBuilders(B, this, BUILD, M, uv);
+  },
 
   *build(B, items) {
     const M = pmats(B);
@@ -105,8 +110,12 @@ export default {
     let t0 = performance.now();
     for (const it of items) {
       const fn = BUILD[it.type];
-      if (fn) fn(B, M, it, uv);
-      if (performance.now() - t0 > 2) { yield; t0 = performance.now(); }
+      if (fn) {
+        // (a big piece builds in slices: its builder yields between them)
+        const r = fn(B, M, it, uv);
+        if (r && r[Symbol.iterator]) { yield* r; yield; t0 = performance.now(); continue; }
+      }
+      if (performance.now() - t0 > 1) { yield; t0 = performance.now(); }
     }
   },
 };
@@ -330,8 +339,8 @@ function planBeach(P, S) {
     P.add({ type: 'tower', x, z, y0, ry: Math.PI + (k % 2 ? 0.25 : -0.2), k });
     P.claim(x, z, 5, 5, 0);
     P.collider({ kind: 'box', x, z, hx: 2, hz: 2, ry: 0, y0: y0 - 1, y1: y0 + 6 });
-    P.add({ type: 'umbrellas', x: x + 14, z: z - 2, n: 5 + k });
-    P.add({ type: 'umbrellas', x: x - 16, z: z + 2, n: 4 + k });
+    P.add({ type: 'umbrellas', x: x + 14, z: z - 2, count: 5 + k });
+    P.add({ type: 'umbrellas', x: x - 16, z: z + 2, count: 4 + k });
   }
   // the lifeguard HQ and the parking lot at the west end, by the sea wall
   {
@@ -929,7 +938,7 @@ function cometPath(A, W) {
   return { at, hAt, total };
 }
 
-function comet(B, M, it, uv) {
+function* comet(B, M, it, uv) {
   const { A, W, ry } = it;
   const F = frame(it.x, 0, it.z, ry);
   const { at, hAt, total } = cometPath(A, W);
@@ -941,9 +950,11 @@ function comet(B, M, it, uv) {
     return p;
   };
   const yAt = (s) => it.y0 + hAt(s);
-  // bents every 4 m: two white posts to the track, X braces, ledgers to the last bent
-  let prev = null;
-  for (let s = 0; s < total; s += 4) {
+  // bents every 5 m: two white posts to the track, X braces, ledgers to the last bent
+  // (built in slices: the whole coaster is too much for one step)
+  let prev = null, nb = 0;
+  for (let s = 0; s < total; s += 5) {
+    if (++nb % 16 === 0) yield;
     const top = yAt(s) - 0.5;
     const a = pt(s, -1.3), b = pt(s, 1.3);
     const ga = B.groundY(a[0], a[2]), gb = B.groundY(b[0], b[2]);
@@ -952,21 +963,24 @@ function comet(B, M, it, uv) {
     wood.beam(b[0], gb - 0.2, b[2], b[0], top, b[2], 0.3, 0.3);
     wood.beam(a[0], top, a[2], b[0], top, b[2], 0.26, 0.3);
     col(wood, C('#e2ddd0'));
-    for (let y = Math.max(ga, gb) + 1; y < top - 2.5; y += 4.5) {
+    for (let y = Math.max(ga, gb) + 1; y < top - 2.5; y += 6) {
       wood.beam(a[0], y, a[2], b[0], Math.min(top, y + 4), b[2], 0.14, 0.14);
       wood.beam(b[0], y, b[2], a[0], Math.min(top, y + 4), a[2], 0.14, 0.14);
     }
     if (prev) {
       for (const [p, q] of [[prev.a, a], [prev.b, b]]) {
         const h = Math.min(prev.top, top);
-        for (let y = Math.min(ga, gb) + 2.5; y < h - 1; y += 6) wood.beam(p[0], y, p[2], q[0], y, q[2], 0.12, 0.12);
+        for (let y = Math.min(ga, gb) + 2.5; y < h - 1; y += 9) wood.beam(p[0], y, p[2], q[0], y, q[2], 0.12, 0.12);
       }
     }
     prev = { a, b, top };
   }
+  yield;
   // the track: a dark bed, two rails, bulbs along both edges
-  const step = 2;
+  const step = 3;
+  let nt = 0;
   for (let s = 0; s < total; s += step) {
+    if (++nt % 60 === 0) yield;
     const s1 = Math.min(total, s + step);
     const a0 = pt(s, -1.25), a1 = pt(s, 1.25), b0 = pt(s1, -1.25), b1 = pt(s1, 1.25);
     const y0 = yAt(s), y1 = yAt(s1);
@@ -976,8 +990,9 @@ function comet(B, M, it, uv) {
     col(st, C('#9a9c9e'));
     for (const lat of [-0.65, 0.65]) { const p = pt(s, lat), q = pt(s1, lat); st.beam(p[0], y0 + 0.12, p[2], q[0], y1 + 0.12, q[2], 0.12, 0.14); }
   }
+  yield;
   col(gl, C('#fff2c8', 2.8));
-  for (let s = 0; s < total; s += 3) {
+  for (let s = 0; s < total; s += 4) {
     for (const lat of [-1.45, 1.45]) { const p = pt(s, lat); gl.box(p[0], yAt(s) + 0.1, p[2], 0.2, 0.2, 0.2); }
   }
   // the train cresting the lift
@@ -1172,10 +1187,11 @@ function guardTower(B, M, it) {
   pa.quadP(fl(1.1, -0.7, 0), fl(0, -0.7, 0), fl(0, 0, 0), fl(1.1, 0, 0));
 }
 
-function umbrellas(B, M, it) {
+function* umbrellas(B, M, it) {
   const rng = makeRng(seedOf(it));
   const pa = B.near(M.paint), mt = B.near(M.matte);
-  for (let k = 0; k < it.n; k++) {
+  for (let k = 0; k < it.count; k++) {
+    if (k && k % 4 === 0) yield;
     const x = it.x + (rng() - 0.5) * 18, z = it.z + (rng() - 0.5) * 10;
     const y = B.groundY(x, z);
     if (y < 0.7) continue;

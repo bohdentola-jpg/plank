@@ -10,7 +10,7 @@
 // the terminal's floods, sodium in the rail yard, warm in the old harbor.
 import { makeRng } from '../../core/util.js';
 import { litMat, box, cylinder, gable, hip, lattice, drape } from './builder.js';
-import { C, col, frame, lbox, lbeam, tube, panel, seedOf, stringLights, groundStrip, truss, cmat, coneC, arcPanel } from './coast/kit.js';
+import { C, col, frame, lbox, lbeam, tube, panel, seedOf, stringLights, groundStrip, truss, cmat, coneC, arcPanel, warmBuilders } from './coast/kit.js';
 import { signAtlas, officeTexture, cladTexture, brickTexture, trackTexture } from './coast/tex.js';
 import { portMats, stackBlock, stsCrane, stsPlan, rtgCrane, straddle, mast, quayEdge, hull, truck, fence, container, randomBox, tugBoat, CH, CW, C40 } from './coast/port.js';
 import { waterAt, riverAt } from '../terrain.js';
@@ -101,9 +101,10 @@ export default {
     if (S.den) P.landmark({ id: 'hb_box', name: 'THE BOX', x: S.den.x, z: S.den.z, r: 20, hidden: true, kind: 'hideout' });
   },
 
-  warm(B) {
-    hmats(B);
-    UV();
+  *warm(B) {
+    const M = hmats(B), uv = UV();
+    yield;
+    yield* warmBuilders(B, this, BUILD, M, uv);
   },
 
   *build(B, items) {
@@ -114,9 +115,9 @@ export default {
       const fn = BUILD[it.type];
       if (fn) {
         const r = fn(B, M, it, uv);
-        if (r && r[Symbol.iterator]) yield* r;
+        if (r && r[Symbol.iterator]) { yield* r; yield; t0 = performance.now(); continue; }
       }
-      if (performance.now() - t0 > 2) { yield; t0 = performance.now(); }
+      if (performance.now() - t0 > 1) { yield; t0 = performance.now(); }
     }
   },
 };

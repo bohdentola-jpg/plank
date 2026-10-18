@@ -14,7 +14,7 @@ import { makeRng } from '../../core/util.js';
 import { U } from '../kit.js';
 import { litMat, box, cylinder, gable, sphere, drape } from './builder.js';
 import { Acc } from '../build/geo.js';
-import { mats, C, col, frame, frame3, lbox, tube, panel, seedOf, groundStrip, coneC, windTree, mixC } from './coast/kit.js';
+import { mats, C, col, frame, frame3, lbox, tube, panel, seedOf, groundStrip, coneC, windTree, mixC, warmBuilders } from './coast/kit.js';
 import { signAtlas } from './coast/tex.js';
 import { homeMats, rockLump, rockPile, stoneWall, picket, cottage, car, lampPost, blob } from './coast/home.js';
 
@@ -113,7 +113,11 @@ export default {
     }
   },
 
-  warm(B) { pmats(B); UV(); },
+  *warm(B) {
+    const M = pmats(B), uv = UV();
+    yield;
+    yield* warmBuilders(B, this, BUILD, M, uv);
+  },
 
   *build(B, items) {
     const M = pmats(B);
@@ -121,8 +125,12 @@ export default {
     let t0 = performance.now();
     for (const it of items) {
       const fn = BUILD[it.type];
-      if (fn) fn(B, M, it, uv);
-      if (performance.now() - t0 > 2) { yield; t0 = performance.now(); }
+      if (fn) {
+        // (a big piece builds in slices: its builder yields between them)
+        const r = fn(B, M, it, uv);
+        if (r && r[Symbol.iterator]) { yield* r; yield; t0 = performance.now(); continue; }
+      }
+      if (performance.now() - t0 > 1) { yield; t0 = performance.now(); }
     }
   },
 };
@@ -158,7 +166,7 @@ function planLight(P, S) {
   // the light: a bright point far off, a big glow round the lantern close to
   P.lamp({ x, z, hx: x, hy: yb + 30.5, hz: z, color: new THREE.Color(2.6, 2.4, 1.9), radius: 6, intensity: 0, halo: 10 });
   // a lamp over the door
-  P.lamp({ x: x - 1, z: z - 5, hx: x - 0.8, hy: yb + 3, hz: z - 4.6, color: '#ffd8a0', radius: 12, intensity: 0.8, halo: 1.2 });
+  P.lamp({ x: x - 2, z: z - 7, hx: x - 1.8, hy: yb + 2.6, hz: z - 6.6, color: '#ffd8a0', radius: 7, intensity: 0.5, halo: 1.0 });
   S.light = { x, z, yb };
 }
 
@@ -261,8 +269,8 @@ function planMarina(P, S) {
   // a sign and a few cars at the end of the lane
   const lane = P.net.byId.get('pt_marina');
   if (lane) {
-    const p = lane.posAt(lane.length - 10);
-    const sx = p.x + lane.LX[p.i] * 7.5, sz = p.z + lane.LZ[p.i] * 7.5;
+    const p = lane.posAt(Math.max(8, lane.length - 40));
+    const sx = p.x + lane.LX[p.i] * 9, sz = p.z + lane.LZ[p.i] * 9;
     const sry = Math.atan2(-lane.LX[p.i], -lane.LZ[p.i]);
     P.add({ type: 'msign', x: sx, z: sz, ry: sry });
     P.collider({ kind: 'box', x: sx, z: sz, hx: 1.6, hz: 0.2, ry: sry, y0: P.groundY(sx, sz) - 1, y1: P.groundY(sx, sz) + 3 });
@@ -311,8 +319,8 @@ function planVillage(P, S) {
     const F = frame(f.x, 0, f.z, f.ry);
     const sp = F(0, 0, 7.5);
     P.far({ shape: 'cone', x: sp[0], z: sp[2], y: g.hi + 11, r: 2.2, h: 8, color: '#3a3e44' });
-    const lp = F(0, 0, 11);
-    P.lamp({ x: lp[0], z: lp[2], hx: lp[0], hy: g.hi + 3, hz: lp[2], color: '#ffd8a0', radius: 12, intensity: 0.8, halo: 1.2 });
+    const lp = F(0, 0, 13.5);
+    P.lamp({ x: lp[0], z: lp[2], hx: lp[0], hy: g.hi + 2.6, hz: lp[2], color: '#ffd8a0', radius: 8, intensity: 0.45, halo: 1.0 });
     S.chapel = f;
   }
   // the island's sign at the end of the bridge
@@ -370,6 +378,7 @@ function planBattery(P, S) {
 
 // ------------------------------------------------------------------ the cove
 
+const NETS = [[1236, 3601], [1240, 3597.5], [1244, 3594]], COVESIGN = [1212, 3571];
 const SURF = [[1148, 3540], [1168, 3560], [1186, 3580], [1202, 3600], [1214, 3620], [1232, 3640], [1250, 3660], [1266, 3680], [1284, 3700]];
 
 function planCove(P, S) {
@@ -390,8 +399,8 @@ function planCove(P, S) {
   // the beach: the glowing surf, driftwood, a boat on the sand, the sign
   P.add({ type: 'surf', x: 1220, z: 3610 });
   P.add({ type: 'beachkit', x: 1212, z: 3596 });
-  P.collider({ kind: 'circle', x: 1232, z: 3580, r: 0.3, y0: 0, y1: 4 });
-  for (const [x, z] of [[1222, 3592], [1226, 3588.5], [1230, 3585]]) P.collider({ kind: 'circle', x, z, r: 0.25, y0: 0, y1: 4 });
+  P.collider({ kind: 'circle', x: COVESIGN[0], z: COVESIGN[1], r: 0.3, y0: 0, y1: 4 });
+  for (const [x, z] of NETS) P.collider({ kind: 'circle', x, z, r: 0.25, y0: 0, y1: 4 });
   P.collider({ kind: 'box', x: 1226, z: 3598, hx: 0.8, hz: 2.2, ry: 0.5, y0: 0, y1: 2.5 });
   // rocks at either end
   for (const [x, z, s] of [[1166, 3532, 3.2], [1158, 3550, 2.4], [1268, 3668, 3.0], [1282, 3678, 2.2], [1250, 3655, 1.8]]) {
@@ -486,7 +495,7 @@ function planWalls(P, S) {
           continue;
         }
         run.push([x, z]);
-        if (run.length > 30) { flush(); }
+        if (run.length > 16) { flush(); }
       }
       flush();
     }
@@ -685,9 +694,10 @@ function lighthouse(B, M, it, uv) {
   // the tower: white, a red band, tapering
   const H = 26;
   const rAt = (h) => 3.3 - 0.85 * h / H;
+  // (painted steel: a lamp at its foot would bake it white all the way up)
   for (const [h0, h1, c] of [[0, 13, '#f4f2ec'], [13, 17.5, '#b8301f'], [17.5, H, '#f4f2ec']]) {
-    col(pa, C(c));
-    cylinder(pa, x, yb + h0, z, rAt(h0), h1 - h0, 18, { r2: rAt(h1) });
+    col(st, C(c, 0.85));
+    cylinder(st, x, yb + h0, z, rAt(h0), h1 - h0, 18, { r2: rAt(h1) });
   }
   // little windows up the tower, a stair's worth of light
   col(gl, C('#ffd29a', 1.2));
@@ -724,8 +734,8 @@ function lighthouse(B, M, it, uv) {
     st.beam(x + Math.cos(a0) * r, gy + 0.85, z + Math.sin(a0) * r, x + Math.cos(a1) * r, gy + 0.85, z + Math.sin(a1) * r, 0.04, 0.04);
   }
   // the watch room, its portholes
-  col(pa, C('#f4f2ec'));
-  cylinder(pa, x, gy + 0.35, z, 2.45, 2.1, 14, {});
+  col(st, C('#f4f2ec', 0.85));
+  cylinder(st, x, gy + 0.35, z, 2.45, 2.1, 14, {});
   col(gl, C('#ffd8a0', 1.4));
   for (let k = 0; k < 4; k++) { const a = (k / 4) * Math.PI * 2 + 0.4; gl.box(x + Math.cos(a) * 2.47, gy + 1.1, z + Math.sin(a) * 2.47, 0.45, 0.45, 0.45, -a); }
   // the lantern: a dark parapet, the glass (lit), its astragals, the red dome
@@ -1016,39 +1026,42 @@ function hullShape(pa, F, L, Bw, fb, hullC, deckC, dry) {
   }
 }
 
-function mole(B, M, it) {
+function* mole(B, M, it) {
+  // big rocks tipped in a bank, the crest higher (built in slices)
   const rng = makeRng(seedOf(it));
   const rk = B.acc(M.rock);
   const [ax, az] = it.a, [bx, bz] = it.b;
   const L = Math.hypot(bx - ax, bz - az);
-  const n = Math.ceil(L / 3.2);
+  const n = Math.ceil(L / 4.4);
   const nx = -(bz - az) / L, nz = (bx - ax) / L;
   for (let k = 0; k <= n; k++) {
+    if (k && k % 6 === 0) yield;
     const t = k / n;
     const x = ax + (bx - ax) * t, z = az + (bz - az) * t;
-    for (const o of [-2.6, 0, 2.6]) {
+    for (const o of [-2.8, 0, 2.8]) {
       const px = x + nx * (o + (rng() - 0.5)), pz = z + nz * (o + (rng() - 0.5));
       const top = o === 0 ? 2.4 : 1.2;
-      const s = 1.6 + rng() * 0.9;
-      rockLump(rk, px, top - s * 0.3, pz, s * 1.1, s * 0.9, s, rng, rng() * 6, o === 0 ? [0.55, 0.53, 0.5] : [0.4, 0.39, 0.37]);
+      const s = 2.0 + rng() * 1.0;
+      rockLump(rk, px, top - s * 0.3, pz, s * 1.15, s * 0.85, s, rng, rng() * 6, o === 0 ? [0.55, 0.53, 0.5] : [0.4, 0.39, 0.37], 6, 3);
     }
   }
   if (it.last) rockLump(rk, bx, 1.6, bz, 3.4, 2.4, 3.4, rng, 0, [0.5, 0.48, 0.45]);
 }
 
-function club(B, M, it, uv) {
+function* club(B, M, it, uv) {
   const { x, z, ry, y1 } = it;
   const rng = makeRng(seedOf(it));
   const F = frame(x, y1, z, ry);
   const pa = B.acc(M.paint), wd = B.acc(M.wood), cl = B.acc(M.clap), gl = B.acc(M.glow), rf = B.acc(M.matte);
   // piles under the whole thing (the bank drops away to the beach)
   col(pa, C('#5a4e42'));
-  for (let lx = -10; lx <= 10; lx += 4) for (const lz of [-5.5, 0, 5.5, 8.5]) {
+  for (let lx = -10; lx <= 10; lx += 4) for (const lz of [-5.5, 0, 5.5, 8.5, 11]) {
     const p = F(lx, 0, lz);
     const gy = B.groundY(p[0], p[2]);
     if (gy > y1 - 0.3) continue;
     pa.box(p[0], gy - 0.5, p[2], 0.35, y1 - gy + 0.5, 0.35);
   }
+  yield;
   // the clubhouse: white boards, a green roof, a cupola
   col(cl, C('#f6f4ee'));
   box(cl, x, y1, z, 20, 3.6, 10, ry, { u: 16, v: 3.6, top: false });
@@ -1080,6 +1093,7 @@ function club(B, M, it, uv) {
     const p = F(lx, 2.9 - Math.sin(t * Math.PI * 3) ** 2 * 0.5, 11.1);
     sl.box(p[0], p[1], p[2], 0.14, 0.14, 0.14);
   }
+  yield;
   // tables and umbrellas on the veranda
   for (let k = 0; k < 4; k++) {
     const lx = -7 + k * 4.6, lz = 8.8;
@@ -1446,9 +1460,9 @@ function beachkit(B, M, it, uv) {
     mt.box(x, y, z, 0.9, 0.7, 0.7, 0.75);
   }
   col(nr, C('#4a3a2a'));
-  for (const [x, z] of [[1222, 3592], [1226, 3588.5], [1230, 3585]]) nr.box(x, B.groundY(x, z) - 0.3, z, 0.12, 2.4, 0.12);
+  for (const [x, z] of NETS) nr.box(x, B.groundY(x, z) - 0.3, z, 0.12, 2.4, 0.12);
   col(mt, C('#3a4a3a'));
-  for (const [a, b] of [[[1222, 3592], [1226, 3588.5]], [[1226, 3588.5], [1230, 3585]]]) {
+  for (const [a, b] of [[NETS[0], NETS[1]], [NETS[1], NETS[2]]]) {
     const ya = B.groundY(a[0], a[1]) + 1.9, yb = B.groundY(b[0], b[1]) + 1.9;
     mt.quadP([a[0], ya - 1.3, a[1]], [b[0], yb - 1.3, b[1]], [b[0], yb, b[1]], [a[0], ya, a[1]]);
     mt.quadP([b[0], yb - 1.3, b[1]], [a[0], ya - 1.3, a[1]], [a[0], ya, a[1]], [b[0], yb, b[1]]);
@@ -1462,9 +1476,9 @@ function beachkit(B, M, it, uv) {
   }
   // the sign at the foot of the trail
   col(pa, C('#3a3028'));
-  const sx = 1232, sz = 3580, sy = B.groundY(sx, sz);
+  const sx = COVESIGN[0], sz = COVESIGN[1], sy = B.groundY(sx, sz);
   pa.box(sx, sy - 0.3, sz, 0.14, 2.4, 0.14);
-  panel(B.acc(M.sign), sx, sy + 1.9, sz + 0.1, 2.6, 2.6 * 110 / 500, Math.PI * 0.9, uv.cove, true);
+  panel(B.acc(M.sign), sx, sy + 1.9, sz + 0.1, 2.6, 2.6 * 110 / 500, -2.2, uv.cove, true);
 }
 
 export { boatModel, hullShape };

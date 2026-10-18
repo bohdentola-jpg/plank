@@ -19,8 +19,7 @@ export function homeMats(B) {
  * An irregular rock: a jittered, squashed blob (flat shaded by the rock
  * material), base sunk into the ground at y. sx/sz its radii, sy its height.
  */
-export function rockLump(acc, x, y, z, sx, sy, sz, rng, ry = 0, c = [0.52, 0.5, 0.47]) {
-  const seg = 7, rings = 4;
+export function rockLump(acc, x, y, z, sx, sy, sz, rng, ry = 0, c = [0.52, 0.5, 0.47], seg = 7, rings = 4) {
   const cr = Math.cos(ry), sr = Math.sin(ry);
   const jit = [];
   for (let j = 0; j <= rings; j++) { const row = []; for (let i = 0; i < seg; i++) row.push(0.78 + rng() * 0.42); jit.push(row); }
@@ -83,11 +82,13 @@ export function blob(acc, x, y, z, r, sy = 0.7, rng = null, seg = 5) {
  * A dry-stone wall along world [x, z] points, following the ground: courses
  * of uneven blocks (rock material), h tall, w thick.
  */
-export function stoneWall(acc, B, pts, h, w, rng, c = [0.55, 0.53, 0.49]) {
+export function stoneWall(acc, B, pts, h, w, rng, c = [0.8, 0.77, 0.71]) {
+  // (blocks ~3 m long: their sides and tops only, the ends where the run ends)
+  const last = pts.length - 2;
   for (let i = 0; i < pts.length - 1; i++) {
     const a = pts[i], b = pts[i + 1];
     const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
-    const n = Math.max(1, Math.round(L / 2.2));
+    const n = Math.max(1, Math.round(L / 3));
     const ry = Math.atan2(b[1] - a[1], b[0] - a[0]);
     for (let k = 0; k < n; k++) {
       const t = (k + 0.5) / n;
@@ -95,11 +96,12 @@ export function stoneWall(acc, B, pts, h, w, rng, c = [0.55, 0.53, 0.49]) {
       const y = B.groundY(x, z);
       const hh = h * (0.85 + rng() * 0.3);
       const kk = 0.85 + rng() * 0.3;
+      const faces = 'fb' + (i === 0 && k === 0 ? 'l' : '') + (i === last && k === n - 1 ? 'r' : '');
       acc.col = [c[0] * kk, c[1] * kk, c[2] * kk];
-      box(acc, x, y - 0.3, z, L / n + 0.05, hh + 0.3, w, -ry, { u: 1.5, v: 1.5 });
+      box(acc, x, y - 0.3, z, L / n + 0.05, hh + 0.3, w, -ry, { u: 1.5, v: 1.5, faces });
       // capping stones on edge
       acc.col = [c[0] * kk * 0.9, c[1] * kk * 0.9, c[2] * kk * 0.9];
-      box(acc, x, y + hh, z, L / n * 0.95, 0.22, w * 0.8, -ry + (rng() - 0.5) * 0.2, { u: 1 });
+      box(acc, x, y + hh, z, L / n * 0.95, 0.22, w * 0.8, -ry + (rng() - 0.5) * 0.2, { u: 1, faces: 'fb' });
     }
   }
 }

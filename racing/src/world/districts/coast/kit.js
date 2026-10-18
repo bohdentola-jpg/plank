@@ -6,7 +6,9 @@
 // frames in a turned local space, catenaries, trusses).
 import * as THREE from 'three';
 import { U } from '../../kit.js';
-import { litMat, box, cylinder } from '../builder.js';
+import { litMat, box, cylinder, Builder } from '../builder.js';
+import { Batch } from '../../build/geo.js';
+import { CELL } from '../../terrain.js';
 import { concreteTexture, groundTexture } from '../../../track/textures.js';
 import { plankTexture } from '../../kit.js';
 
@@ -549,6 +551,47 @@ export function farBox(P, x, z, y, w, d, h, ry, color, lit = 0) {
 export function farBeam(P, ax, az, bx, bz, y, h, w, color) {
   const L = Math.hypot(bx - ax, bz - az);
   P.far({ shape: 'box', x: (ax + bx) / 2, z: (az + bz) / 2, y, w: L, d: w, h, ry: Math.atan2(-(bz - az), bx - ax), color, lit: 0 });
+}
+
+// ------------------------------------------------------------------ warming up
+
+/**
+ * Run a pack's builders once on a planned item of each type (and on its
+ * scatter's, from one cell) into a throwaway batch, from warm(): the first
+ * build of a kind of thing otherwise runs cold, several times slower, and
+ * that first cell hitches. Nothing built here is kept.
+ */
+export function* warmBuilders(B, pack, BUILD, M, uv) {
+  const D = B.D;
+  const seen = new Set();
+  const run = (it) => {
+    const fn = BUILD[it.type];
+    if (!fn || seen.has(it.type)) return false;
+    seen.add(it.type);
+    const out = { batch: new Batch(), nearBatch: new Batch(), group: new THREE.Group(), colliders: [], lamps: [], anims: [] };
+    const WB = new Builder(D, Math.floor(it.x / CELL), Math.floor(it.z / CELL), pack, out);
+    try {
+      const r = fn(WB, M, it, uv);
+      if (r && r[Symbol.iterator]) for (const _ of r) void _;
+    } catch (e) { /* a warm-up must never stop the load */ }
+    return true;
+  };
+  // (from the cells with the most kinds of thing first: fewer cells' ground to make)
+  const cells = [];
+  for (const items of D.items.values()) {
+    const mine = items.filter((it) => it.pack === pack.id);
+    if (mine.length) cells.push({ mine, kinds: new Set(mine.map((it) => it.type)).size });
+  }
+  cells.sort((a, b) => b.kinds - a.kinds);
+  for (const c of cells) {
+    for (const it of c.mine) if (run(it)) yield;
+    if (seen.size >= Object.keys(BUILD).length) break;
+  }
+  if (cells.length && pack.scatter) {
+    const it0 = cells[0].mine[0];
+    const sc = D.scatterCell(Math.floor(it0.x / CELL), Math.floor(it0.z / CELL));
+    for (const it of sc.items) if (it.pack === pack.id && run(it)) yield;
+  }
 }
 
 // ------------------------------------------------------------------ misc
