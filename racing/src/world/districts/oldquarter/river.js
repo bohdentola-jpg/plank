@@ -241,7 +241,7 @@ export function planRiver(P, o = {}) {
         q.lamps.push(t);
         P.lamp({ x: b.bx, z: b.bz, y: top + 0.45, hx: b.bx, hz: b.bz, hy: top + 4.95, color: '#ffcf8a', radius: 13, intensity: 0.9, halo: 2.4 });
       }
-      for (let t = s + 4.5; t < e; t += 9) {
+      for (let t = s + 5; t < e; t += 12) {
         const b = bankPt(t, side, WALL_D + TOP_W + 2.8);
         if (roadNear(b.bx, b.bz, 3) || !P.inside(b.bx, b.bz, 2) || kept(side, t)) continue;
         const y = natural(b.bx, b.bz);

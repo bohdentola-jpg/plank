@@ -674,7 +674,7 @@ function scatter(S) {
 /** A plane tree: a mottled trunk, a broad lumpy crown. */
 function planeTree(K, x, y, z, s, t) {
   const rng = makeRng(Math.floor(t * 1e6));
-  broadTree(K.paint, K.leaf, x, y, z, s * 1.15, rng, [0.27, 0.38, 0.18], { bark: [0.62, 0.6, 0.5], trunk: 3.6, lumps: 4, crown: 0.95 });
+  broadTree(K.paint, K.leaf, x, y, z, s * 1.15, rng, [0.27, 0.38, 0.18], { bark: [0.62, 0.6, 0.5], trunk: 3.6, lumps: 3, crown: 1.05 });
 }
 
 /** A square: paved, and whatever the plan put on it. */
