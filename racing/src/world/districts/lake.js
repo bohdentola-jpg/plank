@@ -21,7 +21,7 @@ import { pine, fir, bush, rock, log as fallenLog } from './westkit/veg.js';
 import { pickup, sedan, boat, picnicTable, bench, tent, camper, canoe, drum, crate } from './westkit/props.js';
 
 const ID = 'lake';
-const IRON = { x0: -4400, z0: -1050, x1: -3050, z1: -330 };
+const IRON = { x0: -4400, z0: -995, x1: -3050, z1: -330 };
 const inIron = (x, z) => x > IRON.x0 - 12 && x < IRON.x1 + 12 && z > IRON.z0 - 12 && z < IRON.z1 + 12;
 const mine = (x, z) => owns(ID, x, z) && !inIron(x, z);
 const WHITE = [1, 1, 1];
@@ -315,10 +315,11 @@ function planDam(P) {
       P.lamp({ x: lx2, z: lz2, hx: lx2, hz: lz2, hy: 58.2 + 4.6, color: '#ffe6c4', radius: 15, intensity: 0.95, halo: 1.6 });
     }
   }
-  for (const [lx, lz] of [[-26, 58], [0, 64], [26, 58]]) {
+  // (floodlights at the toe and on the powerhouse roof, aimed up at the face)
+  for (const [lx, lz, hy] of [[-34, 58, 33], [34, 62, 33], [12, 58, 37.4]]) {
     const [fx, fz] = at(lx, lz);
-    const [hx, hz] = at(lx * 0.8, lz - 8);
-    P.lamp({ x: fx, z: fz, hx, hz, hy: 31, color: '#dfe8ff', radius: 50, intensity: 1.25, halo: 2.6 });
+    const [hx, hz] = at(lx * 0.9, lz - 1);
+    P.lamp({ x: fx, z: fz, hx, hz, hy, color: '#dfe8ff', radius: 52, intensity: 1.3, halo: 2.6 });
   }
   for (const [lx, lz] of [[-34, -56], [38, -54]]) {
     const [tx, tz] = at(lx, lz);
@@ -327,9 +328,9 @@ function planDam(P) {
   }
   // the far view: the face, the hoist house over the spillway
   const [fx, fz] = at(0, 30);
-  P.far({ x: fx, z: fz, y: 24, w: 90, d: 18, h: 34, ry, color: '#a9a69e', lit: 0 });
-  const [hx, hz] = at(0, 15);
-  P.far({ x: hx, z: hz, y: 58, w: 24, d: 9, h: 12, ry, color: '#b9b4a8', lit: 0.4 });
+  P.far({ x: fx, z: fz, y: 22, w: 110, d: 30, h: 36, ry, color: '#a9a69e', lit: 0 });
+  const [hx, hz] = at(0, 35);
+  P.far({ x: hx, z: hz, y: 58, w: 24, d: 9, h: 15, ry, color: '#b9b4a8', lit: 0.4 });
   // the river below the dam is the dam's: nothing else is planned in the gorge
   for (let lz = 12; lz < 80; lz += 10) for (let lx = -60; lx <= 60; lx += 10) { const [qx, qz] = at(lx, lz); P.claim(qx, qz, 10, 10, ry); }
   for (let lz = -60; lz < -10; lz += 10) for (let lx = -120; lx <= 140; lx += 10) { const [qx, qz] = at(lx, lz); P.claim(qx, qz, 10, 10, ry); }
@@ -470,7 +471,7 @@ function planCamp(P) {
     P.lamp({ x, z, hx: x, hz: z, hy: P.groundY(x, z) + 3.6, color: '#ffb060', radius: 13, intensity: 0.85, halo: 1.2 });
   }
   const mid = r.posAt(L * 0.55);
-  P.landmark({ id: 'campground', name: 'PINECONE CAMPGROUND', x: mid.x, z: mid.z, kind: 'campground' });
+  void mid;
   // Heron Point: the fishing jetty at the road's end
   const end = r.posAt(L - 1);
   const sh = shoreAt(end.x, end.z);
@@ -610,12 +611,13 @@ function buildDam(B, M, it) {
   const F = new Fr(it.x, 0, it.z, ry);
   const stone = B.acc(M.stone), dam = B.acc(M.dam), paint = B.acc(M.paint);
   const Y = 58, TOP = 58.15;
-  const zc = (lx) => 20 + (lx * lx) / 600;              // the face's top edge (concave seen from below)
-  const zf = (lx, y) => zc(lx) + 0.62 * (Y - y) + 5 * ((Y - y) / 34) ** 2;   // the face going down
-  // --- the face: a grid over x and height, flaring out to the toe
+  const zc = (lx) => 40 + (lx * lx) / 450;              // the face's top edge: an arch, concave seen from below
+  const zf = (lx, y) => zc(lx) + 0.08 * (Y - y) + 4 * ((Y - y) / 36) ** 3;   // the face going down to the toe
+  const SPAN = 66;
+  // --- the face: a grid over x and height (wound to face downstream, +z)
   const xs = [];
-  for (let lx = -78; lx <= 78; lx += 6) xs.push(lx);
-  const ys = [TOP, 56, 53, 50, 46, 42, 38, 34, 30, 26.5, 23];
+  for (let lx = -SPAN; lx <= SPAN; lx += 6) xs.push(lx);
+  const ys = [TOP, 56, 53, 50, 46, 42, 38, 34, 30, 26.5, 23, 20];
   const vid = [];
   for (let a = 0; a < xs.length; a++) {
     vid.push([]);
@@ -627,17 +629,23 @@ function buildDam(B, M, it) {
   }
   for (let a = 0; a < xs.length - 1; a++) {
     for (let b = 0; b < ys.length - 1; b++) {
-      // faces downstream (+z): seen from below, x runs right to left
-      dam.tri(vid[a][b], vid[a + 1][b], vid[a + 1][b + 1]);
-      dam.tri(vid[a][b], vid[a + 1][b + 1], vid[a][b + 1]);
+      dam.tri(vid[a][b], vid[a + 1][b + 1], vid[a + 1][b]);
+      dam.tri(vid[a][b], vid[a][b + 1], vid[a + 1][b + 1]);
     }
   }
-  // --- the crest: a platform from the road's walls out to the face's edge
+  // --- the crest: a platform from the road's walls out to the face's edge, a walk beyond
   col(stone, lin('#c9c5ba'));
-  for (let lx = -126; lx < 146; lx += 8) {
-    const x0 = lx, x1 = Math.min(146, lx + 8);
-    const za = Math.max(9.9, zc(x0) + 0.3), zb = Math.max(9.9, zc(x1) + 0.3);
+  const edgeZ = (lx) => (Math.abs(lx) <= SPAN ? zc(lx) + 0.3 : 13);
+  for (let lx = -126; lx < 146; lx += 6) {
+    const x0 = lx, x1 = Math.min(146, lx + 6);
+    const za = edgeZ(x0), zb = edgeZ(x1);
     stone.quadP(F.p(x1, TOP, 9.9), F.p(x0, TOP, 9.9), F.p(x0, TOP, za), F.p(x1, TOP, zb), [x1 / 4, 0, x0 / 4, za / 4]);
+  }
+  // the dam's flanks: solid walls closing the body at the ends of the face
+  for (const sx of [-1, 1]) {
+    const lx = sx * SPAN, z1 = zc(lx) + 0.3;
+    const A = F.p(lx, 18, 9.9), Bq = F.p(lx, 18, z1), C = F.p(lx, TOP, z1), D = F.p(lx, TOP, 9.9);
+    if (sx > 0) stone.quadP(A, Bq, C, D, [0, 0, (z1 - 9.9) / 4, 10]); else stone.quadP(Bq, A, D, C, [0, 0, (z1 - 9.9) / 4, 10]);
   }
   // the crest walls along the road (both sides), with a cap
   for (const sd of [1, -1]) {
@@ -646,7 +654,7 @@ function buildDam(B, M, it) {
   }
   // a low rail along the face's edge
   col(paint, lin('#3a3f44'));
-  for (let lx = -78; lx < 78; lx += 6) {
+  for (let lx = -SPAN; lx < SPAN; lx += 6) {
     const a = F.p(lx, TOP + 1.0, zc(lx) + 0.4), b = F.p(lx + 6, TOP + 1.0, zc(lx + 6) + 0.4);
     beam(paint, a, b, 0.08, 0.08);
     const pp = F.p(lx, TOP, zc(lx) + 0.4);
@@ -665,27 +673,28 @@ function buildDam(B, M, it) {
       cylinder(paint, x, Y + 5.32, z, 0.18, 0.2, 6, { top: true });
     }
   }
-  // --- the spillway: gate piers on the crest, a hoist house across their tops
+  // --- the spillway: gate piers at the face's top, a hoist house across their tops
+  const pz = zc(0) - 5;
   col(stone, lin('#bcb8ad'));
-  for (const lx of [-10.5, -3.5, 3.5, 10.5]) F.box(stone, lx, Y - 1, 15, 1.6, 9.5, 10.4, { u: 4, v: 4 });
+  for (const lx of [-10.5, -3.5, 3.5, 10.5]) F.box(stone, lx, Y - 1, pz, 1.6, 9.5, 10.4, { u: 4, v: 4 });
   const wall = B.acc(M.wall);
   col(wall, WHITE);
-  storey(wall, F.wx(0, 15.2), Y + 8.5, F.wz(0, 15.2), 24, 7.5, ry, 4);
-  storey(wall, F.wx(0, 15.2), Y + 11.5, F.wz(0, 15.2), 24, 7.5, ry, 4);
+  storey(wall, F.wx(0, pz), Y + 8.5, F.wz(0, pz), 24, 7.5, ry, 4);
+  storey(wall, F.wx(0, pz), Y + 11.5, F.wz(0, pz), 24, 7.5, ry, 4);
   col(stone, lin('#a8a498'));
-  F.box(stone, 0, Y + 14.5, 15.2, 25.2, 0.6, 8.6, { u: 4 });
-  F.box(stone, 0, Y + 15.1, 15.2, 6, 2.2, 4, { u: 4 });
+  F.box(stone, 0, Y + 14.5, pz, 25.2, 0.6, 8.6, { u: 4 });
+  F.box(stone, 0, Y + 15.1, pz, 6, 2.2, 4, { u: 4 });
   // the lettering on the face beside the spillway
   const sacc = B.acc(M.sign);
   const uv = signUV(3);
-  const segs = 6, x0 = -52, x1 = -17;
+  const segs = 6, x0 = -46, x1 = -14;
   for (let k = 0; k < segs; k++) {
     const a = x0 + (x1 - x0) * (k / segs), b = x0 + (x1 - x0) * ((k + 1) / segs);
     const ua = uv[0] + (uv[2] - uv[0]) * (k / segs), ub = uv[0] + (uv[2] - uv[0]) * ((k + 1) / segs);
     const yt = 56.6, yb = 52.6;
     const pa0 = F.p(b, yb, zf(b, yb) + 0.25), pa1 = F.p(a, yb, zf(a, yb) + 0.25), pa2 = F.p(a, yt, zf(a, yt) + 0.25), pa3 = F.p(b, yt, zf(b, yt) + 0.25);
-    // seen from downstream, local x runs right to left: b is on the viewer's left
-    sacc.quadP(pa0, pa1, pa2, pa3, [ub, uv[1], ua, uv[3]]);
+    // seen from downstream local x runs left to right
+    sacc.quadP(pa1, pa0, pa3, pa2, [ua, uv[1], ub, uv[3]]);
   }
   // the water: a sheet down the spillway's middle (scrolling), white water at the foot
   const foam = B.acc(M.foam);
@@ -716,7 +725,7 @@ function buildDam(B, M, it) {
     foam.quadP(F.p(a + 4, 25.12, z0), F.p(a, 25.12, z0), F.p(a, 25.12, z1), F.p(a + 4, 25.12, z1), [0, 0, 1, 2]);
   }
   // --- the powerhouse at the toe (east of the spillway), transformers on its roof
-  const ph = { lx: 25, lz: 50 };
+  const ph = { lx: 27, lz: 58 };
   col(wall, WHITE);
   for (let k = 0; k < 4; k++) storey(wall, F.wx(ph.lx, ph.lz), 23.5 + k * STOREY, F.wz(ph.lx, ph.lz), 18, 12, ry, 4);
   col(stone, lin('#b9b4a8'));
@@ -728,11 +737,11 @@ function buildDam(B, M, it) {
   // --- the floodlights at the toe, aimed up at the face
   const cool = B.acc(M.cool);
   col(paint, lin('#2a2e32'));
-  for (const [lx, lz] of [[-26, 58], [0, 64], [26, 58]]) {
+  for (const [lx, lz, hy] of [[-34, 58, 33], [34, 62, 33], [12, 58, 37.4]]) {
     const [x, , z] = F.p(lx, 0, lz);
-    const gy = B.groundY(x, z);
-    cylinder(paint, x, gy - 0.5, z, 0.14, 31 - gy, 6);
-    F.box(cool, lx, 30.6, lz - 0.6, 1.6, 0.9, 0.3, {}, 0);
+    const gy = lx === 12 ? 36.3 : B.groundY(x, z);
+    cylinder(paint, x, gy - 0.5, z, 0.14, hy - gy, 6);
+    F.box(cool, lx, hy - 0.4, lz - 0.6, 1.6, 0.9, 0.3, {}, 0);
   }
   // --- the intake towers in the lake, footbridges to the crest wall
   for (const [lx, lz] of [[-34, -56], [38, -54]]) {

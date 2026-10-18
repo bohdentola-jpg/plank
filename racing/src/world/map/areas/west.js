@@ -11,21 +11,22 @@ const nodes = {
   dam_w: [-2565, -1000, 58], dam_e: [-2305, -1102, 58],
   // round the lake
   lk_s1: [-3000, -1010], lk_s2: [-3700, -1060], lk_w: [-4560, -1360],
-  cg_end: [-4290, -1255],
+  cg_end: [-4290, -1255], iy_end: [-3200, -790],
   lk_n1: [-4250, -2120], lk_n2: [-3500, -2620], lk_n3: [-2850, -2560], lk_ne: [-2240, -1800, 111.2],
   // Ironwood Park
   iw_n: [-3807, -950], iw_s: [-3672, -575], iw_d: [-4108, -534], iw_c: [-4100, -834],
   // the farms
   ml_1: [-2900, 130], ml_2: [-4700, 230], fm_1: [-5400, 100], fm_2: [-5600, -700], fm_3: [-4900, 1000],
   fm_4: [-3700, 900], fm_5: [-3400, 1380], fm_6: [-4300, 1500],
-  af_a: [-5650, 640], af_b: [-4760, 520],
+  af_a: [-5650, 640], af_b: [-4760, 520], cc_end: [-5960, -790],
   // the redwoods
-  rh_1: [-4900, -2050, 133.2], rh_2: [-5150, -2700], rw_g: [-4850, -2990],
+  rh_1: [-4900, -2050, 133.2], rh_2: [-5150, -2700], rw_g: [-4850, -2990], dt_end: [-5530, -2662],
   rw_a: [-4847, -3080], rw_b: [-5284, -3161], rw_c: [-4751, -3585], rw_d: [-4686, -3125],
   // Crestwood
   cw_1: [-1900, -2050], cw_g: [-1760, -2230],
   cw_b: [-1460, -2397], cw_c: [-1704, -2646], cw_d: [-1940, -2540],
   cr_e: [-1250, -1720, 79.7],
+  wy_end: [-1680, -2935], vl_end: [-2585, -2990, 167],
 };
 
 const roads = [
@@ -48,6 +49,9 @@ const roads = [
   { id: 'cg_road', type: 'gravel', a: 'lk_s2', b: 'cg_end', name: 'PINECONE CAMP RD', district: 'lake', pts: [[-3740, -1100, 30], [-3900, -1122, 80], [-4060, -1162, 80], [-4180, -1205, 60]] },
   // Ironwood Park: the circuit, its gate off the shore road and the back gate
   { id: 'iw_gate', type: 'street', a: 'lk_s2', b: 'iw_n' },
+  // the back way into the old works: Foundry Lane, off the shore road at the
+  // marina, down past the circuit's east side to the ladle yard
+  { id: 'iy_lane', type: 'service', a: 'lk_s1', b: 'iy_end', name: 'FOUNDRY LN', district: 'ironworks', pts: [[-3050, -940, 60], [-3110, -860, 60]] },
   // (the grand prix layout: the main straight east, a fast right, a left, the
   // long double-apex right, the back straight west, the hairpin, a tight
   // infield of lefts and rights and the last corner onto the straight)
@@ -77,11 +81,14 @@ const roads = [
   // the old airfield's runway
   { id: 'af_runway', type: 'strip', a: 'af_a', b: 'af_b', name: 'OLD RUNWAY', smooth: 400 },
   { id: 'af_taxi', type: 'service', a: 'af_b', b: 'ml_2', pts: [[-4700, 380, 80]] },
+  // a farm track out west to the far wheat field (and what's been drawn in it)
+  { id: 'fm_cc', type: 'dirt', a: 'fm_2', b: 'cc_end', name: 'HOLLOWAY TRACK', district: 'farmland', pts: [[-5790, -735, 60]] },
   // up into the redwoods
   { id: 'rh_1', type: 'highway', a: 'lk_w', b: 'rh_1', name: 'REDWOOD HWY', pts: [[-4750, -1700, 300]] },
   { id: 'rh_2', type: 'highway', a: 'rh_1', b: 'rh_2', name: 'REDWOOD HWY', pts: [[-5050, -2380, 300]] },
   { id: 'rh_3', type: 'highway', a: 'rh_2', b: 'rw_g', name: 'REDWOOD HWY' },
   { id: 'rw_gate', type: 'street', a: 'rw_g', b: 'rw_a' },
+  { id: 'rw_tree', type: 'dirt', a: 'rh_2', b: 'dt_end', name: 'GRANDFATHER LN', district: 'redwood', pts: [[-5425, -2702, 70]] },
   // (the pit straight west, the hairpin, the esses down through the trees,
   // the long back straight, the climb through a left-right flick and the
   // double-apex sweeper onto the pit straight)
@@ -92,6 +99,9 @@ const roads = [
   // Crestwood: from the lake's north-east corner, and from Uptown
   { id: 'cw_road', type: 'highway', a: 'lk_ne', b: 'cw_1', name: 'CRESTWOOD RD', grade: 0.12 },
   { id: 'cw_gate', type: 'street', a: 'cw_1', b: 'cw_g', grade: 0.12 },
+  // the winery's cypress drive and the lane up to the villa, both off the pass road
+  { id: 'cw_winery', type: 'gravel', a: 'pw_2', b: 'wy_end', name: 'WINERY RD', district: 'crestwood', pts: [[-1960, -3000, 120], [-1800, -2965, 120]] },
+  { id: 'cw_villa', type: 'gravel', a: 'pw_2', b: 'vl_end', name: 'VIA SERENA', district: 'crestwood', pts: [[-2185, -3062, 60], [-2460, -3045, 80]] },
   // (the main straight north over the blind crest, the hairpin, the back
   // straight, the sweepers, the climb to the corkscrew, the carousel, the
   // kink and the bottom straight)
@@ -109,7 +119,7 @@ export default {
     { id: 'dam', name: 'HALCYON DAM', x: -2430, z: -1050, kind: 'dam', district: 'lake' },
     { id: 'ironworks', name: 'IRONWOOD WORKS', x: -3650, z: -720, kind: 'industry', district: 'ironworks' },
     { id: 'airfield', name: 'OLD AIRFIELD', x: -5200, z: 600, kind: 'airfield', district: 'farmland' },
-    { id: 'drivein', name: 'STARLITE DRIVE-IN', x: -3300, z: 1450, kind: 'drivein', district: 'farmland' },
+    { id: 'drivein', name: 'STARLITE DRIVE-IN', x: -3300, z: 1450, kind: 'drivein', district: 'farmland', hidden: true },
     { id: 'winery', name: 'CRESTWOOD WINERY', x: -1620, z: -2930, kind: 'winery', district: 'crestwood' },
   ],
 };
