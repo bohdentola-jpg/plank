@@ -28,7 +28,7 @@ const mine = (x, z) => owns(ID, x, z);
 const LOOP = ['cw_l0', 'cw_l1', 'cw_l2', 'cw_l3'];
 const WHITE = [1, 1, 1];
 const STOREY = 3.4, BANDS = 6;   // atlas: 0 stucco + shutters, 1 stucco, 2 stone + arched windows, 3 stone, 4 pit garages, 5 stone + cellar arches
-const ST = { lamp: '#fff2dc', gravel: '#d8ccb0', wall: '#e8e2d4', post: '#5a5e62', seats: ['#b8282a', '#e8e4dc', '#b8282a'], roof: '#f4f1ea', steel: '#c8c2b8', stand: 'classic', mast: '#c8c8c4', mastKind: 'pole', gantry: '#e0dcd4', marshal: '#e8e0d0' };
+const ST = { lamp: '#fff2dc', gravel: '#d8ccb0', wall: '#e8e2d4', post: '#5a5e62', seats: ['#b8282a', '#e8e4dc', '#b8282a'], roof: '#d8d4ca', steel: '#c8c2b8', stand: 'classic', mast: '#c8c8c4', mastKind: 'pole', gantry: '#e0dcd4', marshal: '#e8e0d0' };
 
 // ------------------------------------------------------------------ textures
 
@@ -271,7 +271,7 @@ function planCircuit(P) {
   const cr = lap.samples.reduce((b, p) => (p.x < b.x ? p : b), lap.samples[0]);
   planStand(P, lap, cr.s, cr.k > 0 ? -1 : 1, { w: 70, d: 16, h: 9, tiers: 8, gap: 24, wall: false, roadPad: true, kind: 'classic', color: '#e8e2d4' });
   planRunoffs(P, lap, { w: [12, 26], kmin: 1 / 220, fence: 2.4 });
-  planMasts(P, lap, 100, 22, ST.lamp, { kind: 'pole', radius: 42, intensity: 1.05 });
+  planMasts(P, lap, 100, 22, ST.lamp, { kind: 'pole', radius: 40, intensity: 0.85 });
   planBoards(P, lap);
   planMarshals(P, lap, 240);
   // the circuit's sign at its gate

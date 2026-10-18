@@ -324,7 +324,7 @@ export function* buildStand(B, M, it, st, wallAcc) {
   const dt = (d - 3) / n, ht = (it.h - 3) / n;
   const kind = it.kind || st.stand || 'steel';
   // the base: a solid plinth / concourse under the stand
-  col(paint, lin(kind === 'timber' ? '#5a4632' : kind === 'classic' ? '#e8e2d4' : '#4a4e52'));
+  col(paint, lin(kind === 'timber' ? '#5a4632' : kind === 'classic' ? '#bab2a2' : '#4a4e52'));
   segBox(paint, F.wx(0, -1.5), g.lo - 1, F.wz(0, -1.5), w, y0 - g.lo + 1, d - 3, it.ry, { u: 2 });
   // the tiers: a step each, seats in rows (colour per block), the crowd
   const seats = st.seats || ['#2a5fa8', '#d8dce2'];
@@ -350,7 +350,7 @@ export function* buildStand(B, M, it, st, wallAcc) {
   }
   // the back and the sides
   const top = y0 + it.h;
-  col(paint, lin(kind === 'timber' ? '#6a4e34' : kind === 'classic' ? '#ece6d8' : '#5a5e62'));
+  col(paint, lin(kind === 'timber' ? '#6a4e34' : kind === 'classic' ? '#c4bcac' : '#5a5e62'));
   segBox(paint, F.wx(0, -d / 2 + 0.3), y0, F.wz(0, -d / 2 + 0.3), w, it.h - 1.2, 0.6, it.ry, { u: 2 });
   for (const sx of [-1, 1]) {
     // the end walls, raked with the tiers (both faces)
@@ -621,7 +621,7 @@ export function planStand(P, lap, s, sd, o) {
   if (!it) return null;
   for (let k = -1; k <= 1; k++) {
     const [lx, lz] = toWorld(it.x, it.z, it.ry, k * it.w * 0.33, it.d / 2 - 2);
-    P.lamp({ x: lx, z: lz, hx: lx, hz: lz, hy: P.groundY(lx, lz) + it.h - 0.5, color: '#fff2d8', radius: 18, intensity: 0.8, halo: 0 });
+    P.lamp({ x: lx, z: lz, hx: lx, hz: lz, hy: P.groundY(lx, lz) + it.h - 0.5, color: '#fff2d8', radius: 15, intensity: 0.45, halo: 0 });
   }
   if (o.wall !== false) {
     const half = o.w / 2 + 4;

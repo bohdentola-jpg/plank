@@ -319,7 +319,7 @@ function planDam(P) {
   for (const [lx, lz, hy] of [[-34, 58, 33], [34, 62, 33], [12, 58, 37.4]]) {
     const [fx, fz] = at(lx, lz);
     const [hx, hz] = at(lx * 0.9, lz - 1);
-    P.lamp({ x: fx, z: fz, hx, hz, hy, color: '#dfe8ff', radius: 52, intensity: 1.3, halo: 2.6 });
+    P.lamp({ x: fx, z: fz, hx, hz, hy, color: '#dfe8ff', radius: 44, intensity: 0.75, halo: 2.6 });
   }
   for (const [lx, lz] of [[-34, -56], [38, -54]]) {
     const [tx, tz] = at(lx, lz);

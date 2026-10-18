@@ -511,7 +511,7 @@ function planAirfield(P) {
     P.add({ type: 'apron', x: ax, z: az, ry: ary + Math.PI / 2, w: 170, d: 56, map: 'plaza' });
   }
   for (const [s, w] of [[580, 34], [640, 34], [700, 40]]) {
-    const [hx, hz, hry] = at(s, -(reach + 34 + 28 + w / 2 - 4));
+    const [hx, hz, hry] = at(s, -(reach + 34 + 28 + w / 2 + 1.5));
     placeFoot(P, { type: 'hangar', x: hx, z: hz, ry: hry + Math.PI / 2, w: 28, d: w, h: w * 0.45, seed: P.rng(), map: 'building' }, w * 0.48, { pad: 1, color: '#8a8e8a', lit: 0.05 });
   }
   const [tx, tz, tr] = at(520, -(reach + 40));
@@ -578,7 +578,7 @@ function planDriveIn(P) {
   // the snack bar and projection booth in the middle of the lot
   const [bx, bz] = [F.wx(0, 20), F.wz(0, 20)];
   P.collider({ kind: 'box', x: bx, z: bz, hx: 8, hz: 5, ry, y0: P.groundY(bx, bz) - 1, y1: P.groundY(bx, bz) + 6 });
-  P.lamp({ x: bx, z: bz, hx: F.wx(0, 26), hz: F.wz(0, 26), hy: P.groundY(bx, bz) + 3, color: '#ffd890', radius: 12, intensity: 0.9, halo: 0.8 });
+  P.lamp({ x: bx, z: bz, hx: F.wx(0, 26), hz: F.wz(0, 26), hy: P.groundY(bx, bz) + 3, color: '#ffd890', radius: 10, intensity: 0.4, halo: 0.6 });
   // the fence round it (a gap at the entrance), the marquee at the road
   const fenceLine = [[-W / 2, D / 2], [-W / 2, -D / 2], [W / 2, -D / 2], [W / 2, D / 2], [10, D / 2]];
   const pts = fenceLine.map(([lx, lz]) => [F.wx(lx, lz), F.wz(lx, lz)]);
@@ -1174,7 +1174,7 @@ function buildDriveIn(B, M, it) {
   // the snack bar and projection booth
   const wall = B.acc(M.wall), roof = B.acc(M.roof);
   const bx = F.wx(0, 20), bz = F.wz(0, 20), by = B.groundY(bx, bz) + 0.2;
-  col(wall, WHITE);
+  col(wall, lin('#a8a296'));
   storey(wall, bx, by, bz, 16, 10, it.ry + Math.PI, 5);
   col(roof, lin('#c8322a'));
   F.box(roof, 0, by + STOREY, 20, 17, 0.4, 11, { u: 2 });

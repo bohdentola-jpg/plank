@@ -48,12 +48,12 @@ export function pine(trunk, leaf, x, y, z, h, t, o = {}) {
 export function redwood(bark, leaf, x, y, z, h, r, t, o = {}) {
   bark.col = vary(C(o.bark || '#ffffff'), t, 0.1);
   // the trunk: buttress flare at the foot, a long slow taper
-  const prof = [[r * 1.75, -1.2], [r * 1.5, 0.3], [r * 1.14, 2.2], [r, 6], [r * 0.86, h * 0.25], [r * 0.66, h * 0.5], [r * 0.45, h * 0.75], [r * 0.22, h * 0.93], [0.05, h]];
-  lathe(bark, x, y, z, prof, r > 2.5 ? 12 : 10, { u: 2.4, v: 4 });
+  const prof = [[r * 1.7, -1.2], [r * 1.25, 1.2], [r, 6], [r * 0.8, h * 0.3], [r * 0.52, h * 0.62], [r * 0.24, h * 0.9], [0.05, h]];
+  lathe(bark, x, y, z, prof, r > 2.5 ? 9 : 8, { u: 2.4, v: 4 });
   // the crown: clumps from ~45% up, wider low, a narrow spire at the top
   const dark = C(o.leaf || '#1e3a24'), lite = C(o.leaf2 || '#30552e');
   const c0 = h * (0.42 + ((t * 13.7) % 1) * 0.1);
-  const n = 7 + Math.floor(t * 4);
+  const n = 6 + Math.floor(t * 3);
   for (let k = 0; k < n; k++) {
     const f = k / n;
     const yy = y + c0 + (h - c0) * f * 0.92;
@@ -63,9 +63,9 @@ export function redwood(bark, leaf, x, y, z, h, r, t, o = {}) {
     const px = x + Math.cos(a) * off, pz = z + Math.sin(a) * off;
     leaf.col = vary(mixc(dark, lite, ((t * 5.1 + k * 0.29) % 1) * 0.8), (t + k * 0.17) % 1, 0.1);
     // a drooping, flattened clump (a low cone over a shallow one beneath)
-    bicone(leaf, px, yy - rr * 0.35, pz, rr, rr * 0.9, rr * 0.35, 7);
+    bicone(leaf, px, yy - rr * 0.35, pz, rr, rr * 0.9, rr * 0.35, 6);
     // bare stubs below the crown
-    if (k < 3) {
+    if (k < 2) {
       bark.col = vary(C('#9a8a80'), t);
       const sa = a + 1.7, sy = y + c0 * (0.55 + k * 0.12);
       tube(bark, [x + Math.cos(sa) * r * 0.7, sy, z + Math.sin(sa) * r * 0.7], [x + Math.cos(sa) * (r + 3.5), sy + 1.4, z + Math.sin(sa) * (r + 3.5)], 0.18, 4, { r2: 0.05 });
