@@ -123,7 +123,7 @@ Game › Erase story save.
 ## Free roam: Port Halcyon
 
 Port Halcyon is one city with no seams. It covers about 12 by 10 km, with
-236 km of road, and you can drive all of it without a loading screen:
+274 km of road, and you can drive all of it without a loading screen:
 
 - **Your garage.** Free roam starts with the door shut in your own garage on
   Foundry Street. ↑ ↓ picks any car on the roster, the stick looks round it,
@@ -140,28 +140,50 @@ Port Halcyon is one city with no seams. It covers about 12 by 10 km, with
   drive out into the street. There's no fade and no loading screen. Park
   back inside to get the garage again, or pick BACK TO THE GARAGE in the
   pause menu.
-- **The city:**
-  - **Downtown and Uptown:** towers and four-lane avenues.
-  - **Chinatown:** neon and market blocks.
-  - **Old Town:** cobbles and bridges on the river.
-  - **The coast:** the container docks, the shipyard, Pier 9 and the beach,
-    the Bayshore cliffs and the bridge out to Halcyon Point.
-  - **East:** the Eastside, the Works.
-  - **West:** Halcyon Lake and its dam, the redwoods, the farms and the
-    Ironwood ironworks.
-  - **The mountains:** Kaido Pass, the Summit, the Ridgeline.
-  - **The desert:** Route 99, Red Rock Canyon, Ghost Town and the dry lake.
+- **The city.** Each of its 24 districts was built by hand with its own
+  buildings, props and ground, so nothing repeats from one part of town to
+  the next:
+  - **Downtown and Uptown:** the Meridian Tower and the Helix, the Vault,
+    the Skypark helipad, Halcyon Crossing; Uptown's terraces and mews,
+    the Orpheum, the Victory Arch, the Obelisk and the Boathouse on the
+    park's pond.
+  - **Chinatown:** the Dragon Gate, Lantern Square, the Tin Hau temple and
+    the Jade Teahouse, tenements with fire escapes, steam from the stalls.
+  - **Old Town:** cobbles, quays and bridges on the river (the Grand Bridge,
+    Le Petit Port), the clock tower over the market square, the Jardin du
+    Bastion and the old mill with its turning wheel.
+  - **The Works and Eastside:** brick foundries and sheds, the Low Line
+    freight railway overhead, the power station, the Foundry Stack across
+    from your garage; Eastside's suburbs, the strip along Eastside Ave,
+    Eastside High under its stadium lights, the water tower.
+  - **The coast:** the container terminal's cranes, the lift bridge and a
+    ship at the quay; the shipyard's dry docks and hulls, and a wreck on the
+    beach; Pier 9's wheel, the Comet and the boardwalk; the Bayshore Bridge,
+    the Three Sisters and Sunset Rock; Halcyon Point's lighthouse (its beam
+    turns at night), the marina and the old battery.
+  - **The west:** Halcyon Lake behind its floodlit dam, with the marina,
+    cabins and a campground; the blast furnaces of Ironwood Park; the giant
+    redwoods (one of them you can drive through); Crestwood's vineyards,
+    château and hidden villa; the farms, the grain elevator and its railway,
+    the old airfield, the Starlite Drive-In and a crop circle.
+  - **The mountains:** Kaido Pass through the cedars, its shrine and the
+    Miharashi lookout; the Summit's observatory, its lodge and an ice cave;
+    the Ridgeline wind farm and the 92.7 tower; the North Woods' sawmill,
+    Loon Lake and a hidden waterfall.
+  - **The desert:** Route 99's Rocket Diner and motels, the High Desert
+    Array and Silo 9, the Red Arch and the Lost Dutchman mine, the Last
+    Chance Saloon and the Silver Queen headframe in Ghost Town, and the dry
+    lake's drag strip.
 
   Freeways and viaducts join the districts, and backroads, dirt tracks and
-  bridges run between them. Every district has its own buildings, props and
-  ground.
+  bridges run between them.
 - **No loading screens.** The world is cut into 256 m cells. The cells round
   your car are built a few milliseconds at a time as you drive, the far city
   stands on the horizon, and the frame rate holds. The only loading screen
   is fast travel.
-- **Places to find.** Drive close to a landmark to find it: a message, a
-  sound, and a pin on the map. Some are on no sign, at the end of a dirt
-  road or under a bridge.
+- **Places to find.** There are 111 of them. Drive close to a landmark to
+  find it: a message, a sound, and a pin on the map. 33 are on no sign, at
+  the end of a dirt road, up a trail or under a bridge.
 - **M / the touchpad opens the map** of the whole city. L1/R1 zooms, and
   ✕ fast travels to any place you've found, or to any race's start line. The pause menu has the map too,
   plus "back on the road", the garage, the camera and the music.
