@@ -85,7 +85,7 @@ export function joshua(acc, x, y, z, s, seed) {
     dx /= l; dy /= l; dz /= l;
     const end = [p[0] + dx * len, p[1] + dy * len, p[2] + dz * len];
     paintMix(acc, '#6a5a44', '#857058', hash1(seed, k, 5));
-    tube(acc, [p, end], [r, r * 0.8], 5, false);
+    tube(acc, [p, end], [r, r * 0.8], 4, false);
     const kids = depth > 0 ? (hash1(seed, k, 6) < (depth > 1 ? 0.5 : 0.6) ? 2 : 1) : 0;
     if (!kids) { tips.push([end, [dx, dy, dz], r]); return; }
     for (let q = 0; q < kids; q++) grow(end, [dx, dy, dz], len * (0.62 + hash1(seed, k * 7 + q, 7) * 0.25), r * 0.74, depth - 1, k * 3 + q + 1);
@@ -93,14 +93,14 @@ export function joshua(acc, x, y, z, s, seed) {
   const trunkH = (1.6 + hash1(seed, 9) * 1.6) * s;
   paint(acc, '#5e4e3a');
   const base = [x, y - 0.3, z], top = [x + (hash1(seed, 8) - 0.5) * 0.4, y + trunkH, z + (hash1(seed, 7) - 0.5) * 0.4];
-  tube(acc, [base, top], [0.36 * s, 0.28 * s], 6, false);
+  tube(acc, [base, top], [0.36 * s, 0.28 * s], 5, false);
   const n = hash1(seed, 11) < 0.25 ? 1 : 2 + (hash1(seed, 12) < 0.3 ? 1 : 0);
   const depth = s > 1.05 ? 2 : 1;
   for (let k = 0; k < n; k++) grow(top, [0, 1, 0], (1.4 + hash1(seed, 13 + k) * 0.9) * s, 0.24 * s, depth, k + 1);
   // the tips: a skirt of dead leaves, a burst of green spikes
   for (const [p, d, r] of tips) {
     paint(acc, '#6b6040');
-    tube(acc, [[p[0], p[1] - 0.4 * s, p[2]], [p[0], p[1] + 0.1 * s, p[2]]], [r * 1.9, r * 1.4], 5, false);
+    tube(acc, [[p[0], p[1] - 0.4 * s, p[2]], [p[0], p[1] + 0.1 * s, p[2]]], [r * 1.9, r * 1.4], 4, false);
     paintMix(acc, '#5d6e34', '#6e7e40', hash1(seed, Math.round(p[0] * 10)));
     pompom(acc, p[0] + d[0] * 0.15, p[1] + 0.25 * s, p[2] + d[2] * 0.15, s, seed + Math.round(p[1] * 31));
   }

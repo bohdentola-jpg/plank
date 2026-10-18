@@ -371,7 +371,7 @@ function scatterHighlands(S) {
   const nz = (x, z, f) => 0.5 + 0.5 * S.noise(x / f, z / f);
   const G = cellGround(S);
   // the Joshua tree forest (thicker in the basin and on the lower slopes)
-  for (const [x, z] of S.points(22, { r: 3, density: (x, z) => sstep(0.3, 0.75, nz(x, z, 200)) })) {
+  for (const [x, z] of S.points(25, { r: 3, density: (x, z) => sstep(0.3, 0.75, nz(x, z, 200)) })) {
     const y = G.h(x, z);
     if (y > 380 || steepAt(S, x, z) > 0.45) continue;
     const s = S.range(0.75, 1.35);
