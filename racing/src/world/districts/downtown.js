@@ -19,7 +19,7 @@ import { groundTexture } from '../../track/textures.js';
 import { windowMat, screenMat, signalMat, blinkMat, nightGlow, nightGlowVC, sharedMat } from './central/shaders.js';
 import { curtainTex, CURTAIN, ribbonTex, RIBBON, punchedTex, PUNCHED, lobbyTex, screensTex, SCREEN_ATLAS, dtSignsTex, DT_SIGN_RECTS, signUV, glowOf, graniteTex, STREET_SIGN } from './central/paint.js';
 import { walls, lid, block, panel, decal, tree, car, ring, disc, place, circle, polyWalls, polyCap, toWorld, slope, blob, paint, A, N } from './central/geo.js';
-import { drawParts, drawTops, drawScreens, drawCanopy } from './central/draw.js';
+import { drawParts, drawTops, drawScreens, drawCanopy, rehearse } from './central/draw.js';
 import { blockSide, groundClear, cityJunctions, signalSpot, walkSidewalks, Spots, naturalGround } from './central/plan.js';
 import { roadLamps } from '../build/roads.js';
 import { Acc } from '../build/geo.js';
@@ -74,8 +74,11 @@ export default {
     P.landmark({ id: 'dt_crossing', name: 'HALCYON CROSSING', x: -80, z: -40, r: 50, kind: 'square' });
   },
 
-  warm(B) {
+  *warm(B) {
     mats(B);
+    yield;
+    // and the draw code, compiled at load rather than in the first cell
+    yield* rehearse(B, this);
   },
 
   *build(B, items) {

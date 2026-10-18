@@ -21,7 +21,7 @@ import {
   pondTex, hexTex, UT_STREET_SIGN, AWNINGS,
 } from './central/paint.js';
 import { walls, lid, block, panel, decal, tree, car, ring, disc, place, circle, polyWalls, polyCap, apex, toWorld, slope, blob, under, stairs, post, rod, paint, A, N } from './central/geo.js';
-import { drawParts, drawTops } from './central/draw.js';
+import { drawParts, drawTops, rehearse } from './central/draw.js';
 import { blockSide, cityJunctions, signalSpot, walkSidewalks, reachOf, frontLots, Spots, naturalGround } from './central/plan.js';
 import { roadLamps } from '../build/roads.js';
 import { ITEM } from './occ.js';
@@ -94,8 +94,11 @@ export default {
     }
   },
 
-  warm(B) {
+  *warm(B) {
     mats(B);
+    yield;
+    // and the draw code, compiled at load rather than in the first cell
+    yield* rehearse(B, this);
   },
 
   *build(B, items) {

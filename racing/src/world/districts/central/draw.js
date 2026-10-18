@@ -10,6 +10,35 @@
 // (and the sign atlas' uv lookup M.uv(name)); any of them may be a paint
 // (geo.js). M.crownOf[key]: the facade a lit crown key shares its material with.
 import { walls, lid, place, chamfer, circle, polyWalls, polyCap, apex, ring, panel, decal, under, toWorld, A } from './geo.js';
+import { Builder } from '../builder.js';
+import { Batch } from '../../build/geo.js';
+
+/**
+ * Rehearse a pack's build at load (its warm()): draw a sample of its own
+ * planned items, a few of every kind, into throwaway batches (never
+ * flushed, nothing reaches the GPU), so the draw code is compiled before
+ * the first cell is built on the road instead of in it. A generator: a
+ * slice at a time.
+ */
+export function* rehearse(B, pack, per = 8, rounds = 2) {
+  const D = B.D;
+  const byKind = new Map();
+  for (const a of D.items.values()) {
+    for (const it of a) {
+      if (it.pack !== pack.id) continue;
+      const k = `${it.type}:${it.kind || it.k || ''}`;
+      const l = byKind.get(k) || [];
+      if (l.length < (it.type === 'bldg' || it.type === 'row' ? per * 3 : per)) { l.push(it); byKind.set(k, l); }
+    }
+  }
+  const items = [...byKind.values()].flat();
+  for (let r = 0; r < rounds; r++) {
+    const out = { batch: new Batch(), nearBatch: new Batch(), group: { add() {} }, colliders: [], lamps: [], anims: [] };
+    const g = pack.build(new Builder(D, 0, 0, pack, out), items);
+    if (g && g[Symbol.iterator]) for (let n = g.next(); !n.done; n = g.next()) yield;
+    yield;
+  }
+}
 
 const WHITE = [1, 1, 1];
 
