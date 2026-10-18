@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import { makeRng } from '../../core/util.js';
 import { U } from '../kit.js';
 import { litMat, box, cylinder, drape } from './builder.js';
-import { mats, cmat, C, col, frame, lbox, tube, panel, seedOf, groundStrip, coneC, windTree, chaseBulb, warmBuilders, prepareGround } from './coast/kit.js';
+import { mats, cmat, C, col, frame, lbox, tube, panel, seedOf, groundStrip, coneC, windTree, chaseBulb, warmBuilders, prepareGround, Grove } from './coast/kit.js';
 import { signAtlas, motelTexture } from './coast/tex.js';
 import { homeMats, rockLump, stoneWall, cottage, glassHouse, car, lampPost, blob } from './coast/home.js';
 
@@ -162,6 +162,7 @@ export default {
   *build(B, items) {
     const M = bmats(B);
     const uv = UV();
+    M.grove = new Grove(B, M.leaf);
     yield* prepareGround(B, items);
     let t0 = performance.now();
     for (const it of items) {
@@ -173,6 +174,7 @@ export default {
       }
       if (performance.now() - t0 > 1) { yield; t0 = performance.now(); }
     }
+    yield* M.grove.finish();
   },
 };
 
@@ -514,7 +516,8 @@ const BUILD = {
   tree(B, M, it) {
     const rng = makeRng(`bt${it.x.toFixed(1)},${it.z.toFixed(1)}`);
     const k = 0.8 + it.t * 0.35;
-    windTree(B.acc(M.matte), B.acc(M.leaf), it.x, it.y, it.z, it.h, WIND[0], WIND[1], rng, [0.09 * k, 0.19 * k, 0.11 * k]);
+    const g = M.grove ? M.grove.acc : null;
+    windTree(g || B.acc(M.matte), g || B.acc(M.leaf), it.x, it.y, it.z, it.h, WIND[0], WIND[1], rng, [0.09 * k, 0.19 * k, 0.11 * k]);
   },
   scrub(B, M, it) {
     const lf = B.near(M.leaf);
@@ -856,7 +859,7 @@ function* motel(B, M, it, uv) {
   box(cn, op[0], it.y0, op[2], 12.3, y1 - it.y0, 9.3, ry, { u: 2 });
   col(pa, C('#e8dcc4'));
   box(pa, op[0], y1, op[2], 12, 3.8, 9, ry, {});
-  col(gl, C('#fff0d0', 1.8));
+  col(gl, C('#ffe2b8', 0.85));
   lbox(gl, F, ry, -27, 0.5, 15.53, 9, 2.4, 0.05, {});
   col(pa, C('#3a6a7a'));
   const cr = [F(-33.6, 3.8, 16.8), F(-20.4, 3.8, 16.8), F(-20.4, 5.2, 6.2), F(-33.6, 5.2, 6.2)];

@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { U } from '../../kit.js';
 import { litMat, box, cylinder, Builder } from '../builder.js';
-import { Batch } from '../../build/geo.js';
+import { Batch, Acc } from '../../build/geo.js';
 import { CELL } from '../../terrain.js';
 import { concreteTexture, groundTexture } from '../../../track/textures.js';
 import { plankTexture } from '../../kit.js';
@@ -553,6 +553,31 @@ export function farBeam(P, ax, az, bx, bz, y, h, w, color) {
   P.far({ shape: 'box', x: (ax + bx) / 2, z: (az + bz) / 2, y, w: L, d: w, h, ry: Math.atan2(-(bz - az), bx - ax), color, lit: 0 });
 }
 
+// ------------------------------------------------------------------ groves
+
+/**
+ * A cell's trees in one mesh of their own, made in the pack's own steps
+ * rather than in the cell's shared batch (a wood is most of a cell's
+ * vertices, and the shared batch is made into meshes and lit in single
+ * steps). Trunks and leaves both in the leaf material; no baked lamp light
+ * (trees at night stand dark against the sky).
+ */
+export class Grove {
+  constructor(B, mat) { this.B = B; this.mat = mat; this.acc = new Acc(true); }
+  *finish() {
+    if (!this.acc.idx.length) return;
+    yield;
+    const m = new THREE.Mesh(this.acc.toGeometry(true), this.mat);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    m.matrixAutoUpdate = false;
+    m.updateMatrix();
+    this.B.group.add(m);
+    this.acc = new Acc(true);
+    yield;
+  }
+}
+
 // ------------------------------------------------------------------ the ground next door
 
 /** The world box an item's geometry may reach (its points, its ends, its footprint). */
@@ -567,8 +592,10 @@ function itemBox(it) {
 
 /**
  * Make the ground (the 4 m terrain grids) of the cells next door that this
- * cell's items reach into, a step each: a builder asking the height there
- * would otherwise make that whole grid in the middle of its own step.
+ * cell's items reach into, each in a step of its own (as the cell's own
+ * ground is): a builder asking the height there would otherwise make that
+ * whole grid in the middle of its own step. The streamer finds them made
+ * when it gets to those cells.
  */
 export function* prepareGround(B, items) {
   const need = new Set();
@@ -582,12 +609,15 @@ export function* prepareGround(B, items) {
       }
     }
   }
+  let made = false;
   for (const k of need) {
     const [cx, cz] = k.split(',').map(Number);
     if (B.terrain.cache.has(`4:${cx}:${cz}`)) continue;
-    B.terrain.grid(cx, cz, 4);
     yield;
+    B.terrain.grid(cx, cz, 4);
+    made = true;
   }
+  if (made) yield;
 }
 
 // ------------------------------------------------------------------ warming up

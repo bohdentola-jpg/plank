@@ -14,7 +14,7 @@ import { makeRng } from '../../core/util.js';
 import { U } from '../kit.js';
 import { litMat, box, cylinder, gable, sphere, drape } from './builder.js';
 import { Acc } from '../build/geo.js';
-import { mats, C, col, frame, frame3, lbox, tube, panel, seedOf, groundStrip, coneC, windTree, mixC, warmBuilders, prepareGround } from './coast/kit.js';
+import { mats, C, col, frame, frame3, lbox, tube, panel, seedOf, groundStrip, coneC, windTree, mixC, warmBuilders, prepareGround, Grove } from './coast/kit.js';
 import { signAtlas } from './coast/tex.js';
 import { homeMats, rockLump, rockPile, stoneWall, picket, cottage, car, lampPost, blob } from './coast/home.js';
 
@@ -122,6 +122,7 @@ export default {
   *build(B, items) {
     const M = pmats(B);
     const uv = UV();
+    M.grove = new Grove(B, M.leaf);
     yield* prepareGround(B, items);
     let t0 = performance.now();
     for (const it of items) {
@@ -133,6 +134,7 @@ export default {
       }
       if (performance.now() - t0 > 1) { yield; t0 = performance.now(); }
     }
+    yield* M.grove.finish();
   },
 };
 
@@ -655,7 +657,8 @@ const BUILD = {
   tree(B, M, it) {
     const rng = makeRng(`pt${it.x.toFixed(1)},${it.z.toFixed(1)}`);
     const k = 0.85 + it.t * 0.3;
-    windTree(B.acc(M.matte), B.acc(M.leaf), it.x, it.y, it.z, it.h, WIND[0], WIND[1], rng, [0.1 * k, 0.2 * k, 0.12 * k]);
+    const g = M.grove ? M.grove.acc : null;
+    windTree(g || B.acc(M.matte), g || B.acc(M.leaf), it.x, it.y, it.z, it.h, WIND[0], WIND[1], rng, [0.1 * k, 0.2 * k, 0.12 * k]);
   },
   gorse(B, M, it) {
     const lf = B.near(M.leaf);

@@ -122,11 +122,17 @@ export function picket(acc, B, pts, h = 1.0, c = [0.92, 0.91, 0.88]) {
       acc.box(x0, y0 - 0.2, z0, 0.1, h + 0.25, 0.1, ry);
       // rails, then a board face in front of them (reads as pickets from the road)
       for (const ry0 of [0.3, h - 0.25]) acc.beam(x0, y0 + ry0, z0, x1, y1 + ry0, z1, 0.05, 0.08);
-      const m = Math.max(2, Math.round(L / n / 0.28));
+      const m = Math.max(2, Math.round(L / n / 0.34));
+      const dx = (x1 - x0) / L * n, dz = (z1 - z0) / L * n;   // along the run, unit
       for (let p = 0; p < m; p++) {
         const t = (p + 0.5) / m;
         const px = x0 + (x1 - x0) * t, pz = z0 + (z1 - z0) * t, py = y0 + (y1 - y0) * t;
-        acc.box(px, py, pz, 0.09, h - 0.08 + (p % 2) * 0.06, 0.03, ry, 1, true);
+        const ph = h - 0.08 + (p % 2) * 0.06, hw = 0.05;
+        // a board: its two faces (thin: no edges worth the vertices)
+        const A = [px - dx * hw, py, pz - dz * hw], Bp = [px + dx * hw, py, pz + dz * hw];
+        const Ct = [px + dx * hw, py + ph, pz + dz * hw], Dt = [px - dx * hw, py + ph, pz - dz * hw];
+        acc.quadP(A, Bp, Ct, Dt);
+        acc.quadP(Bp, A, Dt, Ct);
       }
     }
   }

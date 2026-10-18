@@ -14,6 +14,7 @@ import { makeRng } from '../../core/util.js';
 import { litMat, box, cylinder, gable, lattice, drape } from './builder.js';
 import { Acc } from '../build/geo.js';
 import { roadLamps } from '../build/roads.js';
+import { plankTexture } from '../kit.js';
 import { mats, cmat, C, col, frame, lbox, lbeam, tube, panel, seedOf, groundStrip, coneC, disc, bulb, stringLights, beamLine, palm, chaseBulb, spark, warmBuilders, prepareGround } from './coast/kit.js';
 import { signAtlas, decoTexture, shackTexture, shackUV, SHACK_KINDS } from './coast/tex.js';
 import { frame2 } from './coast/geo.js';
@@ -55,7 +56,9 @@ function pmats(B) {
   M.sign = B.mat('sign', () => { const t = atlas(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, roughness: 0.6 }, { night: 1.35 }); });
   M.deco = B.mat('deco', () => { const t = decoTexture(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, vertexColors: true, roughness: 0.8 }, { night: 1.0 }); });
   // (the stalls stand under the boardwalk's lamps: a soft hand with both glows)
-  M.shack = B.mat('shack', () => { const t = shackTexture(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, roughness: 0.75 }, { night: 0.7, glow: 1.3 }); });
+  M.shack = B.mat('shack', () => { const t = shackTexture(); return litMat({ map: t.map, emissive: 0xffffff, emissiveMap: t.emi, roughness: 0.75 }, { night: 0.55, glow: 0.7 }); });
+  // the stalls' boards: pale paint right under the boardwalk's lamps, so a softer hand with the lamplight
+  M.swood = B.mat('swood', () => litMat({ map: plankTexture(), vertexColors: true, roughness: 0.85, envMapIntensity: 0.3 }, { glow: 0.9 }));
   return M;
 }
 
@@ -1140,7 +1143,7 @@ function diner(B, M, it, uv) {
 function shack(B, M, it, uv) {
   const { x, z, w, d, ry } = it;
   const F = frame(x, 0, z, ry);
-  const wd = B.acc(M.wood), sh = B.acc(M.shack), pa = B.acc(M.paint), sg = B.acc(M.sign);
+  const wd = B.acc(M.swood), sh = B.acc(M.shack), pa = B.acc(M.paint), sg = B.acc(M.sign);
   const base = it.y1;
   const H = 4.5;
   col(wd, C(it.tint));
