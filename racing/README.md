@@ -180,7 +180,7 @@ Port Halcyon is one city with no seams. It covers about 12 by 10 km, with
 
 - **Race length:** two to three minutes a race. A circuit's lap is a minute
   to a minute and a half of city streets, so circuits run two laps (three on
-  the short Skyline loop). Sprints run about a minute and a half end to
+  the short Skyline loop, one round the long Summit). Sprints run about a minute and a half end to
   end. A lap knockout lasts two laps (three on the Skyline), and a big
   field loses more than one car a lap, so it's down to two for the last
   lap.
@@ -276,9 +276,9 @@ designs, laid into the hills at one and a half times the size.
 | Raceway | Redwood Raceway | circuit, 2 laps | 2.26 km | the hairpin, the esses down through the redwoods, the back straight | day |
 | Raceway | Crestwood Hills | circuit, 2 laps | 2.15 km | a blind crest, the hairpin, the corkscrew and the carousel in the vineyards | sunset |
 | Raceway | Ironwood Park | circuit, 2 laps | 2.25 km | sweepers past the old ironworks, the hairpin, the tight infield | overcast, wet |
-| Mountain | Kaido Pass | sprint | 2.50 km | downhill from the top of the pass, hairpin after hairpin | dusk |
-| Mountain | Summit Loop | circuit, 2 laps | 3.08 km | round the peak by the observatory | night, fog |
-| Mountain | Ridgeline Climb | sprint | 3.77 km | uphill from the desert floor along the ridge to the Summit | day |
+| Mountain | Kaido Pass | sprint | 3.11 km | downhill from the top of the pass, hairpins down the escarpment | dusk |
+| Mountain | Summit Loop | circuit, 1 lap | 4.34 km | switchbacks round the peak below the observatory | night, fog |
+| Mountain | Ridgeline Climb | sprint | 4.05 km | uphill from the desert floor, up the face and along the crest | day |
 | Desert | Route 99 | sprint | 4.66 km | north from the cliffs past the Ghost Town turn and the diner | day |
 | Desert | Red Rock Canyon | circuit, 2 laps | 3.94 km | the canyon floor and back along the rim | sunset |
 | Desert | Ghost Town | circuit, 2 laps | 1.93 km | a dirt loop round the dead mining town | sunset |

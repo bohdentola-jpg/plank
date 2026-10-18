@@ -28,7 +28,7 @@ function lapsLabel(ev, def) {
   if (ev.type === 'sprint') return 'A TO B';
   if (ev.type === 'drag') return 'ONE RUN';
   if (ev.type === 'knockout') return String(knockLaps(ev.rivals, def?.laps));
-  if (ev.type === 'timeattack') return def?.type === 'sprint' ? '1 RUN' : `BEST OF ${def?.laps || 3}`;
+  if (ev.type === 'timeattack') return def?.type === 'sprint' ? '1 RUN' : `BEST OF ${Math.max(2, def?.laps || 3)}`;
   return String(ev.laps || def?.laps || 3);
 }
 

@@ -140,11 +140,11 @@ export const EVENTS = [
 
   // ch 4 — THE PASS · KAIDO GHOSTS
   E(3, 'ps1', 'DOWNHILL', 'kaido', 'sprint', { rivals: 3, pr: 650, prize: 5100 }, 'Pass road from the ridge to the valley, hairpins stacked down the face. Respect the guardrail.'),
-  E(3, 'ps2', 'FOG LINE', 'summit', 'circuit', { laps: 2, rivals: 4, pr: 655, prize: 5400 }, 'Switchbacks up, a plunge down, fog everywhere in between.'),
+  E(3, 'ps2', 'FOG LINE', 'summit', 'circuit', { laps: 1, rivals: 4, pr: 655, prize: 5400 }, 'Switchbacks up, a plunge down, fog everywhere in between.'),
   E(3, 'ps3', 'HILL CLIMB', 'ridgeline', 'sprint', { rivals: 4, pr: 662, prize: 5800 }, 'Valley floor to the ridge, switchback after switchback. Going up, the engine finally matters.'),
   E(3, 'ps4', 'GHOST LAP', 'kaido', 'timeattack', { tt: 1.035, prize: 4950 }, 'The Ghosts keep a time carved into the summit sign. Beat it.'),
   E(3, 'ps5', 'SUMMIT KNOCKOUT', 'summit', 'knockout', { rivals: 4, pr: 670, prize: 6300 }, 'Two laps of the peak. Every time past the shrine, the back of the pack goes home.'),
-  DUEL(3, 'ps6', 'rin', 'SHRINE GATE', 'summit', 'circuit', { laps: 2, pr: 675, prize: 6400, need: { wins: 2 } }, 'Rin says your lines are lazy. One on one round the summit, through the shrine gate and down.'),
+  DUEL(3, 'ps6', 'rin', 'SHRINE GATE', 'summit', 'circuit', { laps: 1, pr: 675, prize: 6400, need: { wins: 2 } }, 'Rin says your lines are lazy. One on one round the summit, through the shrine gate and down.'),
   E(3, 'ps7', 'FALLING LEAVES', 'summit', 'drift', { laps: 1, prize: 5500, with: ['rin', 'mika', 'sora'] }, 'The Ghosts score every slide past the shrine. Rin\'s posted score has stood all autumn.'),
   E(3, 'ps8', 'GOLDEN HOUR', 'crestwood', 'circuit', { laps: 2, rivals: 5, pr: 685, prize: 6800 }, 'The Ghosts borrow the old hill circuit at sundown. Blind crest, corkscrew, carousel.'),
   DUEL(3, 'ps9', 'yuki', 'THE STUDENT', 'ridgeline', 'sprint', { pr: 692, prize: 7600, need: { wins: 5 } }, 'Kaito won\'t race you until you beat his student. Uphill to the ridge, and Yuki has never lost going up.'),

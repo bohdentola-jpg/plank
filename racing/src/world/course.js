@@ -16,7 +16,8 @@ import { worldNet } from './data.js';
  * other way round. types: the road types the route may use besides the main
  * ones. own: the place has its own start and finish built (no race gantries).
  * laps: a circuit's race (2 unless it says: a lap of these streets takes a
- * minute or more, so two make a race of two to three minutes).
+ * minute or more, so two make a race of two to three minutes; the Summit's
+ * one lap takes over two).
  */
 export const COURSES = {
   downtown: { way: ['c_4_4', 'c_10_4', 'c_10_7', 'c_7_7', 'c_7_9', 'c_4_9'], loop: true, start: 140 },
@@ -36,9 +37,10 @@ export const COURSES = {
   ironwood: { way: ['iw_n', 'iw_s', 'iw_d', 'iw_c'], loop: true, start: 2160 },
   // (downhill, the way the Ghosts race it)
   kaido: { way: ['kd_top', 'kd_0'] },
-  summit: { way: ['sm_j', 'sm_e', 'sm_s', 'sm_w'], loop: true, start: 150 },
-  // (a hill climb: from the desert floor up the ridge to the Summit)
-  ridgeline: { way: ['r99_n2', 'rg_e', 'rg_3', 'rg_2', 'rg_1', 'sm_e'] },
+  // (a long loop of switchbacks round the peak: one lap makes the race)
+  summit: { way: ['sm_j', 'sm_e', 'sm_s', 'sm_w'], loop: true, start: 150, laps: 1 },
+  // (a hill climb: from the desert floor, up the face of the ridge and along its crest)
+  ridgeline: { way: ['r99_n2', 'rg_e', 'rg_3', 'rg_2'] },
   route99: { way: ['bs_east', 'r99_s2', 'gt_j', 'r99_s1', 'i9_e2', 'r99_n1', 'r99_rr', 'r99_n2'] },
   redrock: { way: ['rr_w', 'rr_e', 'rr_r1', 'rr_r2', 'rr_r3'], loop: true, start: 120 },
   ghosttown: { way: ['gt_a', 'gt_b', 'gt_c', 'gt_d'], loop: true, start: 90, types: ['dirt'] },

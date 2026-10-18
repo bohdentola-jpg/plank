@@ -218,7 +218,7 @@ registerScreen('story', () => {
   // ---------------------------------------------------------------- racing
   function lapsFor(ev, def) {
     if (ev.type === 'knockout') return knockLaps(ev.rivals, def.laps);
-    if (ev.type === 'timeattack') return def.type === 'sprint' ? 1 : def.laps || 3;
+    if (ev.type === 'timeattack') return def.type === 'sprint' ? 1 : Math.max(2, def.laps || 3);
     return ev.laps || def.laps || 3;
   }
 
