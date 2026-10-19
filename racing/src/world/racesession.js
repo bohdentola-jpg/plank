@@ -11,6 +11,8 @@ import { WorldScene } from './scene.js';
 import { WorldPhys } from './phys.js';
 import { courseWalls, courseFor } from './course.js';
 import { buildDressing } from './racedress.js';
+import { rehearse } from './build/cell.js';
+import { districtAt } from './ground.js';
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
@@ -50,7 +52,24 @@ export class WorldRaceSession extends RaceSession {
     this.scene.add(this.dress);
     // the streets round the grid, before the lights go out
     const p = this.track.posAt(this.track.startS);
-    await this.world.ensureAsync(p.x, p.z, 360, (f) => progress(0.55 + f * 0.28, 'PAVING THE STREETS'), 40);
+    await this.world.ensureAsync(p.x, p.z, 360, (f) => progress(0.55 + f * 0.26, 'PAVING THE STREETS'), 40);
+    // the code of every district the course runs through (or near), run once before the lights go out
+    {
+      progress(0.82, 'WALKING THE COURSE');
+      const only = new Set();
+      const T = this.track;
+      for (let s = 0; s < T.length; s += 60) {
+        const q = T.posAt(s);
+        for (const [dx, dz] of [[0, 0], [300, 0], [-300, 0], [0, 300], [0, -300]]) {
+          const d = districtAt(q.x + dx, q.z + dz);
+          if (d) only.add(d.id);
+        }
+      }
+      let t0 = performance.now();
+      for (const _ of rehearse(this.world.ctx, only)) {
+        if (performance.now() - t0 > 40) { await tick(); t0 = performance.now(); }
+      }
+    }
     // the streamer follows whoever the camera follows
     const ws = this.world, base = ws.update.bind(ws);
     ws.update = (dt, cam, focus) => base(dt, cam, focus || this.focus());

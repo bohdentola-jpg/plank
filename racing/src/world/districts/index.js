@@ -152,22 +152,44 @@ export class Districts {
 
   /** The scatter (trees, rocks…) of one cell, every district in it (cached). */
   scatterCell(cx, cz) {
+    const it = this.scatterCellSteps(cx, cz);
+    let r;
+    do { r = it.next(); } while (!r.done);
+    return r.value;
+  }
+
+  /**
+   * The same, a district at a time (a generator for the cell builder: a
+   * wood's scatter is milliseconds of work); a pack's scatter that is itself
+   * a generator is stepped too. Its value is the cell's scatter.
+   */
+  *scatterCellSteps(cx, cz) {
     const k = cellKey(cx, cz);
-    let s = this.scatters.get(k);
-    if (s) { s.used = ++this._tick || (this._tick = 1); return s; }
-    s = { items: [], colliders: [], used: ++this._tick || (this._tick = 1) };
+    const had = this.scatters.get(k);
+    if (had) { had.used = ++this._tick || (this._tick = 1); return had; }
+    const s = { items: [], colliders: [], used: 0 };
     const x0 = cx * CELL, z0 = cz * CELL;
+    let first = true;
     for (const d of this.list) {
       const b = d.box;
       if (b.x1 < x0 || b.x0 > x0 + CELL || b.z1 < z0 || b.z0 > z0 + CELL) continue;
       const pack = this.packFor(d);
       if (!pack.scatter) continue;
+      if (!first) yield;
+      first = false;
       const S = new Scatter(this, d, pack, cx, cz);
-      try { pack.scatter(S); } catch (e) { console.error(`district ${d.id}: scatter ${cx},${cz} failed`, e); continue; }
+      try {
+        const r = pack.scatter(S);
+        if (r && r[Symbol.iterator]) for (let q = r.next(); !q.done; q = r.next()) yield;
+      } catch (e) { console.error(`district ${d.id}: scatter ${cx},${cz} failed`, e); continue; }
       s.items.push(...S.items);
       s.colliders.push(...S.colliders);
     }
+    // (something may have asked for it outright meanwhile: keep that one)
+    const got = this.scatters.get(k);
+    if (got) return got;
     for (const c of s.colliders) if (c.reach === undefined) c.reach = c.kind === 'circle' ? c.r : Math.hypot(c.hx, c.hz);
+    s.used = ++this._tick || (this._tick = 1);
     this.scatters.set(k, s);
     if (this.scatters.size > 160) {
       const arr = [...this.scatters.entries()].sort((a, b) => a[1].used - b[1].used);
@@ -237,7 +259,8 @@ export class Districts {
   *buildCell(cx, cz, out) {
     const k = cellKey(cx, cz);
     const planItems = this.items.get(k) || [];
-    const sc = this.scatterCell(cx, cz);
+    const sc = yield* this.scatterCellSteps(cx, cz);
+    yield;
     // by pack
     const byPack = new Map();
     for (const it of [...planItems, ...sc.items]) {

@@ -246,9 +246,25 @@ export class Terrain {
   /** Grid for a cell: { res, n (verts per side), x0, z0, H (Float32Array), R (road mask 0..1), cx, cz }. */
   grid(cx, cz, res = 4) {
     const key = `${res}:${cx}:${cz}`;
-    let g = this.cache.get(key);
+    const g = this.cache.get(key);
     if (g) { g.used = this._tick = (this._tick || 0) + 1; return g; }
-    g = this.build(cx, cz, res);
+    return this.keep(key, this.build(cx, cz, res));
+  }
+
+  /**
+   * The same grid made a slice at a time (a generator, for the streamer: a
+   * 4 m grid is several milliseconds of work); its value is the grid. If
+   * something asks for it outright meanwhile, that one is kept.
+   */
+  *gridSteps(cx, cz, res = 4) {
+    const key = `${res}:${cx}:${cz}`;
+    const had = this.cache.get(key);
+    if (had) { had.used = this._tick = (this._tick || 0) + 1; return had; }
+    const g = yield* this.buildSteps(cx, cz, res);
+    return this.cache.get(key) || this.keep(key, g);
+  }
+
+  keep(key, g) {
     g.used = this._tick = (this._tick || 0) + 1;
     this.cache.set(key, g);
     if (this.cache.size > this.max) this.evict();
@@ -261,6 +277,13 @@ export class Terrain {
   }
 
   build(cx, cz, res) {
+    const it = this.buildSteps(cx, cz, res);
+    let r;
+    do { r = it.next(); } while (!r.done);
+    return r.value;
+  }
+
+  *buildSteps(cx, cz, res) {
     // n verts a side over the cell, plus a one-vertex apron all round (so
     // normals at the cell's edge match its neighbour's): grid is (n+2)²
     const n = Math.round(CELL / res) + 1;
@@ -275,7 +298,9 @@ export class Terrain {
         H[j * m + i] = h;
         N[j * m + i] = h;
       }
+      if (j % 17 === 16) yield;
     }
+    yield;
     // grade to the roads: stamp every nearby road sample's influence
     const D = new Float32Array(m * m).fill(1e9);  // distance past the graded edge
     const Y = new Float32Array(m * m);            // road level to grade to

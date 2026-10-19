@@ -29,6 +29,7 @@ import { Garage } from './garage.js';
 import { Discoverer } from './discover.js';
 import { WorldMap } from './map2d.js';
 import { buildStarts, StartLights, startAt } from './starts.js';
+import { rehearse } from './build/cell.js';
 import { WorldTraffic } from './traffic.js';
 import { TrafficRender } from '../race/trafficModels.js';
 import { GARAGE } from './map/base.js';
@@ -152,8 +153,16 @@ export class WorldSession extends RaceSession {
     await this.world.warm(this.camera.cam, (f) => set(0.55 + f * 0.15, 'MIXING THE PAINT'), sliceMs);
     if (this.disposed) return;
     const st = this.start;
-    await this.world.ensureAsync(st.x, st.z, 300, (f) => set(0.7 + f * 0.3, 'PAVING THE STREETS'), sliceMs);
+    await this.world.ensureAsync(st.x, st.z, 300, (f) => set(0.7 + f * 0.22, 'PAVING THE STREETS'), sliceMs);
     if (this.disposed) return;
+    // every district's code run once now (behind the door), not in the first of its cells met at speed
+    {
+      set(0.92, 'WARMING UP THE CITY');
+      let t0 = performance.now();
+      for (const _ of rehearse(this.world.ctx)) {
+        if (performance.now() - t0 > sliceMs) { await tick(); t0 = performance.now(); if (this.disposed) return; }
+      }
+    }
     // the race tracks' start lines, each under its column of light
     {
       const gen = buildStarts();

@@ -19,7 +19,7 @@ export function* buildCell(ctx, cx, cz) {
   const x0 = cx * CELL, z0 = cz * CELL;
   const glowing = [];
   // the ground
-  const g = ctx.terrain.grid(cx, cz, 4);
+  const g = yield* ctx.terrain.gridSteps(cx, cz, 4);
   yield;
   const ground = terrainMesh(g);
   group.add(ground);
@@ -87,6 +87,43 @@ export function bake(meshes, lamps) {
       G[v * 3] = Math.min(r, 3); G[v * 3 + 1] = Math.min(gg, 3); G[v * 3 + 2] = Math.min(b, 3);
     }
     gl.needsUpdate = true;
+  }
+}
+
+const REHEARSED = new Set();     // pack ids
+
+/**
+ * Build one cell of each district's pack once and throw it away, a step at
+ * a time (a generator, like buildCell): the pack's code is compiled, and its
+ * first-use costs paid, while the world loads rather than in the first cell
+ * of that district met at speed (cold, a cell's longest step can be several
+ * times its usual). Once a page per pack. only: the district ids to cover
+ * (all of them if not given). A pack's cell is the one holding most of its
+ * planned items; every pack with items in that cell is warmed by it too.
+ */
+export function* rehearse(ctx, only = null) {
+  const D = ctx.districts;
+  if (!D?.items) return;
+  const todo = new Set();
+  for (const d of D.list) if (!only || only.has(d.id)) todo.add(D.packFor(d).id);
+  for (const id of REHEARSED) todo.delete(id);
+  while (todo.size) {
+    const id = todo.values().next().value;
+    todo.delete(id);
+    REHEARSED.add(id);
+    let best = null, n = 0;
+    for (const [k, items] of D.items) {
+      let c = 0;
+      for (const it of items) if (it.pack === id) c++;
+      if (c > n) { n = c; best = k; }
+    }
+    if (!best) continue;
+    for (const it of D.items.get(best)) if (todo.delete(it.pack)) REHEARSED.add(it.pack);
+    const [cx, cz] = best.split(',').map(Number);
+    const job = buildCell(ctx, cx, cz);
+    let r;
+    do { r = job.next(); yield; } while (!r.done);
+    r.value.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
   }
 }
 
