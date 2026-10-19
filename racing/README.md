@@ -376,8 +376,10 @@ menu, not the car), and whatever you change is in the moment you close it.
     buildings and props once, on a shared occupancy grid that keeps them
     off the roads, and scatters the small things cell by cell.
   - **Streaming.** A streamer builds the 256 m cells round the cars a few
-    milliseconds a frame, with the shaders warmed up first so nothing
-    hitches. The far city is one skyline mesh.
+    milliseconds a frame. The shaders are warmed up first, and each
+    district's code runs once on a sample cell while the world loads, so
+    the first time you drive into a district doesn't stutter. The far city
+    is one skyline mesh, built once a page.
   - **Physics and traffic.** The physics drives on the same roads and
     terrain and collides with the districts' buildings. Traffic follows the
     road network's lanes.
