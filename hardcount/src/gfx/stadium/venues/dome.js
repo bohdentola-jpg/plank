@@ -79,7 +79,6 @@ function bannerAtlas(home) {
 
 export async function build(ctx) {
   const { B, rig, field, home, root } = ctx;
-  const rng = makeRng('dome');
   const hw = field.halfW, E = field.end;
   const disposables = [];
   const path = new RRPath(hw + 13, E + 11, 26);
@@ -88,7 +87,6 @@ export async function build(ctx) {
   B.get('suites', () => suiteMat(ctx, 'suites-dome'));
   const rib = ribbonMat(ctx, [`${home.city.toUpperCase()} ${home.name.toUpperCase()}`, 'NOVATRON', 'DEFENSE!', 'RAZOR FUEL', `${home.abbr} ${home.abbr} ${home.abbr}`, 'HALCYON BANK', 'GET LOUD!', 'IRONSIDE AUTO']);
   B.get('ribbon', () => rib.mat);
-  const C1 = new THREE.Color(home.colors.primary), C2 = new THREE.Color(home.colors.secondary);
   const seatCol = (lvl) => (s, r) => {
     const a = angleAt(path, s);
     if (lvl === 1) return home.colors.secondary;
@@ -96,7 +94,6 @@ export async function build(ctx) {
     if (r > (lvl === 0 ? 22 : 20)) return '#7a7c80';
     return Math.floor(a / 18) % 2 ? home.colors.primary : '#5a1018';
   };
-  void C1; void C2;
   const lower = buildTier(B, path, {
     s0: 0, s1: P, d0: 0, rows: 28, depth: 0.95, h0: 1.9, rise: 0.42, riseGrow: 0.003,
     tint: [0.62, 0.62, 0.64], seats: 'seats', seatColor: seatCol(0),
@@ -235,7 +232,6 @@ export async function build(ctx) {
   const banners = new THREE.Mesh(bgb.build(), spill(new THREE.MeshStandardMaterial({ map: bt, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.85 }), ctx, 0.6));
   banners.name = 'banners';
   root.add(banners);
-  void rng;
 
   return {
     seats: [...lower.seats, ...mid.seats, ...upper.seats],

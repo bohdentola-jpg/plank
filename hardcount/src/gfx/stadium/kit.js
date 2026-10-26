@@ -349,7 +349,6 @@ export function lightPole(B, x, z, h, aim, opts = {}) {
   const m = B.get('metal');
   m.setColor(0.32, 0.33, 0.35);
   const fx = Math.sin(yaw), fz = Math.cos(yaw);
-  const rx = Math.cos(yaw), rz = -Math.sin(yaw);
   const W = cols * lamp, H = rows * lamp;
   const cy = h + H / 2 + 0.3;
   const tilt = opts.tilt ?? 0.42;   // lamps tipped down toward the field

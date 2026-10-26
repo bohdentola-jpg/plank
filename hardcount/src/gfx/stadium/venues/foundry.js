@@ -6,8 +6,8 @@
 // sawtooth sheds, a gas holder, cranes and the orange glow of the furnaces.
 import * as THREE from 'three';
 import { RRPath, ringWall, ringFlat, buildTier } from '../bowl.js';
-import { V3, box, beam, pole, spill, smokestack, building, lightPole, exteriorMat } from '../kit.js';
-import { cv, tex, BRANDS, label } from '../tex.js';
+import { V3, beam, spill, smokestack, building, lightPole, exteriorMat } from '../kit.js';
+import { cv, tex, BRANDS } from '../tex.js';
 import { createScoreboard } from '../scoreboard.js';
 import { blockText } from '../blockfont.js';
 import { logoCanvas } from '../../logos.js';
@@ -232,10 +232,9 @@ export async function build(ctx) {
   const wz = path.az + 90;
   for (let i = 0; i < 6; i++) {
     const x = -150 + i * 58 + (rng() - 0.5) * 20, z = wz + 60 + rng() * 120, h = 55 + rng() * 40;
-    const st = smokestack(B, x, z, h, 2.6 + rng() * 1.2);
+    smokestack(B, x, z, h, 2.6 + rng() * 1.2);
     stacks.push({ x, y: h, z });
     ctx.lightsList.push({ pos: V3(x, h + 1.5, z), color: [1, 0.1, 0.05], size: 2.4, k: 1.5, blink: 1 });
-    void st;
   }
   // sawtooth sheds
   const clad = B.get('clad');

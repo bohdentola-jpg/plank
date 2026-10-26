@@ -115,8 +115,7 @@ export async function buildVenue(renderer, opts = {}) {
   await tick();
   const sideline = buildSideline(ctx, ctx.B, V.sideline || {});
   root.add(sideline.group);
-  const meshes = ctx.B.flush(root);
-  void meshes;
+  ctx.B.flush(root);
   await tick();
 
   // ---- floodlights, point glows, sky

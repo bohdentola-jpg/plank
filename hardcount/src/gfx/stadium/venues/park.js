@@ -4,12 +4,10 @@
 // graffiti, a basketball court, the street with parked cars, and brick
 // apartment blocks with fire escapes all around.
 import * as THREE from 'three';
-import { RRPath } from '../bowl.js';
 import { V3, box, beam, pole, spill, bleachers, chainFence, lightPole, trees, building } from '../kit.js';
-import { cv, tex, graffitiTex, noiseCanvas, grainCanvas, blotch } from '../tex.js';
+import { cv, graffitiTex, noiseCanvas, grainCanvas, blotch } from '../tex.js';
 import { createScoreboard } from '../scoreboard.js';
 import { makeRng } from '../../../core/util.js';
-import { GeoBuilder } from '../../geo.js';
 
 export const SUN_AZ = 1.9;
 export const WIND_DIR = 0.3;
@@ -182,7 +180,6 @@ export async function build(ctx) {
   face.position.set(0, 5, fz + 0.3);
   face.rotation.y = Math.PI;
   root.add(face);
-  void GeoBuilder; void RRPath; void tex; void home;
 
   return {
     seats,

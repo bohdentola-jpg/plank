@@ -9,7 +9,6 @@ import { RRPath, ringWall, ringFlat, buildTier } from '../bowl.js';
 import { V3, box, beam, pole, spill, exteriorMat } from '../kit.js';
 import { cv, tex, BRANDS, beamTex } from '../tex.js';
 import { createScoreboard } from '../scoreboard.js';
-import { spriteMesh } from '../lights.js';
 import { logoCanvas } from '../../logos.js';
 import { makeRng } from '../../../core/util.js';
 import { GeoBuilder } from '../../geo.js';
@@ -242,7 +241,6 @@ export async function build(ctx) {
     streakMesh.name = 'waterStreaks';
     root.add(streakMesh);
   }
-  void spriteMesh;
 
   // a couple of boats on the bay
   const boat = B.get('paint');

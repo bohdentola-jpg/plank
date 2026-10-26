@@ -5,7 +5,7 @@
 // on the rim, a hedge along the field wall, and the campus beyond the open end.
 import * as THREE from 'three';
 import { RRPath, ringWall, ringFlat } from '../bowl.js';
-import { V3, box, beam, pole, trees, spill, building, exteriorMat } from '../kit.js';
+import { V3, box, beam, pole, trees, building, exteriorMat } from '../kit.js';
 import { cv, tex, BRANDS } from '../tex.js';
 import { createScoreboard } from '../scoreboard.js';
 import { logoCanvas } from '../../logos.js';

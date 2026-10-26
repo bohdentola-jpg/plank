@@ -4,9 +4,9 @@
 // nobody's standing on, an old press box, lattice light towers on the rim,
 // heaters on the sidelines, frosted pines and the mountains beyond.
 import * as THREE from 'three';
-import { RRPath, ringWall, ringFlat, buildTier } from '../bowl.js';
-import { V3, box, beam, pole, spill, trees, lightPole, exteriorMat } from '../kit.js';
-import { cv, tex, BRANDS } from '../tex.js';
+import { RRPath, buildTier } from '../bowl.js';
+import { V3, box, beam, spill, trees, lightPole, exteriorMat } from '../kit.js';
+import { cv, BRANDS } from '../tex.js';
 import { createScoreboard } from '../scoreboard.js';
 import { logoCanvas } from '../../logos.js';
 import { makeRng, makeNoise2D } from '../../../core/util.js';
@@ -145,10 +145,6 @@ export async function build(ctx) {
   root.add(trees(tl, ctx, { snow: true }));
   root.add(mountains(ctx, 650, 2000, 300, 7, [0.16, 0.19, 0.24]));
   root.add(mountains(ctx, 1150, 2600, 470, 11, [0.24, 0.28, 0.36]));
-  // the snow-covered ground outside the bowl
-  const ground = B.get('ground');
-  ground.setColor(...(snowy || ctx.cold ? [0.82, 0.85, 0.9] : [0.4, 0.42, 0.36]));
-  void ground;
 
   return {
     seats: bowl.seats,
