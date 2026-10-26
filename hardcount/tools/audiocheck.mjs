@@ -323,7 +323,7 @@ function crowdTests() {
     tl.every(8, 0.05, (t, dt) => C().update(dt, t < 3 ? st : { size: 0 }));
   }, {}, { until: 3, tail: 1, teardown: () => !A.crowd.playing });
   // reactions in isolation (no bed): length, tone and level of each
-  const lens = { cheer: [2, 5], roar: [4, 8.5], ooh: [0.8, 2.6], aah: [1.5, 3.6], groan: [1, 3], boo: [1.8, 4.2], gasp: [0.25, 1.4], murmur: [2.5, 5], clap: [3.5, 7], chant: [5.5, 9], stomp: [4.5, 8] };
+  const lens = { cheer: [2, 5], roar: [4, 8.5], ooh: [0.8, 2.6], aah: [1.5, 3.6], groan: [1, 3], boo: [1.8, 4.2], gasp: [0.25, 1.4], murmur: [2.5, 5], clap: [3.5, 7], chant: [5.5, 9], stomp: [4.5, 8], charge: [0.4, 1.6] };
   for (const k of Object.keys(lens)) {
     add('crowd:' + k, 'crowd', 10, (ctx, tl) => {
       C().state = { excitement: 0.25, size: 0.9, home: 0.8, indoor: false };

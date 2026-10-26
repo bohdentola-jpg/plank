@@ -69,6 +69,7 @@ registerScreen('soundboard', () => {
         act('PA · CHIME', () => sfx.pa('chime')),
         act('PA · AIR HORN', () => sfx.pa('horn')),
         act('ORGAN · CHARGE!', () => sfx.pa('organ_charge')),
+        act('ORGAN · CHARGE! + CROWD', () => { sfx.pa('organ_charge'); later(2000, () => crowd.react('charge', 1)); }, 'the organ calls, the crowd answers'),
         act('ORGAN · DE-FENSE', () => sfx.pa('organ_defense')),
         act('ORGAN · LET\'S GO', () => sfx.pa('organ_letsgo')),
         ...['move', 'select', 'back', 'tab', 'error', 'buy', 'unlock'].map((k) => act(`UI · ${k.toUpperCase()}`, () => sfx.ui(k))),
@@ -98,7 +99,7 @@ registerScreen('soundboard', () => {
         slider('HOME SHARE', 'home', 'how much of the crowd is cheering for the home side'),
         toggle('INDOOR', 'indoor', 'dome'),
         choice('REACTING', 'side', ['default', 'home', 'away', 'all'].map((v) => ({ value: v, label: v.toUpperCase() })), 'whose fans react'),
-        ...['cheer', 'roar', 'ooh', 'aah', 'groan', 'boo', 'gasp', 'murmur', 'clap', 'chant', 'stomp'].map((k) => act(`REACT · ${k.toUpperCase()}`, () => crowd.react(k, st.strength, st.side === 'default' ? undefined : st.side))),
+        ...['cheer', 'roar', 'ooh', 'aah', 'groan', 'boo', 'gasp', 'murmur', 'clap', 'chant', 'stomp', 'charge'].map((k) => act(`REACT · ${k.toUpperCase()}`, () => crowd.react(k, st.strength, st.side === 'default' ? undefined : st.side))),
         choice('REACTION STRENGTH', 'strength', [0.15, 0.3, 0.5, 0.75, 1].map((v) => ({ value: v, label: pct(v) }))),
         act('TOUCHDOWN!', () => {
           crowd.react('roar', 1); sfx.pa('horn'); music.stinger('td');

@@ -16,9 +16,10 @@
 // API (all safe before audio.unlock()):
 //   crowd.update(dt, { excitement 0..1, size 0..1, home 0..1, indoor })   every frame, any subset
 //   crowd.react(kind, strength = 1, side)   kind: cheer | roar | ooh | aah | groan | boo | gasp |
-//       murmur | clap | chant | stomp. side: 'home' | 'away' | 'all' — whose fans react; the share
-//       of the crowd that is theirs (from `home`) scales it. Defaults: cheer roar clap chant stomp
-//       boo groan → 'home'; ooh aah gasp murmur → 'all'.
+//       murmur | clap | chant | stomp | charge (the yell after the organ's CHARGE!).
+//       side: 'home' | 'away' | 'all' — whose fans react; the share of the crowd that is
+//       theirs (from `home`) scales it. Defaults: cheer roar clap chant stomp boo groan
+//       charge → 'home'; ooh aah gasp murmur → 'all'.
 //   crowd.stop(fade)        fade out and tear down (between screens)
 //   crowd.level             0..1 smoothed loudness, for animating the stands
 //   crowd.prewarm()         render everything now (loading screen)
@@ -288,6 +289,12 @@ const RX = {
     len: 1,
     layers: [{ groups: 24, voices: [4, 7], phones: 'f:.08 e:.3 n:.07 s:.13', at: [0, 0.035], spread: 0.06, f0: [172, 205], female: 0.3, contour: 'chant', shout: 0.95, breath: [0.15, 0.35] }],
   },
+  // the answer to the organ's CHARGE! riff
+  'chant:charge': {
+    len: 1.3,
+    layers: [{ groups: 26, voices: [4, 7], phones: 't:.03 sh:.07 a:.36 r:.08 zh:.09', at: [0, 0.06], spread: 0.1, f0: [190, 245], female: 0.3, contour: 'chant', shout: 1, breath: [0.2, 0.4] }],
+    whistles: [3, 0.3, 0.5, 0.06],
+  },
 };
 
 const BEDS = {
@@ -351,7 +358,7 @@ function* gBed(sr, R, spec) {
 // name → generator factory (sr, R) — everything the crowd can play
 const BUFS = {};
 for (const k of Object.keys(BEDS)) BUFS[k] = (sr, R) => gBed(sr, R, BEDS[k]);
-for (const k of ['cheer', 'roar', 'ooh', 'aah', 'groan', 'boo', 'gasp', 'murmur', 'scream', 'chant:de', 'chant:fense']) {
+for (const k of ['cheer', 'roar', 'ooh', 'aah', 'groan', 'boo', 'gasp', 'murmur', 'scream', 'chant:de', 'chant:fense', 'chant:charge']) {
   BUFS[k] = (sr, R) => gReaction(sr, R, RX[k], 1);
 }
 for (const k of ['cheer', 'roar', 'ooh', 'groan', 'boo', 'aah']) BUFS[k + ':small'] = (sr, R) => gReaction(sr, R, RX[k], 0.3);
@@ -361,14 +368,14 @@ for (let v = 0; v < 3; v++) {
 }
 // warm order: what a game needs first
 const WARM = ['bed:murmur', 'bed:buzz', 'bed:few', 'cheer', 'ooh', 'groan', 'roar', 'bed:roar', 'boo', 'clap:0', 'clap:1', 'stomp:0', 'stomp:1',
-  'chant:de', 'chant:fense', 'aah', 'gasp', 'murmur', 'scream', 'cheer:small', 'ooh:small', 'groan:small', 'roar:small', 'boo:small',
+  'chant:de', 'chant:fense', 'aah', 'gasp', 'murmur', 'scream', 'chant:charge', 'cheer:small', 'ooh:small', 'groan:small', 'roar:small', 'boo:small',
   'aah:small', 'clap:2', 'stomp:2'];
 
-const KINDS = ['cheer', 'roar', 'ooh', 'aah', 'groan', 'boo', 'gasp', 'murmur', 'clap', 'chant', 'stomp'];
-const SIDE = { cheer: 'home', roar: 'home', clap: 'home', chant: 'home', stomp: 'home', boo: 'home', groan: 'home', ooh: 'all', aah: 'all', gasp: 'all', murmur: 'all' };
+const KINDS = ['cheer', 'roar', 'ooh', 'aah', 'groan', 'boo', 'gasp', 'murmur', 'clap', 'chant', 'stomp', 'charge'];
+const SIDE = { cheer: 'home', roar: 'home', clap: 'home', chant: 'home', stomp: 'home', boo: 'home', groan: 'home', charge: 'home', ooh: 'all', aah: 'all', gasp: 'all', murmur: 'all' };
 // how much each reaction lifts the bed afterwards, and its level
-const GLOW = { cheer: 0.35, roar: 0.8, ooh: 0.18, aah: 0.3, groan: 0.1, boo: 0.3, gasp: 0.12, murmur: 0.05, clap: 0.25, chant: 0.4, stomp: 0.55 };
-const LEVEL = { cheer: 0.8, roar: 1, ooh: 0.75, aah: 0.62, groan: 0.62, boo: 0.75, gasp: 0.62, murmur: 0.6, clap: 0.8, chant: 0.8, stomp: 0.78 };
+const GLOW = { cheer: 0.35, roar: 0.8, ooh: 0.18, aah: 0.3, groan: 0.1, boo: 0.3, gasp: 0.12, murmur: 0.05, clap: 0.25, chant: 0.4, stomp: 0.55, charge: 0.4 };
+const LEVEL = { cheer: 0.8, roar: 1, ooh: 0.75, aah: 0.62, groan: 0.62, boo: 0.75, gasp: 0.62, murmur: 0.6, clap: 0.8, chant: 0.8, stomp: 0.78, charge: 0.85 };
 
 // ===========================================================================
 
@@ -624,6 +631,7 @@ class Crowd {
     const lp = 2500 + 10000 * s;
     if (kind === 'clap') this._rhythm(now, g, 'clap', 0.42, 12, lp);
     else if (kind === 'chant') this._chant(now, g, lp);
+    else if (kind === 'charge') this._play('chant:charge', now, g, lp);
     else if (kind === 'stomp') {
       this._play('scream', now, g * 0.85, lp, 0.6);
       this._rhythm(now + 0.15, g * 1.1, 'stomp', 0.44, 13, lp);
