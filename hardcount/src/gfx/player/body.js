@@ -248,6 +248,8 @@ const TORSO_PADS = [
   [1.586, 0.105, 0.079, 0.079, -0.010, 2.2, [0, 0, 0, 0], 'top'],
   [1.588, 0.078, 0.070, 0.069, -0.010, 2.0, [0, 0, 0, 0], 'top'],
   [1.580, 0.060, 0.059, 0.059, -0.012, 2.0, [0, 0, 0, 0], 'top'],
+  // skirt: the collar turns in under the neck, so a bent neck never opens a hole into the torso
+  [1.528, 0.036, 0.032, 0.036, -0.012, 2.0, [0, 0, 0, 0], 'skirt'],
 ];
 const TORSO_SHIRT = [
   [1.330, 0.184, 0.130, 0.116, 0.000, 2.4, [0, 0, 0.004, 0.004], 'chest'],
@@ -258,6 +260,7 @@ const TORSO_SHIRT = [
   [1.528, 0.102, 0.074, 0.072, -0.013, 2.2, [0, 0, 0, 0], 'top'],
   [1.538, 0.070, 0.064, 0.062, -0.012, 2.0, [0, 0, 0, 0], 'top'],
   [1.532, 0.056, 0.054, 0.054, -0.012, 2.0, [0, 0, 0, 0], 'top'],
+  [1.48, 0.036, 0.032, 0.036, -0.012, 2.0, [0, 0, 0, 0], 'skirt'],
 ];
 const TORSO_BUMPS = [[0, 48], [180, 52], [0, 70], [180, 75]];
 
@@ -270,12 +273,12 @@ function torsoKeys(bd) {
     else if (zone === 'waist') { fx = bd.waist; fzF = bd.waist + bd.belly * 0.06; fzB = bd.waist * 0.97; }
     else if (zone === 'chest') { fx = lerp(bd.waist, bd.wide, sstep(1.18, 1.3, y)) * bd.musc ** 0.5; fzF = fx * 1.0; fzB = fx; }
     else if (zone === 'pad') { const p = bd.pads || 1; fx = bd.wide * p; fzF = bd.wide * (0.95 + 0.05 * p) * bd.musc ** 0.3; fzB = fzF; }
-    else if (zone === 'top') { fx = bd.neck * 0.92 + 0.08 * bd.wide; fzF = fzB = bd.neck * 0.95 + 0.05; }
+    else if (zone === 'top' || zone === 'skirt') { fx = bd.neck * 0.92 + 0.08 * bd.wide; fzF = fzB = bd.neck * 0.95 + 0.05; }
     const bp = sstep(1.0, 1.09, y) * (1 - sstep(1.16, 1.27, y));
     const belly = b[0] + bd.belly * 0.034 * bp;
     return {
       t: y * s, rx: rx * fx * s, rzF: rzF * fzF * s, rzB: rzB * fzB * s, cz: cz * s, sq,
-      b: [belly * s, b[1] * s * bd.hip, b[2] * s, b[3] * s],
+      b: [belly * s, b[1] * s * bd.hip, b[2] * s, b[3] * s], skirt: zone === 'skirt',
     };
   });
 }
@@ -314,17 +317,20 @@ function buildTorso(mb, bd, dims, lod) {
       yOf.push(t);
     }
   }
+  let nSkirt = 0;
   for (let i = up; i < keys.length; i++) {
     const k = keys[i];
     rows.push({ rx: k.rx, rzF: k.rzF, rzB: k.rzB, cx: 0, cz: k.cz, sq: k.sq });
     yOf.push(k.t);
+    if (k.skirt) nSkirt++;
   }
-  // v by arc length along the front silhouette
+  // v by arc length along the front silhouette; the skirt inside the collar takes the last
+  // few texels of the region (painted dark: the inside of the collar)
   const arc = [0];
   for (let i = 1; i < rows.length; i++) {
     const dy = yOf[i] - yOf[i - 1];
     const dr = (rows[i].rzF + rows[i].rx) / 2 - (rows[i - 1].rzF + rows[i - 1].rx) / 2;
-    arc.push(arc[i - 1] + Math.hypot(dy, dr));
+    arc.push(i >= rows.length - nSkirt ? arc[i - 1] + 0.006 * bd.s / nSkirt : arc[i - 1] + Math.hypot(dy, dr));
   }
   const total = arc[arc.length - 1];
   const wfn = torsoWeights(bd);

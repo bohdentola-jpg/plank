@@ -277,8 +277,8 @@ function buildStrap(gb, lod) {
   }
   const g = new THREE.SphereGeometry(1, 8, 4, 0, Math.PI * 2, 0, Math.PI * 0.62);
   g.rotateX(Math.PI / 2 + 0.35);
-  g.scale(0.032, 0.022, 0.016);
-  g.translate(cup.x, cup.y, cup.z);
+  g.scale(0.027, 0.019, 0.014);
+  g.translate(cup.x, cup.y - 0.004, cup.z - 0.002);
   gb.merge(g, uv);
   g.dispose();
 }
@@ -435,7 +435,9 @@ export function teamHelmetTexture(team) {
   // facemask / strap / padding / rim swatches
   const H = team.helmet || {};
   x.fillStyle = H.facemask || '#cccccc'; x.fillRect(...HR.MASK);
-  x.fillStyle = H.strap || '#f2f2f2'; x.fillRect(...HR.STRAP);
+  // chin strap + cup: the team's, else white on light shells and black on dark ones
+  const shellC = new THREE.Color(H.shell || '#888888');
+  x.fillStyle = H.strap || (0.2126 * shellC.r + 0.7152 * shellC.g + 0.0722 * shellC.b > 0.45 ? '#e4e4e2' : '#1d1e21'); x.fillRect(...HR.STRAP);
   x.fillStyle = '#1a1b1e'; x.fillRect(...HR.PAD);
   // jaw pads in the team colour at the cheeks of the padding (c ranges at the face-opening sides, low s)
   x.fillStyle = team.colors?.primary || '#222';

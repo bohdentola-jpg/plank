@@ -216,8 +216,10 @@ function paintTorso(ctx, o, { kit, team, num, lm, rng, skin }) {
     for (const th of [90, -90]) boltOnTorso(ctx, T, torsoU(th), v, sc[0], sc[1]);
   }
   // collar: band at the top + V-neck notch at the front
-  const vCol = lm.vFromTop ? lm.vFromTop(padded ? 0.032 : 0.028) : v(1.577);
+  const vCol = lm.vFromTop ? lm.vFromTop(padded ? 0.032 : 0.03) : v(1.577);   // includes the 6 mm skirt
   rectL(ctx, T, 0, vCol, 1, 1, kit.collar || kit.jersey);
+  // the inside of the collar (the skirt that turns in under the neck)
+  if (lm.vFromTop) rectL(ctx, T, 0, lm.vFromTop(0.0032), 1, 1, shade(kit.collar || kit.jersey, -0.72));
   {
     const uF = torsoU(0);
     const [cx, cyTop] = pxOf(T, uF, vCol);

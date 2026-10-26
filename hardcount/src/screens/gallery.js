@@ -290,7 +290,7 @@ registerScreen('gallery', () => {
       extras.push(riser);
     }
     focus.set(0, which === 'both' ? 2.2 : 1.95, which === 'both' ? -0.5 : 0);
-    orbit = { az: 0, el: 6, dist: which === 'both' ? 4.6 : 3.4 };
+    orbit = { az: 0, el: 6, dist: 4.6 };
     camera.fov = parseFloat(q.get('fov') || '32');
   }
 

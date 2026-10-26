@@ -27,6 +27,17 @@ function hairlineAt(c) {
   return [lerp(HAIRLINE[i][0], HAIRLINE[i + 1][0], t), lerp(HAIRLINE[i][1], HAIRLINE[i + 1][1], t)];
 }
 
+let FLAT = null;
+function flatBox() {
+  if (FLAT) return FLAT;
+  const p = new THREE.Vector3();
+  headPoint(90, 0, p);
+  const top = p.y;
+  headPoint(35, 90, p);
+  FLAT = { top: top + 0.042, side: Math.abs(p.x) + 0.014 };
+  return FLAT;
+}
+
 // cap thickness (metres) per style at (λ, φ) and lateral x
 function thickness(style, lam, phi, x, y, z) {
   const top = sstep(20, 75, phi);
@@ -34,8 +45,15 @@ function thickness(style, lam, phi, x, y, z) {
     case 'short': return 0.006 + 0.007 * top;
     case 'curly': return 0.013 + 0.006 * top + 0.0035 * Math.sin(lam * 0.31) * Math.sin(phi * 0.42);
     case 'twists': return 0.017 + 0.006 * top + 0.006 * Math.abs(Math.sin(lam * 0.55) * Math.sin(phi * 0.6));
-    case 'afro': return 0.03 + 0.016 * top + 0.008 * sstep(-10, 30, phi) + 0.003 * Math.sin(lam * 0.4) * Math.sin(phi * 0.5);
-    case 'flat': return 0.005 + 0.034 * sstep(25, 62, phi);
+    case 'afro': return 0.046 + 0.024 * top + 0.012 * sstep(-10, 30, phi) + 0.004 * Math.sin(lam * 0.4) * Math.sin(phi * 0.5);
+    case 'flat': {
+      // high-top: the ray from the head centre stops at a flat top or at the straight sides
+      const F = flatBox();
+      const len = Math.hypot(x, y, z);
+      const dy = y / len, dr = Math.hypot(x, z * 0.92) / len;
+      const d = Math.min(dy > 0.02 ? F.top / dy : 9, dr > 0.02 ? F.side / dr : 9);
+      return clamp(d - len, 0.004, 0.075) * sstep(-8, 22, phi) + 0.002;
+    }
     case 'mohawk': return 0.001 + 0.042 * Math.exp(-((x / 0.017) ** 2)) * sstep(-25, 25, phi + (z < 0 ? 25 : 0));
     case 'dreads': return 0.012 + 0.004 * top;
     case 'braids': return 0.004;
@@ -46,6 +64,8 @@ function thickness(style, lam, phi, x, y, z) {
 
 function capGrid(mb, style, C, hs, lod) {
   const nc = lod === 'high' ? 22 : 10, ns = lod === 'high' ? 7 : 3;
+  // how far in from the hairline the hair reaches its full height (big styles round over)
+  const ramp = style === 'afro' ? 0.42 : style === 'curly' || style === 'twists' ? 0.22 : 0.12;
   const p = new THREE.Vector3(), q = new THREE.Vector3(), r = new THREE.Vector3(), n = new THREE.Vector3();
   const base = mb.count;
   const pos = (c, s, out) => {
@@ -53,7 +73,7 @@ function capGrid(mb, style, C, hs, lod) {
     const phi = Math.min(89.5, lerp(phi0, 90, s));
     headPoint(phi, lam, out);
     const len = out.length();
-    const t = thickness(style, lam, phi, out.x, out.y, out.z) * sstep(0, 0.12, s + 0.02);
+    const t = thickness(style, lam, phi, out.x, out.y, out.z) * sstep(0, ramp, s + 0.02);
     out.multiplyScalar((len + t) / len);
     return out;
   };
