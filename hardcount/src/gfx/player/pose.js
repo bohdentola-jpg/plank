@@ -41,9 +41,13 @@ export const MIRROR_GROUP = {
   clavL: 'clavR', clavR: 'clavL', armL: 'armR', armR: 'armL', legL: 'legR', legR: 'legL', handL: 'handR', handR: 'handL',
   poleL: 'poleR', poleR: 'poleL', footL: 'footR', footR: 'footL', kneeL: 'kneeR', kneeR: 'kneeL',
 };
-// per-channel group index (for masks)
+// per-channel group index (for masks), flat group tables for the hot paths
 export const CH_GROUP = new Int8Array(NCH);
 for (const [name, [s, n]] of Object.entries(G)) for (let i = 0; i < n; i++) CH_GROUP[s + i] = GI[name];
+export const GSTART = Int16Array.from(GROUPS.map((g) => G[g][0]));
+export const GLEN = Int16Array.from(GROUPS.map((g) => G[g][1]));
+const MIRROR_PAIRS = Int16Array.from(Object.entries(MIRROR_GROUP).flatMap(([a, b]) => [G[a][0], G[b][0], G[a][1]]));
+const TRUNK = Int16Array.from(['spine', 'chest', 'neck', 'head'].map((g) => G[g][0]));
 
 /** The neutral pose: standing straight, arms hanging, no IK. */
 export function neutral(out = new Float32Array(NCH)) {
@@ -53,7 +57,8 @@ export function neutral(out = new Float32Array(NCH)) {
   return out;
 }
 
-const IKGROUPS = [[C.IKH_L, 5, 4], [C.IKH_R, 5, 4], [C.IKF_L, 6, -1], [C.IKF_R, 6, -1]];   // [start, len, space index or -1]
+// IK groups: start, length, index of the space channel (−1: none)
+const IKG = Int16Array.from([C.IKH_L, 5, 4, C.IKH_R, 5, 4, C.IKF_L, 6, -1, C.IKF_R, 6, -1]);
 
 /**
  * out = a·(1−t) + b·t. IK targets average weighted by their IK weights; the
@@ -66,7 +71,8 @@ export function blend(out, a, b, t, mask = null) {
     if (mask && !mask[CH_GROUP[i]]) { out[i] = a[i]; continue; }
     out[i] = a[i] + (b[i] - a[i]) * t;
   }
-  for (const [s, n, sp] of IKGROUPS) {
+  for (let g = 0; g < 12; g += 3) {
+    const s = IKG[g], n = IKG[g + 1], sp = IKG[g + 2];
     if (mask && !mask[CH_GROUP[s]]) continue;
     const wa = a[s] * (1 - t), wb = b[s] * t;
     const ws = wa + wb;
@@ -86,14 +92,15 @@ const _tmp = new Float32Array(NCH);
 export function mirror(out, a) {
   const t = _tmp;
   t.set(a);
-  for (const [g, h] of Object.entries(MIRROR_GROUP)) {
-    const [s, n] = G[g], [s2] = G[h];
+  for (let k = 0; k < MIRROR_PAIRS.length; k += 3) {
+    const s = MIRROR_PAIRS[k], s2 = MIRROR_PAIRS[k + 1], n = MIRROR_PAIRS[k + 2];
     for (let i = 0; i < n; i++) out[s + i] = t[s2 + i];
   }
-  for (const g of ['root', 'spine', 'chest', 'neck', 'head']) {
-    const [s] = G[g];
-    if (g === 'root') { out[s] = -t[s]; out[s + 1] = t[s + 1]; out[s + 2] = t[s + 2]; out[s + 3] = t[s + 3]; out[s + 4] = -t[s + 4]; out[s + 5] = -t[s + 5]; }
-    else { out[s] = t[s]; out[s + 1] = -t[s + 1]; out[s + 2] = -t[s + 2]; }
+  const r = C.ROOT;
+  out[r] = -t[r]; out[r + 1] = t[r + 1]; out[r + 2] = t[r + 2]; out[r + 3] = t[r + 3]; out[r + 4] = -t[r + 4]; out[r + 5] = -t[r + 5];
+  for (let k = 0; k < TRUNK.length; k++) {
+    const s = TRUNK[k];
+    out[s] = t[s]; out[s + 1] = -t[s + 1]; out[s + 2] = -t[s + 2];
   }
   return out;
 }

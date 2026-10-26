@@ -144,7 +144,7 @@ registerScreen('gallery', () => {
 
   function add(model, A, label, opts = {}) {
     scene.add(model.group);
-    if (dirt) model.setDirt(dirt);
+    if (dirt) { model.setDirt(dirt); A.dirt = dirt; }
     if (q.get('helmet') === '0') model.setHelmet(false);
     const it = { model, A, label, ...opts };
     if (opts.ball || A.carry) {
@@ -384,6 +384,39 @@ registerScreen('gallery', () => {
     orbit = { az: parseFloat(q.get('az') || '25'), el: 8, dist: times.length * gap * 0.95 + 2 };
   }
 
+  // linemen locked up: pushes +1 / 0 / −1 (the OL drives, stalemate, the DL drives)
+  function engageMode() {
+    const ol = getTeam('det'), dl = getTeam('hou');
+    const pushes = [1, 0, -1];
+    pushes.forEach((push, i) => {
+      const x = (i - 1) * 2.6;
+      const off = add(createPlayerModel({ team: ol, kit: 'home', player: rosterPick(ol, 'G', i), lod }), blankA({ x, z: -0.45, heading: 0, base: 'block', engage: { dx: 0, dz: 1, push } }), `OL push ${push > 0 ? '+' : ''}${push}`);
+      const def = add(createPlayerModel({ team: dl, kit: 'away', player: rosterPick(dl, 'DL', i), lod }), blankA({ x, z: 0.45, heading: Math.PI, base: 'rush', engage: { dx: 0, dz: -1, push: -push } }), `DL ${-push > 0 ? '+' : ''}${-push}`);
+      // the side that is driven back slides at a walk, the winner chops forward
+      off.A.speed = push < 0 ? 0.9 : push > 0 ? 0.9 : 0;
+      off.A.moveAngle = push < 0 ? Math.PI : 0;
+      def.A.speed = push > 0 ? 0.9 : push < 0 ? 0.9 : 0;
+      def.A.moveAngle = push > 0 ? Math.PI : 0;
+    });
+    focus.set(0, 0.9, 0);
+    orbit = { az: 70, el: 12, dist: 9 };
+  }
+
+  // a ball looping overhead: everyone tracks it with their eyes, two receivers reach for it
+  function lookMode() {
+    const team = getTeam('slc');
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const x = Math.sin(a) * 2.6, z = Math.cos(a) * 2.6;
+      const it = add(createPlayerModel({ team, kit: i % 2 ? 'home' : 'away', player: rosterPick(team, ['WR', 'CB', 'S', 'LB', 'RB', 'TE'][i]), lod }), blankA({ x, z, heading: Math.atan2(-x, -z) + (i % 3 - 1) * 0.6, base: i < 2 ? 'ready' : 'stand' }), i < 2 ? 'look + reach' : 'look', { looker: true, reacher: i < 2 });
+    }
+    const ball = createBallModel({});
+    scene.add(ball.group);
+    items.push({ ballOnly: ball, flying: true });
+    focus.set(0, 1.2, 0);
+    orbit = { az: 30, el: 18, dist: 9.5 };
+  }
+
   function perfMode() {
     const rng = makeRng(3);
     for (let i = 0; i < 22; i++) {
@@ -393,6 +426,17 @@ registerScreen('gallery', () => {
       add(createPlayerModel({ team, kit: i < 11 ? 'home' : 'away', player: rosterPick(team, pos, i), lod }), A, '', { wander: rng() * 10 });
     }
     for (let i = 0; i < 3; i++) add(createRefModel({ role: ['referee', 'umpire', 'judge'][i], lod, seed: i }), blankA({ x: -8 + i * 8, z: 12, base: 'ref', speed: 2, heading: 1 }), '', { wander: i * 3 });
+    // CPU benchmark: animation updates only (no rendering), fixed 60 Hz steps
+    const models = items.filter((it) => it.model);
+    for (let f = 0; f < 60; f++) for (const it of models) { tickItem(it, 1 / 60, f / 60); it.model.update(1 / 60, it.A); }
+    const frames = 300;
+    const t0 = performance.now();
+    for (let f = 0; f < frames; f++) {
+      for (const it of models) { tickItem(it, 1 / 60, 1 + f / 60); it.model.update(1 / 60, it.A); }
+    }
+    const ms = (performance.now() - t0) / frames;
+    perf.bench = ms;
+    console.log(`[perf] ${models.length} models: ${ms.toFixed(3)} ms per frame for all animation updates (${(ms / models.length * 1000).toFixed(1)} µs per model)`);
     focus.set(0, 0, 0);
     orbit = { az: 30, el: 35, dist: 42 };
   }
@@ -460,6 +504,15 @@ registerScreen('gallery', () => {
       const rot = q.has('rot') ? parseFloat(q.get('rot')) * D2R : t * 0.45;
       A.heading = rot + (q.has('rot') ? 0 : it.i * 0.35);
     }
+    if (it.looker) {
+      const bt = t * 0.9;
+      const bp = { x: Math.sin(bt) * 2.2, y: 1.6 + Math.sin(bt * 2.3) * 0.9 + 0.6, z: Math.cos(bt * 0.7) * 1.6 };
+      A.look = bp;
+      if (it.reacher) {
+        const d = Math.hypot(bp.x - A.x, bp.z - A.z);
+        A.reach = d < 2.2 ? bp : null;
+      }
+    }
     if (it.huddle && q.get('clap') === '1') {
       const ct = (t % 4) - 2.5;
       A.action = ct > 0 && ct < 0.6 ? { name: 'huddle_clap', t: ct, side: null, power: 1 } : null;
@@ -505,7 +558,7 @@ registerScreen('gallery', () => {
       if (q.get('crt') === '0') { savedCrt = game.renderer.crt; game.renderer.crt = 0; }
       game.renderer.setPost({ bloomStrength: 0.7, vignette: 0.4, exposure: night ? 1.05 : 1.0 }, true);
       lights();
-      ({ lineup, actions: actionsMode, bases: basesMode, run: runMode, stride: strideMode, clip: clipMode, closeup: closeupMode, huddle: huddleMode, ball: ballMode, perf: perfMode }[mode] || lineup)();
+      ({ lineup, actions: actionsMode, bases: basesMode, run: runMode, stride: strideMode, clip: clipMode, engage: engageMode, look: lookMode, closeup: closeupMode, huddle: huddleMode, ball: ballMode, perf: perfMode }[mode] || lineup)();
       applyCamParam();
       if (q.get('bones') === '1' && items[0]?.model) {
         helper = new THREE.SkeletonHelper(items[0].model.group);
@@ -542,6 +595,10 @@ registerScreen('gallery', () => {
       for (const it of items) {
         if (it.strip) continue;
         if (it.ballOnly) {
+          if (it.flying) {
+            const bt = time * 0.9;
+            it.ballOnly.group.position.set(Math.sin(bt) * 2.2, 1.6 + Math.sin(bt * 2.3) * 0.9 + 0.6, Math.cos(bt * 0.7) * 1.6);
+          }
           it.ballOnly.group.rotateZ(sdt * 9);
           continue;
         }
@@ -573,6 +630,7 @@ registerScreen('gallery', () => {
       const st = items.find((it) => it.model)?.model.stats();
       const head = `GALLERY · ${mode.toUpperCase()} · ${items.length} MODELS` + (st ? ` · ${st.tris} TRIS / ${st.calls} CALLS / ${st.bones} BONES (FIRST)` : '') + ` · ANIM ${perf.ms.toFixed(2)} MS`;
       text(ctx, head, 24, 30, { size: 13, color: '#9fb4d8', weight: 700 });
+      if (perf.bench) text(ctx, `BENCH ${perf.bench.toFixed(2)} MS / FRAME FOR ${items.filter((it) => it.model).length} MODELS (ANIMATION ONLY)`, 24, 66, { size: 13, color: '#46e8ff', weight: 700 });
       if (freezeT !== null) text(ctx, keyName ? `t = ${keyName}` : `t = ${freezeT.toFixed(2)} s`, 24, 48, { size: 13, color: '#ffb21e', weight: 700 });
     },
     view() { return { scene, camera }; },

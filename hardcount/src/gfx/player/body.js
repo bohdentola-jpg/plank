@@ -458,7 +458,7 @@ function buildLeg(mb, bd, dims, side, lod) {
     lens: [top.distanceTo(mid), mid.distanceTo(end)],
     rect: R.LEG, n: lod === 'high' ? 12 : 7,
     capR: 0.084 * s * m * bd.hip,
-    f: (t) => s * (t < 1 ? lerp(m * bd.hip ** 0.5, m, sstep(0, 1, t)) : lerp(m, 1 + (m - 1) * 0.7, sstep(1.2, 2, t))),
+    f: (t) => s * (t < 1 ? lerp(m * bd.hip ** 0.5, m, sstep(0, 1, t)) * lerp(1.1, 1.0, sstep(0.62, 0.98, t)) : lerp(m, 1 + (m - 1) * 0.7, sstep(1.2, 2, t))),
     ringsPerSeg: (a, b) => (lod === 'high' ? (b - a > 0.2 ? 2 : 1) : (b - a > 0.22 ? 1 : (a > 0.9 && a < 1.1 ? 1 : 0)) || 1),
     weights: (t) => {
       if (t < 0.14) { const k = sstep(0, 0.14, t); return W(th, 0.72 + 0.28 * k, B.hips, 0.28 * (1 - k)); }

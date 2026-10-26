@@ -61,7 +61,7 @@ export class Animator {
     this.off = makeQuatArray();
     this.offHips = new THREE.Vector3();
     this.offT = 1; this.offDur = 0.15;
-    this.sig = '';
+    this.sigBase = ''; this.sigClip = null; this.sigCarry = null; this.sigSide = 'R';
     this.first = true;
     this.time = seed * 3.7;
     this.lookW = 0; this.lookYaw = 0; this.lookPitch = 0;
@@ -218,11 +218,11 @@ export class Animator {
     this.armIK(P, 0);
     this.armIK(P, 1);
 
-    // ---- transitions
-    const sig = `${baseName}|${clip ? clip.name : ''}|${carry || ''}|${side}`;
+    // ---- transitions (base, action, carry or side changed, or the action restarted)
+    const changed = baseName !== this.sigBase || clip !== this.sigClip || carry !== this.sigCarry || side !== this.sigSide;
     const restarted = clip && actIn.t + 1e-4 < this.lastActT - 0.05;
-    if (!this.first && (sig !== this.sig || restarted)) this.startTransition(clip);
-    this.sig = sig;
+    if (!this.first && (changed || restarted)) this.startTransition(clip);
+    this.sigBase = baseName; this.sigClip = clip; this.sigCarry = carry; this.sigSide = side;
     this.lastActT = actIn ? actIn.t : 0;
     this.applyTransition(dt);
 
@@ -249,8 +249,8 @@ export class Animator {
 
   applyEngage(P, clip, carry) {
     const w = this.engW, push = this.engPush;
-    P[C.ROOT + 3] += (8 + push * 7) * w;
-    P[C.ROOT + 1] -= 0.04 * w;
+    P[C.ROOT + 3] += (5 + push * 5) * w;
+    P[C.ROOT + 1] -= 0.02 * w;
     P[C.ROOT + 4] += this.engYaw * 0.5 * w;
     P[C.SPINE] += (4 + push * 3) * w;
     P[C.SPINE + 1] += this.engYaw * 0.3 * w;
