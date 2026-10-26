@@ -44,8 +44,20 @@ if (steps[0]?.dualsense) {
       vibrationActuator: { type: 'dual-rumble', playEffect(type, p) { (window.__rumbles ||= []).push({ type, ...p }); return Promise.resolve('complete'); } },
     };
     window.__pad = pad;
-    Object.defineProperty(Navigator.prototype, 'getGamepads', { configurable: true, value: () => [pad, null, null, null] });
-    window.__padPress = (i, ms) => { const b = pad.buttons[i]; b.pressed = true; b.value = 1; setTimeout(() => { b.pressed = false; b.value = 0; }, ms); };
+    // a press stays down until the game has polled it twice, and counts as done once
+    // the game has seen it come back up twice (a slow headless frame can't swallow it)
+    let polls = 0;
+    const presses = [];
+    const tick = () => {
+      const now = performance.now();
+      for (const p of presses) {
+        if (p.phase === 'down' && now >= p.at + p.ms && polls >= p.poll + 2) { pad.buttons[p.i].pressed = false; pad.buttons[p.i].value = 0; p.phase = 'up'; p.poll = polls; }
+        else if (p.phase === 'up' && polls >= p.poll + 2) p.phase = 'done';
+      }
+    };
+    Object.defineProperty(Navigator.prototype, 'getGamepads', { configurable: true, value: () => { polls++; tick(); return [pad, null, null, null]; } });
+    window.__padPress = (i, ms) => { const b = pad.buttons[i]; b.pressed = true; b.value = 1; presses.push({ i, ms, at: performance.now(), poll: polls, phase: 'down' }); };
+    window.__padBusy = () => presses.some((p) => p.phase !== 'done');
     window.__padAxes = (a, ms) => { pad.axes = a.slice(); setTimeout(() => { pad.axes = [0, 0, 0, 0]; }, ms); };
   });
 }
@@ -59,7 +71,8 @@ for (const st of steps) {
   if (st.pad) {
     const hold = st.hold || 260;
     await page.evaluate(([i, ms]) => window.__padPress(i, ms), [PAD_BUTTONS.indexOf(st.pad), hold]);
-    await page.waitForTimeout(hold + 120);
+    const end = Date.now() + 8000;
+    do await page.waitForTimeout(60); while (Date.now() < end && await page.evaluate(() => window.__padBusy()));
   }
   if (st.stick) {
     const hold = st.hold || 400;

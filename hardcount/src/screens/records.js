@@ -86,7 +86,7 @@ registerScreen('records', () => {
       ctx.fillRect(512 + (tab - 1) * 220 - 50, 132, 100, 2);
       const k = easeOutCubic(clamp(t / 0.5, 0, 1));
       if (tab === 0) {
-        text(ctx, `${R.games} GAMES · ${R.wins}-${R.losses}${R.ties ? `-${R.ties}` : ''}`, 512, 160, { size: 14, weight: 800, color: 'rgba(241,213,138,0.85)', align: 'center', spacing: 2 });
+        text(ctx, `${R.games} GAME${R.games === 1 ? '' : 'S'} · ${R.wins}-${R.losses}${R.ties ? `-${R.ties}` : ''}`, 512, 160, { size: 14, weight: 800, color: 'rgba(241,213,138,0.85)', align: 'center', spacing: 2 });
         const keys = Object.keys(RECORD_NAMES);
         keys.forEach((key, i) => {
           const col = i % 3, row = Math.floor(i / 3);

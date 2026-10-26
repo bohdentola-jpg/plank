@@ -490,15 +490,38 @@ export function stayInSchool(c) {
 }
 
 /** Draft day: where you go. */
+/** The draft order: worst teams first, a little shuffled — the same every time for this career. */
+export function draftOrder(c) {
+  const rng = makeRng(hashString(`${c.created}:draft`));
+  return { rng, order: TEAMS.slice().sort((a, b) => a.strength - b.strength + (rng() - 0.5) * 0.08) };
+}
+
+/** The draft board around a pick: who went just before (and the pick itself). */
+export function draftBoard(c, d, rows = 8) {
+  const { order } = draftOrder(c);
+  const last = d.undrafted ? 48 : d.pick;
+  const out = [];
+  const POS = ['QB', 'RB', 'WR', 'TE', 'LB', 'CB', 'S'];
+  // a few picks before yours (and, for an early pick, the ones that follow it)
+  const start = Math.max(1, last - rows + 3);
+  for (let n = start; n < start + rows; n++) {
+    const team = order[(n - 1) % 16].id;
+    if (!d.undrafted && n === d.pick) { out.push({ n, team: d.team, me: true }); continue; }
+    if (n > 48) break;
+    // somebody else's prospect (the screen names him from the seed)
+    const r = makeRng(hashString(`${c.created}:prospect:${n}`));
+    out.push({ n, team, after: n > last, pos: POS[Math.floor(r() * POS.length)], school: COLLEGES[Math.floor(r() * COLLEGES.length)].id, seed: Math.floor(r() * 1e9) });
+  }
+  return out;
+}
+
 export function runDraft(c) {
   const tot = c.stats.college || {};
   const g = Math.max(1, tot.games || 1);
   const prod = gradeGame(c.player.pos, Object.fromEntries(Object.entries(tot).map(([k, v]) => [k, typeof v === 'number' ? v / g : v])), false).pts;
   const glory = c.awards.some((a) => a.name.startsWith('THE GLORY TROPHY'));
   const stock = (c.player.ovr - 60) * 0.25 + prod * 0.35 + (glory ? 4 : 0) + c.awards.length * 0.4;
-  const rng = makeRng(hashString(`${c.created}:draft`));
-  // worst teams pick first
-  const order = TEAMS.slice().sort((a, b) => a.strength - b.strength + (rng() - 0.5) * 0.08);
+  const { rng, order } = draftOrder(c);
   const pick = clamp(Math.round(16 - stock * 1.4 + rng.gauss() * 2), 1, 48);
   const round = Math.ceil(pick / 16);
   const team = round > 3 ? order[Math.floor(rng() * order.length)] : order[(pick - 1) % 16];
@@ -534,8 +557,15 @@ export function retire(c) {
     name: `${c.player.first} ${c.player.last}`, pos: c.player.pos,
     years: `${c.history.length} SEASONS`, teams,
     line: pickLine(c.player.pos, pro), rings: c.rings,
-    awards: c.awards.map((a) => a.name),
+    awards: groupAwards(c.awards.map((a) => a.name)),
   };
+}
+
+/** "THE GLORY TROPHY ×3": one line per award, counted. */
+export function groupAwards(names) {
+  const n = new Map();
+  for (const a of names) n.set(a, (n.get(a) || 0) + 1);
+  return [...n].map(([a, k]) => (k > 1 ? `${a} ×${k}` : a));
 }
 
 // ------------------------------------------------------------------ training

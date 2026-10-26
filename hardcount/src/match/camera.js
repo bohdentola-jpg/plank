@@ -121,11 +121,20 @@ export class CameraDirector {
         // the open: a slow arc over the stadium, settling on the field
         const k = clamp(this.shotT / (s.dur || 7), 0, 1);
         const a = lerp(-2.2, -0.4, k * k * (3 - 2 * k));
-        const r = lerp(150, 70, k), h = lerp(70, 26, k);
+        // (ends high enough to clear the end-zone stands of the big bowls)
+        const r = lerp(150, 92, k), h = lerp(70, 40, k);
         P.set(Math.sin(a) * r, h, Math.cos(a) * r * 0.9);
         L.set(0, 0, 0);
         fov = 44;
         this.jump = true;
+        break;
+      }
+      case 'fixed': {
+        // a venue's own camera spot (the scoreboard at the half), easing in a touch
+        const k = clamp(this.shotT / 12, 0, 1);
+        P.copy(s.pos).lerp(s.target, 0.1 * k);
+        L.copy(s.target);
+        fov = s.fov || 40;
         break;
       }
       case 'coin': {

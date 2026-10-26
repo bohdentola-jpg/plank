@@ -54,6 +54,8 @@ class MatchScreen {
     else if (user === 'away') users.away = 0;
     else if (user === 'both') { const p1 = q.p1 === 'away' ? 'away' : 'home'; users[p1] = 0; users[other(p1)] = 1; }
     this.users = users;
+    // (who is playing, kept even after SIM TO THE FINAL hands both sides to the CPU)
+    this.players = ['home', 'away'].filter((s) => users[s] !== null);
     this.userSide = users.home === 0 ? 'home' : users.away === 0 ? 'away' : null;
     this.mode = q.mode || 'free';
     const practice = this.mode === 'practice';
@@ -649,6 +651,26 @@ class MatchScreen {
     void offTeam;
   }
 
+  /**
+   * The lower-third for the man of the moment. The sim credits a play's yards
+   * when the result is applied (after this card is up), so this play is added
+   * by hand: "34 YD CATCH · TOUCHDOWN  ·  4 REC 71 YDS".
+   */
+  playerCard(e, r) {
+    const m = this.m;
+    const s = m.stats.players.get(e.id) || {};
+    // this play's carries for him (yards along his way, never past the goal line)
+    const half = m.field.halfL;
+    const segs = (m.segments || []).filter((g) => g.e === e);
+    const y = Math.round(segs.reduce((a, g) => a + Math.min(g.end ?? g.start, half) - g.start, 0));
+    const kind = segs[0]?.kind || 'rush';
+    const play = `${y} YD ${kind === 'rec' ? 'CATCH' : kind === 'return' ? 'RETURN' : 'RUN'}`;
+    const tot = kind === 'rec' ? `${(s.rec || 0) + 1} REC · ${(s.recYds || 0) + y} YDS`
+      : kind === 'rush' ? `${(s.car || 0) + 1} CAR · ${(s.rushYds || 0) + y} YDS` : null;
+    const line = [r?.type === 'td' ? `${play} · TOUCHDOWN` : play, tot].filter(Boolean).join('  ·  ');
+    return { name: `${e.p.first} ${e.p.last}`.toUpperCase(), number: e.p.number, pos: e.p.pos, team: m.teams[e.side], line, dur: 4 };
+  }
+
   celebrate(side, scorer) {
     const m = this.m;
     const moves = ['celebrate_spike', 'celebrate_point', 'celebrate_flex', 'celebrate_dance', 'celebrate_jump', 'celebrate_salute'];
@@ -666,11 +688,7 @@ class MatchScreen {
     P.t += dt;
     if (P.card && P.t > 1.1 && !P.cardShown) {
       P.cardShown = true;
-      const e = P.card, s = m.stats.players.get(e.id) || {};
-      const line = e.p.pos === 'QB' && s.passYds ? `${s.comp || 0}/${s.att || 0} · ${s.passYds || 0} YDS · ${s.passTd || 0} TD`
-        : s.recYds ? `${s.rec || 0} REC · ${s.recYds} YDS${s.td ? ` · ${s.td} TD` : ''}`
-          : `${s.car || 0} CAR · ${s.rushYds || 0} YDS${s.td ? ` · ${s.td} TD` : ''}`;
-      this.hud.showCard({ name: `${e.p.first} ${e.p.last}`.toUpperCase(), number: e.p.number, pos: e.p.pos, team: m.teams[e.side], line, dur: 4 });
+      this.hud.showCard(this.playerCard(P.card, P.r));
     }
     if (this.ff) { this.stepSim(dt); return; }
     // the broadcast's own replay of the big ones
@@ -739,9 +757,9 @@ class MatchScreen {
     this.breakT = (this.breakT || 0) + dt;
     if (m.phase === 'final' && !this.recorded) {
       this.recorded = true;
-      try { recordGame(m, this.humanSides(), { mode: this.mode }); } catch (e) { console.warn(e); }
+      try { recordGame(m, this.players, { mode: this.mode }); } catch (e) { console.warn(e); }
     }
-    const any = this.humanSides().length ? this.humanSides().some((s) => this.plFor(s).pressed('cross')) : this.breakT > 6;
+    const any = this.players.length ? this.players.some((s) => this.plFor(s).pressed('cross')) : this.breakT > 6;
     if (m.phase === 'halftime') {
       if (any && this.breakT > 1) { this.breakT = 0; RULES.resumeAfterBreak(m); this.cam.cut(); }
     } else if (m.phase === 'final') {
@@ -1035,7 +1053,11 @@ class MatchScreen {
       if (b.car) { const e = f.ents.find((x) => x.id === b.car); if (e) return { x: e.x, y: 1, z: e.z, vx: e.vx, vz: e.vz }; }
       return { x: b.x, y: Math.max(0.6, b.y), z: b.z, vx: b.vx, vz: b.vz };
     };
-    if (this.stage === 'intro' || (this.stage === 'game' && (m.phase === 'halftime' || m.phase === 'final'))) {
+    const board = this.world.venue?.cams?.scoreboard;
+    if (this.stage === 'game' && (m.phase === 'halftime' || m.phase === 'final') && board && !this.drill) {
+      // the break: up at the stadium's scoreboard (it has the score, and FINAL)
+      s.shot = 'fixed'; s.pos = board.pos; s.target = board.target; s.fov = 44;
+    } else if (this.stage === 'intro' || (this.stage === 'game' && (m.phase === 'halftime' || m.phase === 'final'))) {
       s.shot = 'flyover'; s.dur = 8;
     } else if (this.stage === 'toss') {
       s.shot = 'sideline'; s.focus = { x: 0, y: 1, z: 0 }; s.spread = 12;
@@ -1163,10 +1185,11 @@ class MatchScreen {
     if (m.phase === 'presnap' && !this.walk) {
       const lines = [];
       for (const side of this.humanSides()) {
-        if (side === m.offSide && m.play) lines.push({ text: `${m.play.name}${m.flip ? ' (FLIPPED)' : ''}`, color: '#ffd23a', size: 16 });
+        if (side === m.offSide && m.play) lines.push({ text: `${m.tryMode === 'pat' ? 'EXTRA POINT' : m.play.name}${m.flip ? ' (FLIPPED)' : ''}`, color: '#ffd23a', size: 16 });
         else if (side === m.defSide && m.dplay) lines.push({ text: `${m.dplay.name}`, color: '#8fd0ff', size: 16 });
       }
-      const u = m.userEnt[this.userSide || 'home'];
+      // on a kick the person's part is the kicker's leg, whoever they're holding the stick for
+      const u = this.kick ? (m.byRole(this.kick.kind === 'punt' ? 'P' : 'K') || m.userEnt[this.kick.side]) : m.userEnt[this.userSide || 'home'];
       if (u) lines.push({ text: `#${u.p.number} ${u.p.last.toUpperCase()} · ${u.p.pos}`, color: '#e6ebf5', size: 13, weight: 700 });
       if (lines.length) callPanel = lines;
     }

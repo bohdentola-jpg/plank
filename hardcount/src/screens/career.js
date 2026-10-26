@@ -670,22 +670,53 @@ registerScreen('career', () => {
       const sp = ctx.createRadialGradient(512, 200, 20, 512, 300, 600);
       sp.addColorStop(0, 'rgba(70,110,200,0.45)'); sp.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = sp; ctx.fillRect(0, 0, 1024, 768);
-      vText(ctx, 'THE SEVENS LEAGUE DRAFT', 512, 120, 34, { align: 'center', color: '#ffffff', weight: 0.18, outline: 3, outlineColor: 'rgba(0,0,0,0.6)' });
+      vText(ctx, 'THE SEVENS LEAGUE DRAFT', 512, 100, 34, { align: 'center', color: '#ffffff', weight: 0.18, outline: 3, outlineColor: 'rgba(0,0,0,0.6)' });
+      if (Math.floor(ev.t * 2) % 2 === 0) text(ctx, '● LIVE', 900, 80, { size: 14, weight: 900, color: '#ff3d52' });
       const d = ev.d;
       const tm = getTeam(d.team);
-      if (k === 'draft' && ev.t < 3.2) {
-        text(ctx, d.undrafted ? 'THE PHONE ISN\'T RINGING...' : `ROUND ${d.round} · THE PICK IS IN`, 512, 300, { size: 22, weight: 900, color: '#ffd23a', align: 'center', spacing: 3 });
-        if (Math.floor(ev.t * 2) % 2 === 0) text(ctx, '● LIVE', 900, 80, { size: 14, weight: 900, color: '#ff3d52' });
+      const reveal = !(k === 'draft' && ev.t < 3.2);
+      // the board: the picks just before yours, then yours when it's in
+      const board = ev.board || (ev.board = CR.draftBoard(c, d));
+      glossBar(ctx, 52, 150, 300, 30, '#ffd23a', '#c99a14');
+      vText(ctx, d.undrafted ? 'ROUND 3 · THE LAST PICKS' : `ROUND ${d.round} · THE BOARD`, 66, 172, 16, { color: '#1a1400', weight: 0.2 });
+      const since = k === 'draft' ? ev.t - 3.2 : 9;
+      let shown = 0;
+      board.forEach((row, i) => {
+        // the picks after yours come in once your name is called
+        if (row.after && (!reveal || since < 1 + shown++ * 0.6)) return;
+        const y = 180 + i * 50;
+        const t2 = getTeam(row.team);
+        const mine = row.me && reveal;
+        glossBar(ctx, 52, y, 300, 48, mine ? '#3a3410' : '#1b2232', mine ? '#14120a' : '#070a12', false);
+        text(ctx, String(row.n), 74, y + 30, { size: 15, weight: 900, color: mine ? '#ffd23a' : '#8a93a6', align: 'center' });
+        try { drawLogo(ctx, t2, 112, y + 24, 34); } catch { /* */ }
+        if (row.me) {
+          text(ctx, reveal ? `${c.player.first[0]}. ${c.player.last}`.toUpperCase() : 'ON THE CLOCK', 138, y + 22, { size: 14, weight: 900, color: reveal ? '#ffd23a' : '#ff6b6b', spacing: 1 });
+          text(ctx, reveal ? `${c.player.pos} · ${getTeam(c.history.filter((h) => h.stage === 'college').pop()?.team || c.team).name.toUpperCase()}` : t2.name.toUpperCase(), 138, y + 39, { size: 10, weight: 800, color: '#cfd5df', spacing: 1 });
+        } else {
+          const nm = playerName(makeRng(row.seed));
+          text(ctx, `${nm.first[0]}. ${nm.last}`.toUpperCase(), 138, y + 22, { size: 14, weight: 800, color: '#ffffff', spacing: 1 });
+          text(ctx, `${row.pos} · ${getTeam(row.school).name.toUpperCase()}`, 138, y + 39, { size: 10, weight: 800, color: '#9aa3b4', spacing: 1 });
+        }
+      });
+      const cx = 690;
+      if (!reveal) {
+        // on the clock: the team's card, the clock running down
+        try { drawLogo(ctx, tm, cx, 290, 150); } catch { /* */ }
+        text(ctx, d.undrafted ? 'THE PHONE ISN\'T RINGING...' : `${tm.city.toUpperCase()} ${tm.name.toUpperCase()} ARE ON THE CLOCK`, cx, 420, { size: 17, weight: 900, color: '#ffffff', align: 'center', spacing: 2 });
+        if (!d.undrafted) vText(ctx, `0:${String(Math.max(0, 9 - Math.floor(ev.t * 2.5))).padStart(2, '0')}`, cx, 480, 40, { align: 'center', color: '#ff5a4a', weight: 0.2 });
+        if (ev.t > 2.2) text(ctx, 'THE PICK IS IN', cx, 530, { size: 22, weight: 900, color: '#ffd23a', align: 'center', spacing: 3 });
       } else {
-        try { drawLogo(ctx, tm, 512, 300, 200 * easeOutBack(clamp((ev.t - (k === 'draft' ? 3.2 : 0)) / 0.6, 0, 1))); } catch { /* */ }
+        try { drawLogo(ctx, tm, cx, 280, 190 * easeOutBack(clamp((ev.t - (k === 'draft' ? 3.2 : 0)) / 0.6, 0, 1))); } catch { /* */ }
         const line = d.undrafted ? `${tm.city.toUpperCase()} SIGNS YOU AS AN UNDRAFTED FREE AGENT` : `WITH PICK #${d.pick}, THE ${tm.city.toUpperCase()} ${tm.name.toUpperCase()} SELECT`;
-        text(ctx, line, 512, 460, { size: 18, weight: 900, color: '#ffffff', align: 'center', spacing: 2 });
-        vText(ctx, `${c.player.first} ${c.player.last}`.toUpperCase(), 512, 520, 46, { align: 'center', color: '#ffd23a', weight: 0.2, outline: 3, outlineColor: 'rgba(0,0,0,0.6)' });
-        if (k === 'drafted') hints(ctx, [['confirm', 'CONTINUE']]);
+        text(ctx, line, cx, 430, { size: 15, weight: 900, color: '#ffffff', align: 'center', spacing: 1 });
+        vText(ctx, `${c.player.first} ${c.player.last}`.toUpperCase(), cx, 490, 42, { align: 'center', color: '#ffd23a', weight: 0.2, outline: 3, outlineColor: 'rgba(0,0,0,0.6)' });
+        text(ctx, `${CR.POS_NAMES[c.player.pos]} · OVR ${c.player.ovr}`, cx, 528, { size: 15, weight: 900, color: '#cfd5df', align: 'center', spacing: 2 });
       }
-      // the ticker
-      glossBar(ctx, 0, 700, 1024, 34, '#2b3346', '#0a0d15', false);
-      text(ctx, 'HCN DRAFT CENTER · LIVE FROM PORT HALCYON · ROUND 1 · TRADES · MEDICALS · COMBINE NUMBERS · ', 1024 - ((ev.t * 120) % 1600), 723, { size: 14, weight: 800, color: '#ffd23a', spacing: 2 });
+      // the ticker (above the button prompt)
+      glossBar(ctx, 0, 650, 1024, 32, '#2b3346', '#0a0d15', false);
+      text(ctx, 'HCN DRAFT CENTER · LIVE FROM PORT HALCYON · TRADES · MEDICALS · COMBINE NUMBERS · ', 1024 - ((ev.t * 120) % 1600), 672, { size: 14, weight: 800, color: '#ffd23a', spacing: 2 });
+      if (k === 'drafted') hints(ctx, [['confirm', 'CONTINUE']]);
     } else if (k === 'newSeason') {
       ctx.fillStyle = `rgba(0,0,0,${0.7 * a})`; ctx.fillRect(0, 0, 1024, 768);
       const tm = getTeam(c.team);
@@ -707,7 +738,7 @@ registerScreen('career', () => {
         text(ctx, p.teams.toUpperCase(), 512, 316, { size: 13, weight: 800, color: '#3a2508', align: 'center', shadow: false });
         text(ctx, p.line, 512, 360, { size: 15, weight: 800, color: '#3a2508', align: 'center', shadow: false });
         text(ctx, p.rings ? `${p.rings} GLORY BOWL RING${p.rings > 1 ? 'S' : ''}` : 'A CAREER TO REMEMBER', 512, 400, { size: 18, weight: 900, color: '#3a2508', align: 'center', shadow: false });
-        (p.awards || []).filter((x) => /TROPHY|MVP/.test(x)).slice(0, 4).forEach((aw, i) => text(ctx, aw, 512, 440 + i * 22, { size: 12, weight: 900, color: '#3a2508', align: 'center', shadow: false }));
+        CR.groupAwards(p.awards || []).filter((x) => /TROPHY|MVP|ALL-/.test(x)).slice(0, 4).forEach((aw, i) => text(ctx, aw, 512, 440 + i * 22, { size: 12, weight: 900, color: '#3a2508', align: 'center', shadow: false }));
       }
       if (ev.t > 2) hints(ctx, [['confirm', 'THE HALL']]);
     }
