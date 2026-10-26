@@ -147,7 +147,7 @@ function drawGround(x, field, opts, ext, plan) {
   const pat = opts.pattern ?? (turf ? 'none' : 'stripes');
   const band = 5;
   if (pat !== 'none') {
-    const a = turf ? 0.07 : 0.11;
+    const a = turf ? 0.075 : 0.135;
     const w = pat === 'wide' ? 10 : band;
     for (let z = -field.end - 20; z < field.end + 20; z += w) {
       const k = Math.round((z + field.end + 20) / w) % 2;
