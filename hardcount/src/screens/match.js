@@ -1042,7 +1042,7 @@ class MatchScreen {
     const show = this.stage === 'game' && (m.phase === 'presnap' || m.phase === 'live' || m.phase === 'playcall') && m.playKind !== 'kickoff' && !m.tryMode;
     const fd = m.goalToGo ? null : m.firstDownZ;
     try {
-      this.world.venue.setMarkers({ los: m.los, firstDown: fd, dir: m.offDir, show, ballX: m.ballX });
+      this.world.venue.setMarkers({ los: m.los, firstDown: fd, dir: m.offDir, show, ballX: m.ballX, camera: this.cam.camera });
       if (!this._sbT || this.t - this._sbT > 0.5) {
         this._sbT = this.t;
         // the boards in the stadium (gfx/stadium/scoreboard.js state)

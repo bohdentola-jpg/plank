@@ -129,12 +129,22 @@ export function buildField(ctx) {
     // textures only the onBeforeCompile uniforms know about
     disposables: [roughTex, shared.tDetail.value],
     flags: posts.flags,
-    setLines({ los, firstDown, show }) {
+    setLines({ los, firstDown, show, camera }) {
       const on = show !== false;
       losLine.visible = on && Number.isFinite(los);
       fdLine.visible = on && Number.isFinite(firstDown) && Math.abs(firstDown) < field.halfL + 0.01;
       if (losLine.visible) losLine.position.z = los;
       if (fdLine.visible) fdLine.position.z = firstDown;
+      // far off and at a grazing angle a thin line falls between the TV's lines and
+      // breaks up: widen it with distance so it stays one solid stripe
+      if (camera) {
+        const c = camera.position;
+        for (const [ln, base] of [[losLine, 0.16], [fdLine, 0.2]]) {
+          const d = Math.hypot(c.y, c.z - ln.position.z);
+          const lift = Math.max(0.15, c.y / Math.max(1, d));
+          ln.scale.z = Math.max(base, (d * 0.0021) / lift);
+        }
+      }
     },
     update(dt, t, wind) {
       const u = posts.flagUniforms;
