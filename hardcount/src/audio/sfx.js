@@ -18,7 +18,7 @@
 //   footsteps(intensity 0..1)  rain(level)  wind(level)      loops: call every frame (or on change)
 //   ambience('stadium'|'dome'|'park'|'bedroom'|null)          venue bed + acoustic (audio.setSpace)
 //   stopAll()                                                 silence loops + bed (between screens)
-//   prewarm()                                                 render every buffer now (loading screen)
+//   prewarm(keys?)                                            render buffers now (loading screen; all by default)
 //   band('cadence'|'fight'|'charge'|null)                     alias of band.play() (band.js)
 
 import { audio } from './audio.js';
@@ -1020,9 +1020,9 @@ class Sfx {
   }
 
   /** Render every buffer now (e.g. behind a loading screen). */
-  prewarm() {
+  prewarm(keys = WARM_ORDER) {
     if (!this._ok()) return;
-    for (const k of WARM_ORDER) this._get(k);
+    for (const k of keys) this._get(k);
   }
 
   // variants render one at a time from a per-name seeded generator

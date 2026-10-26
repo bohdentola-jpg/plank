@@ -22,7 +22,7 @@
 //       charge → 'home'; ooh aah gasp murmur → 'all'.
 //   crowd.stop(fade)        fade out and tear down (between screens)
 //   crowd.level             0..1 smoothed loudness, for animating the stands
-//   crowd.prewarm()         render everything now (loading screen)
+//   crowd.prewarm(keys?)    render now (loading screen; everything by default)
 
 import { audio } from './audio.js';
 import {
@@ -459,9 +459,9 @@ class Crowd {
   }
 
   /** Render everything now (behind a loading screen). */
-  prewarm() {
+  prewarm(keys = WARM) {
     if (!this._ok()) return;
-    for (const k of WARM) this._buf(k);
+    for (const k of keys) this._buf(k);
   }
 
   // ---- graph ----

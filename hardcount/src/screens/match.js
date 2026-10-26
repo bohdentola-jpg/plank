@@ -34,6 +34,8 @@ import { drawLogo, drawWordmark } from '../gfx/logos.js';
 import { recordGame } from '../data/records.js';
 import { music } from '../audio/music.js';
 import { crowd } from '../audio/crowd.js';
+import { sfx } from '../audio/sfx.js';
+import { audio } from '../audio/audio.js';
 
 const STEP = 1 / 60;
 const other = (s) => (s === 'home' ? 'away' : 'home');
@@ -86,6 +88,8 @@ class MatchScreen {
     this.world = new MatchWorld(game.renderer, m, { venue: venueId, time: q.time, weather: q.weather, wind: m.wind, quality: game.renderer.internalLines <= 480 ? 'low' : 'high' });
     await this.world.build();
     game.renderer.setPost(this.world.post || {}, true);
+    this.quietCrowd = practice;
+    this.warmSounds();
     const vmeta = this.world.venue?.def || (VENUES_META || []).find((v) => v.id === venueId) || { name: 'Memorial Stadium', city: home.city, capacity: 40000, roof: 'open' };
     this.venueMeta = vmeta;
     this.weatherName = this.world.venue?.weather || q.weather || vmeta.defaultWeather || 'clear';
@@ -137,6 +141,21 @@ class MatchScreen {
       music.play('pregame', { fade: 1 });
       this.booth.intro();
     }
+  }
+
+  /**
+   * Synthesize what the first plays need while LOADING is up: the first use of a
+   * sound renders it on the spot, which would hitch the picture at the snap. (No
+   * sound yet — nobody has pressed anything — means it waits for the first frame
+   * that has it.)
+   */
+  warmSounds() {
+    if (this.soundsWarm || !audio.ctx) return;
+    this.soundsWarm = true;
+    try {
+      sfx.prewarm(['whistle:short', 'whistle:long', 'whistle:double', 'cadence:hut', 'cadence:set', 'cadence:hard', 'snap', 'hit:pads', 'hit:tackle', 'hit:ground', 'hit:helmet', 'grunt', 'catch:hands', 'catch:body', 'catch:bobble', 'bounce', 'kick:kickoff', 'kick:punt', 'kick:fg', 'steps:few', 'steps:many', 'flag', 'chains']);
+      if (!this.quietCrowd) crowd.prewarm(['bed:murmur', 'bed:buzz', 'bed:few', 'cheer', 'ooh', 'groan', 'roar', 'aah', 'gasp', 'murmur']);
+    } catch { /* sound never stops the game */ }
   }
 
   exit() {
@@ -922,6 +941,7 @@ class MatchScreen {
     this.t += dt;
     this.stageT += dt;
     if (busy) { this.drawWorld(dt); return; }
+    if (!this.soundsWarm) this.warmSounds();
     // (the press that opens the pause menu mustn't also close it this frame)
     const pausing = (input.p1.pressed('options') || input.p2.pressed('options')) && this.canPause();
     if (pausing) this.openPause();
