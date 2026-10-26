@@ -3,6 +3,7 @@
 //   cam: broadcast | endzone | sideline | aerial | low | scoreboard | crowd | orbit
 //   extra: home= away= (team ids)  crowd=0..1  wind=0..1  quality=high|low  dir=1|-1
 //          exc=0..1  react=cheer|roar|boo|groan|tension  flash=rate  hud=0  t=seconds (orbit angle)
+//          crt=0..1 (TV effect strength, QA)  msg=TEXT (scoreboard message)
 // QA hook: window.__venueview = { venue, camera, stats, setCam(name) }
 import * as THREE from 'three';
 import { registerScreen, game } from '../main.js';
@@ -33,7 +34,7 @@ registerScreen('venueview', () => {
         break;
       case 'sideline':
         camera.fov = 38;
-        camera.position.set(-(f.halfW + 34), 19, los + dir * 3);
+        camera.position.set(-(f.halfW + 30), 24, los + dir * 3);
         look.set(0, 0, los + dir * 3);
         break;
       case 'aerial':
@@ -146,6 +147,7 @@ registerScreen('venueview', () => {
       venue.focusShadow(0, los + 4 * cfg.dir, 30);
       venue.flashes(cfg.flash);
       game.renderer.setPost(venue.post, true);
+      if (q.crt !== undefined) game.renderer.crt = num(q.crt, 1);
       placeCam(cfg.cam);
       venue.update(0.016, { camera, time: t, excitement: cfg.exc, reaction: cfg.react, homeHasBall: true, ball: { x: 0, y: 1, z: los } });
       measure();
@@ -181,6 +183,8 @@ registerScreen('venueview', () => {
       }
       if (!cfg.hud || !stats) return;
       const v = venue.def;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(30, 24, 700, 42);
       text(ctx, `${v.name.toUpperCase()} · ${venue.time.toUpperCase()} · ${venue.weather.toUpperCase()} · CAM ${cfg.cam.toUpperCase()}`, 40, 40, { size: 13, color: '#d8ffd8', font: '"Consolas", monospace', weight: 700 });
       text(ctx, `CALLS ${stats.calls}  TRIS ${(stats.triangles / 1000).toFixed(1)}K  FANS ${stats.crowd}  GEOS ${stats.geometries}  TEX ${stats.textures}  BUILD ${stats.buildMs}MS  FPS ${Math.round(game.fps || 0)}`, 40, 58, { size: 12, color: '#a8c8a8', font: '"Consolas", monospace', weight: 700 });
     },

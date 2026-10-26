@@ -389,15 +389,15 @@ function drawWeather(x, field, opts, ext, tz0, plan) {
   const X0 = ext.x0, Z0 = ext.z0, WW = ext.x1 - ext.x0, HH = ext.z1 - ext.z0;
   if (wthr === 'rain') {
     // darker, saturated wet grass; mud between the hashes (grass only)
-    x.fillStyle = 'rgba(0,18,10,0.16)';
+    x.fillStyle = 'rgba(0,18,10,0.12)';
     x.fillRect(X0, Z0, WW, HH);
     if (!turf) {
       for (const [wx, wz, r, a] of plan.wear) {
-        blotch(x, wx, wz, r * 1.5, `rgba(72,52,30,${Math.min(0.85, a * 1.9)})`);
+        blotch(x, wx, wz, r * 1.4, `rgba(96,72,44,${Math.min(0.7, a * 1.5)})`);
       }
-      for (let i = 0; i < 70; i++) {
+      for (let i = 0; i < 60; i++) {
         const wx = rng.gauss() * field.hash * 0.8, wz = rng.gauss() * field.halfL * 0.5;
-        blotch(x, wx, wz, 0.8 + rng() * 2.5, `rgba(58,40,22,${0.3 + rng() * 0.4})`);
+        blotch(x, wx, wz, 0.8 + rng() * 2.2, `rgba(88,64,38,${0.22 + rng() * 0.3})`);
       }
     }
   } else if (wthr === 'snow') {
@@ -422,11 +422,11 @@ function drawWeather(x, field, opts, ext, tz0, plan) {
     sx.fillStyle = 'rgba(0,0,0,0.92)';
     for (const r of plan.lines) {
       const horiz = r[2] > r[3];
-      if (horiz) sx.fillRect(r[0], r[1] - 0.22, r[2], r[3] + 0.44);
-      else sx.fillRect(r[0] - 0.22, r[1], r[2] + 0.44, r[3]);
+      if (horiz) sx.fillRect(r[0], r[1] - 0.12, r[2], r[3] + 0.24);
+      else sx.fillRect(r[0] - 0.12, r[1], r[2] + 0.24, r[3]);
     }
     sx.fillStyle = 'rgba(0,0,0,0.75)';
-    for (const r of plan.ticks) sx.fillRect(r[0] - 0.15, r[1] - 0.15, r[2] + 0.3, r[3] + 0.3);
+    for (const r of plan.ticks) sx.fillRect(r[0] - 0.08, r[1] - 0.08, r[2] + 0.16, r[3] + 0.16);
     sx.restore();
     x.save();
     x.setTransform(1, 0, 0, 1, 0, 0);
@@ -437,7 +437,7 @@ function drawWeather(x, field, opts, ext, tz0, plan) {
     x.fillStyle = 'rgba(235,240,246,0.18)';
     for (const r of plan.lines) {
       const horiz = r[2] > r[3];
-      if (horiz) { x.fillRect(r[0], r[1] - 0.24, r[2], 0.08); x.fillRect(r[0], r[1] + r[3] + 0.16, r[2], 0.08); }
+      if (horiz) { x.fillRect(r[0], r[1] - 0.14, r[2], 0.06); x.fillRect(r[0], r[1] + r[3] + 0.08, r[2], 0.06); }
     }
     sc.width = sc.height = 1;
   } else if (opts.frozen) {
@@ -459,7 +459,7 @@ function roughMap(field, opts, ext, plan) {
   const turf = opts.surface === 'turf';
   const wet = opts.weather === 'rain';
   const snow = opts.weather === 'snow';
-  const base = snow ? 0.62 : wet ? (turf ? 0.38 : 0.46) : (turf ? 0.78 : 0.92);
+  const base = snow ? 0.62 : wet ? (turf ? 0.42 : 0.58) : (turf ? 0.78 : 0.92);
   const g = (v) => { const k = Math.round(Math.max(0, Math.min(1, v)) * 255); return `rgb(${k},${k},${k})`; };
   x.fillStyle = g(base);
   x.fillRect(0, 0, w, h);
@@ -469,7 +469,7 @@ function roughMap(field, opts, ext, plan) {
   for (const r of plan.lines) x.fillRect(r[0], r[1], r[2], Math.max(r[3], 0.25));
   if (wet) {
     const rng = makeRng('puddles' + opts.seed);
-    if (!turf) for (const [wx, wz, r] of plan.wear) blotch(x, wx, wz, r * 1.4, 'rgba(40,40,40,0.55)');
+    if (!turf) for (const [wx, wz, r] of plan.wear) blotch(x, wx, wz, r * 1.3, 'rgba(60,60,60,0.5)');
     for (let i = 0; i < 40; i++) {
       const wx = (rng() - 0.5) * 2 * (field.halfW + 6), wz = (rng() - 0.5) * 2 * field.end;
       blotch(x, wx, wz, 1 + rng() * 3, 'rgba(10,10,10,0.7)');

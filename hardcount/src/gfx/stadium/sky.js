@@ -24,7 +24,7 @@ export function atmosphere(time, weather, opts = {}) {
       sky: ['#05060a', '#0a0c12', '#12141c'], glow: '#ffffff', clouds: 0, stars: 0, haze: 0,
       fog: ['#1a1d26', 0.0018],
       key: { color: '#f4f6ff', i: 3.0, dir: dirFrom(1.35, 0.4) },
-      hemi: ['#c8d0e0', '#3a4a30', 1.15], env: 'dome', envI: 1.0,
+      hemi: ['#c8d0e0', '#55584e', 1.15], env: 'dome', envI: 1.0,
       lights: 1, lamp: 7, spill: 0.16,
       post: { exposure: 1.02, bloomStrength: 0.75, bloomThreshold: 1.05, bloomKnee: 0.5, saturation: 1.1, contrast: 1.05, lift: [0.0, 0.0, 0.01], gain: [1.0, 1.0, 1.02], vignette: 0.5 },
     };

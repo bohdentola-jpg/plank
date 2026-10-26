@@ -38,11 +38,15 @@ const RAIN_VERT = /* glsl */`
     p = mod(p - lo, uBox) + lo;
     vec3 v = normalize(uVel);
     vec3 toCam = cameraPosition - p;
-    float dist = length(toCam);
-    vec3 side = normalize(cross(v, toCam / max(dist, 1e-3))) * uWidth * (1.0 + dist * 0.012);
-    vec3 wp = p + v * (corner.y * uLen) + side * corner.x;
+    float dist = max(length(toCam), 1e-3);
+    vec3 cx = cross(v, toCam / dist);
+    float cl = length(cx);
+    vec3 side = cl > 1e-4 ? cx / cl : vec3(1.0, 0.0, 0.0);
+    // at least ~1.3 px wide so far streaks don't break into dashes; dimmer as they widen
+    float w = max(uWidth, dist * 0.0021);
+    vec3 wp = p + v * (corner.y * uLen) + side * corner.x * w;
     vec3 rel = abs(p - uCenter) / (uBox * 0.5);
-    vFade = (1.0 - smoothstep(0.7, 1.0, max(rel.x, max(rel.y, rel.z)))) * smoothstep(0.8, 3.0, dist);
+    vFade = (1.0 - smoothstep(0.7, 1.0, max(rel.x, max(rel.y, rel.z)))) * smoothstep(0.8, 3.0, dist) * clamp(uWidth * 1.6 / w, 0.22, 1.0);
     vC = corner;
     gl_Position = projectionMatrix * viewMatrix * vec4(wp, 1.0);
   }`;
@@ -51,8 +55,10 @@ const RAIN_FRAG = /* glsl */`
   varying vec2 vC;
   varying float vFade;
   void main() {
-    float a = (1.0 - abs(vC.x) * 2.0) * smoothstep(0.0, 0.3, vC.y) * (1.0 - smoothstep(0.7, 1.0, vC.y));
-    gl_FragColor = vec4(uColor * a * vFade, 1.0);
+    // MSAA can shade a pixel centre outside a sub-pixel quad: clamp everything
+    vec2 c = clamp(vC, vec2(-0.5, 0.0), vec2(0.5, 1.0));
+    float a = (1.0 - abs(c.x) * 2.0) * smoothstep(0.0, 0.3, c.y) * (1.0 - smoothstep(0.7, 1.0, c.y));
+    gl_FragColor = vec4(uColor * max(a, 0.0) * clamp(vFade, 0.0, 1.0), 1.0);
   }`;
 
 const SPLASH_VERT = /* glsl */`
@@ -80,10 +86,10 @@ const SPLASH_FRAG = /* glsl */`
   varying vec2 vUv;
   varying float vAge;
   void main() {
-    float d = length(vUv - 0.5) * 2.0;
+    float d = length(clamp(vUv, 0.0, 1.0) - 0.5) * 2.0;
     float ring = smoothstep(0.55, 0.8, d) * (1.0 - smoothstep(0.8, 1.0, d));
-    float a = ring * (1.0 - vAge) * (1.0 - vAge);
-    gl_FragColor = vec4(uColor * a, 1.0);
+    float g = clamp(1.0 - vAge, 0.0, 1.0);
+    gl_FragColor = vec4(uColor * max(ring, 0.0) * g * g, 1.0);
   }`;
 
 // ------------------------------------------------------------------ snow
@@ -104,7 +110,7 @@ const SNOW_VERT = /* glsl */`
     p = mod(p - lo, uBox) + lo;
     vec4 mv = viewMatrix * vec4(p, 1.0);
     float dist = -mv.z;
-    float s = uSize * (0.6 + 0.8 * aSeed.w);
+    float s = max(uSize * (0.6 + 0.8 * aSeed.w), dist * 0.0026);
     mv.xy += (corner - vec2(0.0, 0.5)) * s;
     vec3 rel = abs(p - uCenter) / (uBox * 0.5);
     vFade = (1.0 - smoothstep(0.65, 1.0, max(rel.x, max(rel.y, rel.z)))) * smoothstep(0.5, 2.0, dist);
@@ -116,10 +122,10 @@ const SNOW_FRAG = /* glsl */`
   varying vec2 vUv;
   varying float vFade;
   void main() {
-    float d = length(vUv - 0.5) * 2.0;
-    float a = (1.0 - smoothstep(0.35, 1.0, d)) * vFade;
+    float d = length(clamp(vUv, 0.0, 1.0) - 0.5) * 2.0;
+    float a = (1.0 - smoothstep(0.3, 1.0, d)) * clamp(vFade, 0.0, 1.0);
     if (a < 0.01) discard;
-    gl_FragColor = vec4(uColor, a * 0.9);
+    gl_FragColor = vec4(uColor, a * 0.85);
   }`;
 
 // ------------------------------------------------------------------ fog banks + breath (soft puffs)
@@ -177,15 +183,15 @@ export function createWeather(scene, opts) {
   const lit = opts.night ? 1.0 : opts.dusk ? 0.8 : 0.65;
 
   if (opts.weather === 'rain') {
-    const n = low ? 2600 : 7000;
+    const n = low ? 3500 : 11000;
     const g = quadBase();
     g.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seeds(n, rng), 4));
     g.instanceCount = n;
     const u = {
       uCenter: { value: new THREE.Vector3() }, uBox: { value: new THREE.Vector3(34, 22, 34) },
       uVel: { value: new THREE.Vector3(wv.x * 9, -26, wv.y * 9) }, uTime: { value: 0 },
-      uLen: { value: 0.75 }, uWidth: { value: 0.012 },
-      uColor: { value: new THREE.Color(0.42, 0.46, 0.52).multiplyScalar(lit) },
+      uLen: { value: 0.6 }, uWidth: { value: 0.01 },
+      uColor: { value: new THREE.Color(0.3, 0.33, 0.38).multiplyScalar(lit) },
     };
     const m = new THREE.Mesh(g, new THREE.ShaderMaterial({
       vertexShader: RAIN_VERT, fragmentShader: RAIN_FRAG, uniforms: u,
@@ -218,14 +224,14 @@ export function createWeather(scene, opts) {
   }
 
   if (opts.weather === 'snow') {
-    const n = low ? 2500 : 6500;
+    const n = low ? 3500 : 9000;
     const g = quadBase();
     g.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seeds(n, rng), 4));
     g.instanceCount = n;
     const u = {
       uCenter: { value: new THREE.Vector3() }, uBox: { value: new THREE.Vector3(46, 28, 46) },
       uVel: { value: new THREE.Vector3(wv.x * 4, -1.6, wv.y * 4) }, uTime: { value: 0 },
-      uSize: { value: 0.085 },
+      uSize: { value: 0.05 },
       uColor: { value: new THREE.Color(0.95, 0.97, 1.0).multiplyScalar(opts.night ? 1.3 : 1.1) },
     };
     const m = new THREE.Mesh(g, new THREE.ShaderMaterial({

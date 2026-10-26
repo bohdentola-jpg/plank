@@ -159,6 +159,7 @@ export async function buildVenue(renderer, opts = {}) {
   const venue = {
     id: def.id, def, scene, post, shadowLight: key, field, time, weather: A.weather, atmos: A,
     crowdCount: crowdObj?.count || 0,
+    cams: V.cams || {},
     update(dt, st = {}) {
       t = typeof st.time === 'number' ? st.time : t + dt;
       const cam = st.camera;

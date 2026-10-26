@@ -226,21 +226,31 @@ export function createScoreboard(kind, opts) {
   return board;
 }
 
-/** Scrolling LED ribbon (u offset animates). */
+/** Scrolling LED ribbon (u offset animates): 8 panels of 512 × 128. */
 export function ribbonTexture(home, lines, opts = {}) {
-  const W = 2048, H = 64;
+  const W = 4096, H = 128;
   const [c, x] = cv(W, H);
   x.fillStyle = '#05060a';
   x.fillRect(0, 0, W, H);
-  const seg = W / lines.length;
+  const n = lines.length;
+  const seg = W / n;
+  const sec = home.colors.secondary === '#ffffff' ? '#ffd23a' : home.colors.secondary;
   lines.forEach((s, k) => {
     const x0 = k * seg;
-    x.fillStyle = k % 2 ? home.colors.primary : '#0b0e18';
+    const g = x.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, k % 2 ? home.colors.primary : '#0b0e18');
+    g.addColorStop(1, k % 2 ? (home.colors.dark || '#000') : '#05060a');
+    x.fillStyle = g;
     x.fillRect(x0, 0, seg, H);
-    vText(x, s, x0 + seg / 2, H * 0.78, H * 0.6, { align: 'center', color: k % 2 ? '#ffffff' : home.colors.secondary === '#ffffff' ? '#ffd23a' : home.colors.secondary, weight: 0.17 });
+    const size = Math.min(H * 0.56, (seg * 0.86) / Math.max(4, s.length) * 1.25);
+    vText(x, s, x0 + seg / 2, H * 0.5 + size / 2, size, { align: 'center', color: k % 2 ? '#ffffff' : sec, weight: 0.17, skew: -0.12 });
+    x.fillStyle = sec;
+    x.fillRect(x0, 0, seg, 4);
+    x.fillRect(x0, H - 4, seg, 4);
   });
-  x.fillStyle = 'rgba(0,0,0,0.3)';
+  x.fillStyle = 'rgba(0,0,0,0.32)';
   for (let xx = 0; xx < W; xx += 3) x.fillRect(xx, 0, 1, H);
+  for (let yy = 0; yy < H; yy += 3) x.fillRect(0, yy, W, 1);
   const t = tex(c, { aniso: 8 });
   t.wrapT = THREE.ClampToEdgeWrapping;
   return t;

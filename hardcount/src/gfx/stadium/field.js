@@ -60,7 +60,7 @@ export function buildField(ctx) {
     tRough: { value: roughTex },
     uExt: { value: new THREE.Vector4(P.x0, P.z0, 1 / (P.x1 - P.x0), 1 / (P.z1 - P.z0)) },
     uDetail: { value: ctx.weather === 'snow' ? 0.35 : 0.8 },
-    envI: ctx.weather === 'rain' ? 1.1 : 0.55,
+    envI: ctx.weather === 'rain' ? 0.75 : 0.5,
     uPool: ctx.uPool,
   };
   const mats = [];

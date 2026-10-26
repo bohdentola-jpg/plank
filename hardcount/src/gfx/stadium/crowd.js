@@ -293,9 +293,9 @@ export function buildCrowd(seats, opts) {
         if (rng() < 0.12) sh = C.secondary;
       } else {
         v = opts.cold ? pick(rng, [3, 3, 3, 5, 5, 2, 4, 1]) : pick(rng, [0, 0, 1, 1, 2, 4, 4, 5, 6]);
-        if (r < 0.42) sh = C.primary;
-        else if (r < 0.6) sh = C.secondary;
-        else if (r < 0.7) sh = C.accent || '#ffffff';
+        if (r < 0.55) sh = C.primary;
+        else if (r < 0.7) sh = C.secondary;
+        else if (r < 0.77) sh = C.accent || '#ffffff';
         else sh = pick(rng, CIVVIES);
       }
       ac = sh === C.primary ? C.secondary : sh === C.secondary ? C.primary : pick(rng, [C.primary, C.secondary, '#ffffff', '#1a1a1a']);
@@ -321,8 +321,9 @@ export function buildCrowd(seats, opts) {
   base.setAttribute('aSkin', new THREE.InstancedBufferAttribute(skin, 3, true));
   base.instanceCount = n;
   const A = opts.atmos;
-  const key = A.night ? 1.25 : A.dusk ? 1.1 : A.dome ? 1.25 : 1.45;
-  const amb = A.night ? 0.28 : A.dusk ? 0.38 : A.dome ? 0.4 : 0.55;
+  // match the standard materials: direct ≈ I/π, ambient from the hemisphere
+  const key = (A.key.i / Math.PI) * (A.night ? 0.95 : A.dusk ? 0.75 : A.dome ? 0.9 : 0.85);
+  const amb = A.hemi[2] * (A.night ? 0.34 : 0.36) + (A.spill || 0) * 0.8;
   const tint = A.night ? [0.92, 0.96, 1.05] : A.dusk ? [1.05, 0.92, 0.85] : [1, 1, 1];
   const uniforms = THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
     uAtlas: { value: null }, uTime: { value: 0 },
