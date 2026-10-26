@@ -109,8 +109,17 @@ export class Match {
     let s = this.stats.players.get(e.id);
     if (!s) { s = { id: e.id, side: e.side, name: `${e.p.first} ${e.p.last}`, num: e.num, pos: e.p.pos }; this.stats.players.set(e.id, s); }
     s[key] = (s[key] || 0) + v;
+    if (this.phase === 'live' || this.phase === 'post') this.playStats?.push([s, key, v]);
   }
-  tstat(side, key, v = 1) { this.stats[side][key] = (this.stats[side][key] || 0) + v; }
+  tstat(side, key, v = 1) {
+    this.stats[side][key] = (this.stats[side][key] || 0) + v;
+    if (this.phase === 'live' || this.phase === 'post') this.playStats?.push([this.stats[side], key, v]);
+  }
+  /** A penalty wiped the play out: so are its numbers (the completion, the tackle, the sack). */
+  undoPlayStats() {
+    for (const [o, key, v] of this.playStats || []) o[key] = (o[key] || 0) - v;
+    this.playStats = [];
+  }
 
   // ------------------------------------------------------------ teams / bodies
   dirOf(side) { return side === 'home' ? this.dirHome : -this.dirHome; }
@@ -247,6 +256,7 @@ export class Match {
     this.handedOff = false;
     this.flags = [];
     this.result = null;
+    this.playStats = [];
     this.scriptState = {};
     this.hardCounted = 0;
     this.timers = [];

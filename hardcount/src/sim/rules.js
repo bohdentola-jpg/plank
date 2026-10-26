@@ -705,6 +705,9 @@ export function advance(m) {
     m.penaltyChoice = undefined;
     r.penaltyDone = true;
     if (accept) {
+      // a foul that takes the play back takes its numbers back too (an after-the-play
+      // foul like a face mask on the tackle leaves the play standing)
+      if (!f.endOfPlay) m.undoPlayStats(); else creditStats(m, r);
       m.tstat(f.on, 'penalties');
       m.tstat(f.on, 'penYds', f.yards || 0);
       m.emit('penaltyAccepted', { flag: f });
