@@ -80,6 +80,20 @@ const PRESETS = {
     s.add(skyDome('#9aa2ad', '#c6ccd3', '#4b4a48', 1.0));
     glow(s, '#ffffff', 2.5, 40, 20, 0, 25, 0);
   },
+  stadium(s) {
+    // night game: black sky, four banks of cool-white floodlights high up,
+    // a dim warm ring of stands at the horizon, green bounce from the field
+    s.add(skyDome('#020309', '#10141f', '#06080a', 2.6));
+    for (const [x, z] of [[-21, -17], [21, -17], [-21, 17], [21, 17]]) {
+      glow(s, '#eef4ff', 16, 7, 2.4, x, 15, z);
+      glow(s, '#cfe0ff', 3, 9, 4.5, x * 1.02, 15, z * 1.02);
+    }
+    for (let i = 0; i < 18; i++) {
+      const a = (i / 18) * Math.PI * 2;
+      glow(s, i % 3 ? '#ffc890' : '#9ab0ff', 0.32, 8, 2.6, Math.cos(a) * 27, 2.5, Math.sin(a) * 27);
+    }
+    glow(s, '#1d3a14', 0.9, 70, 70, 0, -7, 0);
+  },
   interior(s) {
     s.add(skyDome('#05060a', '#0e1018', '#030304', 2));
     glow(s, '#ffa640', 3, 3, 0.6, 0, 6, 20);

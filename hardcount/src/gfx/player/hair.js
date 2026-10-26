@@ -1,0 +1,160 @@
+// Hair for when the helmet comes off: a cap over the scalp shaped per style
+// (short, curly, twists, afro, flat-top, mohawk, dreads, braids, long), plus
+// the pieces that hang below the helmet (dreads, braids, long hair) which stay
+// visible with the helmet on. Buzz, fade and bald are painted on the scalp.
+// Everything is appended into the body mesh, skinned to the head (hanging
+// ends partly to the neck/chest so they drape when the head moves).
+import * as THREE from 'three';
+import { B } from './rig.js';
+import { headPoint } from './body.js';
+import { R, uvOf } from './layout.js';
+
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const sstep = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const lerp = (a, b, t) => a + (b - a) * t;
+
+const HAIRLINE_HALF = [[0, 37], [16, 35.5], [32, 31], [50, 23], [66, 13], [78, 7], [90, 2], [104, -8], [125, -24], [150, -34], [180, -38]];
+const HAIRLINE = (() => {
+  const L = [];
+  for (let i = HAIRLINE_HALF.length - 1; i >= 0; i--) L.push([-HAIRLINE_HALF[i][0], HAIRLINE_HALF[i][1]]);
+  for (let i = 1; i < HAIRLINE_HALF.length; i++) L.push(HAIRLINE_HALF[i]);
+  return L;
+})();
+function hairlineAt(c) {
+  const f = c * (HAIRLINE.length - 1);
+  const i = Math.min(HAIRLINE.length - 2, Math.floor(f));
+  const t = f - i;
+  return [lerp(HAIRLINE[i][0], HAIRLINE[i + 1][0], t), lerp(HAIRLINE[i][1], HAIRLINE[i + 1][1], t)];
+}
+
+// cap thickness (metres) per style at (λ, φ) and lateral x
+function thickness(style, lam, phi, x, y, z) {
+  const top = sstep(20, 75, phi);
+  switch (style) {
+    case 'short': return 0.006 + 0.007 * top;
+    case 'curly': return 0.013 + 0.006 * top + 0.0035 * Math.sin(lam * 0.31) * Math.sin(phi * 0.42);
+    case 'twists': return 0.017 + 0.006 * top + 0.006 * Math.abs(Math.sin(lam * 0.55) * Math.sin(phi * 0.6));
+    case 'afro': return 0.03 + 0.016 * top + 0.008 * sstep(-10, 30, phi) + 0.003 * Math.sin(lam * 0.4) * Math.sin(phi * 0.5);
+    case 'flat': return 0.005 + 0.034 * sstep(25, 62, phi);
+    case 'mohawk': return 0.001 + 0.042 * Math.exp(-((x / 0.017) ** 2)) * sstep(-25, 25, phi + (z < 0 ? 25 : 0));
+    case 'dreads': return 0.012 + 0.004 * top;
+    case 'braids': return 0.004;
+    case 'long': return 0.011 + 0.006 * top;
+    default: return 0;
+  }
+}
+
+function capGrid(mb, style, C, hs, lod) {
+  const nc = lod === 'high' ? 22 : 10, ns = lod === 'high' ? 7 : 3;
+  const p = new THREE.Vector3(), q = new THREE.Vector3(), r = new THREE.Vector3(), n = new THREE.Vector3();
+  const base = mb.count;
+  const pos = (c, s, out) => {
+    const [lam, phi0] = hairlineAt(c);
+    const phi = Math.min(89.5, lerp(phi0, 90, s));
+    headPoint(phi, lam, out);
+    const len = out.length();
+    const t = thickness(style, lam, phi, out.x, out.y, out.z) * sstep(0, 0.12, s + 0.02);
+    out.multiplyScalar((len + t) / len);
+    return out;
+  };
+  const uv = [0, 0];
+  for (let k = 0; k <= ns; k++) {
+    for (let j = 0; j <= nc; j++) {
+      const c = j / nc, s = Math.pow(k / ns, 1.1);
+      pos(c, s, p);
+      pos(Math.min(1, c + 0.01), s, q).sub(pos(Math.max(0, c - 0.01), s, r));
+      const tc = q.clone();
+      pos(c, Math.min(1, s + 0.02), q).sub(pos(c, Math.max(0, s - 0.02), r));
+      n.crossVectors(tc, q).normalize();
+      if (!(n.lengthSq() > 0.5) || s > 0.98) n.copy(p).normalize();
+      if (n.dot(p) < 0) n.negate();
+      uvOf(R.HAIR, c, 0.05 + s * 0.9, uv);
+      mb.vert(C.x + p.x * hs, C.y + p.y * hs, C.z + p.z * hs, n.x, n.y, n.z, uv[0], uv[1], [B.head, 1]);
+    }
+  }
+  for (let k = 0; k < ns; k++) for (let j = 0; j < nc; j++) {
+    const a = base + k * (nc + 1) + j, b = a + 1, c = a + nc + 2, d = a + nc + 1;
+    // orient outward: check with the first quad
+    mb.tri(a, c, b); mb.tri(a, d, c);
+  }
+  // make sure the winding faces out (test the first triangle against its vertex normal)
+  const I = mb.I, P = mb.P, N = mb.N;
+  const t0 = I.length - ns * nc * 6;
+  const ia = I[t0], ib = I[t0 + 1], ic = I[t0 + 2];
+  const ax = P[ia * 3], ay = P[ia * 3 + 1], az = P[ia * 3 + 2];
+  const ux = P[ib * 3] - ax, uy = P[ib * 3 + 1] - ay, uz = P[ib * 3 + 2] - az;
+  const vx = P[ic * 3] - ax, vy = P[ic * 3 + 1] - ay, vz = P[ic * 3 + 2] - az;
+  const fx = uy * vz - uz * vy, fy = uz * vx - ux * vz, fz = ux * vy - uy * vx;
+  if (fx * N[ia * 3] + fy * N[ia * 3 + 1] + fz * N[ia * 3 + 2] < 0) {
+    for (let i = t0; i < I.length; i += 3) { const tmp = I[i + 1]; I[i + 1] = I[i + 2]; I[i + 2] = tmp; }
+  }
+}
+
+/** Hanging strands (dreads / braids) and the long-hair fall, from the nape downward. */
+function hanging(mb, style, C, hs, lod) {
+  if (!['dreads', 'braids', 'long'].includes(style)) return;
+  const uv = uvOf(R.HAIR, 0.5, 0.5, [0, 0]);
+  const p = new THREE.Vector3();
+  if (style === 'long') {
+    const rings = [];
+    const n = 8;
+    const steps = 4;
+    for (let k = 0; k <= steps; k++) {
+      const t = k / steps;
+      headPoint(-30 - t * 4, 180, p);
+      const y = C.y + (p.y - t * 0.17) * hs;
+      const z = C.z + (p.z - 0.012 - t * 0.03) * hs;
+      rings.push({ y, z, w: lerp(0.07, 0.085, t) * hs, d: lerp(0.03, 0.015, t) * hs, t });
+    }
+    const base = mb.count;
+    for (const r of rings) {
+      for (let j = 0; j <= n; j++) {
+        const a = (j / n) * Math.PI * 2;
+        const x = Math.sin(a) * r.w, dz = Math.cos(a) * r.d;
+        const nn = new THREE.Vector3(Math.sin(a) / r.w, 0, Math.cos(a) / r.d).normalize();
+        const w = [B.head, 1 - r.t * 0.6, B.neck, r.t * 0.35, B.chest, r.t * 0.25];
+        mb.vert(x, r.y, r.z + dz, nn.x, nn.y, nn.z, uv[0] + j * 0.002, uv[1] - r.t * 0.05, w);
+      }
+    }
+    for (let k = 0; k < steps; k++) for (let j = 0; j < n; j++) {
+      const a = base + k * (n + 1) + j, b = a + 1, c = a + n + 2, d = a + n + 1;
+      mb.tri(a, b, c); mb.tri(a, c, d);
+    }
+    return;
+  }
+  const count = style === 'dreads' ? (lod === 'high' ? 11 : 5) : 6;
+  const len = style === 'dreads' ? 0.2 : 0.12;
+  const rad = style === 'dreads' ? 0.0075 : 0.0055;
+  for (let i = 0; i < count; i++) {
+    const f = count === 1 ? 0 : i / (count - 1) - 0.5;
+    const lam = 180 + f * (style === 'dreads' ? 150 : 70);
+    headPoint(-34, lam, p);
+    const start = new THREE.Vector3(C.x + p.x * hs * 1.02, C.y + p.y * hs, C.z + p.z * hs * 1.02);
+    const out = new THREE.Vector3(p.x, 0, p.z).normalize();
+    const L = len * (0.85 + 0.3 * Math.abs(Math.sin(i * 2.3))) * hs;
+    const pts = [
+      start,
+      start.clone().add(new THREE.Vector3(out.x * 0.02, -L * 0.35, out.z * 0.03 - 0.01)),
+      start.clone().add(new THREE.Vector3(out.x * 0.035, -L * 0.7, out.z * 0.045 - 0.025)),
+      start.clone().add(new THREE.Vector3(out.x * 0.045, -L, out.z * 0.05 - 0.04)),
+    ];
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const g = new THREE.TubeGeometry(curve, lod === 'high' ? 5 : 3, rad * hs, lod === 'high' ? 4 : 3, false);
+    const py = start.y;
+    mb.piece(g, new THREE.Matrix4(), (lx, ly, lz, gu, gv, o) => { o[0] = uv[0] + gu * 0.03; o[1] = uv[1] + gv * 0.1; }, (x, y) => {
+      const t = clamp((py - y) / L, 0, 1);
+      return [B.head, 1 - t * 0.6, B.neck, t * 0.3, B.chest, t * 0.3];
+    });
+    g.dispose();
+  }
+}
+
+/** Geometry callbacks for buildBody: { always: [fn], off: [fn] }. */
+export function hairParts(look, C, hs, lod) {
+  const style = look?.hair || 'short';
+  const capStyles = ['short', 'curly', 'twists', 'afro', 'flat', 'mohawk', 'dreads', 'braids', 'long'];
+  return {
+    always: [(mb) => hanging(mb, style, C, hs, lod)],
+    off: capStyles.includes(style) && style !== 'braids' ? [(mb) => capGrid(mb, style, C, hs, lod)] : [],
+  };
+}
