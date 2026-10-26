@@ -14,6 +14,7 @@
 //           armBand: bool, bodyType: 'lean'|'average'|'thick'|'big' },
 // }
 import { makeRng, hashString } from '../core/util.js';
+import { FIRST, LAST } from './names.js';
 
 export const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'C', 'G', 'DL', 'LB', 'CB', 'S', 'K'];
 
@@ -70,21 +71,8 @@ export function overall(pos, r) {
 
 // ------------------------------------------------------------------ names
 
-export const FIRST = [
-  'Marcus', 'Tyrell', 'Jake', 'DeShawn', 'Cody', 'Andre', 'Brandon', 'Malik', 'Tyler', 'Jamal', 'Ryan', 'Darius', 'Kyle', 'Terrence',
-  'Austin', 'Devin', 'Jordan', 'Trey', 'Cameron', 'Isaiah', 'Logan', 'Xavier', 'Chase', 'Dante', 'Garrett', 'Quentin', 'Brett', 'Jalen',
-  'Colby', 'Reggie', 'Hunter', 'Lamar', 'Dalton', 'Cedric', 'Wyatt', 'Desmond', 'Nate', 'Corey', 'Luis', 'Mateo', 'Tavon', 'Shane',
-  'Elijah', 'Rashad', 'Kevin', 'Bo', 'Javon', 'Clay', 'Antonio', 'Derek', 'Tomás', 'Ike', 'Keenan', 'Rocco', 'Sione', 'Kai', 'Emeka',
-  'Dmitri', 'Jace', 'Vince', 'Omar', 'Calvin', 'Rodney', 'Earl', 'Myles', 'Grady', 'Thad', 'Zeke', 'Daquan', 'Mason', 'Trent', 'Kendrick',
-];
-export const LAST = [
-  'Washington', 'Kowalski', 'Hayes', 'Brooks', 'McAllister', 'Okafor', 'Reyes', 'Holloway', 'Sanders', 'Fitzgerald', 'Pruitt', 'Gaines',
-  'Lindqvist', 'Mercer', 'Tuiasosopo', 'Whitfield', 'Crenshaw', 'Delgado', 'Bishop', 'Thornton', 'Mayfield', 'Odom', 'Banks', 'Kincaid',
-  'Barrow', 'Vasquez', 'Petrakis', 'Coleman', 'Ruiz', 'Huckabee', 'Jefferson', 'Nakamura', 'Strickland', 'Bledsoe', 'Moreau', 'Pittman',
-  'Grayson', 'Ferrell', 'Abernathy', 'Dunlap', 'Castillo', 'Sorensen', 'Booker', 'Faleolo', 'Hargrove', 'Ivory', 'Lattimore', 'Quarles',
-  'Sutton', 'Vance', 'Wilcox', 'Yates', 'Zamora', 'Ballard', 'Cobb', 'Dempsey', 'Easley', 'Gentry', 'Horn', 'Jenkins', 'Kirby', 'Lyle',
-  'Mabry', 'Nunez', 'Orr', 'Pace', 'Rhodes', 'Sharpe', 'Tate', 'Upshaw', 'Ware', 'Youngblood', 'Archer', 'Beasley', 'Calloway', 'Dukes',
-];
+// the name pools live in names.js (shared with coaches, recruiters, schools)
+export { FIRST, LAST };
 
 // skin tones light → dark (sRGB)
 export const SKIN = ['#f1d3bd', '#e5b896', '#d4a07a', '#c08a63', '#a8714b', '#8d5a3a', '#73452b', '#5c3521', '#4a2a1a', '#3a2015'];
