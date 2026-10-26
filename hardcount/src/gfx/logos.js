@@ -666,13 +666,12 @@ def('anchor', (g) => {
   g.parts([
     [ringPath(0, -76, 19, 9), 'fg', 'evenodd'],
     [rrect(-46, -56, 92, 14, 7), 'fg'],
+    [circ(-46, -49, 9.5), 'fg'], [circ(46, -49, 9.5), 'fg'],
     [rect(-10, -66, 20, 140), 'fg'],
     [poly([...arms, ...armsIn]), 'fg'],
     [fluke(1), 'fg'], [fluke(-1), 'fg'],
     [poly([[-14, 72], [0, 90], [14, 72]]), 'fg'],
   ]);
-  g.fill(circ(-46, -49, 9), 'fg');
-  g.fill(circ(46, -49, 9), 'fg');
   if (!g.small) {
     g.line(poly([[-4, -40], [-4, 66]], false), 2.6, 'light');
     g.line(poly([[-38, -51], [38, -51]], false), 2.4, 'light');
@@ -797,31 +796,38 @@ def('rattlesnake', (g) => {
 
 // ---------------------------------------------------------------- horse (Louisville Thoroughbreds)
 def('horse', (g) => {
-  const head = 'M 22 -74 L 14 -98 L 30 -82 L 40 -96 L 46 -72 C 66 -56, 84 -24, 92 10 C 98 40, 96 70, 92 98 L 30 98 C 34 76, 34 60, 30 50 C 20 58, 4 64, -14 66 C -30 68, -46 72, -56 70 C -70 68, -80 58, -82 46 C -84 34, -78 26, -70 22 C -52 0, -30 -30, -10 -52 C 0 -62, 10 -70, 22 -74 Z';
-  const mane = 'M 24 -76 C 42 -80, 58 -70, 66 -58 C 74 -66, 80 -64, 84 -56 C 82 -48, 86 -40, 94 -36 C 88 -28, 92 -18, 100 -12 C 92 -6, 96 6, 100 14 C 92 18, 94 30, 98 40 C 90 42, 90 54, 94 64 L 92 98 C 96 60, 84 10, 60 -26 C 50 -42, 38 -58, 24 -76 Z';
-  g.part(mane, 'fg2');
+  // a thoroughbred's head in profile, facing left, ears pricked, mane flying
+  const farEar = 'M 18 -70 C 20 -84, 26 -94, 32 -98 C 36 -88, 36 -78, 32 -66 Z';
+  const head = 'M -2 -72 C -2 -86, 4 -96, 12 -100 C 18 -90, 20 -80, 18 -70 C 22 -70, 26 -70, 30 -68 C 54 -56, 72 -24, 80 14 C 84 40, 86 70, 86 98 L 28 98 C 28 80, 30 62, 34 50 C 30 46, 26 44, 24 42 C 12 56, -12 64, -34 62 C -44 66, -54 64, -52 56 C -58 56, -66 54, -74 48 C -82 42, -84 26, -76 12 C -60 -12, -38 -40, -24 -54 C -16 -62, -8 -68, -2 -72 Z';
+  const mane = 'M 20 -74 C 34 -88, 50 -94, 64 -88 C 56 -84, 52 -80, 52 -74 C 64 -78, 78 -72, 86 -62 C 76 -62, 70 -58, 70 -54 C 82 -50, 92 -40, 96 -26 C 86 -30, 80 -28, 78 -24 C 88 -14, 94 0, 95 14 C 88 8, 82 8, 80 10 C 88 22, 93 36, 92 50 C 86 46, 83 46, 81 48 L 82 98 C 84 60, 76 18, 62 -14 C 52 -38, 38 -58, 20 -74 Z';
+  const forelock = 'M 4 -72 C 0 -62, -6 -56, -16 -50 C -8 -52, -2 -52, 4 -56 C 2 -50, -2 -44, -8 -38 C 2 -42, 10 -50, 14 -60 Z';
+  g.part(farEar, 'fg2', g.ow * 0.8);
   g.part(head, 'fg');
-  g.clip(head, () => g.fill(mane, 'fg2'));
-  g.line(head, g.ow * 0.6);
-  // face details
-  g.fill(ell(-12, -34, 7, 5, -0.5), 'line');
-  if (!g.tiny) g.fill(circ(-14, -36, 1.8), 'white');
-  g.line('M -24 -44 C -16 -50, -6 -48, 0 -42', 3);
-  g.fill('M -74 36 C -70 30, -62 32, -62 40 C -64 46, -70 44, -74 36 Z', 'line');
-  g.line('M -80 54 C -70 56, -62 54, -56 50', 3);
+  g.part(mane, 'fg2');
+  g.part(forelock, 'fg2', g.ow * 0.6);
   if (!g.small) {
-    g.line('M 30 50 C 44 30, 40 0, 18 -8', 3, 'shade');
-    g.line('M -40 2 C -30 12, -10 14, 6 8', 2.6, 'shade');
+    g.line('M 34 -62 C 50 -46, 62 -24, 70 0 M 52 -62 C 64 -48, 74 -30, 80 -10 M 66 -14 C 74 6, 78 26, 80 44', 2.4, 'shade2');
+    g.fill('M 4 -90 C 8 -84, 10 -78, 10 -72 L 4 -74 Z', 'shade');
   }
-  // bridle: browband, cheek piece and noseband, with the bit ring
+  // eye, nostril, mouth, the line of the jowl
+  g.fill('M -26 -38 C -20 -46, -10 -46, -4 -40 C -10 -34, -20 -32, -26 -38 Z', 'line');
+  if (!g.tiny) g.fill(circ(-13, -41, 2), 'white');
+  g.line('M -30 -48 C -20 -56, -6 -54, 2 -46', 3);
+  g.fill('M -74 26 C -70 20, -62 22, -62 30 C -64 36, -70 34, -74 26 Z', 'line');
+  g.line('M -74 48 C -66 50, -58 50, -52 46', 2.8);
+  if (!g.small) {
+    g.line('M -12 -14 C 10 -12, 26 8, 22 34', 3, 'shade');
+    g.line('M -52 0 C -42 8, -26 10, -12 4', 2.4, 'shade');
+  }
+  // bridle: browband, cheekpiece to the bit, noseband
   g.clip(head, () => {
     g.bars([
-      ['M 10 -62 C 4 -52, -2 -46, -8 -46', 'acc', 5],
-      ['M 2 -46 C -4 -20, -20 16, -40 44', 'acc', 5],
-      ['M -66 14 C -54 22, -40 26, -22 22', 'acc', 5],
+      ['M 20 -66 C 12 -56, 0 -50, -10 -50', 'acc', 5],
+      ['M 10 -54 C 8 -28, -14 14, -46 44', 'acc', 5],
+      ['M -68 2 C -56 12, -40 18, -20 16', 'acc', 5],
     ], g.ow * 0.5);
   });
-  g.part(circ(-44, 48, 6), 'acc', g.ow * 0.5);
+  g.part(circ(-46, 46, 6), 'acc', g.ow * 0.5);
 }, { slot: { x: 40, y: 56, h: 70 } });
 
 // ---------------------------------------------------------------- tornado (Oklahoma City Twisters)
@@ -1469,7 +1475,8 @@ function renderEmblem(canvas, emblem, P, o, px, opts) {
   ctx.save();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.translate(canvas.width / 2, canvas.height / 2);
-  const k = px / 200;
+  // emblems are drawn out to about ±98 units; 93 % keeps their outlines inside
+  const k = (px / 200) * 0.93;
   ctx.scale(k, k);
   const g = makePainter(ctx, P, k);
   paintEmblem(g, emblem, o);
@@ -1578,7 +1585,8 @@ export function drawWordmark(ctx, team, cx, cy, height, opts = {}) {
   if (opts.city || opts.cityText) {
     const ct = String(opts.cityText || team.city || '').toUpperCase();
     const chh = h * 0.3;
-    drawBlockText(ctx, ct, cx, cy - h * 0.5 - chh * 0.95, chh, {
+    const lift = style === 'arch' ? archGeometry(text, h, base).droop / 2 : 0;
+    drawBlockText(ctx, ct, cx, cy - h * 0.5 - lift - chh * 0.95, chh, {
       font: 'block', align: 'center', middle: true, fill: outline2 && !mono ? outline2 : fill, outline: outline || undefined, ow: chh * 0.12, spacing: chh * 0.35, weight: 0.17,
     });
   }
@@ -1616,15 +1624,19 @@ export function drawWordmark(ctx, team, cx, cy, height, opts = {}) {
   return width;
 }
 
-function drawArched(ctx, text, cx, cy, h, base, o) {
+function archGeometry(text, h, base) {
   const st = { ...FONT_STYLES[base.font], condense: FONT_STYLES[base.font].condense * base.condense };
   const L = textLayout(text, h, st, 0);
   const R = Math.max(L.width * 1.9, h * 6);
-  // the arc's centre sits below; lift it by half the droop so the arch is
-  // centred on cy
-  const half = L.width / 2 / R;
-  const droop = R * (1 - Math.cos(half));
-  const ocx = cx, ocy = cy + R + droop / 2;
+  const droop = R * (1 - Math.cos(L.width / 2 / R));
+  return { st, L, R, droop };
+}
+
+function drawArched(ctx, text, cx, cy, h, base, o) {
+  // the arc's centre sits below; it's raised by half the droop so the arch
+  // is centred on cy
+  const { st, L, R, droop } = archGeometry(text, h, base);
+  const ocx = cx, ocy = cy + R - droop / 2;
   const glyphs = [];
   let x = 0;
   for (const ch of text) {
