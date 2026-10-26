@@ -149,7 +149,10 @@ export class Booth {
         if (ev.e) this.say(ev.turnover ? 'recoverDef' : 'recoverOff', { e: nm(ev.e), team: teamName(m, ev.e.side) }, 0.3);
         break;
       case 'lateral': case 'pitch':
-        if (ev.type === 'lateral' || m.playKind !== 'option') { this.play.lats++; this.say('lateral', { to: nm(ev.to) }); }
+        // (a toss sweep's pitch and a designed handoff aren't laterals worth shouting about)
+        if (ev.type === 'pitch' && (m.play?.run?.give === 'toss' || m.playKind === 'run')) break;
+        this.play.lats++;
+        this.say('lateral', { to: nm(ev.to) });
         break;
       case 'hit': if (ev.kind === 'big' && ev.power > 0.75 && this.rng() < 0.6) this.say('hit', {}, 0.2); break;
       case 'move':

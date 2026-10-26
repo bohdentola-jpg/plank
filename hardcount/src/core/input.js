@@ -254,8 +254,10 @@ class Input {
       let l2 = r ? r.l2 : 0, r2 = r ? r.r2 : 0;
       if (r && (Math.abs(lx) + Math.abs(ly) > 0.2 || r.b.some(Boolean))) pl.device = 'pad';
       if (idx === 0) {
-        // keyboard merges into player 1
+        // keyboard merges into player 1 (a tap that came and went between two
+        // frames still counts as one frame down, so slow frames don't eat it)
         for (const [code, name] of Object.entries(KEY_BTN)) if (k.has(code)) b[BI[name]] = true;
+        for (const code of this._pendingKeys) { const name = KEY_BTN[code]; if (name) b[BI[name]] = true; }
         const kx = (k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0);
         const ky = (k.has('KeyS') ? 1 : 0) - (k.has('KeyW') ? 1 : 0);
         if (kx || ky) {

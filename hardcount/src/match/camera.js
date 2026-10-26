@@ -54,15 +54,21 @@ export class CameraDirector {
       case 'broadcast':
       case 'low': {
         // over the offense's shoulder: back and up, leaning toward the action
+        // far enough back to get the whole formation across the screen (the
+        // spread is how far the widest man is from the middle of the shot)
         const deep = s.deep ? 1 : 0;
-        const lowK = s.shot === 'low' ? 0.72 : 1;
-        const dist = (lerp(12.5, 17, deep) + (s.kind === 'kickoff' ? 6 : 0)) * lowK;
-        const h = (lerp(7.2, 11, deep) + (s.kind === 'kickoff' ? 3 : 0)) * (s.shot === 'low' ? 0.62 : 1);
-        const cx = clamp(f.x * 0.55 + (s.ballX ?? 0) * 0.2, -F.halfW + 4, F.halfW - 4);
-        P.set(cx, h, f.z - dir * dist);
-        L.set(f.x * 0.75, 0.8, f.z + dir * (5 + deep * 4));
-        fov = 46;
-        rate = s.live ? 4.5 : 3;
+        const low = s.shot === 'low';
+        const vfov = low ? 50 : 54;
+        const halfH = Math.tan((vfov / 2) * Math.PI / 180) * (4 / 3);   // half-width per yard of distance
+        const need = clamp((s.spreadX ?? 10) + 2, 7, 22) / halfH;
+        const base = low ? 12 : 15.5;
+        const dist = Math.max(base, need) + deep * 4 + (s.kind === 'kickoff' ? 5 : 0);
+        const h = dist * (low ? 0.42 : 0.52) + deep * 2;
+        const cx = clamp(f.x * 0.55 + (s.ballX ?? 0) * 0.2, -F.halfW + 3, F.halfW - 3);
+        P.set(cx, h, f.z - dir * dist * 0.92);
+        L.set(f.x * 0.7, 0.5, f.z + dir * (dist * 0.3 + deep * 4));
+        fov = vfov;
+        rate = s.live ? 4 : 3;
         break;
       }
       case 'high': {

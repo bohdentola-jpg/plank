@@ -959,6 +959,12 @@ class MatchScreen {
         } else if (phase === 'presnap') {
           s.focus = { x: m.ballX, y: 0, z: m.los + this.viewDir * 2 };
         }
+        // how wide the picture needs to be: the widest man on the side we're behind
+        if (phase === 'presnap' || (phase === 'live' && m.playT < 2.5 && m.ball.carrier === m.qb)) {
+          let w = 6;
+          for (const e of m.active) if (Math.abs(e.z - m.los) < 12) w = Math.max(w, Math.abs(e.x - s.focus.x));
+          s.spreadX = Math.min(w, 18);
+        } else s.spreadX = 8;
         // a pass in the air: frame the throw and where it's going
         if (phase === 'live' && m.ball.state === 'air' && m.ball.kind === 'pass' && m.ball.targetPt) {
           const tp = m.ball.targetPt;
