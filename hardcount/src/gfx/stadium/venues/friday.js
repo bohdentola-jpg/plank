@@ -263,7 +263,7 @@ export async function build(ctx) {
 
   // ---- trees, houses, water tower
   const treeList = [];
-  for (let i = 0; i < 150; i++) {
+  for (let i = 0; i < (ctx.quality === 'low' ? 70 : 150); i++) {
     const ang = rng() * Math.PI * 2;
     const r = 1 + rng() * 0.5;
     const tx = Math.cos(ang) * 95 * r, tz = Math.sin(ang) * 140 * r;

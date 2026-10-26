@@ -126,6 +126,8 @@ export function buildField(ctx) {
 
   return {
     group, paint: P, shared, materials: mats,
+    // textures only the onBeforeCompile uniforms know about
+    disposables: [roughTex, shared.tDetail.value],
     flags: posts.flags,
     setLines({ los, firstDown, show }) {
       const on = show !== false;
@@ -188,11 +190,13 @@ function goalposts(field, ctx) {
   }
   const yMat = new THREE.MeshStandardMaterial({ color: new THREE.Color('#f2c80a'), roughness: 0.38, metalness: 0.25, emissive: new THREE.Color('#3a2a00'), envMapIntensity: 1.2 });
   const posts = new THREE.Mesh(yellow.build(), yMat);
+  posts.name = 'goalposts';
   posts.castShadow = true;
   posts.receiveShadow = true;
   group.add(posts);
   const pMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(ctx.padColor || '#1a3a7a'), roughness: 0.7 });
   const padM = new THREE.Mesh(pad.build(), pMat);
+  padM.name = 'postPads';
   padM.castShadow = true;
   group.add(padM);
 
@@ -270,6 +274,7 @@ function goalposts(field, ctx) {
   };
   fMat.customProgramCacheKey = () => 'hc-flag';
   const flags = new THREE.Mesh(fg, fMat);
+  flags.name = 'flags';
   flags.frustumCulled = false;
   group.add(flags);
   return { group, flags, flagUniforms };

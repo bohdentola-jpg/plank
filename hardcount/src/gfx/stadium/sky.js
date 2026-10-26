@@ -87,7 +87,7 @@ export function atmosphere(time, weather, opts = {}) {
       A.haze *= 1.5;
       A.cold = true;
     } else if (w === 'fog') {
-      A.fog = [night ? '#262e3c' : dusk ? '#6a6068' : '#b9bdc0', night ? 0.028 : 0.024];
+      A.fog = [night ? '#262e3c' : dusk ? '#6a6068' : '#b9bdc0', night ? 0.0155 : 0.0135];
       A.haze *= 2.2;
       A.post.contrast *= 0.95;
     }

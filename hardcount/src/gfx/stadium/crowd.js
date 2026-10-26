@@ -269,7 +269,7 @@ export function buildCrowd(seats, opts) {
     const want = s.want ?? 0.5;
     let p = s.group === 'student' || s.group === 'band' ? Math.min(1, att * 1.5) : att * (0.45 + 0.95 * want);
     if (att >= 0.97) p = 0.985;
-    if (rng() < p && (!low || rng() < 0.6)) chosen.push(s);
+    if (rng() < p && (!low || rng() < 0.4)) chosen.push(s);
   }
   const n = chosen.length;
   const pos = new Float32Array(n * 3), info = new Float32Array(n * 4);

@@ -3,7 +3,8 @@
 //   cam: broadcast | endzone | sideline | aerial | low | scoreboard | crowd | orbit
 //   extra: home= away= (team ids)  crowd=0..1  wind=0..1  quality=high|low  dir=1|-1
 //          exc=0..1  react=cheer|roar|boo|groan|tension  flash=rate  hud=0  t=seconds (orbit angle)
-//          crt=0..1 (TV effect strength, QA)  msg=TEXT (scoreboard message)
+//          crt=0..1 (TV effect strength, QA)  msg=TEXT (scoreboard message)  breath=1 (steam at the heads)
+// keys: 1-9 cameras (…, 9 = chains close-up), R cycle crowd reaction, F camera flashes, H hud
 // QA hook: window.__venueview = { venue, camera, stats, setCam(name) }
 import * as THREE from 'three';
 import { registerScreen, game } from '../main.js';
@@ -11,9 +12,14 @@ import { buildVenue, VENUES } from '../gfx/stadium/index.js';
 import { makeField } from '../sim/field.js';
 import { TEAMS, getTeam } from '../data/teams.js';
 import { vText, text, C } from '../core/ui.js';
+import { createBreath } from '../gfx/fx/weather.js';
+
+const CAMS = ['broadcast', 'endzone', 'sideline', 'aerial', 'low', 'scoreboard', 'crowd', 'orbit', 'chains'];
+const REACTS = [null, 'cheer', 'roar', 'boo', 'groan', 'tension'];
 
 registerScreen('venueview', () => {
   let venue = null, label = 'LOADING', stats = null, t = 0, frame = 0;
+  let breath = null, heads = [], onKey = null;
   const camera = new THREE.PerspectiveCamera(45, 4 / 3, 0.1, 3000);
   const figures = new THREE.Group();
   let cfg = {};
@@ -54,6 +60,11 @@ registerScreen('venueview', () => {
         if (V.crowd) { camera.position.copy(V.crowd.pos); look.copy(V.crowd.target); }
         else { camera.position.set(f.halfW + 3, 2.5, 6); look.set(f.halfW + 30, 10, 18); }
         break;
+      case 'chains':
+        camera.fov = 50;
+        camera.position.set(f.halfW + 9, 2.6, los - dir * 7);
+        look.set(f.halfW + 1.2, 1.4, los + dir * 3);
+        break;
       case 'orbit': {
         const a = t * 0.12 + 0.6;
         camera.position.set(Math.sin(a) * 165, 62, Math.cos(a) * 165);
@@ -81,15 +92,17 @@ registerScreen('venueview', () => {
     const O = [[0, -0.6], [-1.1, -0.7], [1.1, -0.7], [0, -5], [-1.4, -6.5], [-(hw - 4), -0.8], [hw - 7, -1.2]];
     const D = [[-1.4, 1.0], [1.4, 1.0], [-3.2, 4.5], [3.4, 4.8], [-(hw - 4.5), 6], [hw - 7, 5.5], [0.5, 11]];
     const bodies = new THREE.InstancedMesh(cap, new THREE.MeshStandardMaterial({ roughness: 0.6 }), 14);
-    const heads = new THREE.InstancedMesh(head, new THREE.MeshStandardMaterial({ roughness: 0.25, metalness: 0.2 }), 14);
+    const helmets = new THREE.InstancedMesh(head, new THREE.MeshStandardMaterial({ roughness: 0.25, metalness: 0.2 }), 14);
     const m = new THREE.Matrix4(), c = new THREE.Color();
-    [...O.map((p) => [p, off, kitO]), ...D.map((p) => [p, def, kitD])].forEach(([[x, dz], team, kit], i) => {
+    heads = [];
+    [...O.map((p) => [p, off, kitO, dir]), ...D.map((p) => [p, def, kitD, -dir])].forEach(([[x, dz], team, kit, face], i) => {
       m.makeTranslation(x, 0, los + dz * dir);
-      bodies.setMatrixAt(i, m); heads.setMatrixAt(i, m);
-      bodies.setColorAt(i, c.set(kit.jersey)); heads.setColorAt(i, c.set(team.helmet.shell));
+      heads.push({ x, y: 1.72, z: los + dz * dir + face * 0.25, face, next: Math.random() * 0.8 });
+      bodies.setMatrixAt(i, m); helmets.setMatrixAt(i, m);
+      bodies.setColorAt(i, c.set(kit.jersey)); helmets.setColorAt(i, c.set(team.helmet.shell));
     });
-    bodies.castShadow = heads.castShadow = true;
-    figures.add(bodies, heads);
+    bodies.castShadow = helmets.castShadow = true;
+    figures.add(bodies, helmets);
   }
 
   function measure() {
@@ -152,13 +165,27 @@ registerScreen('venueview', () => {
       venue.update(0.016, { camera, time: t, excitement: cfg.exc, reaction: cfg.react, homeHasBall: true, ball: { x: 0, y: 1, z: los } });
       measure();
       stats.buildMs = buildMs;
+      if (q.breath === '1') breath = createBreath(venue.scene);
       label = 'READY';
+      onKey = (e) => {
+        const k = e.key.toLowerCase();
+        if (k >= '1' && k <= '9') { cfg.cam = CAMS[Number(k) - 1]; placeCam(cfg.cam); }
+        else if (k === 'r') cfg.react = REACTS[(REACTS.indexOf(cfg.react) + 1) % REACTS.length];
+        else if (k === 'f') { cfg.flash = cfg.flash ? 0 : 6; venue.flashes(cfg.flash); }
+        else if (k === 'h') cfg.hud = !cfg.hud;
+      };
+      window.addEventListener('keydown', onKey);
       window.__venueview = {
         venue, camera, get stats() { return measure(); },
         setCam(name) { cfg.cam = name; placeCam(name); },
+        setReaction(r) { cfg.react = r; },
+        setExcitement(e) { cfg.exc = e; },
       };
     },
     exit() {
+      if (onKey) window.removeEventListener('keydown', onKey);
+      breath?.dispose();
+      breath = null;
       venue?.dispose();
       venue = null;
       figures.traverse((o) => { o.geometry?.dispose(); o.material?.dispose?.(); });
@@ -172,6 +199,13 @@ registerScreen('venueview', () => {
         camera, time: t, excitement: cfg.exc, reaction: cfg.react, homeHasBall: true,
         ball: { x: 0, y: 1, z: Number.isFinite(cfg.los) ? cfg.los : 0 },
       });
+      if (breath) {
+        breath.update(dt);
+        for (const h of heads) {
+          h.next -= dt;
+          if (h.next <= 0) { h.next = 0.7 + Math.random() * 0.5; breath.emit(h.x, h.y, h.z, 0, h.face); }
+        }
+      }
       if (frame % 120 === 0) { const b = stats?.buildMs; measure(); stats.buildMs = b; }
     },
     view() { return label === 'READY' ? { scene: venue.scene, camera } : null; },
@@ -185,7 +219,7 @@ registerScreen('venueview', () => {
       const v = venue.def;
       ctx.fillStyle = 'rgba(0,0,0,0.55)';
       ctx.fillRect(30, 24, 700, 42);
-      text(ctx, `${v.name.toUpperCase()} · ${venue.time.toUpperCase()} · ${venue.weather.toUpperCase()} · CAM ${cfg.cam.toUpperCase()}`, 40, 40, { size: 13, color: '#d8ffd8', font: '"Consolas", monospace', weight: 700 });
+      text(ctx, `${v.name.toUpperCase()} · ${venue.time.toUpperCase()} · ${venue.weather.toUpperCase()} · CAM ${cfg.cam.toUpperCase()}${cfg.react ? ' · ' + cfg.react.toUpperCase() : ''}`, 40, 40, { size: 13, color: '#d8ffd8', font: '"Consolas", monospace', weight: 700 });
       text(ctx, `CALLS ${stats.calls}  TRIS ${(stats.triangles / 1000).toFixed(1)}K  FANS ${stats.crowd}  GEOS ${stats.geometries}  TEX ${stats.textures}  BUILD ${stats.buildMs}MS  FPS ${Math.round(game.fps || 0)}`, 40, 58, { size: 12, color: '#a8c8a8', font: '"Consolas", monospace', weight: 700 });
     },
   };

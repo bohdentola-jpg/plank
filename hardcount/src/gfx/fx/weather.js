@@ -311,7 +311,7 @@ export function createBreath(scene, opts = {}) {
   g.instanceCount = N;
   const u = {
     uTime: { value: 0 }, uRise: { value: 0.12 }, uGrow: { value: 3.2 }, uWrap: { value: new THREE.Vector4(0, 0, 0, 0) },
-    uColor: { value: new THREE.Color(opts.color || '#e8eef6').multiplyScalar(opts.bright ?? 1.1) }, uAlpha: { value: opts.alpha ?? 0.42 },
+    uColor: { value: new THREE.Color(opts.color || '#e8eef6').multiplyScalar(opts.bright ?? 0.95) }, uAlpha: { value: opts.alpha ?? 0.3 },
   };
   const mesh = new THREE.Mesh(g, new THREE.ShaderMaterial({
     vertexShader: PUFF_VERT, fragmentShader: PUFF_FRAG, uniforms: u, transparent: true, depthWrite: false,
@@ -326,7 +326,7 @@ export function createBreath(scene, opts = {}) {
     emit(x, y, z, dx = 0, dz = 0) {
       const l = Math.hypot(dx, dz) || 1;
       const sp = 0.35;
-      A.set([x + (dx / l) * 0.12, y, z + (dz / l) * 0.12, t], head * 4);
+      A.set([x + (dx / l) * 0.3, y - 0.06, z + (dz / l) * 0.3, t], head * 4);
       Bv.set([(dx / l) * sp, (dz / l) * sp, 0.1 + Math.random() * 0.05, 0.9 + Math.random() * 0.6], head * 4);
       head = (head + 1) % N;
       aA.needsUpdate = true;

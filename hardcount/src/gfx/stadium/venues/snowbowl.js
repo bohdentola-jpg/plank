@@ -16,9 +16,8 @@ import { wantFn, angleAt, adWallMat } from './common.js';
 export const SUN_AZ = 2.5;
 export const WIND_DIR = 2.2;
 export const COLD = true;
-export const POOL = [95, 120];
 export const FLAG_COLOR = '#13294b';
-export const FOG = 0.6;
+export const FOG = 0.35;
 
 export function paint(ctx) {
   const h = ctx.home;
@@ -144,8 +143,8 @@ export async function build(ctx) {
     tl.push({ x: Math.cos(a) * (path.ax + 70) * r, z: Math.sin(a) * (path.az + 60) * r, h: 12 + rng() * 12, kind: 'pine', w: 0.4, tint: rng() < 0.5 ? '#9ab0b8' : '#7a9098' });
   }
   root.add(trees(tl, ctx, { snow: true }));
-  root.add(mountains(ctx, 900, 2200, 380, 7, [0.22, 0.26, 0.32]));
-  root.add(mountains(ctx, 1400, 2800, 520, 11, [0.3, 0.34, 0.42]));
+  root.add(mountains(ctx, 650, 2000, 300, 7, [0.16, 0.19, 0.24]));
+  root.add(mountains(ctx, 1150, 2600, 470, 11, [0.24, 0.28, 0.36]));
   // the snow-covered ground outside the bowl
   const ground = B.get('ground');
   ground.setColor(...(snowy || ctx.cold ? [0.82, 0.85, 0.9] : [0.4, 0.42, 0.36]));
@@ -153,6 +152,7 @@ export async function build(ctx) {
 
   return {
     seats: bowl.seats,
+    pool: [path.ax + bowl.dEnd + 3, path.az + bowl.dEnd + 3],
     boards: [board],
     disposables,
     sideline: { benchOff: 8, cheer: true, photographers: 8, coaches: 4, players: 16, chainSide: 1, vest: '#ff7a12', heaters: true },

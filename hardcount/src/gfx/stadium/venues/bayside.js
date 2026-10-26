@@ -17,7 +17,6 @@ import { wantFn, angleAt, adWallMat, ribbonMat, suiteMat, edgeBanks, videoBoard,
 
 export const SUN_AZ = 0.15;          // the sun sets over the bay, behind the skyline
 export const WIND_DIR = -1.2;
-export const POOL = [80, 120];
 export const FLAG_COLOR = '#1fb5b0';
 export const FOG = 0.45;
 /** The shoreline sits this far north of the field centre (see build). */
@@ -75,7 +74,7 @@ export async function build(ctx) {
   const rib = ribbonMat(ctx, ['PORT HALCYON TIDE', 'MIDNIGHT 88.1', 'TIDE TIDE TIDE', 'KUROSHIO', 'DEFENSE!', 'HALCYON BANK', 'MAKE SOME NOISE', 'CLEARWATER']);
   B.get('ribbon', () => rib.mat);
   B.get('exterior', (c) => exteriorMat(c, 'bay', '#c4c8cc', home.colors.secondary));
-  B.get('canopy', (c) => spill(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.2, side: THREE.DoubleSide }), c, 0.25, { direct: 0.12 }));
+  B.get('canopy', (c) => spill(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.2, side: THREE.DoubleSide, envMapIntensity: c.night ? 0.25 : 0.8 }), c, 0.2, { direct: 0.1 }));
   const seatCol = (s, r) => (Math.floor(angleAt(path, s) / 14) % 2 ? home.colors.primary : '#13706c');
   const groupLo = (s, r) => { const a = angleAt(path, s); return a > 255 && a < 285 && r > 2 ? 'student' : 'home'; };
   // lower bowl: full height down the sides and round the south end, a low stand in the north
@@ -140,7 +139,7 @@ export async function build(ctx) {
   }
   const waterMat = spill(new THREE.MeshStandardMaterial({
     color: ctx.day ? '#1d4a66' : ctx.dusk ? '#1a2a44' : '#04101c', roughness: 0.12, metalness: 0.1,
-    normalMap: rippleNormals(), normalScale: new THREE.Vector2(0.55, 0.55), envMapIntensity: ctx.night ? 1.6 : 1.1,
+    normalMap: rippleNormals(), normalScale: new THREE.Vector2(0.55, 0.55), envMapIntensity: ctx.night ? 2.6 : 1.2,
   }), ctx, 0);
   waterMat.normalMap.repeat.set(60, 60);
   const water = new THREE.Mesh(new THREE.PlaneGeometry(2400, 1400), waterMat);
@@ -149,24 +148,34 @@ export async function build(ctx) {
   water.name = 'bay';
   root.add(water);
 
-  // ---- the skyline across the bay
+  // ---- the skyline across the bay: towers with setbacks, lit crowns, spires
   const sky = [];
-  const styles = ['glass', 'dark', 'teal', 'concrete'];
-  for (let i = 0; i < 46; i++) {
-    const x = -420 + i * 19 + (rng() - 0.5) * 12;
-    const core = Math.exp(-Math.pow((x + 40) / 170, 2));
-    const z = shore + 330 + rng() * 140 - core * 40;
-    const h = 30 + rng() * 40 + core * (70 + rng() * 90);
-    const w = 14 + rng() * 14;
-    sky.push({ x, z, w, d: 14 + rng() * 12, h, style: styles[(rng() * styles.length) | 0], seed: 'b' + (i % 3), antenna: h > 110, uw: 14, uh: 22, glow: 2.4 });
+  const styles = ['glass', 'dark', 'teal', 'concrete', 'glass'];
+  const crowns = [[0.4, 1.8, 2.0], [2.2, 2.0, 1.7], [1.6, 0.6, 2.2], [2.2, 2.2, 2.2]];
+  for (let i = 0; i < 34; i++) {
+    const x = -470 + i * 28 + (rng() - 0.5) * 14;
+    const core = Math.exp(-Math.pow((x + 40) / 190, 2));
+    const z = shore + 320 + rng() * 170 - core * 50;
+    const h = 24 + rng() * 30 + core * (55 + rng() * 120);
+    const w = 16 + rng() * 14, d = 14 + rng() * 12;
+    const style = styles[(rng() * styles.length) | 0];
+    const seed = 'b' + (i % 3);
+    if (h > 75) {
+      const h0 = h * (0.45 + rng() * 0.2);
+      sky.push({ x, z, w, d, h: h0, style, seed, uw: 14, uh: 22, glow: 2.6 });
+      const h1 = h - h0;
+      const w1 = w * (0.6 + rng() * 0.2), d1 = d * (0.6 + rng() * 0.2);
+      sky.push({ x: x + (rng() - 0.5) * (w - w1) * 0.5, z, w: w1, d: d1, h: h1, y0: h0, style, seed, uw: 14, uh: 22, glow: 2.6, antenna: rng() < 0.6, crown: rng() < 0.65 ? crowns[(rng() * crowns.length) | 0] : null });
+    } else sky.push({ x, z, w, d, h, style, seed, uw: 14, uh: 22, glow: 2.6, crown: rng() < 0.2 ? crowns[(rng() * crowns.length) | 0] : null });
   }
   // landmark: a slim tower with a spire
-  sky.push({ x: -40, z: shore + 300, w: 18, d: 18, h: 190, style: 'glass', seed: 'L', antenna: true, uw: 12, uh: 20 });
+  sky.push({ x: -40, z: shore + 300, w: 20, d: 20, h: 120, style: 'glass', seed: 'L', uw: 12, uh: 20, glow: 2.6 });
+  sky.push({ x: -40, z: shore + 300, w: 14, d: 14, h: 70, y0: 120, style: 'glass', seed: 'L', uw: 12, uh: 20, glow: 2.6, crown: [0.4, 2.0, 2.2] });
   cityBlock(ctx, rng, sky);
   const spire = B.get('metal');
   spire.setColor(0.7, 0.72, 0.75);
-  pole(spire, V3(-40, 190, shore + 300), V3(-40, 230, shore + 300), 0.8, 6);
-  ctx.lightsList.push({ pos: V3(-40, 231, shore + 300), color: [1, 0.15, 0.08], size: 5, k: 1.6, blink: 1 });
+  pole(spire, V3(-40, 190, shore + 300), V3(-40, 232, shore + 300), 0.8, 6);
+  ctx.lightsList.push({ pos: V3(-40, 233, shore + 300), color: [1, 0.15, 0.08], size: 5, k: 1.6, blink: 1 });
 
   // ---- the Halcyon Bridge (suspension, strung with lights)
   const bridge = B.get('metal');
@@ -202,11 +211,13 @@ export async function build(ctx) {
   const streaks = [];
   if (!ctx.day) {
     for (const b of sky) {
-      for (let k = 0; k < 2; k++) {
-        const x = b.x + (rng() - 0.5) * b.w * 0.8;
-        streaks.push({ pos: V3(x, -1.5, b.z - b.d / 2 - 22 - rng() * 30), w: 1.6 + rng() * 2, h: 30 + rng() * 40, color: rng() < 0.7 ? [0.5, 0.42, 0.3] : [0.3, 0.4, 0.55] });
+      if (b.y0) continue;
+      for (let k = 0; k < 3; k++) {
+        const x = b.x + (rng() - 0.5) * b.w * 0.9;
+        streaks.push({ pos: V3(x, -1.5, b.z - b.d / 2 - 14 - rng() * 30), w: 1.4 + rng() * 2.4, h: 40 + rng() * 70, color: rng() < 0.7 ? [0.75, 0.6, 0.42] : [0.42, 0.55, 0.8] });
       }
     }
+    for (const b of sky) if (b.crown) streaks.push({ pos: V3(b.x, -1.5, b.z - b.d / 2 - 20), w: b.w * 0.7, h: 120, color: b.crown.map((v) => v * 0.35) });
     for (let k = 0; k <= 20; k++) {
       const c = cable(k / 20);
       streaks.push({ pos: V3(c.x, -1.5, c.z - 30), w: 2.2, h: 46, color: [0.55, 0.5, 0.38] });
@@ -259,6 +270,7 @@ export async function build(ctx) {
 
   return {
     seats: [...lower.seats, ...north.seats, ...upper.seats],
+    pool: [path.ax + upper.dEnd + 3, path.az + upper.dEnd + 3],
     boards: [board],
     disposables,
     sideline: { benchOff: 8.5, cheer: 'big', photographers: 10, coaches: 4, players: 16, chainSide: 1, vest: '#d8ff20' },

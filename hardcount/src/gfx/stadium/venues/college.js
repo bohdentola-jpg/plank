@@ -5,7 +5,7 @@
 // on the rim, a hedge along the field wall, and the campus beyond the open end.
 import * as THREE from 'three';
 import { RRPath, ringWall, ringFlat } from '../bowl.js';
-import { V3, box, beam, pole, trees, spill, building } from '../kit.js';
+import { V3, box, beam, pole, trees, spill, building, exteriorMat } from '../kit.js';
 import { cv, tex, BRANDS } from '../tex.js';
 import { createScoreboard } from '../scoreboard.js';
 import { logoCanvas } from '../../logos.js';
@@ -43,6 +43,7 @@ export async function build(ctx) {
   B.get('ribbon', () => rib.mat);
   B.get('suites', () => suiteMat(ctx));
   B.opts('ribbon', { receive: false });
+  B.get('exterior', (c) => exteriorMat(c, 'college', '#8a4030', home.colors.primary, { brick: true }));
 
   const primary = new THREE.Color(home.colors.primary);
   const groupLo = (s, r) => {
@@ -71,7 +72,7 @@ export async function build(ctx) {
     tint: [0.72, 0.71, 0.68], seats: 'bench', benchTint: [0.84, 0.85, 0.86],
     aisleEvery: 26, aisleW: 1.2, vom: { every: 30, offset: 14, row: 6, rows: 3, w: 2.6 },
     group: groupUp, want: wantFn(path, field, upperRows), light: () => 0.92,
-    back: { h: 2.4 }, exterior: true, exteriorKey: 'brick', exteriorTint: [0.95, 0.9, 0.86], exteriorU: 8, exteriorV: 8,
+    back: { h: 2.4 }, exterior: true, exteriorKey: 'exterior', exteriorTint: [1, 1, 1], exteriorU: 16, exteriorV: 16,
   });
   // suites between the decks, soffit, fascia ribbon
   const ss = path.samples(s0 + 3, s1 - 3, 6);
@@ -170,6 +171,7 @@ export async function build(ctx) {
   const seats = [...lower.seats, ...upper.seats];
   return {
     seats,
+    pool: [path.ax + upper.dEnd + 3, path.az + upper.dEnd + 3],
     boards: [board],
     disposables,
     sideline: { benchOff: 7.5, cheer: 'big', photographers: 10, coaches: 4, players: 16, chainSide: 1, vest: '#e8e8e0' },

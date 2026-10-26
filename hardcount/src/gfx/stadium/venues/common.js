@@ -123,8 +123,20 @@ export function videoBoard(ctx, x, y, z, w, h, ry, board, opts = {}) {
 /** A block of city buildings (facade textures), returns nothing; batched by style. */
 export function cityBlock(ctx, rng, list) {
   for (const b of list) {
-    building(ctx.B, ctx, b.x, b.z, b.w, b.d, b.h, b.ry || 0, b.style, b.seed || 'a', { tint: b.tint, uw: b.uw, uh: b.uh, glow: b.glow });
-    if (b.antenna && (ctx.night || ctx.dusk)) ctx.lightsList.push({ pos: V3(b.x, b.h + 4, b.z), color: [1, 0.15, 0.08], size: 2.2, k: 1.4, blink: 1 });
+    building(ctx.B, ctx, b.x, b.z, b.w, b.d, b.h, b.ry || 0, b.style, b.seed || 'a', { tint: b.tint, uw: b.uw, uh: b.uh, glow: b.glow, y0: b.y0 });
+    const top = (b.y0 || 0) + b.h;
+    if (b.antenna && (ctx.night || ctx.dusk)) ctx.lightsList.push({ pos: V3(b.x, top + 4, b.z), color: [1, 0.15, 0.08], size: 2.2, k: 1.4, blink: 1 });
+    if (b.crown) {
+      // a lit crown band round the top floors
+      const g = ctx.B.get('glow');
+      g.setColor(...(ctx.day ? [0.55, 0.6, 0.65] : b.crown));
+      const hw = b.w / 2 + 0.15, hd = b.d / 2 + 0.15, y0 = top - 4, y1 = top - 1.5;
+      const P = (x, y, z) => V3(b.x + x, y, b.z + z);
+      g.quad(P(-hw, y0, hd), P(hw, y0, hd), P(hw, y1, hd), P(-hw, y1, hd));
+      g.quad(P(hw, y0, -hd), P(-hw, y0, -hd), P(-hw, y1, -hd), P(hw, y1, -hd));
+      g.quad(P(hw, y0, hd), P(hw, y0, -hd), P(hw, y1, -hd), P(hw, y1, hd));
+      g.quad(P(-hw, y0, -hd), P(-hw, y0, hd), P(-hw, y1, hd), P(-hw, y1, -hd));
+    }
   }
 }
 

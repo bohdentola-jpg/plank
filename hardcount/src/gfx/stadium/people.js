@@ -32,8 +32,8 @@ function figureGeometry() {
     else for (let i = 0; i < p.count; i++) I.push(base + i);
   };
   const box = new THREE.BoxGeometry(1, 1, 1);
-  const head = new THREE.SphereGeometry(1, 8, 6);
-  const cap = new THREE.SphereGeometry(1, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2);
+  const head = new THREE.SphereGeometry(1, 7, 5);
+  const cap = new THREE.SphereGeometry(1, 7, 3, 0, Math.PI * 2, 0, Math.PI / 2);
   const pom = new THREE.IcosahedronGeometry(1, 0);
   // legs + shoes
   for (const [s, limb] of [[-1, LIMB.legL], [1, LIMB.legR]]) {

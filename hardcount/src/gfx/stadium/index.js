@@ -109,6 +109,8 @@ export async function buildVenue(renderer, opts = {}) {
 
   // ---- the venue itself (stands, structures, surroundings, boards, light banks)
   const V = (await mod.build(ctx)) || {};
+  // the floodlight pool covers the stands the venue actually built
+  if (V.pool) { ctx.uPool.value.x = V.pool[0]; ctx.uPool.value.y = V.pool[1]; }
   await tick();
   const sideline = buildSideline(ctx, ctx.B, V.sideline || {});
   root.add(sideline.group);
@@ -193,7 +195,9 @@ export async function buildVenue(renderer, opts = {}) {
     dispose() {
       wx.dispose();
       V.dispose?.();
-      disposeTree(scene, [...(V.disposables || [])]);
+      disposeTree(scene, [...(V.disposables || []), ...(F.disposables || [])]);
+      key.shadow.dispose();
+      key.dispose();
       scene.clear();
     },
   };

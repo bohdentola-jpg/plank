@@ -60,7 +60,7 @@ export function pole(gb, a, b, r, seg = 8) {
 
 /** Axis box centred at (x, z) with its base at y, rotated ry. */
 export function box(gb, x, y, z, w, h, d, ry = 0, opts = {}) {
-  gb.box(x, y, z, w, h, d, ry, { uw: opts.uw || 4, uh: opts.uh || 4, top: opts.top, bottom: opts.bottom, topUv: opts.topUv, uFit: opts.uFit });
+  gb.box(x, y, z, w, h, d, ry, { uw: opts.uw || 4, uh: opts.uh || 4, top: opts.top, bottom: opts.bottom, topUv: opts.topUv, uFit: opts.uFit, v0: opts.v0 });
 }
 
 /** Merge any geometry with position / rotation(y) / scale. */
@@ -132,7 +132,7 @@ export const POOL_GLSL = /* glsl */`
   varying vec3 vPoolW;
   float poolAt(vec3 w) {
     float pd = length(w.xz / max(uPool.xy, vec2(1.0)));
-    return mix(1.0, 1.0 - smoothstep(1.0, 1.4, pd), uPool.z);
+    return mix(1.0, 1.0 - smoothstep(1.0, 1.3, pd), uPool.z);
   }`;
 
 export function poolPatch(sh, ctx, direct = 1) {
@@ -206,8 +206,8 @@ export const MATS = {
 };
 
 /** Stadium exterior facade (columns, concourse openings lit at night), tinted per venue. */
-export function exteriorMat(ctx, key, base, accent) {
-  const t = exteriorTex(key, base, accent);
+export function exteriorMat(ctx, key, base, accent, opts = {}) {
+  const t = exteriorTex(key, base, accent, opts);
   return spill(std({
     map: t.map, emissive: 0xffffff, emissiveMap: t.emi, emissiveIntensity: ctx.night ? 1.6 : ctx.dusk ? 0.8 : 0.0,
     roughness: 0.85, vertexColors: true,
@@ -373,12 +373,13 @@ export function building(B, ctx, x, z, w, d, h, ry = 0, style = 'brick', seed = 
   const gb = B.get(key, () => facadeMat(style, seed, ctx, opts));
   gb.setColor(...(opts.tint || [1, 1, 1]));
   // facade uv: 1 repeat = 12 yd wide × 20 yd tall
-  gb.box(x, 0, z, w, h, d, ry, { uw: opts.uw || 12, uh: opts.uh || 20, top: false });
+  const y0 = opts.y0 || 0;
+  gb.box(x, y0, z, w, h, d, ry, { uw: opts.uw || 12, uh: opts.uh || 20, top: false, v0: y0 / (opts.uh || 20) });
   // roof
   const r = B.get('concrete');
   r.setColor(...(opts.roof || [0.35, 0.35, 0.36]));
-  r.box(x, h, z, w + 0.3, 0.3, d + 0.3, ry, { uw: 4, uh: 4 });
-  return { top: h + 0.3 };
+  r.box(x, y0 + h, z, w + 0.3, 0.3, d + 0.3, ry, { uw: 4, uh: 4 });
+  return { top: y0 + h + 0.3 };
 }
 
 /** Gable-roof house with a lit window or two. */
@@ -425,6 +426,7 @@ export function trees(list, ctx, opts = {}) {
   const mk = (geo, items, colFn) => {
     const mat = spill(std({ vertexColors: false, roughness: 0.95, flatShading: true }), ctx, 0.35);
     const im = new THREE.InstancedMesh(geo, mat, items.length);
+    im.name = 'trees';
     const c = new THREE.Color();
     items.forEach((t, i) => {
       _q.setFromAxisAngle(_up, (t.rot ?? i * 1.7));

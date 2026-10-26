@@ -554,7 +554,7 @@ export function bannerTex(key, lines, bg, fg, accent, w = 256, h = 512) {
  * openings (emissive map), a team-colour stripe. One repeat = 16 × 16 yd.
  */
 export function exteriorTex(key, base = '#b8b6ae', accent = '#1a3a7a', opts = {}) {
-  return once(`ext|${key}|${base}|${accent}`, () => {
+  return once(`ext|${key}|${base}|${accent}|${opts.brick ? 1 : 0}`, () => {
     const W = 512, H = 512;
     const [c, x] = cv(W, H);
     const [e, ex] = cv(W, H);
@@ -564,11 +564,29 @@ export function exteriorTex(key, base = '#b8b6ae', accent = '#1a3a7a', opts = {}
     ex.fillStyle = '#000';
     ex.fillRect(0, 0, W, H);
     speckle(x, W, H, rng, 9000, ['#000', '#fff'], 0.02, 0.1, 1, 2);
-    // panel joints
-    x.strokeStyle = 'rgba(0,0,0,0.18)';
-    x.lineWidth = 2;
-    for (let y = 0; y <= H; y += 64) { x.beginPath(); x.moveTo(0, y); x.lineTo(W, y); x.stroke(); }
-    for (let xx = 0; xx <= W; xx += 128) { x.beginPath(); x.moveTo(xx, 0); x.lineTo(xx, H); x.stroke(); }
+    if (opts.brick) {
+      // brick courses (16 yd per repeat → ~5 px per course)
+      const bc = new THREE.Color(base);
+      for (let r = 0; r < H / 6; r++) {
+        for (let k = -1; k < W / 14 + 1; k++) {
+          const v = 0.82 + rng() * 0.3;
+          x.fillStyle = `rgb(${bc.r * 255 * v | 0},${bc.g * 255 * v | 0},${bc.b * 255 * v | 0})`;
+          x.fillRect(k * 14 + (r % 2) * 7, r * 6, 13, 5);
+        }
+      }
+      x.fillStyle = 'rgba(0,0,0,0.12)';
+      for (let y = 0; y < H; y += 6) x.fillRect(0, y + 5, W, 1);
+      // limestone bands
+      x.fillStyle = '#cfc6b4';
+      x.fillRect(0, 120, W, 10);
+      x.fillRect(0, 440, W, 12);
+    } else {
+      // panel joints
+      x.strokeStyle = 'rgba(0,0,0,0.18)';
+      x.lineWidth = 2;
+      for (let y = 0; y <= H; y += 64) { x.beginPath(); x.moveTo(0, y); x.lineTo(W, y); x.stroke(); }
+      for (let xx = 0; xx <= W; xx += 128) { x.beginPath(); x.moveTo(xx, 0); x.lineTo(xx, H); x.stroke(); }
+    }
     // columns
     for (const cx of [0, 256]) {
       const g = x.createLinearGradient(cx - 20, 0, cx + 20, 0);
@@ -579,13 +597,14 @@ export function exteriorTex(key, base = '#b8b6ae', accent = '#1a3a7a', opts = {}
       x.fillRect(cx - 20, 0, 40, H);
       x.fillRect(cx + W - 20, 0, 40, H);
     }
-    // concourse band: dark openings with warm light behind
+    // concourse band: dark openings with warm light behind (arched in brick)
     const oy = opts.bandY ?? 300, oh = opts.bandH ?? 84;
     for (let k = 0; k < 4; k++) {
       const ox = 32 + k * 128;
       if (k === 0 || k === 2) continue;
       x.fillStyle = '#1a1814';
       x.fillRect(ox, oy, 192 - 64, oh);
+      if (opts.brick) { x.beginPath(); x.ellipse(ox + 64, oy, 64, 26, 0, Math.PI, 0); x.fill(); ex.fillStyle = '#ffc890'; ex.globalAlpha = 0.4; ex.beginPath(); ex.ellipse(ox + 64, oy + 2, 60, 22, 0, Math.PI, 0); ex.fill(); ex.globalAlpha = 1; }
       ex.fillStyle = '#ffc890';
       ex.globalAlpha = 0.55;
       ex.fillRect(ox + 4, oy + 4, 120, oh - 8);

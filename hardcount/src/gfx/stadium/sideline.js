@@ -69,7 +69,8 @@ export function buildSideline(ctx, B, opts = {}) {
   }
 
   // ---- players on the sideline
-  const nPlayers = opts.players ?? 14;
+  const low = ctx.quality === 'low';
+  const nPlayers = Math.round((opts.players ?? 14) * (low ? 0.5 : 1));
   for (const s of [-1, 1]) {
     const team = s < 0 ? home : away;
     const kit = kitOf(team, s < 0 ? 'home' : 'away');
@@ -100,7 +101,7 @@ export function buildSideline(ctx, B, opts = {}) {
   }
 
   // ---- photographers: kneeling behind the end lines, a few standing near the corners
-  const nPh = opts.photographers ?? 8;
+  const nPh = Math.round((opts.photographers ?? 8) * (low ? 0.5 : 1));
   for (const s of [-1, 1]) {
     for (let i = 0; i < nPh; i++) {
       const behind = i < nPh * 0.65;
@@ -119,7 +120,7 @@ export function buildSideline(ctx, B, opts = {}) {
   // ---- cheerleaders: home sideline, by the end zones, facing the stands
   if (opts.cheer !== false) {
     const kit = kitOf(home, 'home');
-    const n = opts.cheer === 'big' ? 7 : 5;
+    const n = low ? 3 : opts.cheer === 'big' ? 7 : 5;
     for (const zg of [-1, 1]) {
       for (let i = 0; i < n; i++) {
         list.push({

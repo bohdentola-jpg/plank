@@ -142,7 +142,8 @@ export function ringFlat(gb, path, ss, d0, d1, y, opts = {}) {
  * Returns { seats, top, dEnd, hAt(r) }.
  */
 export function buildTier(B, path, spec) {
-  const ss = path.samples(spec.s0, spec.s1, spec.step || 6);
+  const low = B.ctx?.quality === 'low';
+  const ss = path.samples(spec.s0, spec.s1, spec.step || (low ? 12 : 6), low ? 0.2 : 0.11);
   const rows = spec.rows, depth = spec.depth || 0.95;
   const rise0 = spec.rise || 0.45, grow = spec.riseGrow || 0;
   const hAt = (r) => spec.h0 + r * rise0 + grow * r * r * 0.5;

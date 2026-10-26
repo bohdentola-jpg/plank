@@ -16,7 +16,6 @@ import { wantFn, angleAt, adWallMat, ribbonMat, suiteMat, edgeBanks, videoBoard 
 
 export const SUN_AZ = 2.0;
 export const WIND_DIR = 0.4;
-export const POOL = [95, 115];
 export const FLAG_COLOR = '#f26a1b';
 
 export function paint(ctx) {
@@ -111,7 +110,7 @@ export async function build(ctx) {
   const P = path.P;
   B.get('adwall', () => adWallMat(ctx, 'adwall8', BRANDS.slice(4, 12)));
   B.get('suites', () => suiteMat(ctx, 'suites-foundry'));
-  B.get('exterior', (c) => exteriorMat(c, 'foundry', '#8a5a48', home.colors.secondary));
+  B.get('exterior', (c) => exteriorMat(c, 'foundry', '#7a3a2c', home.colors.secondary, { brick: true }));
   const rib = ribbonMat(ctx, ['DETROIT MOTORMEN', 'IRONSIDE AUTO', 'FULL THROTTLE', 'RAZOR FUEL', 'DEFENSE!', 'BOLT COLA', 'MOTOR CITY', 'STATIC TIRES']);
   B.get('ribbon', () => rib.mat);
   B.get('roofdeck', (c) => spill(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.5, side: THREE.DoubleSide }), c, 0.3, { direct: 0.12 }));
@@ -281,6 +280,7 @@ export async function build(ctx) {
 
   return {
     seats: [...lower.seats, ...north.seats, ...sides.flatMap((s) => s.t.seats)],
+    pool: [path.ax + sides[0].t.dEnd + 3, path.az + lower.dEnd + 18],
     boards: [board],
     disposables,
     sideline: { benchOff: 8.5, cheer: true, photographers: 10, coaches: 4, players: 16, chainSide: 1, vest: '#f26a1b', heaters: ctx.weather === 'snow' },
