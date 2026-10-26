@@ -7,6 +7,7 @@
 //   mode=bases    every BASE stance (bases=stand,ready… | all)
 //   mode=run      runners at 2 / 5 / 8 / 10.5 yd/s, backpedal, shuffle, ball carrier, a banking curve, kick-slide
 //   mode=closeup  head / helmet / facemask turntable: helmets on (every facemask + visors) and off (hair styles)
+//                 which=helmet|bare  finish=chrome|matte|pearl|gloss  stripe=skunk|bolt|…  (override every shell)
 //   mode=huddle   six players in the huddle around a first-person camera at QB eye height (the main menu shot)
 //   mode=ball     footballs (pro + striped) spinning in a spiral
 //   mode=perf     22 players running around; shows the animation cost per frame
@@ -276,8 +277,11 @@ registerScreen('gallery', () => {
     const hairs = ['afro', 'dreads', 'mohawk', 'flat', 'long', 'curly'];
     const beards = ['none', 'full', 'goatee', 'stubble', 'chinstrap', 'none'];
     const which = q.get('which') || 'both';
+    const finish = q.get('finish');      // finish=gloss|matte|pearl|chrome overrides every shell
+    const stripe = q.get('stripe');      // stripe=none|single|double|triple|skunk|bolt|wings
     for (let i = 0; i < 6; i++) {
-      const team = teams[i % 4];
+      let team = teams[i % 4];
+      if (finish || stripe) team = { ...team, helmet: { ...team.helmet, ...(finish ? { finish } : {}), ...(stripe ? { stripe } : {}) } };
       const base = rosterPick(team, ['QB', 'WR', 'G', 'LB', 'DL', 'K'][i]);
       if (which !== 'bare') {
         const p = { ...base, look: { ...base.look, facemask: masks[i], visor: visors[i], eyeBlack: i % 2 ? 'stripe' : 'sticker' } };
