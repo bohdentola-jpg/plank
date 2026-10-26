@@ -991,10 +991,11 @@ function organ(B, ref) {
  * a little scoop into pitch, and `players` slightly detuned and staggered.
  */
 function brassNote(B, ref, o) {
-  const { len = 2.4, players = 3, cents = 6, bright = 1, form, bell, attack = 0.035, blat = 0.25, scoop = 0.035, sus = 0.82 } = o;
+  const { len = 2.2, players = 2, cents = 7, bright = 1, form, bell, attack = 0.035, blat = 0.25, scoop = 0.035, sus = 0.82 } = o;
   const f0 = mtof(ref), sr = B.sr / 2, buf = B.make(2, len, sr), n = buf.length;
   const L = buf.getChannelData(0), R = buf.getChannelData(1);
-  const H = Math.max(1, Math.min(36, Math.floor((sr * 0.45) / f0)));
+  // harmonics up to where the bell has rolled them off (≈ −20 dB)
+  const H = Math.max(1, Math.min(30, Math.floor(Math.min(sr * 0.45, bell * 1.8) / f0)));
   const w = new Float32Array(H + 1);
   for (let h = 1; h <= H; h++) {
     const f = h * f0;
@@ -1009,18 +1010,20 @@ function brassNote(B, ref, o) {
     const pan = players > 1 ? ((p / (players - 1)) * 2 - 1) * 0.6 : 0;
     const gl = Math.cos(((pan + 1) * Math.PI) / 4), gr = Math.sin(((pan + 1) * Math.PI) / 4);
     const vr = 4.8 + B.noise() * 0.6, vd = 0.0025 * (0.5 + 0.5 * B.noise());
-    let ph = B.noise() * 0.5 + 0.5;
+    let ph = B.noise() * 0.5 + 0.5, inc = 0;
     for (let i = off; i < n; i++) {
-      const t = (i - off) / sr;
       if (((i - off) & (K - 1)) === 0) {
+        const t = (i - off) / sr;
         // loudness envelope with the attack overshoot; harmonic h ∝ A^(1 + bright·(h−1)·0.3)
         const A = (1 - Math.exp(-t / attack)) * (1 + blat * Math.exp(-t / 0.07) * (1 - Math.exp(-t / 0.012))) * (sus + (1 - sus) * Math.exp(-t / 0.5));
-        for (let h = 1; h <= H; h++) amps[h] = w[h] * Math.pow(Math.min(1.3, A), 1 + bright * (h - 1) * 0.3);
+        const lA = Math.log(Math.max(1e-6, Math.min(1.3, A)));
+        for (let h = 1; h <= H; h++) amps[h] = w[h] * Math.exp(lA * (1 + bright * (h - 1) * 0.3));
+        inc = (f0 * det * (1 - scoop * Math.exp(-t / 0.04)) * (1 + vd * Math.sin(2 * Math.PI * vr * t) * Math.min(1, t / 0.4))) / sr;
       }
-      const f = f0 * det * (1 - scoop * Math.exp(-t / 0.04)) * (1 + vd * Math.sin(2 * Math.PI * vr * t) * Math.min(1, t / 0.4));
-      ph += f / sr;
-      let s = 0;
-      for (let h = 1; h <= H; h++) s += amps[h] * tsin(ph * h);
+      ph += inc;
+      if (ph > 1) ph -= 1;
+      let s = 0, x = ph;
+      for (let h = 1; h <= H; h++, x += ph) s += amps[h] * SIN[((x - Math.floor(x)) * SIN_N) | 0];
       L[i] += s * gl; R[i] += s * gr;
     }
   }
@@ -1044,14 +1047,18 @@ function timpani(B, ref) {
   const P = [[1, 1, 2.4], [1.504, 0.5, 1.5], [1.742, 0.22, 0.9], [2.0, 0.3, 1.1], [2.245, 0.12, 0.6], [2.494, 0.15, 0.7], [2.8, 0.06, 0.4], [0.68, 0.45, 0.12]];
   for (let c = 0; c < 2; c++) {
     const d = c ? buf.getChannelData(1) : buf.getChannelData(0);
+    const ka = Math.exp(-1 / (0.09 * sr)), atk = sr * 0.003;
     for (const [r, a, dec] of P) {
-      let ph = B.noise();
+      let ph = B.noise() * 0.5 + 0.5, bend = 0.012, e = a;
       const fr = f * r * (c ? 1.0015 : 1);
       if (fr > sr * 0.45) continue;
-      for (let i = 0; i < n; i++) {
-        const t = i / sr;
-        ph += (fr * (1 + 0.012 * Math.exp(-t / 0.09))) / sr;
-        d[i] += tsin(ph) * a * Math.exp(-t / dec) * Math.min(1, t / 0.003);
+      const inc = fr / sr, kd = Math.exp(-1 / (dec * sr));
+      const m = Math.min(n, Math.ceil(dec * 9 * sr));
+      for (let i = 0; i < m; i++) {
+        ph += inc * (1 + bend);
+        if (ph > 1) ph -= 1;
+        d[i] += SIN[(ph * SIN_N) | 0] * e * (i < atk ? i / atk : 1);
+        bend *= ka; e *= kd;
       }
     }
     let lp = 0;
@@ -1079,10 +1086,10 @@ function tonewheel(B, ref) {
 
 const MS = {
   saw: { step: 6, loop: true, fn: (B, r) => ensemble(B, r, { voices: 7, spread: 24 }) },
-  trumpet: { step: 5, fn: (B, r) => brassNote(B, r, { form: [[1250, 1], [2500, 0.45]], bell: 3800, bright: 1.25, attack: 0.03, blat: 0.32, players: 3 }) },
-  horn: { step: 5, fn: (B, r) => brassNote(B, r, { form: [[460, 1], [950, 0.3]], bell: 1700, bright: 0.75, attack: 0.055, blat: 0.12, players: 3, cents: 5 }) },
-  bone: { step: 5, fn: (B, r) => brassNote(B, r, { form: [[580, 1], [1250, 0.4]], bell: 2500, bright: 1.05, attack: 0.04, blat: 0.25, players: 3 }) },
-  tuba: { step: 5, fn: (B, r) => brassNote(B, r, { form: [[240, 1], [480, 0.35]], bell: 850, bright: 0.8, attack: 0.05, blat: 0.15, players: 2, cents: 4, len: 2 }) },
+  trumpet: { step: 5, fn: (B, r) => brassNote(B, r, { form: [[1250, 1], [2500, 0.45]], bell: 3800, bright: 1.25, attack: 0.03, blat: 0.32 }) },
+  horn: { step: 5, fn: (B, r) => brassNote(B, r, { form: [[460, 1], [950, 0.3]], bell: 1700, bright: 0.75, attack: 0.055, blat: 0.12, cents: 6 }) },
+  bone: { step: 5, fn: (B, r) => brassNote(B, r, { form: [[580, 1], [1250, 0.4]], bell: 2500, bright: 1.05, attack: 0.04, blat: 0.25 }) },
+  tuba: { step: 5, fn: (B, r) => brassNote(B, r, { form: [[240, 1], [480, 0.35]], bell: 850, bright: 0.8, attack: 0.05, blat: 0.15, cents: 5, len: 2 }) },
   timp: { step: 2, fn: timpani },
   tonewheel: { step: 5, loop: true, fn: tonewheel },
   glock: { step: 6, fn: (B, r) => fmOne(B, r, { len: 1.8, partials: [[1, 1, 1.3], [2.76, 0.28, 0.45], [5.4, 0.1, 0.18], [8.93, 0.05, 0.08]] }) },

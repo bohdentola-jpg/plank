@@ -19,6 +19,7 @@
 //   ambience('stadium'|'dome'|'park'|'bedroom'|null)          venue bed + acoustic (audio.setSpace)
 //   stopAll()                                                 silence loops + bed (between screens)
 //   prewarm()                                                 render every buffer now (loading screen)
+//   band('cadence'|'fight'|'charge'|null)                     alias of band.play() (band.js)
 
 import { audio } from './audio.js';
 import {
@@ -1226,7 +1227,7 @@ class Sfx {
         L.noise('pink').connect(L.filt('lowpass', 900, 0.5)).connect(L.gRoar).connect(L.out);
       });
     }
-    this._set(L, 0, L.g.gain, Math.pow(a, 0.8) * 0.3, 0.15);
+    this._set(L, 0, L.g.gain, Math.pow(a, 0.8) * 0.2, 0.15);
     this._set(L, 1, L.lp.frequency, 2500 + 8500 * a, 0.2, 0.02);
     this._set(L, 2, L.gRoar.gain, a * a * 0.12, 0.3);
     this._idle(L, a > 0.002);
@@ -1488,6 +1489,11 @@ class Sfx {
   chains() {
     if (!this._ok()) return;
     this._play('chains', { gain: 0.35, rate: 0.95 + Math.random() * 0.1, pan: (Math.random() < 0.5 ? -1 : 1) * (0.4 + Math.random() * 0.3), space: 0.12 });
+  }
+
+  /** DESIGN.md's sfx.band(): forwards to band.play() (band.js), loaded on first use. */
+  band(piece) {
+    import('./band.js').then((m) => m.band.play(piece)).catch((e) => console.error(e));
   }
 
   // ---- UI / TV -------------------------------------------------------------------

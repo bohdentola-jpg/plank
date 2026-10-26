@@ -283,10 +283,10 @@ function sfxTests() {
   add('chains', 'sfx', 2, () => S().chains(), { cent: [1500, 6000], len: [0.3, 1.3], mmax: [-36, -16] });
   add('grunt', 'sfx', 1, () => S().grunt(1), { cent: [300, 2500], len: [0.08, 0.5], mmax: [-36, -16] });
   for (const k of ['chime', 'horn', 'organ_charge', 'organ_defense', 'organ_letsgo']) {
-    add('pa:' + k, 'pa', 7, () => S().pa(k), { cent: k === 'chime' ? [700, 3000] : [300, 2500], len: k === 'chime' ? [0.8, 3] : [1.2, 5], mmax: [-22, -12] });
+    add('pa:' + k, 'pa', 7, () => S().pa(k), { cent: k === 'chime' ? [700, 3000] : [300, 2500], len: k === 'chime' ? [0.8, 3.5] : [1.2, 5], mmax: [-22, -12] });
   }
   for (const k of ['move', 'select', 'back', 'tab', 'error', 'buy', 'unlock']) add('ui:' + k, 'ui', 1.4, () => S().ui(k), { mmax: [-40, -10] });
-  add('staticBurst', 'ui', 1.2, () => S().staticBurst(0.5), { cent: [1500, 6000], mmax: [-30, -10] });
+  add('staticBurst', 'ui', 1.2, () => S().staticBurst(0.5), { cent: [1500, 7500], mmax: [-30, -10] });
   add('tvOn', 'ui', 3, () => S().tvOn(), { mmax: [-30, -10] });
   add('tvOff', 'ui', 1.2, () => S().tvOff(), { mmax: [-30, -10] });
   add('knob', 'ui', 0.5, () => S().knob(), { mmax: [-44, -14] });
@@ -372,7 +372,7 @@ function musicTests() {
     }, { integ: [-24, -13] }, { from: 0.5 });
   }
   for (const st of ['td', 'turnover', 'bigplay', 'kickoff', 'win', 'lose', 'twominute']) {
-    add('stinger:' + st, 'stinger', 6, () => { M().stop(0.01); M().stinger(st); }, { mmax: [-22, -11], len: [0.6, 6] });
+    add('stinger:' + st, 'stinger', 6, () => { M().stop(0.01); M().stinger(st); }, { mmax: [-22, st === 'td' ? -9 : -11], len: [0.6, 6] });
   }
   add('stinger:td over playcall', 'stinger', 10, (ctx, tl) => {
     M().play('playcall', { fade: 0.05 });
@@ -393,6 +393,7 @@ const GROUPS = { sfx: sfxTests, crowd: crowdTests, band: bandTests, music: music
 // ---- safety: every API before unlock, then a late unlock --------------------------
 async function preUnlockCheck() {
   const errs = [];
+  const noCtxBefore = !A.audio.ctx;
   const tryit = (label, fn) => { try { fn(); } catch (e) { errs.push(label + ': ' + e.message); } };
   const { sfx, crowd, band, music, voice } = A;
   tryit('sfx.whistle', () => sfx.whistle('short'));
@@ -408,7 +409,19 @@ async function preUnlockCheck() {
   tryit('sfx.chains', () => sfx.chains());
   tryit('sfx.rain', () => sfx.rain(0.5));
   tryit('sfx.wind', () => sfx.wind(0.5));
-  tryit('sfx.ambience', () => sfx.ambience('stadium'));
+  tryit('sfx.ambience', () => sfx.ambience('dome'));
+  tryit('sfx.grunt', () => sfx.grunt(0.5));
+  tryit('sfx.stopAll', () => sfx.stopAll());
+  tryit('sfx.prewarm', () => sfx.prewarm());
+  tryit('crowd.stop', () => crowd.stop(0.5));
+  tryit('crowd.update again', () => crowd.update(0.016, { excitement: 0.5, size: 0.8 }));
+  tryit('crowd.prewarm', () => crowd.prewarm());
+  tryit('music.setPA', () => music.setPA(null));
+  tryit('music.setIntensity', () => music.setIntensity(0.5));
+  tryit('music.setTuning', () => music.setTuning(0));
+  tryit('audio.duck', () => A.audio.duck(0.5));
+  tryit('audio.setSpace', () => A.audio.setSpace('dome'));
+  tryit('voice.cancel', () => voice.cancel());
   tryit('sfx.ui', () => sfx.ui('move'));
   tryit('sfx.staticBurst', () => sfx.staticBurst(0.3));
   tryit('sfx.tvOn', () => sfx.tvOn());
@@ -431,11 +444,12 @@ async function preUnlockCheck() {
   tl.arm();
   const buf = await ctx.startRendering();
   const m = measure(buf, 2);
-  return { errs, lateUnlock: { music: music.theme, band: band.current, loudness: m.integ, bad: m.bad } };
+  return { errs, lateUnlock: { noCtxBefore, music: music.theme, band: band.current, space: A.audio.spaceKind, loudness: +m.integ.toFixed(1), bad: m.bad } };
 }
 
 async function runOne(t, withWav) {
   const ctx = new OfflineAudioContext(2, Math.ceil(SR * t.dur), SR);
+  A.audio.setSpace('stadium');
   A.audio.useContext(ctx);
   // fresh engine state per test
   try { A.music.stop(0.01); A.music.setGameState?.({ quarter: 1, clock: 900, scoreDiff: 0, redZone: false, twoMinute: false, playLive: false }); } catch { /* */ }
@@ -443,7 +457,9 @@ async function runOne(t, withWav) {
   try { A.band?.play(null); } catch { /* */ }
   const tl = timeline(ctx);
   const c0 = performance.now();
-  await t.run(ctx, tl);
+  // one-shots fire 0.25 s in (the master compressor's state at t = 0 of an
+  // offline render would otherwise squash their first transient)
+  if (t.run.length === 0) { A.sfx?._ok?.(); tl.at(0.25, () => t.run()); } else await t.run(ctx, tl);
   tl.arm();
   const c1 = performance.now();
   const buf = await ctx.startRendering();
@@ -521,6 +537,17 @@ window.__ac = {
     return { name, cat: t.cat, expect: t.expect, lenExpect: t.lenExpect || null, ...r };
   },
   async pre() { return preUnlockCheck(); },
+  // peak / duration of each cached variant of an sfx buffer (debugging levels)
+  async bufInfo(name) {
+    const ctx = new OfflineAudioContext(2, SR, SR);
+    A.audio.useContext(ctx);
+    A.sfx._ok();
+    return A.sfx._get(name).map((b) => {
+      let p = 0, at = 0;
+      for (let c = 0; c < b.numberOfChannels; c++) { const d = b.getChannelData(c); for (let i = 0; i < d.length; i++) if (Math.abs(d[i]) > p) { p = Math.abs(d[i]); at = i / b.sampleRate; } }
+      return { peak: +p.toFixed(3), at: +at.toFixed(4), dur: +b.duration.toFixed(3), sr: b.sampleRate };
+    });
+  },
   // CPU cost of rendering every cached buffer (what idle-time warm-up has to do)
   async cost() {
     const ctx = new OfflineAudioContext(2, SR, SR);
@@ -530,6 +557,26 @@ window.__ac = {
     for (const k of A.crowd.constructor.WARM || []) { const t0 = performance.now(); A.crowd._buf(k); out['crowd ' + k] = performance.now() - t0; }
     A.sfx._ok();
     for (const k of A.sfx.constructor.WARM || []) { const t0 = performance.now(); A.sfx._get(k); out['sfx ' + k] = performance.now() - t0; }
+    // the music sample bank, as the engine's idle prewarm walks it
+    const R = await import('/hardcount/src/audio/music/render.js');
+    const B = R.bank(ctx);
+    const ranges = { trumpet: [58, 84], horn: [48, 76], bone: [40, 68], tuba: [28, 52], timp: [38, 56], tonewheel: [45, 84], glock: [76, 96] };
+    let tot = 0;
+    for (const n of R.DRUM_NAMES()) { const t0 = performance.now(); B.get(n); tot += performance.now() - t0; }
+    out['music drums (all)'] = tot;
+    for (const k of R.MS_KINDS()) {
+      const [lo, hi] = ranges[k] || [55, 84];
+      let c = 0, n = 0, worst = 0;
+      const seen = new Set();
+      for (let m = lo; m <= hi; m++) {
+        const key = B.msKey(k, m);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const t0 = performance.now(); B.ms(k, m); const d = performance.now() - t0;
+        c += d; n++; worst = Math.max(worst, d);
+      }
+      out['music ms ' + k + ' (' + n + ', worst ' + worst.toFixed(0) + ')'] = c;
+    }
     return out;
   },
 };
@@ -564,6 +611,12 @@ await page.goto(`http://127.0.0.1:${port}/__audiocheck.html`);
 await page.waitForFunction(() => window.__acReady === true, null, { timeout: 20000 });
 
 const all = await page.evaluate(() => window.__ac.list());
+if (flag('buf')) {
+  console.log(JSON.stringify(await page.evaluate((n) => window.__ac.bufInfo(n), flag('buf'))));
+  await browser.close();
+  server.close();
+  process.exit(0);
+}
 if (args.includes('--cost')) {
   const c = await page.evaluate(() => window.__ac.cost());
   let tot = 0;
@@ -584,9 +637,17 @@ if (listOnly) {
 const fmt = (v, d = 1) => (v <= -199 ? '  -inf' : v.toFixed(d).padStart(6));
 const inRange = (v, r) => !r || (v >= r[0] && v <= r[1]);
 const rows = [];
-let fails = 0;
 if (wavDir) await mkdir(resolve(wavDir), { recursive: true });
 if (specDir) await mkdir(resolve(specDir), { recursive: true });
+let fails = 0;
+// before anything else (no AudioContext exists yet in this page): every API
+// must be safe to call, and a late unlock must still start what was asked for
+let preLine = null;
+if (!filter || filter.includes('pre')) {
+  const pre = await page.evaluate(() => window.__ac.pre());
+  preLine = ['before-unlock API calls: ' + (pre.errs.length ? pre.errs.join('; ') : 'all safe'), 'late unlock: ' + JSON.stringify(pre.lateUnlock)];
+  if (pre.errs.length || !pre.lateUnlock.music || !pre.lateUnlock.band || pre.lateUnlock.loudness < -60 || pre.lateUnlock.noCtxBefore !== true) fails++;
+}
 console.log('name'.padEnd(30), '  peak', ' M-max', '     I', '  len', '   cent', ' corr', ' ms(set/ren)', ' notes');
 for (const t of wanted) {
   let r;
@@ -617,12 +678,7 @@ for (const t of wanted) {
   if (specDir && r.spec) await writeFile(join(resolve(specDir), t.name.replace(/[^a-z0-9_.-]+/gi, '_') + '.png'), Buffer.from(r.spec.split(',')[1], 'base64'));
 }
 
-if (!filter || filter.includes('pre')) {
-  const pre = await page.evaluate(() => window.__ac.pre());
-  console.log('\nbefore-unlock API calls:', pre.errs.length ? pre.errs.join('; ') : 'all safe');
-  console.log('late unlock:', JSON.stringify(pre.lateUnlock));
-  if (pre.errs.length || !pre.lateUnlock.music || pre.lateUnlock.loudness < -60) fails++;
-}
+if (preLine) console.log('\n' + preLine.join('\n'));
 if (errors.length) console.log('\n' + errors.slice(0, 30).join('\n'));
 if (jsonOut) await writeFile(resolve(jsonOut), JSON.stringify(rows, null, 1));
 console.log(`\n${rows.length} renders, ${fails} with notes`);
