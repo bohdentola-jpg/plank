@@ -360,8 +360,14 @@ function cardFrame(ctx, team, x, y, w, h, title, sub) {
   const avail = w - subW - 34;
   const ts = Math.min(13, 13 * avail / Math.max(1, vWidth(title, 13)));
   vText(ctx, title, x + 10, y + 14 + ts / 2, ts, { color: light ? '#10131a' : '#ffffff', weight: 0.15, skew: -0.15 });
-  // the bar fades to the team's dark colour on the right
-  if (sub) text(ctx, sub, x + w - 10, y + 19, { size: 10.5, color: luminance(team.colors.dark) > 0.55 ? '#141821' : '#e6ebf2', align: 'right', weight: 700, shadow: false });
+  // the bar fades to the team's dark colour on the right; a pill keeps the
+  // division text readable over any primary
+  if (sub) {
+    roundRect(ctx, x + w - subW - 18, y + 7, subW + 12, 16, 8);
+    ctx.fillStyle = 'rgba(6,8,14,0.55)';
+    ctx.fill();
+    text(ctx, sub, x + w - 12, y + 19, { size: 10.5, color: '#e6ebf2', align: 'right', weight: 700, shadow: false });
+  }
 }
 
 /** The in-game score bug, to see the 24 px logo where it lives. */
