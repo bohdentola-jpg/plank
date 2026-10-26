@@ -537,8 +537,9 @@ export class Match {
       if (e.recover <= 0 && !e.action) { e.act(e.base === 'lie_back' ? 'getup_back' : 'getup_front'); e.recover = 1.2; }
       return;
     }
-    // a person's man (unless he's left the stick alone in a career, when his job runs itself)
-    if (e.ctrl !== null && this.cmd[e.side] && this.userEnt[e.side] === e) {
+    // a person's man (unless he's left the stick alone in a career, when his job runs itself —
+    // and the kicker, holder and punter go through their steps on their own until the kick is away)
+    if (e.ctrl !== null && this.cmd[e.side] && this.userEnt[e.side] === e && !this.kickingUnit(e)) {
       if (userControl(this, e, this.cmd[e.side], dt, false) !== 'ai') return;
     }
     if (e.state === 'wrapping') return;
@@ -582,6 +583,15 @@ export class Match {
     if (a === 'zone') return D.zoneBrain(this, e, dt);
     if (a === 'spy') return D.spyBrain(this, e, dt);
     return D.pursue(this, e, dt);
+  }
+
+  /** Before the kick, the kicking team's man runs himself (the kick meter is the person's part). */
+  kickingUnit(e) {
+    if (e.side !== this.offSide) return false;
+    if (this.playKind === 'kickoff') return !this.kickoff?.kicked;
+    if (this.playKind === 'punt') return !this.punt?.kicked;
+    if (this.playKind === 'fg') return !this.fg?.kicked;
+    return false;
   }
 
   blockForReturner(e, dt) {

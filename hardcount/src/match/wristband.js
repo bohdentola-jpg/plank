@@ -132,7 +132,7 @@ export function wristbandTabs(m, side, kind, offCall = null) {
 }
 
 export class Wristband {
-  constructor({ m, side, kind, player, area, offCall = null, label = null }) {
+  constructor({ m, side, kind, player, area, offCall = null, label = null, clock = null }) {
     this.m = m;
     this.side = side;
     this.kind = kind;
@@ -147,6 +147,7 @@ export class Wristband {
     this.t = 0;
     this.done = null;
     this.label = label;
+    this.clockText = clock;      // replaces the game clock in the header (practice)
     this.coach = null;
     this.offCall = offCall;
     // open on a sensible page: the coach's idea of the situation
@@ -275,7 +276,7 @@ export class Wristband {
     const title = this.label || (this.kind === 'defense' ? 'DEFENSE' : this.kind === 'specialDef' ? 'SPECIAL TEAMS' : this.kind === 'kickoff' ? 'KICKOFF' : this.kind === 'return' ? 'RECEIVE' : this.kind === 'pat' ? 'THE TRY' : 'OFFENSE');
     vText(ctx, title, cx + 12, cy + (small ? 20 : 22), small ? 13 : 15, { color: team.colors.secondary === '#ffffff' ? '#ffd23a' : '#ffd23a', weight: 0.2 });
     const sit = m.tryMode ? downText(m) : this.kind === 'kickoff' || this.kind === 'return' ? 'KICKOFF' : `${downText(m)}  ·  ${m.field.spotText(m.los, m.offDir)}`;
-    text(ctx, `${sit}  ·  ${quarterText(m)} ${fmtClock(m.clock)}`, cx + cw - 12, cy + (small ? 18 : 20), { size: small ? 11 : 13, weight: 800, color: '#cfd5df', align: 'right', spacing: 1, shadow: false });
+    text(ctx, `${sit}  ·  ${this.clockText ?? `${quarterText(m)} ${fmtClock(m.clock)}`}`, cx + cw - 12, cy + (small ? 18 : 20), { size: small ? 11 : 13, weight: 800, color: '#cfd5df', align: 'right', spacing: 1, shadow: false });
     // tab strip
     const tab = this.tabs[this.tab];
     const ty = cy + hdrH - 10;

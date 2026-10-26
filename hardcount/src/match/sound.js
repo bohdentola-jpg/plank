@@ -26,6 +26,10 @@ export class MatchSound {
     this.indoor = opts.roof === 'dome';
     this.size = clamp((opts.capacity || 40000) / 70000, 0.08, 1);
     this.homeShare = opts.neutral ? 0.5 : 0.82;
+    // practice: no crowd, no band, no PA man — just the whistles and the pads
+    this.quiet = !!opts.quiet;
+    this.crowd = this.quiet ? { react() {} } : crowd;
+    this.band = this.quiet ? { play() {} } : band;
     this.unsub = m.on((ev) => this.onEvent(ev));
     try {
       sfx.ambience(opts.ambience || (this.indoor ? 'dome' : opts.capacity < 1000 ? 'park' : 'stadium'));
@@ -38,6 +42,8 @@ export class MatchSound {
     this.unsub?.();
     try { crowd.stop(1.2); band.play(null); sfx.footsteps(0); sfx.rain(0); sfx.wind(0); sfx.stopAll?.(); voice.cancel(); } catch { /* */ }
   }
+
+  say(text, kind = 'pa', chime = false) { if (!(this.quiet && kind === 'pa')) say(text, kind, chime); }
 
   /** Whose fans: 'home' / 'away' for a side. */
   fans(side) { return side; }
@@ -56,7 +62,7 @@ export class MatchSound {
     try {
       switch (ev.type) {
         case 'lineup':
-          if (m.playKind !== 'kickoff') { band.play(null); }
+          if (m.playKind !== 'kickoff') { this.band.play(null); }
           break;
         case 'hardCount': sfx.cadence('hard'); break;
         case 'snap':
@@ -65,99 +71,99 @@ export class MatchSound {
           break;
         case 'kick':
           sfx.kickBall(ev.kind === 'pat' ? 'fg' : ev.kind);
-          if (ev.kind === 'kickoff') crowd.react('cheer', 0.5, 'all');
+          if (ev.kind === 'kickoff') this.crowd.react('cheer', 0.5, 'all');
           break;
         case 'hit': {
           const p = ev.power || 0.4;
           sfx.hit(p, ev.kind === 'big' ? (Math.random() < 0.5 ? 'helmet' : 'pads') : ev.kind === 'truck' ? 'pads' : 'tackle');
           if (p > 0.55 && Math.random() < 0.6) sfx.grunt(0.5 + p * 0.4, 0.04);
-          if (ev.kind === 'big' && p > 0.7) { crowd.react('ooh', 0.6 + p * 0.3, 'all'); this.spike = Math.max(this.spike, 0.35); }
+          if (ev.kind === 'big' && p > 0.7) { this.crowd.react('ooh', 0.6 + p * 0.3, 'all'); this.spike = Math.max(this.spike, 0.35); }
           this.rumbleFor(ev.c, 0.4 + p * 0.6, 0.3 + p * 0.4, 120 + p * 160);
           this.rumbleFor(ev.d, 0.3 + p * 0.5, 0.2 + p * 0.3, 100 + p * 120);
           break;
         }
         case 'block': if (Math.random() < 0.3) sfx.hit(0.25, 'pads'); break;
-        case 'pancake': sfx.hit(0.7, 'ground'); crowd.react('ooh', 0.4, 'all'); break;
+        case 'pancake': sfx.hit(0.7, 'ground'); this.crowd.react('ooh', 0.4, 'all'); break;
         case 'catch':
           sfx.catchBall(ev.kind === 'dive' || ev.kind === 'high' ? 'body' : 'hands');
           this.rumbleFor(ev.e, 0.15, 0.35, 70);
           break;
-        case 'drop': sfx.catchBall('bobble'); crowd.react('aah', 0.6, 'all'); break;
+        case 'drop': sfx.catchBall('bobble'); this.crowd.react('aah', 0.6, 'all'); break;
         case 'throw':
-          if (ev.rec && (ev.plan?.dist || 0) > 20) { crowd.react('murmur', 0.5, 'all'); this.spike = Math.max(this.spike, 0.3); }
+          if (ev.rec && (ev.plan?.dist || 0) > 20) { this.crowd.react('murmur', 0.5, 'all'); this.spike = Math.max(this.spike, 0.3); }
           this.rumbleFor(ev.qb, 0.05, 0.25, 60);
           break;
         case 'interception':
-          crowd.react('gasp', 0.9, 'all');
-          crowd.react(ev.e.side === 'home' ? 'roar' : 'groan', 0.9, 'home');
+          this.crowd.react('gasp', 0.9, 'all');
+          this.crowd.react(ev.e.side === 'home' ? 'roar' : 'groan', 0.9, 'home');
           music.stinger('turnover');
           this.spike = 0.8;
           break;
         case 'fumble':
-          if (ev.c) { crowd.react('gasp', 0.8, 'all'); this.spike = 0.7; this.rumbleFor(ev.c, 0.8, 0.6, 260); }
+          if (ev.c) { this.crowd.react('gasp', 0.8, 'all'); this.spike = 0.7; this.rumbleFor(ev.c, 0.8, 0.6, 260); }
           break;
         case 'recover':
-          if (ev.turnover) { crowd.react(ev.e?.side === 'home' ? 'roar' : 'boo', 0.85, 'home'); music.stinger('turnover'); }
+          if (ev.turnover) { this.crowd.react(ev.e?.side === 'home' ? 'roar' : 'boo', 0.85, 'home'); music.stinger('turnover'); }
           break;
         case 'lateral': case 'pitch':
-          if (ev.type === 'lateral') { crowd.react('ooh', 0.7, 'all'); this.spike = Math.max(this.spike, 0.5); }
+          if (ev.type === 'lateral') { this.crowd.react('ooh', 0.7, 'all'); this.spike = Math.max(this.spike, 0.5); }
           break;
         case 'move':
-          if (ev.move === 'hurdle' || ev.move === 'spin' || ev.move === 'juke') { crowd.react('ooh', 0.45, 'all'); }
+          if (ev.move === 'hurdle' || ev.move === 'spin' || ev.move === 'juke') { this.crowd.react('ooh', 0.45, 'all'); }
           break;
-        case 'missedTackle': crowd.react('ooh', 0.4, 'all'); break;
-        case 'flag': sfx.flagThrow(); crowd.react('murmur', 0.6, 'all'); break;
+        case 'missedTackle': this.crowd.react('ooh', 0.4, 'all'); break;
+        case 'flag': sfx.flagThrow(); this.crowd.react('murmur', 0.6, 'all'); break;
         case 'firstDown':
           sfx.chains();
-          crowd.react('cheer', 0.55, ev.side === 'home' ? 'home' : 'away');
+          this.crowd.react('cheer', 0.55, ev.side === 'home' ? 'home' : 'away');
           break;
         case 'whistle': {
           const r = ev.result;
           sfx.whistle(m.flags.length ? 'double' : r?.type === 'td' ? 'long' : 'short');
           if (!r) break;
-          if (r.sack) { crowd.react(m.defSide === 'home' ? 'roar' : 'groan', 0.7, 'home'); }
-          else if (r.type === 'incomplete') crowd.react(m.offSide === 'home' ? 'aah' : 'cheer', 0.5, 'home');
-          else if (r.side === m.offSide && r.yards >= 20 && r.type !== 'td') { crowd.react(m.offSide === 'home' ? 'roar' : 'groan', 0.8, 'home'); music.stinger('bigplay'); }
+          if (r.sack) { this.crowd.react(m.defSide === 'home' ? 'roar' : 'groan', 0.7, 'home'); }
+          else if (r.type === 'incomplete') this.crowd.react(m.offSide === 'home' ? 'aah' : 'cheer', 0.5, 'home');
+          else if (r.side === m.offSide && r.yards >= 20 && r.type !== 'td') { this.crowd.react(m.offSide === 'home' ? 'roar' : 'groan', 0.8, 'home'); music.stinger('bigplay'); }
           break;
         }
         case 'score': {
           const home = ev.side === 'home';
           if (ev.kind === 'td') {
-            crowd.react(home ? 'roar' : 'boo', 1, 'home');
-            if (!home) crowd.react('cheer', 1, 'away');
+            this.crowd.react(home ? 'roar' : 'boo', 1, 'home');
+            if (!home) this.crowd.react('cheer', 1, 'away');
             music.stinger('td');
-            if (home) setTimeout(() => { try { band.play('fight'); } catch { /* */ } }, 2600);
+            if (home) setTimeout(() => { try { this.band.play('fight'); } catch { /* */ } }, 2600);
             const t = m.teams[ev.side];
-            setTimeout(() => say(`Touchdown, ${t.city}!`, 'pa', true), 1400);
+            setTimeout(() => this.say(`Touchdown, ${t.city}!`, 'pa', true), 1400);
             this.spike = 1;
             for (const side of ['home', 'away']) { const c = this.users[side]; if (c !== null && c !== undefined) input.rumble(side === ev.side ? 0.6 : 0.2, 0.8, 500, c); }
           } else if (ev.kind === 'fg') {
-            crowd.react(home ? 'cheer' : 'groan', 0.8, 'home');
-            setTimeout(() => say(`The kick is good. ${m.teams[ev.side].city} three.`, 'pa', true), 1200);
-          } else if (ev.kind === 'pat' || ev.kind === 'two') crowd.react(home ? 'cheer' : 'boo', 0.5, 'home');
-          else if (ev.kind === 'safety') { crowd.react(home ? 'roar' : 'groan', 0.9, 'home'); say('Safety!', 'pa', true); }
+            this.crowd.react(home ? 'cheer' : 'groan', 0.8, 'home');
+            setTimeout(() => this.say(`The kick is good. ${m.teams[ev.side].city} three.`, 'pa', true), 1200);
+          } else if (ev.kind === 'pat' || ev.kind === 'two') this.crowd.react(home ? 'cheer' : 'boo', 0.5, 'home');
+          else if (ev.kind === 'safety') { this.crowd.react(home ? 'roar' : 'groan', 0.9, 'home'); this.say('Safety!', 'pa', true); }
           break;
         }
-        case 'fgMissed': crowd.react(m.offSide === 'home' ? 'groan' : 'cheer', 0.8, 'home'); break;
-        case 'turnoverOnDowns': crowd.react(m.defSide === 'home' ? 'roar' : 'groan', 0.8, 'home'); break;
+        case 'fgMissed': this.crowd.react(m.offSide === 'home' ? 'groan' : 'cheer', 0.8, 'home'); break;
+        case 'turnoverOnDowns': this.crowd.react(m.defSide === 'home' ? 'roar' : 'groan', 0.8, 'home'); break;
         case 'twoMinute':
           music.stinger('twominute');
-          say('Two minutes remaining in the ' + (m.quarter === 2 ? 'half.' : 'game.'), 'pa', true);
+          this.say('Two minutes remaining in the ' + (m.quarter === 2 ? 'half.' : 'game.'), 'pa', true);
           break;
-        case 'timeout': sfx.whistle('short'); say(`Timeout, ${m.teams[ev.side].city}.`, 'pa', false); break;
+        case 'timeout': sfx.whistle('short'); this.say(`Timeout, ${m.teams[ev.side].city}.`, 'pa', false); break;
         case 'penaltyAccepted': {
           const f = ev.flag;
-          if (f) say(`${f.name.toLowerCase().replace(', offense', '')}, ${f.on === m.offSide ? 'offense' : 'defense'}. ${f.yards} yard penalty.`, 'ref');
+          if (f) this.say(`${f.name.toLowerCase().replace(', offense', '')}, ${f.on === m.offSide ? 'offense' : 'defense'}. ${f.yards} yard penalty.`, 'ref');
           break;
         }
         case 'quarterEnd': sfx.whistle('long'); break;
-        case 'halftime': band.play('fight'); music.play('halftime', { fade: 2 }); break;
+        case 'halftime': this.band.play('fight'); music.play('halftime', { fade: 2 }); break;
         case 'final': {
           const u = this.users.home !== null && this.users.home !== undefined ? 'home' : this.users.away !== null && this.users.away !== undefined ? 'away' : 'home';
           const won = m.score[u] > m.score[u === 'home' ? 'away' : 'home'];
           music.stinger(won ? 'win' : 'lose');
           setTimeout(() => { try { music.play(won ? 'postgame_win' : 'postgame_loss', { fade: 2.5 }); } catch { /* */ } }, 2600);
-          crowd.react(m.score.home > m.score.away ? 'roar' : 'boo', 1, 'home');
+          this.crowd.react(m.score.home > m.score.away ? 'roar' : 'boo', 1, 'home');
           break;
         }
         default: break;
@@ -187,7 +193,7 @@ export class MatchSound {
     const target = clamp(0.28 + close * 0.15 + late + redZone + live + thirdDownD + this.spike, 0, 1);
     this.excite += (target - this.excite) * (1 - Math.exp(-dt * 1.6));
     try {
-      crowd.update(dt, { excitement: this.excite, size: this.size, home: this.homeShare, indoor: this.indoor });
+      crowd.update(dt, { excitement: this.excite, size: this.quiet ? 0 : this.size, home: this.homeShare, indoor: this.indoor });
       band.update();
       music.update();
       // footsteps: the pace of the bodies nearest the camera
@@ -217,6 +223,7 @@ export class MatchSound {
   /** Between plays: the band, the organ, the PA. */
   betweenPlays() {
     const m = this.m;
+    if (this.quiet) return;
     try {
       const r = Math.random();
       if (m.offSide === 'away' && m.down >= 3 && r < 0.45) {

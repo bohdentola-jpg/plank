@@ -85,6 +85,21 @@ function doKick(m, e) {
   m.kickoff.kicked = true;
   m.kickoff.kickZ = b.z;
   m.emit('kick', { e, kind: 'kickoff', type, power });
+  userToCover(m);
+}
+
+/** A person on the kicking team takes the cover man nearest where the ball comes down. */
+function userToCover(m) {
+  const side = m.offSide;
+  if (!m.isUser(side) || (m.lock && m.lock.side === side) || m.settings.autoSwitch === false) return;
+  const land = landing(m);
+  let best = null, bd = Infinity;
+  for (const e of m.offense) {
+    if (e.role === 'K' || e.role === 'P' || !e.standing) continue;
+    const d = Math.hypot(e.x - land.x, e.z - land.z);
+    if (d < bd) { bd = d; best = e; }
+  }
+  if (best) m.setUserEnt(side, best);
 }
 
 // ================================================================== PUNT / FG
@@ -172,6 +187,7 @@ function doPunt(m, e) {
   m.punt.kickZ = e.z;
   m.tstat(e.side, 'punts');
   m.emit('kick', { e, kind: 'punt', power });
+  userToCover(m);
   // blocked?
   for (const d of m.foesOf(e)) {
     if (!d.standing || d.asg?.type !== 'puntRush') continue;
@@ -191,7 +207,8 @@ function doFieldGoal(m, e, holder) {
   const need = clamp(0.35 + (dist2 - 15) / 55 / (0.6 + 0.5 * kpw), 0.3, 1);
   const power = kp?.power ?? clamp(need + 0.08 + m.rng.gauss() * 0.06, 0.25, 1);
   const acc = kp?.acc ?? m.rng.gauss() * (0.06 + (1 - kac) * 0.3 + dist2 / 300);
-  const aim = { x: 0, z: F.end * dir };
+  // a person aims with the meter (the wind, the hash); the CPU aims down the middle
+  const aim = { x: kp?.aimX ?? 0, z: F.end * dir };
   const k = planKick(m, e, 'fg', power, acc, aim);
   const b = m.ball;
   b.state = 'air'; b.kind = 'kick';

@@ -415,7 +415,7 @@ export class Hud {
   draw(ctx, dt, s) {
     const m = s.m;
     if (s.icons) this.drawIcons(ctx, s.icons);
-    if (!s.hideBug) this.drawBug(ctx, m, s);
+    if (s.customBug) { this.bugIn = 0; s.customBug(ctx); } else if (!s.hideBug) this.drawBug(ctx, m, s);
     else this.bugIn = 0;
     this.drawCallPanel(ctx, s.callPanel);
     this.drawKickMeter(ctx, s.kick);

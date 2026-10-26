@@ -11,3 +11,5 @@ import './cointoss.js';
 import './options.js';
 import './records.js';
 import './career.js';
+import './playbook.js';
+import './practice.js';
