@@ -104,7 +104,7 @@ export class Presnap {
     if (m.phase !== 'presnap') { this.mode = 'idle'; return this.events; }
     const off = this.isOffense();
     const kick = m.playKind === 'kickoff' || m.playKind === 'fg' || m.playKind === 'punt' || m.tryMode === 'pat';
-    if (pl.pressed('create') || pl.pressed('touch')) {
+    if (pl.pressed('touch')) {
       if (m.callTimeout(this.side)) this.events.push({ type: 'timeout' });
       else this.events.push({ type: 'toast', text: m.timeouts[this.side] > 0 ? 'NOT NOW' : 'NO TIMEOUTS LEFT' });
       return this.events;
@@ -192,7 +192,7 @@ export class Presnap {
   describe() {
     const m = this.m;
     const off = this.isOffense();
-    if (m.playKind === 'kickoff' || m.playKind === 'fg' || m.playKind === 'punt' || m.tryMode === 'pat') return { hints: [['create', 'TIMEOUT']] };
+    if (m.playKind === 'kickoff' || m.playKind === 'fg' || m.playKind === 'punt' || m.tryMode === 'pat') return { hints: [['touch', 'TIMEOUT']] };
     switch (this.mode) {
       case 'hot': return { title: 'HOT ROUTE', sub: 'PICK A RECEIVER', hints: [['r1', 'CANCEL']], pickIcons: true };
       case 'motion': return { title: 'MOTION', sub: 'PICK A RECEIVER', hints: [['l1', 'CANCEL']], pickIcons: true };
@@ -201,8 +201,8 @@ export class Presnap {
       case 'defAudible': return { title: 'DEFENSIVE AUDIBLE', list: this.list, btns: ['square', 'triangle', 'circle', 'cross'] };
       default:
         return off
-          ? { hints: [['cross', 'SNAP'], ['square', 'HARD COUNT'], ['triangle', 'AUDIBLE'], ['r1', 'HOT ROUTE'], ['l1', 'MOTION'], ['create', 'TIMEOUT']] }
-          : { hints: [['circle', 'SWITCH'], ['triangle', 'AUDIBLE'], ['stick', 'SHIFT'], ['create', 'TIMEOUT']] };
+          ? { hints: [['cross', 'SNAP'], ['square', 'HARD COUNT'], ['triangle', 'AUDIBLE'], ['r1', 'HOT ROUTE'], ['l1', 'MOTION'], ['touch', 'TIMEOUT']] }
+          : { hints: [['circle', 'SWITCH'], ['triangle', 'AUDIBLE'], ['stick', 'SHIFT'], ['touch', 'TIMEOUT']] };
     }
   }
 }

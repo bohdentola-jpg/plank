@@ -30,6 +30,61 @@ const DEF_GROUPS = [
   { name: 'SHORT YARDAGE', ids: ['bear', 'goal', 'c1press', 'c0', 'spy', 'c3'] },
 ];
 
+/**
+ * The quarterback's forearm, held up under the card: a tapered, rounded limb
+ * with a little skin sheen and the jersey sleeve at the bottom.
+ * (x, y) is the top-left of the area the band sits on, w its width.
+ */
+export function drawForearm(ctx, x, y, w, h, opts = {}) {
+  const skin = opts.skin || '#8d5a3a';
+  const sleeve = opts.sleeve || '#1d3f94';
+  const trim = opts.trim || '#ffffff';
+  const cx = x + w / 2;
+  const top = y - 10, bot = y + h + 260;
+  const wTop = w * 0.62, wBot = w * 0.86;
+  ctx.save();
+  // the limb
+  ctx.beginPath();
+  ctx.moveTo(cx - wTop / 2, top);
+  ctx.bezierCurveTo(cx - wTop / 2 - w * 0.04, top + h * 0.5, cx - wBot / 2, bot - 120, cx - wBot / 2 - w * 0.02, bot);
+  ctx.lineTo(cx + wBot / 2 + w * 0.02, bot);
+  ctx.bezierCurveTo(cx + wBot / 2, bot - 120, cx + wTop / 2 + w * 0.04, top + h * 0.5, cx + wTop / 2, top);
+  ctx.closePath();
+  const g = ctx.createLinearGradient(cx - wBot / 2, 0, cx + wBot / 2, 0);
+  g.addColorStop(0, shadeSkin(skin, -0.55));
+  g.addColorStop(0.18, shadeSkin(skin, -0.2));
+  g.addColorStop(0.42, skin);
+  g.addColorStop(0.55, shadeSkin(skin, 0.12));
+  g.addColorStop(0.8, shadeSkin(skin, -0.25));
+  g.addColorStop(1, shadeSkin(skin, -0.6));
+  ctx.fillStyle = g;
+  ctx.fill();
+  // a soft highlight down the muscle
+  const hl = ctx.createLinearGradient(cx - w * 0.1, 0, cx + w * 0.12, 0);
+  hl.addColorStop(0, 'rgba(255,230,200,0)'); hl.addColorStop(0.5, 'rgba(255,230,200,0.12)'); hl.addColorStop(1, 'rgba(255,230,200,0)');
+  ctx.fillStyle = hl;
+  ctx.fill();
+  // the sleeve (team colour, a trim band)
+  const sy = y + h + 120;
+  ctx.beginPath();
+  ctx.moveTo(cx - wBot / 2 - 18, sy + 14); ctx.quadraticCurveTo(cx, sy - 16, cx + wBot / 2 + 18, sy + 14);
+  ctx.lineTo(cx + wBot / 2 + 40, bot + 40); ctx.lineTo(cx - wBot / 2 - 40, bot + 40); ctx.closePath();
+  const sg = ctx.createLinearGradient(cx - wBot / 2, 0, cx + wBot / 2, 0);
+  sg.addColorStop(0, shadeSkin(sleeve, -0.6)); sg.addColorStop(0.45, sleeve); sg.addColorStop(1, shadeSkin(sleeve, -0.6));
+  ctx.fillStyle = sg;
+  ctx.fill();
+  ctx.strokeStyle = trim; ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.moveTo(cx - wBot / 2 - 14, sy + 26); ctx.quadraticCurveTo(cx, sy - 2, cx + wBot / 2 + 14, sy + 26); ctx.stroke();
+  ctx.restore();
+}
+
+function shadeSkin(hex, f) {
+  const n = parseInt(String(hex).replace('#', ''), 16);
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  if (f < 0) { r *= 1 + f; g *= 1 + f; b *= 1 + f; } else { r += (255 - r) * f; g += (255 - g) * f; b += (255 - b) * f; }
+  return `rgb(${r | 0},${g | 0},${b | 0})`;
+}
+
 /** Per-player stick / d-pad / key navigation with auto-repeat. */
 class PadNav {
   constructor(pl) { this.pl = pl; this.r = {}; this.edges = new Set(); }
@@ -174,22 +229,11 @@ export class Wristband {
     const small = w < 600;
     ctx.save();
     ctx.translate(0, oy);
-    // the forearm under the band (glove at the bottom edge, sleeve at the top)
+    // the forearm under the band, the jersey sleeve below
     const team = m.teams[this.side];
-    const skin = '#8d5a3a';
-    ctx.save();
-    ctx.fillStyle = skin;
-    ctx.beginPath();
-    ctx.moveTo(x + w * 0.16, y + h + 140);
-    ctx.quadraticCurveTo(x + w * 0.08, y + h * 0.5, x + w * 0.2, y - 20);
-    ctx.lineTo(x + w * 0.8, y - 20);
-    ctx.quadraticCurveTo(x + w * 0.94, y + h * 0.5, x + w * 0.86, y + h + 140);
-    ctx.closePath();
-    const sg = ctx.createLinearGradient(x, 0, x + w, 0);
-    sg.addColorStop(0, '#5a3522'); sg.addColorStop(0.25, '#8d5a3a'); sg.addColorStop(0.6, '#a06a46'); sg.addColorStop(1, '#4f2e1d');
-    ctx.fillStyle = sg;
-    ctx.fill();
-    ctx.restore();
+    const qbLook = m.rosters?.[this.side]?.depth?.QB?.[0]?.look;
+    const kit = team.uniform?.home || {};
+    drawForearm(ctx, x, y, w, h, { skin: qbLook?.skinHex || '#8d5a3a', sleeve: kit.jersey || team.colors.primary, trim: kit.numbers || team.colors.secondary });
     // the elastic band
     const bx = x - 18, by = y - 26, bw = w + 36, bh = h + 52;
     ctx.save();

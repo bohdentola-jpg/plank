@@ -185,8 +185,12 @@ export class CameraDirector {
         L.set(0, 0, 0);
       }
     }
-    // never under the turf or inside the stands' first rows on the game cams
+    // never under the turf; the game cams stay in front of the goalposts
     P.y = Math.max(0.5, P.y);
+    if (s.shot === 'broadcast' || s.shot === 'low' || s.shot === 'high' || s.shot === 'kickoff') {
+      const lim = F.end - 1.2;
+      if (Math.abs(P.z) > lim) { const over = Math.abs(P.z) - lim; P.z = Math.sign(P.z) * lim; P.y += over * 0.6; }
+    }
     if (this.jump) {
       this.pos.copy(P); this.look.copy(L); this.fov = fov;
       this.jump = false;

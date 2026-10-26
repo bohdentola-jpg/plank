@@ -7,3 +7,4 @@ import './soundboard.js';
 import './gallery.js';
 import './venueview.js';
 import './match.js';
+import './cointoss.js';

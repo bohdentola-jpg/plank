@@ -266,8 +266,8 @@ class MatchScreen {
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.fillRect(0, 0, 1024, 768);
-    glossBar(ctx, 262, 110, 500, 46, '#2b3346', '#0a0d15');
-    vText(ctx, 'THE COIN TOSS', 512, 143, 26, { align: 'center', color: '#ffd23a', weight: 0.2 });
+    glossBar(ctx, 262, 176, 500, 46, '#2b3346', '#0a0d15');
+    vText(ctx, 'THE COIN TOSS', 512, 209, 26, { align: 'center', color: '#ffd23a', weight: 0.2 });
     // the coin
     const cx = 512, cy = 330;
     let sx = 1, face = T.result || 'heads';
@@ -356,7 +356,7 @@ class MatchScreen {
     if (!C) return;
     C.t += dt;
     // replay of the last play from the huddle
-    if ((input.p1.pressed('r3') || input.p1.pressed('touch')) && this.tape.last && !this.wbs.some((w) => w.done)) { this.openReplay(false); return; }
+    if (input.p1.pressed('create') && this.tape.last && !this.wbs.some((w) => w.done)) { this.openReplay(false); return; }
     for (const wb of this.wbs) {
       const r = wb.update(dt);
       if (r && !wb.applied) {
@@ -370,7 +370,7 @@ class MatchScreen {
     // timeouts from the huddle
     for (const side of this.humanSides()) {
       const pl = this.plFor(side);
-      if (pl.pressed('create') && m.phase === 'playcall') { if (!m.callTimeout(side)) this.hud.toast(m.timeouts[side] > 0 ? 'NOT NOW' : 'NO TIMEOUTS LEFT'); }
+      if (pl.pressed('touch') && m.phase === 'playcall') { if (!m.callTimeout(side)) this.hud.toast(m.timeouts[side] > 0 ? 'NOT NOW' : 'NO TIMEOUTS LEFT'); }
     }
     const allIn = this.wbs.every((w) => w.applied && w.t - w.doneAt > 0.5);
     const minT = this.wbs.length ? 0 : C.kind === 'kickoff' ? 1.0 : 1.6;
@@ -795,7 +795,7 @@ class MatchScreen {
     panel(ctx, 112, 96, 800, 560, { accentLen: 300 });
     vText(ctx, 'CONTROLS', 150, 148, 30, { color: '#fff', weight: 0.2 });
     const cols = [
-      ['PRE-SNAP (OFFENSE)', [['cross', 'SNAP'], ['square', 'HARD COUNT'], ['triangle', 'AUDIBLE'], ['r1', 'HOT ROUTE'], ['l1', 'MOTION'], ['create', 'TIMEOUT']]],
+      ['PRE-SNAP (OFFENSE)', [['cross', 'SNAP'], ['square', 'HARD COUNT'], ['triangle', 'AUDIBLE'], ['r1', 'HOT ROUTE'], ['l1', 'MOTION'], ['touch', 'TIMEOUT'], ['create', 'INSTANT REPLAY']]],
       ['PASSING', [['cross', 'THROW TO ✕'], ['circle', 'THROW TO ◯'], ['square', 'THROW TO □'], ['triangle', 'THROW TO △'], ['l1', 'PUMP FAKE'], ['r3', 'THROW AWAY'], ['l2', 'LEAD THE THROW (HOLD)']]],
       ['BALL CARRIER', [['r2', 'SPRINT'], ['square', 'STIFF ARM'], ['circle', 'SPIN'], ['triangle', 'HURDLE'], ['cross', 'DIVE'], ['l1', 'LATERAL'], ['r1', 'PROTECT BALL'], ['rstick', 'JUKE / TRUCK / SPIN']]],
       ['DEFENSE', [['circle', 'SWITCH PLAYER'], ['cross', 'DIVE TACKLE'], ['square', 'STRIP'], ['triangle', 'JUMP / SWAT'], ['rstick', 'HIT STICK ↑ / CUT ↓'], ['r2', 'SPRINT']]],
@@ -805,8 +805,8 @@ class MatchScreen {
       text(ctx, title, x, y, { size: 14, weight: 900, color: C.accent, spacing: 2 });
       list.forEach(([b, l], k) => {
         const yy = y + 28 + k * 25;
-        if (usingPad()) padGlyph(ctx, b === 'r1' ? 'R1' : b === 'l1' ? 'L1' : b === 'r2' ? 'R2' : b === 'l2' ? 'L2' : b === 'r3' ? 'R3' : b === 'create' ? 'CREATE' : b, x + 12, yy - 5, 10);
-        else keyCap(ctx, { cross: 'K', circle: 'L', square: 'J', triangle: 'I', l1: 'Q', r1: 'E', l2: 'Z', r2: 'SHIFT', r3: 'V', create: 'R', rstick: 'ARROWS' }[b] || b, x + 14, yy - 5, 18);
+        if (usingPad()) padGlyph(ctx, { r1: 'R1', l1: 'L1', r2: 'R2', l2: 'L2', r3: 'R3', create: 'CREATE', touch: 'TOUCHPAD', rstick: 'rstick' }[b] || b, x + 12, yy - 5, 10);
+        else keyCap(ctx, { cross: 'K', circle: 'L', square: 'J', triangle: 'I', l1: 'Q', r1: 'E', l2: 'Z', r2: 'SHIFT', r3: 'V', create: 'R', touch: 'T', rstick: 'ARROWS' }[b] || b, x + 14, yy - 5, 18);
         text(ctx, l, x + 44, yy, { size: 14, weight: 700, color: '#e6ebf5' });
       });
     });
@@ -1056,7 +1056,7 @@ class MatchScreen {
         ctx.fillStyle = 'rgba(0,0,0,0.28)';
         ctx.fillRect(0, 0, 1024, 768);
         for (const wb of this.wbs) wb.draw(ctx);
-        if (this.tape.last && !this.wbs.some((w) => w.done)) hints(ctx, [['r3', 'REPLAY'], ['create', 'TIMEOUT']], { y: 744 });
+        if (this.tape.last && !this.wbs.some((w) => w.done)) hints(ctx, [['create', 'REPLAY'], ['touch', 'TIMEOUT']], { y: 744 });
       } else {
         const off = m.teams[m.offSide];
         text(ctx, `${off.name.toUpperCase()} IN THE HUDDLE`, 512, 120, { size: 15, weight: 900, color: '#ffffff', align: 'center', spacing: 3 });
