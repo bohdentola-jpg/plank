@@ -5,4 +5,5 @@ import './sim2d.js';
 import './logosheet.js';
 import './soundboard.js';
 import './gallery.js';
+import './venueview.js';
 import './match.js';
