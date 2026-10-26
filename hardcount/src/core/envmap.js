@@ -33,7 +33,61 @@ function glow(scene, color, intensity, w, h, x, y, z, lookAt = [0, 0, 0]) {
   return m;
 }
 
+/** A horizontal band around the eye (stands, horizon city) from y0 to y1. */
+function ring(scene, color, intensity, radius, y0, y1) {
+  const g = new THREE.CylinderGeometry(radius, radius, y1 - y0, 32, 1, true);
+  g.translate(0, (y0 + y1) / 2, 0);
+  const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(intensity), side: THREE.BackSide }));
+  scene.add(m);
+  return m;
+}
+
+/** Stadium light banks all around at an elevation, aimed at the middle. */
+function banks(scene, n, color, intensity, radius, y, w = 4, h = 1.6, phase = 0) {
+  for (let i = 0; i < n; i++) {
+    const a = phase + (i / n) * Math.PI * 2;
+    glow(scene, color, intensity, w, h, Math.cos(a) * radius, y, Math.sin(a) * radius);
+  }
+}
+
 const PRESETS = {
+  // ---- stadiums (HARD COUNT venues): the field below, stands around, banks above
+  stadium_night(s) {
+    s.add(skyDome('#03050b', '#141c30', '#2a4a22', 1.8));
+    ring(s, '#1c2232', 1, 30, -2, 8);
+    ring(s, '#2a3044', 1, 30, -6, -2);
+    banks(s, 8, '#eef3ff', 16, 26, 15, 5, 1.8, 0.2);
+    banks(s, 6, '#ffffff', 6, 28, 9, 3, 1.0, 0.7);
+    glow(s, '#3a6a2c', 1.6, 50, 50, 0, -12, 0, [0, 0, 0]);
+  },
+  stadium_dusk(s) {
+    s.add(skyDome('#1c2450', '#d07a5a', '#2c3a1e', 1.3));
+    ring(s, '#3a3440', 1, 30, -2, 7);
+    glow(s, '#ffb070', 14, 6, 2.5, 30, 3, -8);
+    banks(s, 8, '#fff0dc', 8, 26, 15, 5, 1.8, 0.2);
+    glow(s, '#4a6a30', 1.6, 50, 50, 0, -12, 0, [0, 0, 0]);
+  },
+  stadium_day(s) {
+    s.add(skyDome('#3a72c4', '#cfe0f0', '#4a6a34', 1.4));
+    ring(s, '#7a7c82', 1, 30, -2, 7);
+    glow(s, '#fff6e0', 40, 3, 3, 18, 26, 14);
+    glow(s, '#5a8a3c', 2.2, 50, 50, 0, -12, 0, [0, 0, 0]);
+  },
+  stadium_overcast(s) {
+    s.add(skyDome('#9aa2ad', '#c4cad0', '#45583a', 1.0));
+    ring(s, '#5a5c62', 1, 30, -2, 7);
+    glow(s, '#ffffff', 2.5, 40, 20, 0, 25, 0);
+    banks(s, 8, '#ffffff', 3, 26, 15, 5, 1.8, 0.2);
+    glow(s, '#4a6a3a', 1.6, 50, 50, 0, -12, 0, [0, 0, 0]);
+  },
+  dome(s) {
+    s.add(skyDome('#0c0e14', '#1a1e28', '#2a5a2a', 1.6));
+    ring(s, '#2a2e3a', 1, 30, -3, 9);
+    ring(s, '#ffd9a0', 1.2, 29.5, 4.5, 5.2);
+    banks(s, 12, '#f4f8ff', 14, 20, 22, 4, 1.4, 0.1);
+    banks(s, 8, '#ffffff', 9, 12, 26, 3, 1.0, 0.4);
+    glow(s, '#3a7a34', 2.2, 50, 50, 0, -12, 0, [0, 0, 0]);
+  },
   studio(s) {
     s.add(skyDome('#1a1c21', '#2b2e35', '#0d0e10'));
     glow(s, '#ffffff', 5, 16, 6, 0, 16, 0);
