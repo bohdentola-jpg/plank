@@ -406,7 +406,7 @@ def('catch_side', {
 def('catch_onehand', {
   ball: true, legsLoco: 1, reach: [0.08, 0.22, 0.32, 0.4], reachHands: 'side', keys: [
     [0.0, { root: [0, -0.08, 0, 8, 0, 0], spine: [4, 0, 0], chest: [2, 0, 0] }],
-    [0.14, { root: [0, -0.02, 0, 4, -10, -6], spine: [-4, -8, -10], chest: [-4, -10, -8], armR: [160, 30, 10, 10, -20, 0, 20, 0.05], armL: [60, 40, 0, 40, 0, 0, 0, 0.4], neck: [-20, -20, 0] }],
+    [0.14, { root: [0, -0.02, 0, 4, -10, -6], spine: [-4, -8, -10], chest: [-4, -10, -8], armR: [160, 30, 10, 10, -20, 0, 20, 0.05], armL: [48, 12, 0, 45, 0, 0, 0, 0.5], neck: [-20, -20, 0] }],
     [0.28, { root: [0, 0.02, 0, 2, -12, -8], spine: [-6, -10, -14], chest: [-6, -12, -10], armR: [168, 25, 15, 6, -25, 0, 20, 0.35] }, 'h'],
     [0.42, { root: [0, -0.06, 0, 6, -4, -2], spine: [2, -4, -4], chest: [2, -4, -2], armR: [70, 60, 0, 90, 0, 0, 0, 0.7], neck: [-5, -5, 0] }],
     [0.6, { root: [0, -0.04, 0, 8, 0, 0], spine: [4, 0, 0], chest: [2, 0, 0], armR: [26, 62, -28, 112, -8, 0, 30, 0.7], armL: [20, 20, 0, 40, 0, 0, 0, 0.4], neck: [0, 0, 0] }],
@@ -454,11 +454,14 @@ def('dive_tackle', {
 });
 def('hit', {
   legsLoco: 0.6, keys: [
+    // gather: sink and coil, the hitting shoulder dropped
     [0.0, { root: [0, -0.24, -0.04, 34, 18, 4], spine: [12, 8, 0], chest: [8, 12, 0], neck: [-28, -12, 0], head: [-10, -8, 0], armL: [35, 50, 0, 100, 0, 0, 0, 0.9], armR: [45, 20, 0, 105, 0, 0, 0, 0.9], footL: [0.16, 0, 0.18, 10, 6], footR: [0.16, 0, -0.22, 35, 10] }],
-    [0.08, { root: [0, -0.21, 0.08, 36, 12, 2] }],
-    [0.15, { root: [0, -0.04, 0.22, 24, -18, -4], spine: [10, -10, 0], chest: [4, -14, 0], neck: [-20, 8, 0], head: [-8, 4, 0], armL: [110, 75, 0, 70, 0, 0, 0, 1], armR: [120, 55, 0, 65, 0, 0, 0, 1], clav: [12, 10], footL: [0.15, 0, 0.3, 0, 6], footR: [0.15, 0.02, -0.18, 50, 10] }, 'h'],
-    [0.3, { root: [0, -0.06, 0.24, 20, -10, 0], spine: [8, -5, 0], chest: [4, -6, 0], armL: [80, 70, 0, 80, 0, 0, 0, 0.9], armR: [85, 60, 0, 80, 0, 0, 0, 0.9], clav: [4, 4], footR: [0.14, 0.06, 0.05, 30, 8] }],
-    [0.5, { root: [0, -0.07, 0.1, 12, 0, 0], spine: [6, 0, 0], chest: [3, 0, 0], neck: [-8, 0, 0], head: [-4, 0, 0], arms: [30, 40, 0, 70, 0, 0, 0, 0.6], clav: [0, 0], footL: [0.14, 0, 0.2, 0, 6], footR: [0.14, 0, 0.0, 0, 8] }],
+    [0.08, { root: [0, -0.28, 0.08, 42, 14, 3], spine: [12, 6, 0], chest: [8, 10, 0], armL: [18, 40, 0, 112, 0, 0, 0, 0.95], armR: [22, 20, 0, 112, 0, 0, 0, 0.95], footR: [0.16, 0.02, -0.27, 48, 10] }],
+    // contact: hips explode up and through, back flat, eyes up, both fists ripping up into his chest
+    [0.15, { root: [0, -0.1, 0.34, 40, -16, -4], spine: [6, -10, 0], chest: [0, -14, 0], neck: [-36, 8, 0], head: [-12, 4, 0], armL: [120, 70, -10, 82, 0, 0, 0, 1], armR: [130, 50, -10, 74, 0, 0, 0, 1], clav: [14, 12], footL: [0.15, 0, 0.36, 0, 6], footR: [0.15, 0.07, -0.3, 64, 10] }, 'h'],
+    // drive through him
+    [0.28, { root: [0, -0.11, 0.44, 36, -8, 0], spine: [8, -5, 0], chest: [4, -6, 0], neck: [-28, 4, 0], head: [-8, 2, 0], armL: [102, 75, 0, 42, 0, 0, 0, 0.9], armR: [106, 65, 0, 38, 0, 0, 0, 0.9], clav: [8, 10], footL: [0.15, 0, 0.4, 5, 6], footR: [0.15, 0.1, -0.12, 40, 8] }],
+    [0.5, { root: [0, -0.07, 0.18, 14, 0, 0], spine: [6, 0, 0], chest: [3, 0, 0], neck: [-8, 0, 0], head: [-4, 0, 0], arms: [30, 40, 0, 70, 0, 0, 0, 0.6], clav: [0, 0], footL: [0.14, 0, 0.3, 0, 6], footR: [0.14, 0, 0.06, 0, 8] }],
   ],
 });
 def('cut', {
@@ -799,9 +802,21 @@ def('sig_timeout', {
 
 const DEFAULT_LAG = { neck: 0.03, head: 0.045 };
 
+// A clip that poses an arm by FK but never mentions that hand's IK owns the arm: the
+// stance underneath (ready, block, huddle … hold their hands by IK) lets go of it.
+function armsOwnHands(keys) {
+  const has = (names) => keys.some((k) => names.some((n) => k[1][n] !== undefined));
+  const first = { ...keys[0][1] };
+  let changed = false;
+  for (const [arm, hand] of [['armL', 'handL'], ['armR', 'handR']]) {
+    if (has([arm, 'arms']) && !has([hand, 'hands'])) { first[hand] = false; changed = true; }
+  }
+  return changed ? [[keys[0][0], first, keys[0][2]], ...keys.slice(1)] : keys;
+}
+
 function compileClip(name, o) {
   const dur = o.dur ?? ACTIONS[name]?.dur ?? o.keys[o.keys.length - 1][0];
-  const tracks = compileKeys(o.keys);
+  const tracks = compileKeys(armsOwnHands(o.keys));
   const mask = tracks.mask.slice();
   let legTracks = null;
   if (o.upper) {
