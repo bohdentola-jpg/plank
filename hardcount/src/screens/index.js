@@ -8,3 +8,5 @@ import './gallery.js';
 import './venueview.js';
 import './match.js';
 import './cointoss.js';
+import './options.js';
+import './records.js';

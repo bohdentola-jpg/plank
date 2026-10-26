@@ -194,8 +194,10 @@ registerScreen('cointoss', () => {
     text(ctx, LEAGUES[S.lg[side]].name, x + 124, y + 140, { size: 10, weight: 900, color: light ? '#333' : 'rgba(255,255,255,0.65)', spacing: 2 });
     if (focused) {
       if (usingPad()) { padGlyph(ctx, 'L1', x + 286, y + 18, 8); padGlyph(ctx, 'R1', x + 314, y + 18, 8); } else { keyCap(ctx, 'Q', x + 288, y + 18, 15); keyCap(ctx, 'E', x + 312, y + 18, 15); }
-      vText(ctx, '‹', x - 18, y + 86, 34, { color: '#ffd23a', weight: 0.25, skew: 0 });
-      vText(ctx, '›', x + 342, y + 86, 34, { color: '#ffd23a', weight: 0.25, skew: 0 });
+      ctx.fillStyle = '#ffd23a';
+      const ay = y + 75 + Math.sin(t * 6) * 2;
+      ctx.beginPath(); ctx.moveTo(x - 8, ay - 10); ctx.lineTo(x - 20, ay); ctx.lineTo(x - 8, ay + 10); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(x + 338, ay - 10); ctx.lineTo(x + 350, ay); ctx.lineTo(x + 338, ay + 10); ctx.closePath(); ctx.fill();
     }
   }
 
@@ -230,13 +232,14 @@ registerScreen('cointoss', () => {
       // the captains face each other at the 50, the ref between them
       const cA = cap.away, cH = cap.home;
       const breathe = Math.sin(t * 1.3) * 0.01;
-      cA?.model.update(dt, blankA({ x: -1.15, z: 0, heading: Math.PI / 2, base: 'stand', look: { x: 0, y: 1.7, z: 0.4 } }));
-      cH?.model.update(dt, blankA({ x: 1.15, z: 0, heading: -Math.PI / 2, base: 'stand', look: { x: 0, y: 1.7, z: 0.4 } }));
+      // (the camera looks up the field, so the visitors on +x are on the left, like their card)
+      cA?.model.update(dt, blankA({ x: 1.15, z: 0, heading: -Math.PI / 2, base: 'stand', look: { x: 0, y: 1.7, z: 0.4 } }));
+      cH?.model.update(dt, blankA({ x: -1.15, z: 0, heading: Math.PI / 2, base: 'stand', look: { x: 0, y: 1.7, z: 0.4 } }));
       ref?.update(dt, blankA({ x: 0, z: 0.9, heading: Math.PI, base: 'ref', look: { x: 0, y: 1.6, z: -2 } }));
       // a slow drift around the three of them
-      const a = -0.32 + Math.sin(t * 0.12) * 0.12;
-      camera.position.set(Math.sin(a) * 6.2, 1.55 + breathe, -Math.cos(a) * 6.2);
-      camera.lookAt(0, 1.32, 0.2);
+      const a = -0.25 + Math.sin(t * 0.12) * 0.1;
+      camera.position.set(Math.sin(a) * 8.6 - 0.9, 1.6 + breathe, -Math.cos(a) * 8.6);
+      camera.lookAt(-0.9, 1.15, 0.2);
       try { venue?.update(dt, { camera, excitement: 0.35, time: t }); } catch { /* */ }
     },
     draw(ctx) {
@@ -246,24 +249,24 @@ registerScreen('cointoss', () => {
       vText(ctx, 'FREE PLAY', 64, 84, 38, { color: '#ffffff', weight: 0.17, outline: 3, outlineColor: 'rgba(0,0,0,0.75)', shadow: [3, 4, 'rgba(0,0,0,0.6)'] });
       text(ctx, 'MIDFIELD · THE CAPTAINS MEET', 68, 108, { size: 13, weight: 900, color: C.accent, spacing: 4 });
       // the two teams
-      drawTeamCard(ctx, 'away', 40 - (1 - k) * 400, 470, rowsDef[row] === 'away');
-      drawTeamCard(ctx, 'home', 654 + (1 - k) * 400, 470, rowsDef[row] === 'home');
-      vText(ctx, 'VS', 512, 556, 30, { align: 'center', color: '#ffffff', weight: 0.2, outline: 3, outlineColor: 'rgba(0,0,0,0.7)' });
+      drawTeamCard(ctx, 'away', 40 - (1 - k) * 400, 556, rowsDef[row] === 'away');
+      drawTeamCard(ctx, 'home', 654 + (1 - k) * 400, 556, rowsDef[row] === 'home');
+      vText(ctx, 'VS', 512, 646, 30, { align: 'center', color: '#ffffff', weight: 0.2, outline: 3, outlineColor: 'rgba(0,0,0,0.7)' });
       // the settings list
       const rows = rowsDef.filter((r) => r !== 'home' && r !== 'away');
-      const px = 600, py = 128;
-      panel(ctx, px, py, 380, 34 + rows.length * 34, { accentLen: 160, alpha: 0.95 });
+      const px = 664, py = 112;
+      panel(ctx, px, py, 330, 34 + rows.length * 34, { accentLen: 140, alpha: 0.95 });
       const labels = { control: 'CONTROL', difficulty: 'SKILL LEVEL', qlen: 'QUARTERS', venue: 'STADIUM', time: 'KICKOFF TIME', weather: 'WEATHER', field: 'FIELD', start: '' };
       rows.forEach((r, i) => {
         const y = py + 40 + i * 34;
         const on = rowsDef[row] === r;
-        if (on) { ctx.fillStyle = 'rgba(255,178,30,0.22)'; ctx.fillRect(px + 8, y - 22, 364, 30); }
+        if (on) { ctx.fillStyle = 'rgba(255,178,30,0.22)'; ctx.fillRect(px + 8, y - 22, 314, 30); }
         if (r === 'start') {
-          vText(ctx, 'KICK IT OFF', px + 190, y + 2, 22, { align: 'center', color: on ? '#ffd23a' : '#ffffff', weight: 0.2 });
+          vText(ctx, 'KICK IT OFF', px + 165, y + 2, 22, { align: 'center', color: on ? '#ffd23a' : '#ffffff', weight: 0.2 });
           return;
         }
-        text(ctx, labels[r], px + 20, y, { size: 12, weight: 900, color: on ? C.accent : C.dim, spacing: 2 });
-        text(ctx, valueText(r) || '', px + 362, y, { size: 15, weight: 800, color: on ? '#ffffff' : '#cfd5df', align: 'right' });
+        text(ctx, labels[r], px + 18, y - 9, { size: 10, weight: 900, color: on ? C.accent : C.dim, spacing: 2 });
+        text(ctx, valueText(r) || '', px + 312, y + 4, { size: 14, weight: 800, color: on ? '#ffffff' : '#cfd5df', align: 'right' });
       });
       if (starting >= 0) {
         ctx.fillStyle = `rgba(0,0,0,${clamp(starting / 0.6, 0, 0.8)})`;

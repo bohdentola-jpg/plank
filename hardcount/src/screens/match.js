@@ -29,6 +29,7 @@ import { captureFrame } from '../match/frame.js';
 import { MatchSound } from '../match/sound.js';
 import { drawBoxScore, playerOfGame } from '../match/statsview.js';
 import { drawLogo, drawWordmark } from '../gfx/logos.js';
+import { recordGame } from '../data/records.js';
 import { music } from '../audio/music.js';
 import { crowd } from '../audio/crowd.js';
 
@@ -684,6 +685,10 @@ class MatchScreen {
   updateBreak(dt) {
     const m = this.m;
     this.breakT = (this.breakT || 0) + dt;
+    if (m.phase === 'final' && !this.recorded) {
+      this.recorded = true;
+      try { recordGame(m, this.humanSides(), { mode: this.mode }); } catch (e) { console.warn(e); }
+    }
     const any = this.humanSides().length ? this.humanSides().some((s) => this.plFor(s).pressed('cross')) : this.breakT > 6;
     if (m.phase === 'halftime') {
       if (any && this.breakT > 1) { this.breakT = 0; RULES.resumeAfterBreak(m); this.cam.cut(); }
