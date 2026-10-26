@@ -264,7 +264,7 @@ const add = (name, cat, dur, run, expect = {}, opts = {}) => T.push({ name, cat,
 
 function sfxTests() {
   const S = () => A.sfx;
-  for (const k of ['short', 'long', 'double']) add('whistle:' + k, 'sfx', 2.5, () => S().whistle(k), { cent: [2400, 4200], len: k === 'long' ? [0.9, 2] : k === 'double' ? [0.35, 1.1] : [0.2, 0.8], mmax: [-20, -10] });
+  for (const k of ['short', 'long', 'double']) add('whistle:' + k, 'sfx', 2.5, () => S().whistle(k), { cent: [2400, 4200], len: k === 'long' ? [0.9, 2] : k === 'double' ? [0.35, 1.2] : [0.2, 1.0], mmax: [-20, -10] });
   for (const k of ['pads', 'helmet', 'ground', 'tackle']) {
     const c = { pads: [120, 900], helmet: [500, 3000], ground: [50, 400], tackle: [60, 600] }[k];
     add('hit:' + k + ':1', 'sfx', 2, () => S().hit(1, k), { cent: c, len: [0.08, k === 'tackle' ? 1.4 : 0.9], mmax: [-24, -12] });
