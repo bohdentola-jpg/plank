@@ -3,8 +3,9 @@
 // the whole league can be reviewed in a few screenshots.
 //   ?screen=logosheet&page=N      (L1 / R1 or ← → to flip pages, ◯ back)
 //   &crt=0                        (CRT effects off, for crisp captures)
-// Pages: 0 league · 1-4 pros · 5 colleges · 6-9 college detail ·
-//        10-11 high-school rivals · 12 generated high schools · 13 emblem library
+// Pages: 0 league · 1 pro helmets & uniforms · 2-5 pro detail · 6 colleges ·
+//        7 college helmets · 8-11 college detail · 12-13 high-school rivals ·
+//        14 generated high schools · 15 emblem library
 import { registerScreen, go, game } from '../main.js';
 import { input } from '../core/input.js';
 import { C, text, vText, vWidth, measure, hints, roundRect } from '../core/ui.js';
@@ -485,6 +486,30 @@ function pageLeague(ctx) {
   });
 }
 
+/** Every helmet with its home and road uniforms, for side-by-side comparison. */
+function helmetWall(ctx, groups, rows) {
+  const cols = groups.length;
+  const colW = (1024 - 32) / cols;
+  const cellH = 604 / rows;
+  groups.forEach(([label, list], ci) => {
+    const x0 = 16 + ci * colW;
+    text(ctx, label, x0 + colW / 2, 118, { size: 11.5, color: C.accent, align: 'center', weight: 800, spacing: 2 });
+    list.forEach((t, i) => {
+      const y = 126 + i * cellH;
+      roundRect(ctx, x0 + 3, y, colW - 6, cellH - 6, 6);
+      ctx.fillStyle = 'rgba(10,13,22,0.82)';
+      ctx.fill();
+      ctx.fillStyle = t.colors.primary;
+      ctx.fillRect(x0 + 3, y + cellH - 10, colW - 6, 4);
+      const hw = Math.min(colW * 0.44, cellH * 0.92);
+      drawHelmetSide(ctx, t, x0 + 8 + hw * 0.5, y + cellH * 0.48, hw);
+      const kw = Math.min(colW * 0.17, (cellH - 22) / 1.85);
+      ['home', 'away'].forEach((k, j) => drawKitFront(ctx, t.uniform[k], x0 + colW * 0.6 + j * kw * 1.25, y + 6, kw, { number: [7, 21][j] }));
+      text(ctx, t.abbr, x0 + colW - 8, y + cellH - 14, { size: 9.5, color: C.text, align: 'right', weight: 800, shadow: false });
+    });
+  });
+}
+
 function pageColleges(ctx) {
   COLLEGE_CONFERENCES.forEach((cf, ci) => {
     const x = 26 + ci * 246;
@@ -536,7 +561,7 @@ function pageGenerated(ctx) {
 function pageEmblems(ctx) {
   const ids = EMBLEM_IDS();
   const pal = { fg: '#d9a520', fg2: '#1d3557', acc: '#ffffff', line: '#0b1220', bg: '#1d3557', ring: '#d9a520' };
-  const cols = 10, cw = 98, ch = 112;
+  const cols = 10, cw = 98, ch = 120;
   ids.forEach((id, i) => {
     const x = 20 + (i % cols) * (cw + 2), y = 100 + Math.floor(i / cols) * (ch + 4);
     roundRect(ctx, x, y, cw, ch, 6);
@@ -544,17 +569,16 @@ function pageEmblems(ctx) {
     ctx.fill();
     plate(ctx, x + 4, y + 4, cw - 8, 72, '#cfd3d9');
     drawEmblem(ctx, id, pal, x + cw / 2, y + 40, 66);
-    drawEmblem(ctx, id, pal, x + 16, y + 92, 24);
+    drawEmblem(ctx, id, pal, x + 22, y + 92, 24);
     ctx.fillStyle = '#2d6b31';
-    ctx.fillRect(x + 32, y + 79, 30, 26);
-    drawEmblem(ctx, id, pal, x + 47, y + 92, 24, { mono: '#f4f4f0' });
-    const lbl = id.toUpperCase();
-    text(ctx, lbl, x + 66, y + 96, { size: lbl.length > 8 ? 7.5 : 9, color: C.dim, weight: 800, shadow: false });
+    ctx.fillRect(x + 50, y + 79, 30, 26);
+    drawEmblem(ctx, id, pal, x + 65, y + 92, 24, { mono: '#f4f4f0' });
+    text(ctx, id.toUpperCase(), x + cw / 2, y + ch - 4, { size: 9, color: C.dim, align: 'center', weight: 800, shadow: false });
   });
   // the athletic lettering, every face
   const fonts = ['block', 'pro', 'college', 'italic', 'stencil'];
   fonts.forEach((f, i) => {
-    const x = 24 + i * 198, y = 100 + 4 * (ch + 4) + 8;
+    const x = 24 + i * 198, y = 100 + 4 * (ch + 4) + 4;
     roundRect(ctx, x, y, 190, 72, 6);
     ctx.fillStyle = '#123a6b';
     ctx.fill();
@@ -566,11 +590,15 @@ function pageEmblems(ctx) {
 
 function buildPages() {
   const pages = [{ title: 'THE SEVENS LEAGUE', sub: '16 TEAMS · 2 CONFERENCES · 4 DIVISIONS', draw: pageLeague }];
+  const divisions = LEAGUE.conferences.flatMap((c) => c.divisions.map((d) => [`${c.id} ${d.toUpperCase()}`, divisionTeams(c.id, d)]));
+  pages.push({ title: 'HELMETS & UNIFORMS', sub: 'THE PRO LEAGUE ON THE FIELD · HOME / ROAD', draw: (ctx) => helmetWall(ctx, divisions, 4) });
   chunk(TEAMS, 4).forEach((list, i) => pages.push({
     title: `PRO TEAMS ${i + 1}/4`, sub: 'LOGO 124 / 40 / 24 PX · MONO · WORDMARK · KITS · HELMET',
     draw: (ctx) => list.forEach((t, k) => teamCard(ctx, t, 18 + (k % 2) * 498, 104 + Math.floor(k / 2) * 318, 490, 310)),
   }));
   pages.push({ title: 'COLLEGE FOOTBALL', sub: '24 PROGRAMS · 4 CONFERENCES', draw: pageColleges });
+  const confs = COLLEGE_CONFERENCES.map((cf) => [cf.toUpperCase(), COLLEGES.filter((t) => t.conference === cf)]);
+  pages.push({ title: 'COLLEGE HELMETS', sub: 'SATURDAYS · HOME / ROAD', draw: (ctx) => helmetWall(ctx, confs, 6) });
   chunk(COLLEGES, 6).forEach((list, i) => pages.push({
     title: `COLLEGES ${i + 1}/4`, sub: 'LOGO · WORDMARK · COLOURS · HOME / AWAY · HELMET',
     draw: (ctx) => list.forEach((t, k) => teamCard(ctx, t, 14 + (k % 3) * 333, 104 + Math.floor(k / 3) * 318, 327, 310)),
