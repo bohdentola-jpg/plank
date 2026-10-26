@@ -70,7 +70,7 @@ const GT = {};
 function glottalTable(oq) {
   const key = Math.round(oq * 20) / 20;
   if (GT[key]) return GT[key];
-  const tab = new Float32Array(GT_N + 1);
+  const tab = new Float64Array(GT_N + 1);
   const tp = key * 0.68, tn = key * 0.32;
   for (let i = 0; i <= GT_N; i++) {
     const p = i / GT_N;
@@ -181,42 +181,57 @@ export function speak(o) {
   }
 
   // ---- source: glottal pulses of every voice + aspiration noise ----
-  const src = new Float32Array(n);
-  const avS = new Float32Array(n);
+  const src = new Float64Array(n);
+  const avS = new Float64Array(n);
   let sm = 0;
   const kA = Math.exp(-1 / (0.006 * sr));
   for (let i = 0; i < n; i++) { // smoothed voicing envelope at audio rate
-    const k = i / K, k0 = Math.floor(k), fr = k - k0;
+    const k0 = (i / K) | 0, fr = (i - k0 * K) / K;
     const v = AV[k0] + (AV[Math.min(frames - 1, k0 + 1)] - AV[k0]) * fr;
     sm = v + (sm - v) * kA;
     avS[i] = sm;
   }
+  const invK = 1 / K, invSr = 1 / sr;
+  const fK = new Float64Array(frames + 1);
+  let vFirst = n, vLast = -1;
+  for (let i = 0; i < n; i++) if (avS[i] >= 1e-4) { if (i < vFirst) vFirst = i; vLast = i; }
   for (const vc of o.voices) {
     const tab = glottalTable(vc.oq ?? (0.6 - 0.18 * shout));
     const g = vc.gain ?? 1;
     const d = Math.round((vc.delay || 0) * sr);
     const f0 = vc.f0;
     const jit = vc.jit ?? 0.012, [vr, vcnt] = vc.vib || [5.2, 0];
-    const vInc = (2 * Math.PI * vr) / sr, vDepth = Math.pow(2, vcnt / 1200) - 1;
-    let ph0 = R(), vph = R() * 6.28, drift = 0, shim = 1, bi = 0;
-    for (let i = Math.max(0, d); i < n; i++) {
-      const e = avS[i - d];
-      if (e < 1e-4) { if (i - d > 0 && avS[i - d - 1] >= 1e-4) ph0 = 0; continue; }
-      const t = (i - d) / sr / speed;
+    const vDepth = Math.pow(2, vcnt / 1200) - 1, vph0 = R() * 6.28, vIncK = (2 * Math.PI * vr * K) / sr;
+    // pitch contour + vibrato at the control rate; interpolated per sample below
+    let bi = 0;
+    for (let k = 0; k <= frames; k++) {
+      const t = Math.max(0, k * K - d) / sr / speed;
       while (bi < f0.length - 2 && t > f0[bi + 1][0]) bi++;
-      const [ta, fa] = f0[bi], [tb, fb] = f0[Math.min(f0.length - 1, bi + 1)];
-      const fr = tb > ta ? clamp((t - ta) / (tb - ta), 0, 1) : 0;
-      let f = fa * Math.pow(fb / fa, fr);
-      vph += vInc;
-      f *= 1 + vDepth * Math.sin(vph) + drift;
-      ph0 += f / sr;
-      if (ph0 >= 1) { // new glottal period: jitter + shimmer
-        ph0 -= 1;
-        drift = clamp(drift * 0.7 + (R() * 2 - 1) * jit, -0.06, 0.06);
-        shim = 1 + (R() * 2 - 1) * 0.08;
+      const a = f0[bi], b = f0[Math.min(f0.length - 1, bi + 1)];
+      const fr = b[0] > a[0] ? clamp((t - a[0]) / (b[0] - a[0]), 0, 1) : 0;
+      fK[k] = a[1] * Math.pow(b[1] / a[1], fr) * (1 + vDepth * Math.sin(vph0 + vIncK * k)) * invSr;
+    }
+    let ph0 = R(), drift = 0, gs = g;
+    // only the voiced span (shifted by this voice's delay); the phase increment
+    // ramps linearly across each control frame
+    const iA = Math.max(d, vFirst + d), iB = Math.min(n, vLast + d + 1);
+    for (let k = (iA / K) | 0; k * K < iB; k++) {
+      const j0 = Math.max(iA, k * K), j1 = Math.min(iB, (k + 1) * K);
+      const m = 1 + drift;
+      let inc = (fK[k] + ((fK[k + 1] - fK[k]) * (j0 - k * K)) * invK) * m;
+      const dinc = (fK[k + 1] - fK[k]) * invK * m;
+      for (let i = j0; i < j1; i++) {
+        const e = avS[i - d];
+        if (e < 1e-4) { if (avS[i - d - 1] >= 1e-4) ph0 = 0; inc += dinc; continue; }
+        ph0 += inc;
+        inc += dinc;
+        if (ph0 >= 1) { // new glottal period: jitter + shimmer
+          ph0 -= 1;
+          drift = clamp(drift * 0.7 + (R() * 2 - 1) * jit, -0.06, 0.06);
+          gs = g * (1 + (R() * 2 - 1) * 0.08);
+        }
+        src[i] += tab[(ph0 * GT_N) | 0] * e * gs;
       }
-      const x = ph0 * GT_N, xi = x | 0;
-      src[i] += (tab[xi] + (tab[xi + 1] - tab[xi]) * (x - xi)) * e * g * shim;
     }
   }
   // breath + aspiration (noise through the same vocal tract). The noise is
@@ -224,13 +239,15 @@ export function speak(o) {
   // leaves it roughly flat instead of blue.
   let ahS = 0, nl = 0;
   const totalG = o.voices.reduce((a, v) => a + (v.gain ?? 1), 0);
-  const kN = Math.exp(-2 * Math.PI * 1800 / sr);
+  const kN = Math.exp(-2 * Math.PI * 1800 / sr), nG = 2.2 * Math.sqrt(totalG) * (1 - kN);
   for (let i = 0; i < n; i++) {
-    const k = i / K, k0 = Math.floor(k), fr = k - k0;
-    const ah = AH[k0] + (AH[Math.min(frames - 1, k0 + 1)] - AH[k0]) * fr;
+    const k0 = (i / K) | 0;
+    const ah = AH[k0] + (AH[Math.min(frames - 1, k0 + 1)] - AH[k0]) * ((i - k0 * K) / K);
     ahS = ah + (ahS - ah) * kA;
-    nl = nl * kN + (R() * 2 - 1) * (1 - kN);
-    src[i] += nl * 2.2 * (ahS * 0.6 + breath * avS[i] * 0.5) * Math.sqrt(totalG);
+    const amt = ahS * 0.6 + breath * avS[i] * 0.5;
+    if (amt < 1e-5) { nl *= kN; continue; }
+    nl = nl * kN + (R() * 2 - 1) * nG;
+    src[i] += nl * amt;
   }
   // optional spectral tilt (softer, rounder voices)
   if (o.tilt) new Biquad('lowpass', o.tilt, 0.6, 0, sr).run(src);
@@ -239,7 +256,7 @@ export function speak(o) {
   const res = [new Res(), new Res(), new Res(), new Res()];
   const bwK = 1 + 0.35 * shout;
   let prev = 0;
-  const y = new Float32Array(n);
+  const y = new Float64Array(n);
   for (let k = 0; k < frames; k++) {
     for (let j = 0; j < 4; j++) res[j].set(F[j][k], BW[j] * bwK * (j === 0 ? 1 + 0.4 * shout : 1), sr);
     const i1 = Math.min(n, (k + 1) * K);
@@ -264,12 +281,14 @@ export function speak(o) {
   let lastFc = 0, lastQ = 0, afS = 0;
   const kF = Math.exp(-1 / (0.0015 * sr));
   const fg = (o.fric ?? 1) * 0.13;
-  for (let i = 0; i < n; i++) {
-    const k = Math.floor(i / K);
+  let anyF = false;
+  for (let k = 0; k < frames; k++) if (AF[k] > 0) { anyF = true; break; }
+  for (let i = 0; anyF && i < n; i++) {
+    const k = (i / K) | 0;
     const af = AF[k];
     if (af > 0 && (FC[k] !== lastFc || FQ[k] !== lastQ)) { bp.set('bandpass', FC[k], FQ[k], 0, sr); lastFc = FC[k]; lastQ = FQ[k]; }
     afS = af + (afS - af) * kF;
-    if (afS < 1e-5 && af === 0) { bp.tick(0); continue; }
+    if (afS < 1e-5 && af === 0) { bp.z1 = bp.z2 = 0; continue; }
     y[i] += bp.tick(R() * 2 - 1) * afS * fg;
   }
   for (let i = 0; i < n && at + i < out.length; i++) out[at + i] += y[i] * (o.gain ?? 1);

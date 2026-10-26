@@ -233,12 +233,28 @@ function tailRms(buf, secs) {
   return r > 0 ? 20 * Math.log10(r) : -200;
 }
 
-// Frame-stepped helper: call fn(t, dt) every dt seconds of render time.
-function frames(ctx, dur, dt, fn) {
-  for (let t = dt; t < dur - 1e-6; t += dt) {
-    const tt = Math.round(t * SR / 128) * 128 / SR; // suspend needs render-quantum boundaries
-    ctx.suspend(tt).then(() => { try { fn(tt, dt); } catch (e) { console.error(e); } ctx.resume(); });
-  }
+// Timeline of callbacks during an offline render: OfflineAudioContext allows
+// one suspend() per render quantum, so callbacks at the same time are merged.
+function timeline(ctx) {
+  const m = new Map();
+  const tl = {
+    at(t, fn) {
+      const q = Math.max(128, Math.round((t * SR) / 128) * 128) / SR;
+      if (!m.has(q)) m.set(q, []);
+      m.get(q).push(fn);
+    },
+    every(dur, dt, fn) { for (let t = dt; t < dur - 1e-6; t += dt) { const tt = t; tl.at(tt, () => fn(tt, dt)); } },
+    arm() {
+      for (const [q, fns] of m) {
+        if (q >= ctx.length / SR) continue;
+        ctx.suspend(q).then(() => {
+          for (const f of fns) { try { f(q); } catch (e) { console.error(e); } }
+          ctx.resume();
+        });
+      }
+    },
+  };
+  return tl;
 }
 
 // ---- the test list ------------------------------------------------------------------
@@ -248,105 +264,128 @@ const add = (name, cat, dur, run, expect = {}, opts = {}) => T.push({ name, cat,
 
 function sfxTests() {
   const S = () => A.sfx;
-  for (const k of ['short', 'long', 'double']) add('whistle:' + k, 'sfx', 2.5, () => S().whistle(k), { cent: [2000, 4500], len: k === 'long' ? [0.9, 2] : k === 'double' ? [0.35, 1.1] : [0.2, 0.8], mmax: [-26, -9] });
+  for (const k of ['short', 'long', 'double']) add('whistle:' + k, 'sfx', 2.5, () => S().whistle(k), { cent: [2400, 4200], len: k === 'long' ? [0.9, 2] : k === 'double' ? [0.35, 1.1] : [0.2, 0.8], mmax: [-20, -10] });
   for (const k of ['pads', 'helmet', 'ground', 'tackle']) {
-    const c = { pads: [150, 1300], helmet: [700, 3500], ground: [80, 900], tackle: [120, 1500] }[k];
-    add('hit:' + k + ':1', 'sfx', 2, () => S().hit(1, k), { cent: c, len: [0.1, k === 'tackle' ? 1.6 : 1.2], mmax: [-24, -9] });
-    add('hit:' + k + ':.3', 'sfx', 2, () => S().hit(0.3, k), { cent: [c[0] * 0.6, c[1]], mmax: [-36, -14] });
+    const c = { pads: [120, 900], helmet: [500, 3000], ground: [50, 400], tackle: [60, 600] }[k];
+    add('hit:' + k + ':1', 'sfx', 2, () => S().hit(1, k), { cent: c, len: [0.08, k === 'tackle' ? 1.4 : 0.9], mmax: [-24, -12] });
+    add('hit:' + k + ':.3', 'sfx', 2, () => S().hit(0.3, k), { cent: [c[0] * 0.6, c[1]], mmax: [-34, -18] });
   }
-  for (const k of ['hands', 'body', 'bobble']) add('catch:' + k, 'sfx', 1.5, () => S().catchBall(k), { cent: [200, 3000], len: [0.04, 0.9], mmax: [-30, -12] });
-  for (const k of ['kickoff', 'punt', 'fg']) add('kick:' + k, 'sfx', 2.5, () => S().kickBall(k), { cent: [200, 2500], len: [0.3, 1.8], mmax: [-26, -9] });
-  add('snap', 'sfx', 1.5, () => S().snap(), { cent: [200, 3000], len: [0.05, 1], mmax: [-32, -12] });
-  for (const k of ['set', 'hut', 'hard']) add('cadence:' + k, 'sfx', 1.5, () => S().cadence(k), { cent: [600, 3200], len: [0.15, 1.2], mmax: [-26, -9] });
-  add('ballBounce:1', 'sfx', 1.5, () => S().ballBounce(1), { cent: [150, 2000], len: [0.04, 0.8], mmax: [-30, -10] });
-  add('ballBounce:series', 'sfx', 3, (ctx) => {
+  for (const k of ['hands', 'body', 'bobble']) add('catch:' + k, 'sfx', 1.5, () => S().catchBall(k), { cent: k === 'body' ? [100, 800] : [200, 2500], len: [0.04, 0.8], mmax: [-36, -16] });
+  for (const k of ['kickoff', 'punt', 'fg']) add('kick:' + k, 'sfx', 2.5, () => S().kickBall(k), { cent: [150, 1200], len: [0.2, 1.4], mmax: [-30, -12] });
+  add('snap', 'sfx', 1.5, () => S().snap(), { cent: [150, 2500], len: [0.05, 0.8], mmax: [-34, -16] });
+  for (const k of ['set', 'hut', 'hard']) add('cadence:' + k, 'sfx', 1.5, () => S().cadence(k), { cent: [500, 2500], len: [0.15, 0.9], mmax: [-24, -12] });
+  add('ballBounce:1', 'sfx', 1.5, () => S().ballBounce(1), { cent: [150, 1500], len: [0.03, 0.5], mmax: [-34, -16] });
+  add('ballBounce:series', 'sfx', 3, (ctx, tl) => {
     const seq = [[0, 1], [0.42, 0.62], [0.71, 0.4], [0.86, 0.28], [0.95, 0.15], [1.02, 0.08]];
-    for (const [t, s] of seq) { if (t === 0) S().ballBounce(s); else ctx.suspend(Math.round(t * SR / 128) * 128 / SR).then(() => { S().ballBounce(s); ctx.resume(); }); }
-  }, { cent: [150, 2000], len: [0.8, 1.6] });
-  add('flagThrow', 'sfx', 1.5, () => S().flagThrow(), { cent: [200, 3000], len: [0.2, 1.2], mmax: [-36, -12] });
-  add('chains', 'sfx', 2, () => S().chains(), { cent: [1500, 6000], len: [0.3, 1.8], mmax: [-34, -12] });
+    for (const [t, s] of seq) { if (t === 0) S().ballBounce(s); else tl.at(t, () => S().ballBounce(s)); }
+  }, { cent: [150, 1500], len: [0.8, 1.4] });
+  add('flagThrow', 'sfx', 1.5, () => S().flagThrow(), { cent: [200, 2500], len: [0.2, 1], mmax: [-36, -16] });
+  add('chains', 'sfx', 2, () => S().chains(), { cent: [1500, 6000], len: [0.3, 1.3], mmax: [-36, -16] });
+  add('grunt', 'sfx', 1, () => S().grunt(1), { cent: [300, 2500], len: [0.08, 0.5], mmax: [-36, -16] });
   for (const k of ['chime', 'horn', 'organ_charge', 'organ_defense', 'organ_letsgo']) {
-    add('pa:' + k, 'pa', 7, () => S().pa(k), { cent: k === 'chime' ? [500, 3500] : k === 'horn' ? [300, 2500] : [300, 2500], len: [0.8, 7], mmax: [-24, -9] });
+    add('pa:' + k, 'pa', 7, () => S().pa(k), { cent: k === 'chime' ? [700, 3000] : [300, 2500], len: k === 'chime' ? [0.8, 3] : [1.2, 5], mmax: [-22, -12] });
   }
-  for (const k of ['move', 'select', 'back', 'tab', 'error', 'buy', 'unlock']) add('ui:' + k, 'ui', 1.4, () => S().ui(k), { mmax: [-34, -12] });
+  for (const k of ['move', 'select', 'back', 'tab', 'error', 'buy', 'unlock']) add('ui:' + k, 'ui', 1.4, () => S().ui(k), { mmax: [-40, -10] });
   add('staticBurst', 'ui', 1.2, () => S().staticBurst(0.5), { cent: [1500, 6000], mmax: [-30, -10] });
   add('tvOn', 'ui', 3, () => S().tvOn(), { mmax: [-30, -10] });
   add('tvOff', 'ui', 1.2, () => S().tvOff(), { mmax: [-30, -10] });
-  add('knob', 'ui', 0.5, () => S().knob(), { mmax: [-40, -14] });
+  add('knob', 'ui', 0.5, () => S().knob(), { mmax: [-44, -14] });
   add('phone', 'ui', 2.2, () => S().phone(), { mmax: [-30, -12] });
-  // loops (measured after a 1 s settle) and teardown: run 4 s, set 0, check silence at the end
-  const loop = (name, fn, expect) => add(name, 'loop', 9, (ctx) => {
+  // loops (measured 1–4 s) and teardown: run 4 s at 1, then 0; the end must be silent and the loop gone
+  const loop = (name, fn, expect) => add(name, 'loop', 9, (ctx, tl) => {
     fn(1);
-    frames(ctx, 9, 0.05, (t) => fn(t < 4 ? 1 : 0));
+    tl.every(9, 0.05, (t) => fn(t < 4 ? 1 : 0));
   }, expect, { from: 1, until: 4, tail: 1.2, teardown: () => !Object.keys(A.sfx._loops || {}).length });
-  loop('footsteps', (v) => S().footsteps(v), { cent: [300, 3000], integ: [-36, -16] });
-  loop('rain', (v) => S().rain(v), { cent: [1500, 7000], integ: [-34, -16] });
-  loop('wind', (v) => S().wind(v), { cent: [200, 2500], integ: [-38, -16] });
+  loop('footsteps', (v) => S().footsteps(v), { cent: [200, 2500], integ: [-34, -18] });
+  loop('rain', (v) => S().rain(v), { cent: [1000, 7000], integ: [-34, -18] });
+  loop('wind', (v) => S().wind(v), { cent: [150, 2500], integ: [-36, -18] });
   for (const k of ['stadium', 'dome', 'park', 'bedroom']) {
-    add('ambience:' + k, 'loop', 12, (ctx) => {
+    add('ambience:' + k, 'loop', 12, (ctx, tl) => {
       S().ambience(k);
-      ctx.suspend(Math.round(8 * SR / 128) * 128 / SR).then(() => { S().ambience(null); ctx.resume(); });
-    }, { integ: [-52, -24] }, { from: 1.5, until: 8, tail: 1, teardown: () => !A.sfx._bed });
+      tl.at(8, () => S().ambience(null));
+    }, { integ: [-56, -28] }, { from: 1.5, until: 8, tail: 1, teardown: () => !A.sfx._bed });
   }
 }
 
 function crowdTests() {
   const C = () => A.crowd;
-  const bed = (name, st, expect) => add(name, 'crowd', 8, (ctx) => {
+  const bed = (name, st, expect) => add(name, 'crowd', 8, (ctx, tl) => {
     C().update(0.05, st);
-    frames(ctx, 8, 0.05, (t, dt) => C().update(dt, st));
+    tl.every(8, 0.05, (t, dt) => C().update(dt, st));
   }, expect, { from: 3 });
-  bed('crowd:bed calm small', { excitement: 0.1, size: 0.15, home: 0.7, indoor: false }, { integ: [-44, -24], cent: [300, 2500] });
-  bed('crowd:bed calm big', { excitement: 0.15, size: 1, home: 0.7, indoor: false }, { integ: [-36, -18], cent: [300, 2500] });
-  bed('crowd:bed loud big', { excitement: 0.9, size: 1, home: 0.7, indoor: false }, { integ: [-28, -12], cent: [400, 3000] });
-  bed('crowd:bed loud dome', { excitement: 0.9, size: 1, home: 0.7, indoor: true }, { integ: [-28, -12], cent: [300, 3000] });
-  const lens = { cheer: [1.2, 6], roar: [3, 12], ooh: [0.8, 4], aah: [1, 4.5], groan: [0.8, 4], boo: [1.2, 5], gasp: [0.3, 2.5], murmur: [1.5, 6], clap: [2, 10], chant: [3, 12], stomp: [2, 10] };
+  bed('crowd:bed calm small', { excitement: 0.1, size: 0.15, home: 0.7, indoor: false }, { integ: [-48, -32], cent: [250, 2500] });
+  bed('crowd:bed calm big', { excitement: 0.15, size: 1, home: 0.7, indoor: false }, { integ: [-34, -22], cent: [250, 2500] });
+  bed('crowd:bed loud big', { excitement: 0.9, size: 1, home: 0.7, indoor: false }, { integ: [-24, -14], cent: [400, 3000] });
+  bed('crowd:bed loud dome', { excitement: 0.9, size: 1, home: 0.7, indoor: true }, { integ: [-24, -13], cent: [300, 3000] });
+  add('crowd:teardown', 'crowd', 8, (ctx, tl) => {
+    const st = { excitement: 0.6, size: 1, home: 0.7 };
+    C().update(0.05, st);
+    tl.every(8, 0.05, (t, dt) => C().update(dt, t < 3 ? st : { size: 0 }));
+  }, {}, { until: 3, tail: 1, teardown: () => !A.crowd.playing });
+  // reactions in isolation (no bed): length, tone and level of each
+  const lens = { cheer: [2, 5], roar: [4, 8.5], ooh: [0.8, 2.6], aah: [1.5, 3.6], groan: [1, 3], boo: [1.8, 4.2], gasp: [0.25, 1.4], murmur: [2.5, 5], clap: [3.5, 7], chant: [5.5, 9], stomp: [4.5, 8] };
   for (const k of Object.keys(lens)) {
-    add('crowd:' + k, 'crowd', 12, (ctx) => {
-      const st = { excitement: 0.25, size: 0.9, home: 0.8 };
-      C().update(0.05, st);
-      frames(ctx, 12, 0.05, (t, dt) => C().update(dt, st));
-      ctx.suspend(Math.round(1.0 * SR / 128) * 128 / SR).then(() => { C().react(k, 1); ctx.resume(); });
-    }, { cent: [250, 3500], mmax: [-26, -9] }, { from: 0.9, reaction: true, lenExpect: lens[k] });
+    add('crowd:' + k, 'crowd', 10, (ctx, tl) => {
+      C().state = { excitement: 0.25, size: 0.9, home: 0.8, indoor: false };
+      tl.at(0.2, () => C().react(k, 1));
+    }, { cent: [250, 3000], mmax: [-24, -12], len: lens[k] });
   }
+  add('crowd:small cheer', 'crowd', 6, (ctx, tl) => {
+    C().state = { excitement: 0.25, size: 0.15, home: 0.8, indoor: false };
+    tl.at(0.2, () => C().react('cheer', 1));
+  }, { cent: [250, 3000], mmax: [-38, -22] });
+  add('crowd:away boo (home 0.9)', 'crowd', 6, (ctx, tl) => {
+    C().state = { excitement: 0.25, size: 0.9, home: 0.9, indoor: false };
+    tl.at(0.2, () => C().react('cheer', 1, 'away'));
+  }, { mmax: [-34, -18] });
+  // the moment: a loud bed, a touchdown roar on top, rhythmic claps after
+  add('crowd:td moment', 'crowd', 14, (ctx, tl) => {
+    const st = { excitement: 0.55, size: 1, home: 0.8, indoor: false };
+    C().update(0.05, st);
+    tl.every(14, 0.05, (t, dt) => C().update(dt, st));
+    tl.at(2, () => C().react('roar', 1));
+    tl.at(8, () => C().react('clap', 0.8));
+  }, { integ: [-24, -14], cent: [400, 3000] });
 }
 
 function bandTests() {
   const B = () => A.band;
   for (const k of ['cadence', 'fight', 'charge']) {
     const dur = k === 'charge' ? 8 : k === 'fight' ? 40 : 16;
-    add('band:' + k, 'band', dur, (ctx) => {
+    add('band:' + k, 'band', dur, (ctx, tl) => {
       B().play(k);
-      frames(ctx, dur, 0.05, () => B().update());
-      if (k === 'cadence') ctx.suspend(Math.round((dur - 4) * SR / 128) * 128 / SR).then(() => { B().play(null); ctx.resume(); });
-    }, { cent: k === 'cadence' ? [500, 4500] : [400, 3500], integ: [-30, -12] }, { tail: k === 'cadence' ? 1 : 0, teardown: k === 'cadence' ? () => !B().playing : null });
+      B().update();
+      tl.every(dur, 0.05, () => B().update());
+      if (k === 'cadence') tl.at(dur - 4, () => B().play(null));
+    }, { cent: k === 'cadence' ? [400, 4500] : [300, 3500], integ: [-30, -14] }, { until: k === 'cadence' ? dur - 4 : 0, tail: k === 'cadence' ? 1 : 0, teardown: k === 'cadence' ? () => !B().playing : null });
   }
 }
 
 function musicTests() {
   const M = () => A.music;
+  const live = (tl, dur) => { M()._schedule(0.25); tl.every(dur, 0.1, (t) => M()._schedule(t + 0.25)); };
   const names = Object.keys(A.THEMES);
   for (const th of names) {
-    add('music:' + th, 'music', 24, (ctx) => {
+    add('music:' + th, 'music', 24, (ctx, tl) => {
       M().play(th, { fade: 0.05 });
-      M()._schedule(24);
-    }, { integ: [-26, -12] }, { from: 0.5 });
+      live(tl, 24);
+    }, { integ: [-24, -13] }, { from: 0.5 });
   }
   for (const st of ['td', 'turnover', 'bigplay', 'kickoff', 'win', 'lose', 'twominute']) {
-    add('stinger:' + st, 'stinger', 6, () => { M().stop(0.01); M().stinger(st); }, { mmax: [-24, -9], len: [0.6, 6] });
+    add('stinger:' + st, 'stinger', 6, () => { M().stop(0.01); M().stinger(st); }, { mmax: [-22, -11], len: [0.6, 6] });
   }
-  add('stinger:td over playcall', 'stinger', 10, (ctx) => {
+  add('stinger:td over playcall', 'stinger', 10, (ctx, tl) => {
     M().play('playcall', { fade: 0.05 });
-    M()._schedule(10);
-    ctx.suspend(Math.round(4 * SR / 128) * 128 / SR).then(() => { M().stinger('td'); M()._schedule(10); ctx.resume(); });
-  }, { integ: [-26, -12] });
-  add('music:gamestate', 'music', 20, (ctx) => {
+    live(tl, 10);
+    tl.at(4, () => M().stinger('td'));
+  }, { integ: [-24, -13] });
+  add('music:gamestate', 'music', 20, (ctx, tl) => {
     M().play('playcall', { fade: 0.05 });
     M().setGameState({ quarter: 1, clock: 600, scoreDiff: 0, redZone: false, twoMinute: false, playLive: false });
-    M()._schedule(20);
-    ctx.suspend(Math.round(6 * SR / 128) * 128 / SR).then(() => { M().setGameState({ quarter: 4, clock: 110, scoreDiff: -4, redZone: true, twoMinute: true }); M()._schedule(20); ctx.resume(); });
-    ctx.suspend(Math.round(13 * SR / 128) * 128 / SR).then(() => { M().setGameState({ playLive: true }); M()._schedule(20); ctx.resume(); });
-  }, { integ: [-30, -12] });
+    live(tl, 20);
+    tl.at(6, () => M().setGameState({ quarter: 4, clock: 110, scoreDiff: -4, redZone: true, twoMinute: true }));
+    tl.at(13, () => M().setGameState({ playLive: true }));
+  }, { integ: [-28, -13] });
 }
 
 const GROUPS = { sfx: sfxTests, crowd: crowdTests, band: bandTests, music: musicTests };
@@ -386,8 +425,10 @@ async function preUnlockCheck() {
   // late unlock: what was asked before must start now
   const ctx = new OfflineAudioContext(2, SR * 6, SR);
   A.audio.useContext(ctx);
-  frames(ctx, 6, 0.05, (t, dt) => { crowd.update(dt, { excitement: 0.5, size: 0.8, home: 0.6 }); band.update(); music.update(); });
-  music._schedule(6);
+  const tl = timeline(ctx);
+  tl.every(6, 0.05, (t, dt) => { crowd.update(dt, { excitement: 0.5, size: 0.8, home: 0.6 }); band.update(); music.update(); music._schedule(t + 0.25); });
+  music._schedule(0.25);
+  tl.arm();
   const buf = await ctx.startRendering();
   const m = measure(buf, 2);
   return { errs, lateUnlock: { music: music.theme, band: band.current, loudness: m.integ, bad: m.bad } };
@@ -397,9 +438,13 @@ async function runOne(t, withWav) {
   const ctx = new OfflineAudioContext(2, Math.ceil(SR * t.dur), SR);
   A.audio.useContext(ctx);
   // fresh engine state per test
-  try { A.music.stop(0.01); } catch { /* */ }
+  try { A.music.stop(0.01); A.music.setGameState?.({ quarter: 1, clock: 900, scoreDiff: 0, redZone: false, twoMinute: false, playLive: false }); } catch { /* */ }
+  if (A.crowd) { A.crowd._glow = 0; A.crowd._E = 0; A.crowd._act = 0; }
+  try { A.band?.play(null); } catch { /* */ }
+  const tl = timeline(ctx);
   const c0 = performance.now();
-  await t.run(ctx);
+  await t.run(ctx, tl);
+  tl.arm();
   const c1 = performance.now();
   const buf = await ctx.startRendering();
   const c2 = performance.now();
@@ -438,11 +483,12 @@ function measureReaction(buf, from) {
   const base = Math.min(...env.slice(0, 2));
   let pk = -Infinity, pi = 0;
   env.forEach((v, i) => { if (v > pk) { pk = v; pi = i; } });
-  const thr = Math.max(base + 3, pk - 20);
-  let a = pi, b = pi;
-  while (a > 0 && env[a - 1] > thr) a--;
-  while (b < env.length - 1 && env[b + 1] > thr) b++;
-  return (b - a + 1) * 0.05;
+  // span from the first to the last frame within 12 dB of the peak (and above the bed),
+  // so rhythmic reactions (chant, claps, stomps) count their whole run
+  const thr = Math.max(base + 3, pk - 12);
+  let a = -1, b = -1;
+  env.forEach((v, i) => { if (v > thr) { if (a < 0) a = i; b = i; } });
+  return a < 0 ? 0 : (b - a + 1) * 0.05;
 }
 
 function toWav(buf) {
@@ -475,6 +521,17 @@ window.__ac = {
     return { name, cat: t.cat, expect: t.expect, lenExpect: t.lenExpect || null, ...r };
   },
   async pre() { return preUnlockCheck(); },
+  // CPU cost of rendering every cached buffer (what idle-time warm-up has to do)
+  async cost() {
+    const ctx = new OfflineAudioContext(2, SR, SR);
+    A.audio.useContext(ctx);
+    const out = {};
+    A.crowd.update(0.01, {});
+    for (const k of A.crowd.constructor.WARM || []) { const t0 = performance.now(); A.crowd._buf(k); out['crowd ' + k] = performance.now() - t0; }
+    A.sfx._ok();
+    for (const k of A.sfx.constructor.WARM || []) { const t0 = performance.now(); A.sfx._get(k); out['sfx ' + k] = performance.now() - t0; }
+    return out;
+  },
 };
 window.__acReady = true;
 `;
@@ -507,6 +564,15 @@ await page.goto(`http://127.0.0.1:${port}/__audiocheck.html`);
 await page.waitForFunction(() => window.__acReady === true, null, { timeout: 20000 });
 
 const all = await page.evaluate(() => window.__ac.list());
+if (args.includes('--cost')) {
+  const c = await page.evaluate(() => window.__ac.cost());
+  let tot = 0;
+  for (const [k, v] of Object.entries(c)) { tot += v; console.log(k.padEnd(28), v.toFixed(1).padStart(8), 'ms'); }
+  console.log('total'.padEnd(28), tot.toFixed(0).padStart(8), 'ms');
+  await browser.close();
+  server.close();
+  process.exit(0);
+}
 const wanted = filter ? all.filter((t) => filter.split(',').some((f) => t.name.includes(f))) : all;
 if (listOnly) {
   for (const t of wanted) console.log(t.cat.padEnd(8), t.name);

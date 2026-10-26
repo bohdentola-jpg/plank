@@ -24,6 +24,7 @@ import { audio } from './audio.js';
 import {
   TAU, clamp, rng, hash, Biquad, modal, ping, burst, pinkGen, wanderGen,
   alloc, normalize, fadeEdges, loopify, toBuffer, setSmooth, rotStereo, krate,
+  thump, nburst, modes, panInto,
 } from './synthkit.js';
 import { speak } from './vox.js';
 
@@ -301,50 +302,6 @@ function rSiren(sr) {
 
 // ---------------------------------------------------------------------------
 // building blocks
-
-/** Damped sine thump whose pitch drops from f0 to f1 (bodies, balls, boots). */
-function thump(o, sr, at, f0, f1, tau, decay, amp) {
-  const i0 = Math.round(at * sr), n = Math.min(o.length - i0, Math.round(decay * 7 * sr));
-  let ph = 0;
-  for (let i = 0; i < n; i++) {
-    const t = i / sr;
-    ph += (TAU * (f1 + (f0 - f1) * Math.exp(-t / tau))) / sr;
-    o[i0 + i] += Math.sin(ph) * amp * Math.min(1, t / 0.0012) * Math.exp(-t / decay);
-  }
-}
-
-/** A filtered noise burst, normalized to `amp` peak, added into o at `at` seconds. */
-function nburst(o, sr, R, at, decay, amp, filters = [], attack = 0.0004) {
-  const i0 = Math.round(at * sr);
-  const n = Math.min(o.length - i0, Math.ceil((decay * 7 + attack * 4) * sr) + 64);
-  if (n <= 4) return;
-  const tmp = new Float32Array(n);
-  burst(tmp, 0, decay, 1, R, attack, sr);
-  for (const [type, f, q] of filters) new Biquad(type, f, q, 0, sr).run(tmp);
-  normalize([tmp], amp);
-  for (let i = 0; i < n; i++) o[i0 + i] += tmp[i];
-}
-
-/** Modal ring (plastic shells, a ball's air cavity, steel facemasks) excited by a click. */
-function modes(o, sr, R, at, list, amp, excite = 0.0003) {
-  const i0 = Math.round(at * sr);
-  const longest = Math.max(...list.map((m) => m[1]));
-  const n = Math.min(o.length - i0, Math.ceil(longest * 7 * sr) + 64);
-  if (n <= 4) return;
-  const exc = new Float32Array(n);
-  burst(exc, 0, excite, 1, R, 0.00004, sr);
-  const m = modal(exc, new Float32Array(n), list, sr);
-  normalize([m], amp);
-  for (let i = 0; i < n; i++) o[i0 + i] += m[i];
-}
-
-/** Mono → stereo with a constant-power pan. */
-function panInto(L, Rt, m, pan, gain = 1, at = 0) {
-  const a = ((clamp(pan, -1, 1) + 1) * Math.PI) / 4;
-  const gl = Math.cos(a) * gain * Math.SQRT2, gr = Math.sin(a) * gain * Math.SQRT2;
-  const i0 = Math.round(at);
-  for (let i = 0; i < m.length && i0 + i < L.length; i++) { L[i0 + i] += m[i] * gl; Rt[i0 + i] += m[i] * gr; }
-}
 
 /** Stadium horn loudspeaker: band-limited, mid-forward, gently driven. */
 function paVoice(chans, sr, drive = 1.8, hp = 260, lp = 6200) {
@@ -1018,6 +975,8 @@ const BEDS = {
 // ===========================================================================
 
 class Sfx {
+  static WARM = WARM_ORDER;
+
   constructor() {
     this._ctx = null;
     this._loops = {};
