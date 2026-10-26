@@ -428,6 +428,8 @@ export function checkCatches(m, dt) {
     if (e === b.thrower && b.t < 0.6) continue;
     // snaps and handoff tosses are for the man they're meant for
     if (b.kind === 'snap' && b.target && e !== b.target) continue;
+    // a pitch is his teammate's for its first moments (nobody plucks it out of the QB's hands)
+    if (b.kind === 'lateral' && b.target && e !== b.target && e.side === b.lastTeam && b.t < 0.3) continue;
     // nobody on the kicking team catches a kick in the air (an onside kick is recovered off the ground)
     if ((b.kind === 'kick' || b.kind === 'punt') && b.kicked && e.side === b.lastTeam) continue;
     if (e.catchCD > 0) continue;
@@ -438,7 +440,7 @@ export function checkCatches(m, dt) {
     const h = Math.hypot(b.x - e.x, b.z - e.z);
     const diving = e.action && /catch_dive|dive/.test(e.action.name) && e.action.t < 0.5;
     const jumping = e.y > 0.15;
-    const reachH = e.radius + (diving ? 1.15 : 0.62);
+    const reachH = e.radius + (diving ? 1.15 : 0.62) + (b.kind === 'lateral' && e.side === b.lastTeam ? 0.3 : 0);   // a soft pitch is easy to reach for
     if (h > reachH) continue;
     const top = e.height * 0.62 + 0.8 + e.y + (jumping ? 0.25 : 0);   // hands overhead (≈ 2.6 yd standing)
     const lo = diving ? 0.0 : 0.22;

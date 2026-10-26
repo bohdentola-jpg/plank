@@ -7,7 +7,7 @@
 // to catch). Accuracy falls off with distance, a rush in the QB's face,
 // throwing on the run and fatigue; arm strength sets how far he can get it.
 import { GRAVITY } from './field.js';
-import { clamp, norm, lerp } from './math.js';
+import { clamp, norm, lerp, timeToReach } from './math.js';
 
 const R99 = (v) => (v ?? 50) / 99;
 const RELEASE_H = 2.05;   // yards: the ball leaves a passer's hand overhead
@@ -18,7 +18,9 @@ export function predictPos(m, e, t, out = {}) {
   let x = e.x, z = e.z;
   if (pts && e.mem.routeIdx < pts.length && e.asg?.type === 'route' && !e.mem.settled) {
     const sp = Math.max(e.speed, e.vTop * (e.mem.routeSpeed || 0.92) * 0.85);
-    let left = t * sp;
+    // he hasn't left yet (a delayed route), or he's still getting going
+    const wait = Math.max(0, (e.mem.routeDelay || 0) + (e.mem.jamT || 0) - m.playT);
+    let left = Math.max(0, t - wait) * sp - (e.speed < sp * 0.5 ? sp * 0.22 : 0);
     let i = e.mem.routeIdx;
     while (left > 0 && i < pts.length) {
       const p = pts[i];
@@ -169,8 +171,10 @@ export function planToss(m, from, to, opts = {}) {
   const vh = opts.speed ?? (11 + 2 * R99(from.r.awr));
   let T = 0.4;
   const tmp = {};
+  // a pitch leads the man where he's running now (not where his drawn route went)
   for (let k = 0; k < 4; k++) {
-    predictPos(m, to, T + 0.12, tmp);
+    const lead = Math.min(T + 0.12, 1.2);
+    tmp.x = to.x + to.vx * lead; tmp.z = to.z + to.vz * lead;
     T = Math.hypot(tmp.x - from.x, tmp.z - from.z) / vh;
   }
   T = Math.max(0.18, T);
@@ -181,6 +185,23 @@ export function planToss(m, from, to, opts = {}) {
   if (from.speed > 6) sigma *= 1.2;
   tx += m.rng.gauss() * sigma;
   tz += m.rng.gauss() * sigma;
+  // a pitch can't go forward: if he'd be level or ahead by the time it got there,
+  // pitch it flat-back across his path and let him run onto it
+  const dir = m.dirFor(from);
+  if (!opts.forward && (tz - from.z) * dir > -0.45) {
+    tz = from.z - dir * 0.45;
+    const closing = to.vz * dir;
+    if (closing > 0.5) {
+      // he's coming up onto that line: hit him as he crosses it
+      const tMeet = clamp(((tz - to.z) * dir) / closing, 0, 1.2);
+      tx = to.x + to.vx * tMeet + m.rng.gauss() * sigma;
+      T = clamp(tMeet, 0.22, 1.0);
+    } else {
+      // he's out in front: lead him back to it (slower ball, he comes to it)
+      tx = to.x + to.vx * 0.3 + m.rng.gauss() * sigma;
+      T = clamp(timeToReach(to, tx, tz, 0.3) + 0.1, 0.3, 1.4);
+    }
+  }
   return { tx, ty: 1.15, tz, T, dist: d };
 }
 

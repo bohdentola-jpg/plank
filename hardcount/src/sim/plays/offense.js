@@ -29,8 +29,8 @@ export const OFFENSE = [
   { id: 'sp_speedopt', name: 'SPEED OPTION', form: 'gun_spread', kind: 'option', option: { read: 'edge', pitch: 'RB', side: 1 }, run: { carrier: 'QB', give: 'keep', hole: 'edge', side: 1, scheme: 'sweep' }, routes: { RB: 'pitchpath' }, block: { X: 'stalk', Z: 'stalk' }, tags: ['run', 'option', 'lateral'] },
   { id: 'sp_rpo', name: 'BUBBLE RPO', form: 'gun_spread', kind: 'run', rpo: 'Z', run: { carrier: 'RB', give: 'hand', hole: 'A', side: 1, scheme: 'zone' }, routes: { Z: 'bubble' }, block: { X: 'stalk' }, tags: ['run', 'short', 'rpo'] },
   { id: 'sp_screen', name: 'HB SCREEN', form: 'gun_spread', kind: 'screen', drop: 'gun5', screen: 'RB', routes: { X: 'go', Z: 'go', RB: 'screen' }, reads: ['RB'], tags: ['screen', 'long'] },
-  { id: 'sp_double', name: 'DOUBLE PASS', form: 'gun_spread', kind: 'trick', drop: 'quick', routes: { Z: 'bubble', X: 'post', RB: 'wheel' }, reads: ['Z'],
-    script: [{ do: 'pass', from: 'QB', to: 'Z', at: 0.45 }, { do: 'throwFrom', from: 'Z', reads: ['X', 'RB'], after: 'catch', delay: 0.9 }], tags: ['trick', 'deep'] },
+  { id: 'sp_double', name: 'DOUBLE PASS', form: 'ace_twins', kind: 'trick', drop: 'toss', bootSide: -1, routes: { SL: 'throwback', X: 'post', RB: 'wheel' }, reads: ['SL'],
+    script: [{ do: 'pass', from: 'QB', to: 'SL', at: 0.8 }, { do: 'throwFrom', from: 'SL', reads: ['X', 'RB'], after: 'catch', delay: 0.35 }], tags: ['trick', 'deep'] },
   { id: 'sp_qbdraw', name: 'QB DRAW', form: 'gun_spread', kind: 'qbrun', run: { carrier: 'QB', give: 'keep', hole: 'A', side: 1, scheme: 'draw', delay: 0.9 }, routes: { X: 'go', Z: 'go' }, block: { RB: 'lead' }, tags: ['run', 'long'] },
 
   // ------------------------------------------------------------- GUN TRIPS
@@ -74,7 +74,7 @@ export const OFFENSE = [
   { id: 'gl_pa', name: 'PA TE FLAT', form: 'goal_line', kind: 'pass', drop: 'boot', paFake: 'FB', bootSide: 1, routes: { TE: 'flat', FB: 'flat', RB: 'leak' }, reads: ['TE', 'RB', 'FB'], tags: ['pa', 'goal', '2pt'] },
   { id: 'ac_reverse', name: 'REVERSE', form: 'ace_twins', kind: 'trick', routes: { SL: 'reverse', X: 'stalk' }, run: { carrier: 'RB', give: 'hand', hole: 'edge', side: -1, scheme: 'sweep' },
     script: [{ do: 'handoff', from: 'QB', to: 'RB', at: 0.5 }, { do: 'handoff', from: 'RB', to: 'SL', at: 1.35 }], tags: ['trick', 'edge'] },
-  { id: 'ac_statue', name: 'STATUE OF LIBERTY', form: 'ace_twins', kind: 'trick', drop: 'drop5', routes: { X: 'go', SL: 'post', RB: 'statue' }, reads: ['X'],
+  { id: 'ac_statue', name: 'STATUE OF LIBERTY', form: 'ace_twins', kind: 'trick', drop: 'drop3', routes: { X: 'go', SL: 'post', RB: 'statue' }, reads: ['X'],
     script: [{ do: 'pump', from: 'QB', at: 1.05 }, { do: 'handoff', from: 'QB', to: 'RB', at: 1.25 }], tags: ['trick'] },
   { id: 'ac_slant', name: 'SLANT FLAT', form: 'ace_twins', kind: 'pass', drop: 'drop3', routes: { X: 'slant', SL: 'flat', RB: 'checkdown' }, reads: ['X', 'SL', 'RB'], tags: ['short', 'quick'] },
 
@@ -89,8 +89,8 @@ export const OFFENSE = [
   // ------------------------------------------------------------- WILDCAT
   { id: 'wc_power', name: 'WILDCAT POWER', form: 'wildcat', kind: 'run', run: { carrier: 'RB', give: 'direct', hole: 'B', side: 1, scheme: 'power' }, block: { HB: 'lead', X: 'stalk' }, routes: { QB: 'stalk' }, tags: ['run', 'short'] },
   { id: 'wc_jet', name: 'WILDCAT JET', form: 'wildcat', kind: 'run', run: { carrier: 'HB', give: 'hand', hole: 'edge', side: -1, scheme: 'sweep', fromDirect: true }, block: { X: 'stalk' }, routes: { QB: 'stalk' }, tags: ['run', 'edge'] },
-  { id: 'wc_philly', name: 'PHILLY SPECIAL', form: 'wildcat', kind: 'trick', routes: { QB: 'leak', X: 'post', HB: 'philly' }, run: { carrier: 'RB', give: 'direct', hole: 'edge', side: 1, scheme: 'sweep' },
-    script: [{ do: 'pitch', from: 'RB', to: 'HB', at: 0.55 }, { do: 'throwFrom', from: 'HB', reads: ['QB', 'X'], after: 'catch', delay: 0.85 }], tags: ['trick', 'goal', '2pt'] },
+  { id: 'wc_philly', name: 'PHILLY SPECIAL', form: 'wildcat', kind: 'trick', routes: { QB: 'qbleak', X: 'post', HB: 'philly' }, run: { carrier: 'RB', give: 'direct', hole: 'edge', side: 1, scheme: 'sweep' },
+    script: [{ do: 'pitch', from: 'RB', to: 'HB', at: 0.55 }, { do: 'throwFrom', from: 'HB', reads: ['QB', 'X'], after: 'catch', delay: 0.4 }], tags: ['trick', 'goal', '2pt'] },
 
   // ------------------------------------------------------------- CLOCK
   { id: 'ck_spike', name: 'SPIKE', form: 'gun_spread', kind: 'spike', tags: ['clock'] },
@@ -101,9 +101,10 @@ export const OFFENSE = [
 export const SCRIPT_ROUTES = {
   pitchpath: { pts: [[-2, -4.5], [-8, -3.5], [-14, -1]], speed: 0.85 },  // option pitch man: 4 yd deep, 4 wide of the QB
   arc: { pts: [[-1, 0], [-6, 2], [-10, 5]], block: true },                 // flexbone wing arcs to block the alley
-  flea: { pts: [[0.5, -2.5], [0.2, -3]], speed: 0.8 },                     // RB takes the handoff, stops, pitches back
+  flea: { pts: [[0.5, -2.5], [0.2, -3]], speed: 0.8 },
+  throwback: { pts: [[1.5, -2.6], [2.5, -4.2]], speed: 1 },                // slot drops behind the QB for the backward pass                     // RB takes the handoff, stops, pitches back
   hbpass: { pts: [[-7, -4.5], [-11, -3]], speed: 0.75 },                   // HB sweeps, pulls up to throw
-  statue: { pts: [[0, -4], [-1.5, -5.5], [-8, -3]], speed: 0.6 },          // RB loops behind the QB for the hand-off
+  statue: { pts: [[0.6, -4.4], [-1.5, -4.6], [-8, -2.5]], speed: 0.7, delay: 0.55 },  // RB sits, then slips behind the QB for the hand-off
   reverse: { pts: [[4, -2], [-4, -4.5], [-14, -2]], speed: 1 },            // reverse man swings back the other way
   philly: { pts: [[4, -2.5], [-3, -3.5], [-6, -3]], speed: 0.85 },         // takes the pitch going right, pulls up
   trail: { pts: [[-2, -5], [-8, -4.5], [-14, -2]], speed: 0.9 },           // rugby trailer: stays in pitch relationship

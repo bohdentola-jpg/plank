@@ -32,7 +32,7 @@ for (let k = 0; k < N; k++) {
   for (let i = 0; i < 60 * 8 && m.phase === 'presnap'; i++) m.step(1 / 60);   // the CPU snaps on its own (motion plays time it)
   if (m.phase === 'presnap') m.snap();
   for (let i = 0; i < 60 * 20 && m.phase === 'live'; i++) m.step(1 / 60);
-  if (m.phase === 'live') { T.stuck++; continue; }
+  if (m.phase === 'live') { T.stuck++; const c = m.ball.carrier; console.log(`!! stuck: ${op.id} vs ${dp.id} seed ${1000 + k} flip ${k % 2} ball=${m.ball.state}/${m.ball.kind} carrier=${c ? c.role + ' ' + c.state + ' ' + (c.mem.phase || '') : '-'} t=${m.playT.toFixed(1)}`); continue; }
   const r = m.result;
   T.n++;
   if (r.sack) { T.sack++; sack = true; }

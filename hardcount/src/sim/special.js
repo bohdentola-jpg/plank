@@ -203,7 +203,7 @@ function doFieldGoal(m, e, holder) {
   b.history.push('fg');
   m.fg.kicked = true;
   m.fg.dist = Math.round(dist2);
-  m.tstat(e.side, 'fga');
+  m.tstat(e.side, m.tryMode === 'pat' ? 'xpa' : 'fga');
   m.emit('kick', { e, kind: m.tryMode === 'pat' ? 'pat' : 'fg', power, dist: m.fg.dist });
   for (const d of m.foesOf(e)) {
     if (!d.standing || d.asg?.type !== 'fgRush') continue;

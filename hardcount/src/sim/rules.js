@@ -320,7 +320,8 @@ export function onContact(m, a, b, impact) {
     }
   }
   // a rusher running into a pass protector
-  if (def.asg?.type === 'rush' && off.asg?.type === 'block' && !off.engaged && !def.engaged && def !== ball.carrier) {
+  if (def.asg?.type === 'rush' && off.asg?.type === 'block' && !off.engaged && !def.engaged && def !== ball.carrier
+    && !(def.mem.readMan && m.playKind === 'option' && !m.optionDone)) {
     engage(m, off, def, m.isRunning() ? 'run' : 'pass');
     return;
   }
@@ -348,7 +349,7 @@ export function onContact(m, a, b, impact) {
   const qb = m.passInfo?.qb;
   if (qb && (a === qb || b === qb) && ball.carrier !== qb && m.settings.penalties) {
     const hitter = a === qb ? b : a;
-    if (hitter.side !== qb.side && impact > 3 && m.time - m.passInfo.t > 0.7 && !m.flags.some((f) => f.type === 'roughing') && m.rng() < 0.6) {
+    if (hitter.side !== qb.side && impact > 4.5 && m.time - m.passInfo.t > 0.9 && !m.flags.some((f) => f.type === 'roughing') && m.rng() < 0.35) {
       m.flags.push({ type: 'roughing', name: 'ROUGHING THE PASSER', on: hitter.side, yards: 15, autoFirst: true, endOfPlay: true });
       m.emit('flag', { name: 'ROUGHING THE PASSER', on: hitter.side });
     }
@@ -741,6 +742,7 @@ export function advance(m) {
       return afterScore(m, offense);
     case 'patGood':
       m.score[offense] += 1;
+      m.tstat(offense, 'xpm');
       m.emit('score', { side: offense, kind: 'pat', pts: 1 });
       m.tryMode = null;
       if (otDecided(m)) return;

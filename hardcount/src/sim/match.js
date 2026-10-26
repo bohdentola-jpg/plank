@@ -26,7 +26,7 @@ import * as D from './ai/defense.js';
 import * as C from './contact.js';
 import * as P from './passing.js';
 import { userControl } from './user.js';
-import { runScripts, runnerBrain, optionBrain, qbRunFeet } from './scripts.js';
+import { runScripts, runnerBrain, optionBrain, qbRunFeet, scriptCarrier } from './scripts.js';
 import * as K from './special.js';
 import * as RULES from './rules.js';
 
@@ -43,7 +43,7 @@ function teamStats() {
   return {
     firstDowns: 0, plays: 0, yards: 0, passYds: 0, rushYds: 0, comp: 0, att: 0, passTd: 0, rushTd: 0, ints: 0,
     fumbles: 0, fumblesLost: 0, sacks: 0, sackYds: 0, penalties: 0, penYds: 0, top: 0, third: 0, thirdConv: 0,
-    laterals: 0, bigPlays: 0, returnYds: 0, punts: 0, fgm: 0, fga: 0,
+    laterals: 0, bigPlays: 0, returnYds: 0, punts: 0, fgm: 0, fga: 0, xpm: 0, xpa: 0,
   };
 }
 
@@ -267,7 +267,10 @@ export class Match {
       const e = this.byRole(mo.role);
       if (e) {
         const across = this.ballX + (this.ballX - e.x) * 0.9;
-        e.mem.motion = { x: across, speed: mo.jet ? 0.9 : 0.5, startAt: 0.6, jet: !!mo.jet };
+        // a jet man crosses just in front of a shotgun QB (behind one under center)
+        const qbDepth = this.qb ? (this.los - this.qb.z) * this.offDir : 1;
+        const depth = mo.jet ? (qbDepth > 2.5 ? qbDepth - 1.15 : 1.6) : 1.2;
+        e.mem.motion = { x: across, speed: mo.jet ? 0.9 : 0.5, startAt: 0.6, jet: !!mo.jet, depth };
         this.motionMan = e;
         if (!this.isUser(this.offSide)) this.snapAt = Infinity;
       }
@@ -441,10 +444,11 @@ export class Match {
         const mo = e.mem.motion;
         if (this.presnapT < (mo.startAt ?? 0)) { e.vx = e.vz = 0; continue; }
         e.state = 'active';
-        e.goTo(mo.x, this.los - this.offDir * (mo.jet ? 1.6 : 1.2), mo.speed ?? 0.55, null, 0.3);
+        e.goTo(mo.x, this.los - this.offDir * (mo.depth ?? 1.2), mo.speed ?? 0.55, null, 0.3);
         e.move(dt);
-        // a jet man is snapped to as he crosses the ball
-        if (mo.jet && this.motionMan === e && !this.isUser(this.offSide) && Math.abs(e.x - this.ballX) < 2.4) { this.snap(); return; }
+        // a jet man is snapped to so the ball and he reach the QB together
+        const lead = this.form.qb === 'under' ? 1.0 : 0.6 + Math.hypot(e.vx, e.vz) * 0.3;
+        if (mo.jet && this.motionMan === e && !this.isUser(this.offSide) && Math.abs(e.x - this.ballX) < lead) { this.snap(); return; }
         if (Math.abs(e.x - mo.x) < 0.4) { e.mem.motion = null; e.state = 'set'; e.base = 'stance2'; if (this.motionMan === e && !this.isUser(this.offSide)) this.snapAt = this.presnapT + 0.2; }
         continue;
       }
@@ -542,6 +546,7 @@ export class Match {
       if (e === this.qb && e.side === this.offSide && !this.handedOff && (this.playKind === 'pass' || this.playKind === 'screen' || this.playKind === 'trick') && e.mem.phase !== 'scramble' && (this.los - e.z) * this.offDir > -0.3 && e.asg?.type === 'qb') return O.qbBrain(this, e, dt);
       if (e.asg?.type === 'qb' && e.side === this.offSide && e.mem.passer && (this.los - e.z) * this.offDir > -0.3) return O.qbBrain(this, e, dt);
       if (this.optionLive(e)) return optionBrain(this, e, dt);
+      if (this.playKind === 'trick' && scriptCarrier(this, e, dt)) return;
       return O.carrierBrain(this, e, dt);
     }
     // the ball changed hands: everybody's job changes
@@ -554,6 +559,8 @@ export class Match {
     if (holder === null) return D.pursue(this, e, dt);   // loose ball: everybody goes
     if (e.side === this.offSide) {
       const a = e.asg?.type;
+      // a pitch / lateral coming to me (the QB on a flea flicker too): go get it
+      if (b.state === 'air' && b.target === e && b.kind === 'lateral') return O.trackBall(this, e, dt);
       if (a === 'qb') return O.qbBrain(this, e, dt);
       if (a === 'route') return O.routeBrain(this, e, dt);
       if (a === 'block') return O.blockBrain(this, e, dt);
@@ -638,6 +645,8 @@ export class Match {
     const c = this.ball.carrier;
     if (!c) return false;
     if (c.side !== this.offSide) return true;
+    // a trick-play carrier who's still going to throw / pitch it: the routes stay live
+    if (this.playKind === 'trick' && this.carrierScripted(c)) return false;
     if (c !== this.qb) return true;
     return this.handedOff || this.playKind === 'qbrun' || (c.mem.phase === 'scramble' && (c.z - this.los) * this.offDir > 0) || (c.z - this.los) * this.offDir > 0.5;
   }
@@ -645,7 +654,21 @@ export class Match {
   runCarrier() { return this.offense.find((e) => e.asg?.type === 'carrierDesignate') || null; }
   holePoint() { return this.runHole || { x: this.ballX, z: this.los }; }
   optionLive(e) { return (this.playKind === 'option') && e.side === this.offSide && !this.optionDone && (this.los - e.z) * this.offDir > -1 && (e === this.qb); }
-  scriptHold(e) { return !!this.scriptState.hold?.has?.(e); }
+  /** Does this trick-play carrier still have a scripted throw / pitch / handoff to make (behind the line)? */
+  carrierScripted(c) {
+    const steps = this.play?.script;
+    if (!steps || (c.z - this.los) * this.offDir > 0.5) return false;
+    const done = this.scriptState.done;
+    return steps.some((st, i) => !done?.has(i) && st.from === c.role && ['handoff', 'pitch', 'lateral', 'pass', 'throwFrom'].includes(st.do));
+  }
+
+  /** A trick-play QB with a scripted handoff / pitch / pump still to come doesn't throw first. */
+  scriptHold(e) {
+    const steps = this.play?.script;
+    if (!steps || this.playKind !== 'trick') return false;
+    const done = this.scriptState.done;
+    return steps.some((st, i) => !done?.has(i) && st.from === e.role && st.at !== undefined && ['handoff', 'pitch', 'lateral', 'pass', 'pump'].includes(st.do));
+  }
   lateAndTrailing(side = this.offSide) {
     const diff = this.score[side] - this.score[other(side)];
     return this.quarter >= 4 && this.clock < 150 && diff < 0;
@@ -653,7 +676,8 @@ export class Match {
 
   /** Did the defender read run yet? */
   runRead(e) {
-    if (!this.isRunning() && !(this.handedOff && this.playT > 0.2)) return false;
+    // (an option shows run as soon as the QB rides the mesh or heads for the edge)
+    if (!this.isRunning() && !(this.handedOff && this.playT > 0.2) && !(this.playKind === 'option' && this.playT > 0.35 && !this.forwardPassed)) return false;
     if (e.mem.runReadAt === undefined) e.mem.runReadAt = this.time + D.reaction(e, 'run');
     return this.time >= e.mem.runReadAt;
   }
@@ -737,7 +761,8 @@ export class Match {
     const about = c.state === 'wrapped' || (th && th.d < 1.6 && th.closing > 1);
     if (!about) return false;
     const desperate = this.lateAndTrailing(c.side) && this.clock < 12;
-    const designed = this.play?.tags?.includes('lateral') || this.scriptState.lateralOk;
+    // (an option's pitch is the QB's business; the dive back doesn't go looking for laterals)
+    const designed = this.scriptState.lateralOk || (this.play?.tags?.includes('lateral') && this.playKind !== 'option');
     const p = desperate ? 0.9 : designed ? 0.55 : this.playKind === 'kickoff' ? 0.12 : 0.04;
     if (this.rng() > p) { c.mem.noLateral = true; return false; }
     return true;

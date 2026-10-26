@@ -56,7 +56,7 @@ for (let g = 0; g < games; g++) {
   console.log(`\n${home.abbr} ${m.score.home} – ${away.abbr} ${m.score.away}${m.ot ? ' (OT)' : ''}   [${m.phase}] sim ${Math.round(simT)}s, ${((Date.now() - t0) / 1000).toFixed(1)}s wall`);
   for (const side of ['home', 'away']) {
     const t = s[side];
-    console.log(`  ${(side === 'home' ? home : away).abbr}: ${t.plays} plays, ${t.yards} yds (pass ${t.passYds} ${t.comp}/${t.att}, rush ${t.rushYds}), 1st ${t.firstDowns}, 3rd ${t.thirdConv}/${t.third}, TO ${t.ints}int ${t.fumblesLost}fum, sacks ${t.sacks}, pen ${t.penalties}-${t.penYds}, lat ${t.laterals}, punts ${t.punts}, FG ${t.fgm}/${t.fga}`);
+    console.log(`  ${(side === 'home' ? home : away).abbr}: ${t.plays} plays, ${t.yards} yds (pass ${t.passYds} ${t.comp}/${t.att}, rush ${t.rushYds}), 1st ${t.firstDowns}, 3rd ${t.thirdConv}/${t.third}, TO ${t.ints}int ${t.fumblesLost}fum, sacks ${t.sacks}, pen ${t.penalties}-${t.penYds}, lat ${t.laterals}, punts ${t.punts}, FG ${t.fgm}/${t.fga}, XP ${t.xpm}/${t.xpa}`);
   }
   const players = [...s.players.values()].sort((a, b) => (b.passYds || 0) + (b.rushYds || 0) + (b.recYds || 0) - ((a.passYds || 0) + (a.rushYds || 0) + (a.recYds || 0))).slice(0, 6);
   for (const p of players) console.log(`    ${p.pos} ${p.name.padEnd(20)} ${p.att ? `pass ${p.comp || 0}/${p.att} ${p.passYds || 0}y ${p.passTd || 0}td ${p.intsThrown || 0}int ` : ''}${p.car ? `rush ${p.car}-${p.rushYds}y ` : ''}${p.rec ? `rec ${p.rec}-${p.recYds || 0}y ` : ''}${p.td ? p.td + 'td' : ''}`);

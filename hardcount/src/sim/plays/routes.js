@@ -42,6 +42,7 @@ export const ROUTES = {
   ladder: { name: 'LADDER', pts: [[1, 3], [3, 7], [1.5, 9]] },             // trails the hook for the pitch
   leak: { name: 'LEAK', pts: [[-1, 1], [-4, 6], [-6, 30]], delay: 1.2 },      // QB / TE slipping out late
   delayseam: { name: 'DELAY SEAM', pts: [[0, 4], [0.5, 40]], delay: 1.0 },
+  qbleak: { name: 'LEAK', pts: [[2.5, 2], [3.5, 6], [3.5, 30]], delay: 0.45 },  // the split-out QB on the Philly Special
   // run-play support legs (not real routes: paths the AI follows)
   stalk: { name: 'STALK', pts: [[0, 4]], block: true },
   lead: { name: 'LEAD', pts: [], block: true },

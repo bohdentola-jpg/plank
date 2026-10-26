@@ -52,15 +52,16 @@ export function qbBrain(m, e, dt) {
   }
   if (mem.phase === 'snap') { if (m.playT > 0.15) mem.phase = 'drop'; else { e.setWant(0, 0, 0); return; } }
   // run plays / handoffs are scripted by the match; options read in optionBrain
-  if (m.playKind === 'run' || m.playKind === 'option' || m.playKind === 'qbrun' || m.scriptHold(e)) {
-    return;
-  }
+  if (m.playKind === 'run' || m.playKind === 'option' || m.playKind === 'qbrun') return;
+  // a trick play's QB carries out his footwork until the scripted moment
+  const hold = m.scriptHold(e);
   if (mem.phase === 'drop') {
     const d = mem.drop;
     const left = e.goTo(d.x, d.z, 1, m.play.drop === 'boot' || m.play.drop === 'sprint' ? null : headingOf(0, dir));
     mem.backpedalling = m.play.drop !== 'boot' && m.play.drop !== 'sprint';
     if (left < 0.45 || m.playT > d.dur + 0.6) { mem.phase = 'set'; mem.setT = 0; mem.backpedalling = false; }
   }
+  if (hold) { if (mem.phase === 'set') e.goTo(mem.drop.x, mem.drop.z, 0.3, headingOf(0, dir)); return; }
   if (mem.phase === 'set' || mem.phase === 'scramble' || (mem.phase === 'drop' && m.play.drop === 'quick')) {
     mem.setT += dt;
     if (e.ctrl !== null) return;   // a person is throwing
@@ -116,7 +117,9 @@ function cpuPass(m, e, dt) {
   // evaluate the reads he has gotten to (and the first ones again late)
   let best = null;
   // how tight a window he'll throw into: picky early, braver as the play goes on
-  const thresh = 0.14 - Math.min(0.4, t * 0.13) - pressure * 0.22 - (m.difficulty.qbRisk || 0) + (1 - awr) * 0.06;
+  // (a trick-play passer — the halfback, the receiver on a double pass — lets it rip)
+  const trick = e.role !== 'QB' && m.playKind === 'trick';
+  const thresh = 0.14 - Math.min(0.4, t * 0.13) - pressure * 0.22 - (m.difficulty.qbRisk || 0) + (1 - awr) * 0.06 - (trick ? 0.3 : 0);
   for (let i = 0; i <= Math.min(mem.readIdx + (t > 2.2 ? 9 : 0), reads.length - 1); i++) {
     const r = reads[i];
     if (r.state === 'engaged' || r.mem.blocking) continue;
@@ -166,7 +169,12 @@ function cpuPass(m, e, dt) {
     if (t > 3.5 && !inPocket) {
       if (m.rng() < dt * 0.8) m.throwAway(e);
     }
-    const hitch = mem.drop;
+    // nothing there for ages: take off if there's room, else throw it away
+    if (t > 4.5 && canThrow) {
+      if (m.runLane(e).open > 0.5) { mem.phase = 'scramble'; mem.scrambleT = 0; m.emit('scramble', { qb: e }); }
+      else { m.throwAway(e); return; }
+    }
+    const hitch = mem.drop || (mem.drop = { x: e.x, z: e.z });
     e.goTo(hitch.x + Math.sin(t * 1.7) * 0.2, hitch.z + m.offDir * Math.min(1.2, t * 0.25), 0.4, headingOf(0, m.offDir));
   }
   if (mem.phase === 'scramble') {
@@ -191,6 +199,8 @@ export function routeBrain(m, e, dt) {
     return afterCatchBrain(m, e, dt);
   }
   if (mem.blocking) return blockBrain(m, e, dt);
+  // the option pitch man: once the QB has it, stay 4½ outside and a yard and a half behind him
+  if (mem.routeId === 'pitchpath' && c && c === m.qb && c.side === e.side && m.playKind === 'option' && !m.optionDone && m.playT > 0.3) return pitchRelation(m, e, c);
   // QB scrambling: break off and find grass
   const qb = m.qb;
   if (qb && qb.mem.phase === 'scramble' && b.carrier === qb && (m.los - qb.z) * m.offDir > 0) return scrambleDrill(m, e, dt);
@@ -199,6 +209,7 @@ export function routeBrain(m, e, dt) {
     if (mem.jamT && m.playT < mem.jamT) e.setWant(-m.offDir * 0, m.offDir, 0.15);
     return;
   }
+  mem.wantBlock = null;   // running a route, not blocking anybody
   const pts = mem.route;
   if (!pts || !pts.length) { e.setWant(0, 0, 0); return; }
   if (mem.routeIdx >= pts.length) {
@@ -207,7 +218,8 @@ export function routeBrain(m, e, dt) {
     const a = pts[pts.length - 2] || { x: e.x - e.vx, z: e.z - e.vz }, p = pts[pts.length - 1];
     const n = norm(p.x - a.x, p.z - a.z);
     const tx = clamp(e.x + n.x * 5, -m.field.halfW + 1.2, m.field.halfW - 1.2);
-    e.goTo(tx, e.z + n.z * 5, mem.routeSpeed || 1);
+    const tz = clamp(e.z + n.z * 5, -m.field.end + 1, m.field.end - 1);   // (not out the back of the end zone)
+    e.goTo(tx, tz, mem.routeSpeed || 1);
     return;
   }
   const p = pts[mem.routeIdx];
@@ -258,7 +270,7 @@ function scrambleDrill(m, e, dt) {
 }
 
 /** Work back to the ball: arrive where it comes down, at the right height. */
-function trackBall(m, e, dt, loose = false) {
+export function trackBall(m, e, dt, loose = false) {
   const b = m.ball;
   const mem = e.mem;
   e.look = { x: b.x, y: b.y, z: b.z };
@@ -399,6 +411,7 @@ function runBlock(m, e, dt) {
     const aimX = e.x + worldSide * (scheme === 'zone' || scheme === 'sweep' ? 1.2 : 0.2);
     for (const d of m.defense) {
       if (!d.standing || (d.engaged && d.engaged.a !== e)) continue;
+      if (d.mem.readMan && m.playKind === 'option' && !m.optionDone) continue;   // the QB reads him; nobody blocks him
       const depth = (d.z - m.los) * dir;
       if (depth > 8) continue;
       const claimed = m.offense.some((o) => o !== e && o.mem.blockTgt === d);
@@ -598,6 +611,19 @@ export function carrierBrain(m, e, dt) {
   if (crowd >= 2 && e.carry !== 'two' && !e.isBusyAction()) { e.carry = 'two'; } else if (crowd < 2 && e.carry === 'two') e.carry = e.mem.carrySide || 'R';
   // CPU lateral when it's on
   if (m.wantsLateral(e)) m.lateralFrom(e);
+}
+
+function pitchRelation(m, e, c) {
+  const dir = m.offDir;
+  const opt = m.play.option || {};
+  const sideW = -((opt.keepSide ?? opt.side ?? 1) * (m.flip ? -1 : 1)) * dir;
+  let tx = c.x + sideW * 4.5;
+  if (Math.abs(tx) > m.field.halfW - 1) tx = Math.sign(tx) * (m.field.halfW - 1);
+  const tz = c.z - dir * 1.5;
+  const d = Math.hypot(tx - e.x, tz - e.z);
+  const cs = c.speed / Math.max(1, e.vTop);
+  e.setWant(tx - e.x + c.vx * 0.3, tz - e.z + c.vz * 0.3, clamp(cs + d * 0.2, 0.4, 1));
+  e.look = { x: c.x, y: 1.4, z: c.z };
 }
 
 // ================================================================== SUPPORT (pitch relationship)

@@ -24,6 +24,8 @@ export function setupRun(m) {
     done: run.give === 'direct' || run.give === 'keep',
     sideW: -side * m.offDir,
   };
+  // option: the read man is picked at the snap so nobody blocks him
+  if (m.play.option && m.play.option.read !== 'edge') m.optRead = pickReadDefender(m, m.play.option);
 }
 
 /** The designated ball carrier before he has it: get to the mesh, take it, hit the hole. */
@@ -41,6 +43,12 @@ export function runnerBrain(m, e, dt) {
     if (Math.hypot(p.x - e.x, p.z - e.z) < 0.7) e.mem.routeIdx++;
     else e.setWant(p.x - e.x, p.z - e.z, e.mem.routeSpeed || 0.9);
     if (b.state === 'air' && b.target === e) e.setWant(b.targetPt.x - e.x, b.targetPt.z - e.z, 1);
+    return;
+  }
+  if (run.jet && b.carrier === qb) {
+    // flat down the line at full speed; the ball comes to him as he passes the QB
+    if (e.mem.jetZ === undefined) e.mem.jetZ = e.z;
+    e.setWant(mesh.sideW || 1, (e.mem.jetZ - e.z) * 2, 1);
     return;
   }
   if (run.give === 'toss') {
@@ -74,6 +82,13 @@ export function handoffMesh(m, dt) {
   if (!carrier || m.ball.carrier !== qb) { mesh.done = true; return; }
   // a person at QB who has run off with it keeps it
   if (qb.ctrl !== null && qb.mem.userMoved && run.give !== 'toss') { mesh.done = true; m.handedOff = false; return; }
+  if (run.jet) {
+    // the jet sweep handoff happens on the fly as he passes
+    if (!mesh.started) { mesh.started = true; qb.act('handoff_give'); carrier.act('handoff_take'); }
+    if (dist(qb, carrier) < 1.7) giveTo(m, qb, carrier);
+    else if (m.playT > mesh.t + 0.5 || (carrier.x - qb.x) * (mesh.sideW || 1) > 1.4) { mesh.done = true; m.emit('meshMiss', { qb, carrier }); }
+    return;
+  }
   if (m.playT >= mesh.t - 0.3 && !mesh.started) {
     mesh.started = true;
     if (run.give === 'toss') {
@@ -97,20 +112,21 @@ export function handoffMesh(m, dt) {
   if (m.playKind === 'option' && m.optionKeep) { mesh.done = true; return; }
   if (mesh.started && m.playT >= mesh.t) {
     mesh.done = true;
-    if (dist(qb, carrier) < 1.8) {
-      m.ball.give(carrier);
-      m.ball.history.push('handoff');
-      m.handedOff = true;
-      carrier.carry = carrier.mem.carrySide || 'R';
-      m.seg(carrier, 'rush');
-      m.emit('handoff', { from: qb, to: carrier });
-      // the QB carries out his fake
-      qb.mem.fake = true;
-    } else {
-      // botched mesh: the QB is stuck with it
-      m.emit('meshMiss', { qb, carrier });
-    }
+    if (dist(qb, carrier) < 1.8) giveTo(m, qb, carrier);
+    else m.emit('meshMiss', { qb, carrier });   // botched mesh: the QB is stuck with it
   }
+}
+
+function giveTo(m, qb, carrier) {
+  m.mesh.done = true;
+  m.ball.give(carrier);
+  m.ball.history.push('handoff');
+  m.handedOff = true;
+  carrier.carry = carrier.mem.carrySide || 'R';
+  m.seg(carrier, 'rush');
+  m.emit('handoff', { from: qb, to: carrier });
+  // the QB carries out his fake
+  qb.mem.fake = true;
 }
 
 /** QB footwork on run plays (and the fake after the handoff). */
@@ -126,6 +142,7 @@ export function qbRunFeet(m, e, dt) {
     return true;
   }
   if (m.ball.carrier !== e) return false;
+  if (e.mem.passer) return false;   // a trick play gave it back to him to throw
   // a direct snap to the runner (wildcat): he's just a ball carrier
   if (run.give === 'direct' && m.byRole(run.carrier) === e) { m.handedOff = true; return false; }
   if (run.carrier === 'QB' || run.give === 'keep') {
@@ -135,8 +152,13 @@ export function qbRunFeet(m, e, dt) {
     m.handedOff = true;
     return false;
   }
-  // turn toward the mesh: a step back and to the play side (a fixed spot, set once)
-  if (!e.mem.meshSpot) e.mem.meshSpot = { x: e.x + (m.mesh?.sideW || 0) * 0.6, z: m.form.qb === 'under' ? m.los - dir * 2.2 : e.z - dir * 0.2 };
+  // the mesh came and went and he's still got it: he runs
+  if (m.mesh?.done) { m.handedOff = true; return false; }
+  // turn toward the mesh: a step back and to the play side (a fixed spot, set once;
+  // on a jet sweep he steps up to meet the jet man's path)
+  if (!e.mem.meshSpot) e.mem.meshSpot = run.jet
+    ? { x: e.x, z: e.z + dir * (m.form.qb === 'under' ? -0.3 : 0.45) }
+    : { x: e.x + (m.mesh?.sideW || 0) * 0.6, z: m.form.qb === 'under' ? m.los - dir * 2.2 : e.z - dir * 0.2 };
   e.goTo(e.mem.meshSpot.x, e.mem.meshSpot.z, 0.6);
   return true;
 }
@@ -174,15 +196,26 @@ export function optionBrain(m, e, dt) {
   const pm = pitchRole ? m.byRole(pitchRole) : null;
   if (!pm || m.optionDone) { m.optionDone = true; return carrierBrain(m, e, dt); }
   const keepSideW = -((opt.keepSide ?? opt.side ?? 1) * (m.flip ? -1 : 1)) * dir;
-  const edgeX = clamp(m.ballX + keepSideW * 8, -m.field.halfW + 3, m.field.halfW - 3);
-  const tgtZ = (m.los - e.z) * dir > 0.5 ? m.los - dir * 0.5 : e.z + dir * 2;
-  e.setWant(edgeX - e.x, tgtZ - e.z + dir * 1.5, 1);
-  // pitch when the read man takes the QB
-  const pr = m.optPitchRead || (m.optPitchRead = nearestOn(m, e, keepSideW));
-  if (e.ctrl === null && pr) {
+  // the pitch key: the first unblocked man on the edge (re-picked if he gets blocked)
+  let pr = m.optPitchRead;
+  if (!pr || pr.state === 'engaged' || !pr.standing) pr = m.optPitchRead = nearestOn(m, e, keepSideW);
+  // attack his inside shoulder along the line; no key → get to the edge
+  const edgeX = clamp(pr ? pr.x - keepSideW * 0.8 : m.ballX + keepSideW * 8, -m.field.halfW + 3, m.field.halfW - 3);
+  const behind = (m.los - e.z) * dir;
+  const tgtZ = behind > 0.5 ? m.los - dir * 0.6 : e.z + dir * 2;
+  e.setWant(edgeX - e.x, tgtZ - e.z + dir * (behind > 0.5 ? 0.6 : 1.5), 1);
+  // he has to get out on the edge before he can option anybody
+  const outWide = Math.abs(e.x - m.ballX) > 2.4 || m.playT > 0.9;
+  if (e.ctrl === null && pr && outWide) {
     const d = dist(pr, e);
-    const committed = d < 2.6 && ((pr.vx * (e.x - pr.x) + pr.vz * (e.z - pr.z)) / Math.max(0.1, d)) > 2;
-    if (committed && dist(pm, e) < 9 && (pm.z - e.z) * dir < 0.5) { pitchTo(m, e, pm); return; }
+    const closing = (pr.vx * (e.x - pr.x) + pr.vz * (e.z - pr.z)) / Math.max(0.1, d);
+    const pmOk = dist(pm, e) < 9 && (pm.z - e.z) * dir < 0.3 && pm.standing;
+    // he widened to take the pitch man: keep it and turn it up inside him
+    const onPitch = Math.abs(pr.x - e.x) > 1.2 && (pr.x - e.x) * keepSideW > 0 && dist(pr, pm) < d;
+    if (d < 3.4 && !onPitch && (closing > 1 || d < 2) && pmOk) {
+      if (m.rng() < 0.9 + 0.08 * R99(e.r.awr)) { pitchTo(m, e, pm); return; }
+      m.optionDone = true;   // froze: he eats it
+    } else if (d < 3.4 && onPitch) m.optionDone = true;
   }
   // past the line: he's a runner now
   if ((e.z - m.los) * dir > 1.2) { m.optionDone = true; }
@@ -320,6 +353,26 @@ export function runScripts(m, dt) {
       } else if (m.time - (S.got?.[i] ?? m.time) > 1.6) S.done.add(i);
     }
   });
+}
+
+/**
+ * A trick-play ball carrier who still has a scripted handoff / pitch / pass to
+ * make: run his drawn leg and pull up to sell it, instead of taking off.
+ * Returns false when he has nothing pending (or no leg drawn) and is just a runner.
+ */
+export function scriptCarrier(m, e, dt) {
+  const steps = m.play.script;
+  if (!steps || !e.mem.route) return false;
+  const S = m.scriptState;
+  const pending = steps.some((st, i) => !S.done?.has(i) && st.from === e.role && ['handoff', 'pitch', 'lateral', 'pass', 'throwFrom'].includes(st.do));
+  if (!pending) return false;
+  const pts = e.mem.route;
+  while (e.mem.routeIdx < pts.length && Math.hypot(pts[e.mem.routeIdx].x - e.x, pts[e.mem.routeIdx].z - e.z) < 0.7) e.mem.routeIdx++;
+  if (e.mem.routeIdx < pts.length) {
+    const p = pts[e.mem.routeIdx];
+    e.setWant(p.x - e.x, p.z - e.z, e.mem.routeSpeed || 0.9);
+  } else e.setWant(0, 0, 0);
+  return true;
 }
 
 /** Play-action: show the handoff, then the QB keeps dropping. */

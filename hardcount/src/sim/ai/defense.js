@@ -60,13 +60,28 @@ export function rushBrain(m, e, dt) {
   }
 }
 
+/**
+ * Coverage men (man defenders, deep zones) don't fly up at the first sign of a
+ * run. Once it's across the line, or the linemen are run blocking (low hats),
+ * they come; behind the line on a fake, only some of them bite.
+ */
+function coverRunRead(m, e) {
+  const c = m.ball.carrier;
+  if (!m.runRead(e)) return false;
+  if (!c || c.side === e.side || m.passCompleted) return true;
+  if ((c.z - m.los) * m.offDir > 0.5) return true;
+  if (m.play?.run || m.playKind === 'run' || m.playKind === 'option' || m.playKind === 'qbrun') return true;
+  if (e.mem.biteRoll === undefined) e.mem.biteRoll = m.rng() < 0.08 + 0.42 * (1 - R99(e.r.prc));
+  return e.mem.biteRoll;
+}
+
 // ================================================================== MAN
 export function manBrain(m, e, dt) {
   const asg = e.asg;
   const r = asg.target;
   if (!r || !r.standing && r !== m.ball.carrier) { e.asg = { type: 'zone', zone: asg.fallback || 'hookM' }; return; }
   if (m.ballThrown()) return ballhawk(m, e, dt);
-  if (m.runRead(e) && (asg.tech !== 'press' || m.playT > 1.2)) return pursue(m, e, dt);
+  if (coverRunRead(m, e) && (asg.tech !== 'press' || m.playT > 1.2)) return pursue(m, e, dt);
   const c = m.ball.carrier;
   if (c && c === r) return pursue(m, e, dt);
   const dir = m.offDir;
@@ -112,12 +127,12 @@ export function zoneSpot(m, zoneId) {
 
 export function zoneBrain(m, e, dt) {
   if (m.ballThrown()) return ballhawk(m, e, dt);
-  if (m.runRead(e)) return pursue(m, e, dt);
+  const spot = zoneSpot(m, e.asg.zone);
+  if (spot.deep ? coverRunRead(m, e) : m.runRead(e)) return pursue(m, e, dt);
   const c = m.ball.carrier;
-  if (c && c.side !== e.side && c !== m.qb) return pursue(m, e, dt);
+  if (c && c.side !== e.side && c !== m.qb && (!spot.deep || m.passCompleted || !m.carrierScripted(c))) return pursue(m, e, dt);
   if (c === m.qb && m.qb.mem.phase === 'scramble' && (c.z - m.los) * m.offDir > -0.5) return pursue(m, e, dt);
   const dir = m.offDir;
-  const spot = zoneSpot(m, e.asg.zone);
   const R = spot.deep ? 9 : 6.5;
   // the most dangerous receiver in (or heading into) my area
   let threat = null, best = 1e9;
