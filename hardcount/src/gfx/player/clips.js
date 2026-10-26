@@ -82,9 +82,10 @@ export const BASE_SPECS = {
     feet: false, legL: [58, 6, 0, 105, -12, 0], legR: [4, 6, 15, 12, 25, 0],
   },
   sit: {
-    root: [0, -0.87, -0.05, -12, 0, 0], spine: [8, 0, 0], chest: [10, 0, 0], neck: [0, 0, 0], head: [-4, 0, 0],
-    feet: false, legs: [82, 12, 12, 75, -8, 0],
-    hands: [0.24, 0.07, -0.22, 1], poles: [0.3, -0.2, -1], arms: [0, 0, 0, 0, -60, 0, 0, 0.1],
+    // on the bench: seat 0.46 m (18 in) up, thighs level, shins upright, leaning on his thighs
+    root: [0, -0.4, -0.06, 6, 0, 0], spine: [12, 0, 0], chest: [8, 0, 0], neck: [-12, 0, 0], head: [-6, 0, 0],
+    feet: [0.15, 0, 0.42, 0, 10], knees: [0.18, 0.2, 1],
+    hands: [0.1, 0.69, 0.33, 1], poles: [0.6, -0.7, -0.3], arms: [0, 0, 0, 0, 10, 0, 50, 0.5],
   },
   hips: {
     root: [0.02, -0.02, 0, 1, 0, 2.5], spine: [0, 0, 1], chest: [-4, 0, 0], neck: [4, 0, 0], head: [-2, 0, 0],

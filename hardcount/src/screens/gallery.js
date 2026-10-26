@@ -19,7 +19,7 @@ import * as THREE from 'three';
 import { registerScreen, game } from '../main.js';
 import { TEAMS, getTeam } from '../data/teams.js';
 import { buildRoster } from '../data/roster.js';
-import { createPlayerModel, createRefModel, bodyCacheSize } from '../gfx/player/index.js';
+import { createPlayerModel, createRefModel, bodyCacheSize, SEAT_HEIGHT } from '../gfx/player/index.js';
 import { createBallModel } from '../gfx/ball.js';
 import { CLIPS } from '../gfx/player/clips.js';
 import { getEnvMap } from '../core/envmap.js';
@@ -226,7 +226,16 @@ registerScreen('gallery', () => {
       const team = TEAMS[i % TEAMS.length];
       const pos = { stance3: 'G', center: 'C', qbUnder: 'QB', qbGun: 'QB', block: 'G', rush: 'DL', kick_ready: 'K', stance2: 'WR', ready: 'CB', huddle: 'TE' }[b] || 'RB';
       const model = b === 'ref' ? createRefModel({ lod }) : createPlayerModel({ team, kit: 'home', player: rosterPick(team, pos), lod });
-      add(model, blankA({ x: (c - (cols - 1) / 2) * 2.4, z: -r * 2.6, base: b }), b);
+      const x = (c - (cols - 1) / 2) * 2.4, z = -r * 2.6;
+      add(model, blankA({ x, z, base: b }), b);
+      if (b === 'sit') {
+        // a sideline bench at the seat height the pose sits on
+        const bench = new THREE.Mesh(new THREE.BoxGeometry(1.6, SEAT_HEIGHT, 0.42), new THREE.MeshStandardMaterial({ color: '#3a3f47', roughness: 0.6, metalness: 0.3 }));
+        bench.position.set(x, SEAT_HEIGHT / 2, z - 0.22);
+        bench.castShadow = bench.receiveShadow = true;
+        scene.add(bench);
+        extras.push(bench);
+      }
     });
     const rows = Math.ceil(names.length / cols);
     focus.set(0, 0.8, -(rows - 1) * 1.3);

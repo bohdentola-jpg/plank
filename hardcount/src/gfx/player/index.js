@@ -27,6 +27,8 @@ import { ACTIONS } from '../../sim/anims.js';
 export { createBallModel } from '../ball.js';
 
 const YARD_M = 0.9144;
+/** Height (yards) of the bench seat the 'sit' base sits on: put benches this high. */
+export const SEAT_HEIGHT = 0.46 / YARD_M;
 const HELMET_SCALE = 1.05;   // helmets read a touch big, like the games
 
 // ---------------------------------------------------------------- shared body geometry (ref-counted)
