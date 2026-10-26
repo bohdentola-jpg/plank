@@ -251,7 +251,7 @@ class MatchScreen {
     T.t += dt;
     if (T.step === 'call') {
       // the visitors call it in the air
-      if (m.isUser('away')) {
+      if (m.isUser('away') && !m.lock) {
         const pl = this.plFor('away');
         if (pl.pressed('cross')) T.call = 'heads';
         if (pl.pressed('circle')) T.call = 'tails';
@@ -260,7 +260,7 @@ class MatchScreen {
     } else if (T.step === 'flip') {
       if (T.t > 2.2) { T.step = 'result'; T.t = 0; T.winner = T.call === T.result ? 'away' : 'home'; }
     } else if (T.step === 'result') {
-      if (m.isUser(T.winner)) {
+      if (m.isUser(T.winner) && !m.lock) {
         const pl = this.plFor(T.winner);
         if (T.t > 0.6 && pl.pressed('cross')) T.choice = 'receive';
         if (T.t > 0.6 && pl.pressed('circle')) T.choice = 'kick';
@@ -302,14 +302,14 @@ class MatchScreen {
     const away = m.teams.away, home = m.teams.home;
     if (T.step === 'call') {
       text(ctx, `${away.city.toUpperCase()} ${away.name.toUpperCase()} CALL IT IN THE AIR`, 512, 470, { size: 18, weight: 900, color: '#fff', align: 'center', spacing: 2 });
-      if (m.isUser('away')) this.choiceRow(ctx, [['cross', 'HEADS'], ['circle', 'TAILS']], 520);
+      if (m.isUser('away') && !m.lock) this.choiceRow(ctx, [['cross', 'HEADS'], ['circle', 'TAILS']], 520);
     } else if (T.step === 'flip') {
       text(ctx, `${away.abbr} CALLS ${T.call.toUpperCase()}`, 512, 470, { size: 18, weight: 900, color: '#fff', align: 'center', spacing: 2 });
     } else {
       const w = m.teams[T.winner];
       vText(ctx, `${T.result.toUpperCase()}!`, 512, 470, 30, { align: 'center', color: '#ffd23a', weight: 0.2 });
       text(ctx, `${w.city.toUpperCase()} WINS THE TOSS`, 512, 506, { size: 18, weight: 900, color: '#fff', align: 'center', spacing: 2 });
-      if (T.step === 'result' && m.isUser(T.winner)) this.choiceRow(ctx, [['cross', 'RECEIVE'], ['circle', 'KICK']], 552);
+      if (T.step === 'result' && m.isUser(T.winner) && !m.lock) this.choiceRow(ctx, [['cross', 'RECEIVE'], ['circle', 'KICK']], 552);
       if (T.choice) text(ctx, T.choice === 'receive' ? 'THEY WILL RECEIVE' : 'THEY WILL KICK OFF', 512, 552, { size: 16, weight: 800, color: '#cfd7e6', align: 'center', spacing: 2 });
     }
     void home;
@@ -472,7 +472,12 @@ class MatchScreen {
     this.override = null;
     this.playClock = kick ? null : 25;
     this.presnaps = {};
-    for (const side of this.humanSides()) this.presnaps[side] = new Presnap(m, side, this.plFor(side));
+    // the pre-snap tools are the quarterback's and the defensive play-caller's; a
+    // career man who isn't the QB just lines up and waits for the snap
+    for (const side of this.humanSides()) {
+      if (m.lock && m.lock.side === side && !(m.lock.player.pos === 'QB' && side === m.offSide && m.qb?.p?.id === m.lock.player.id)) continue;
+      this.presnaps[side] = new Presnap(m, side, this.plFor(side));
+    }
     // the kick meter for a person kicking
     this.kick = null;
     const kickSide = m.offSide;
@@ -527,7 +532,7 @@ class MatchScreen {
     camRight.x /= cl; camRight.z /= cl;
     for (const side of this.humanSides()) {
       const ps = this.presnaps[side];
-      if (!ps) continue;
+      if (!ps || this.ff) { if (!this.ff) m.cmd[side] = buildCmd(this.plFor(side), this.cam, {}); continue; }
       ps.camRight = camRight;
       const evs = ps.update(dt);
       for (const ev of evs) {
@@ -1112,7 +1117,7 @@ class MatchScreen {
       }
     }
     // pre-snap tools
-    if (m.phase === 'presnap' && !this.walk) {
+    if (m.phase === 'presnap' && !this.walk && !this.ff) {
       for (const side of this.humanSides()) {
         const ps = this.presnaps[side];
         if (!ps) continue;
