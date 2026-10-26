@@ -46,6 +46,7 @@ export function hardCount(m) {
   m.hardCounted++;
   m.emit('hardCount', {});
   if (m.isUser(m.defSide) && m.userEnt[m.defSide]) return;   // people don't jump on their own
+  if (!m.settings.penalties) return;
   // a jumpy lineman goes offside
   const dl = m.defense.filter((d) => d.role.startsWith('DL') || d.asg?.type === 'rush');
   for (const d of dl) {

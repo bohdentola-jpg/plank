@@ -6,6 +6,12 @@ The high school chapter of the football-game trinity, in the browser — full 3D
 install, no build step. Boots with a cinematic flyover of America's football towns
 and an original synthesized score.
 
+> **Also in this repo: [HARD COUNT](hardcount/README.md)** — 7-on-7 tackle football
+> on a 2005 CRT TV, played with a DualSense: Road to Glory (high school to the
+> Hall of Fame), Free Play, Practice, a chalkboard Playbook and every lateral on
+> the table. Windows: double-click **`hardcount.bat`**. Mac/Linux:
+> `python3 serve.py --open hardcount/`.
+
 **HOMETOWN HERO** — the player career: create your QB in a full face editor (skin,
 jaw, brows, eyes, hair, facial hair, eye black, visor, build), then live the week:
 allocate your hours between training, film, academics, and rest; handle what comes

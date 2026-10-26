@@ -43,10 +43,16 @@ hardcount/
   src/data/                 teams, rosters, names, schedules, career data
   src/gfx/                  geo/texture helpers, logos, player/ (models + animation),
                             stadium/ (venues, field paint, crowd, scoreboard), fx/ (weather)
-  src/game/                 the match: sim ↔ 3D bridge, cameras, HUD, controls, replay, presentation
-  src/screens/              boot, huddle (main menu), cointoss, match, options, records,
-                            practice, playbook, career/*, QA screens (gallery, venueview…)
-  tools/                    shot.mjs (screenshots), headless sim bench, e2e tests
+  src/match/                the broadcast around the sim: frame (sim snapshot), world (3D
+                            bridge), camera, hud, wristband (play calling), playart,
+                            controls (pre-snap, kick meter), commentary (the booth),
+                            officials, replay, sound, statsview, practice (the drills)
+  src/career/               Road to Glory engine (seasons, offers, draft, awards, saves)
+  src/screens/              boot, huddle (main menu), cointoss (Free Play setup), match,
+                            options, records (Hall of Fame), practice, playbook, career,
+                            QA screens (gallery, venueview, logosheet, soundboard, sim2d)
+  tools/                    simgame.mjs / playbench.mjs (headless sim), drive.mjs (drive
+                            the real game in Chromium, virtual DualSense), shot.mjs
 ```
 
 ## Units and coordinates
@@ -132,9 +138,12 @@ sfx.ui('move' | 'select' | 'back' | 'tab' | 'error'); sfx.staticBurst(s); sfx.tv
 sfx.whistle('short' | 'long' | 'double'); sfx.hit(strength, 'pads' | 'helmet' | 'ground');
 sfx.catchBall('hands' | 'body' | 'bobble'); sfx.kickBall('kickoff' | 'punt' | 'fg');
 sfx.snap(); sfx.cadence('set' | 'hut' | 'hard'); sfx.ballBounce(strength);
-sfx.pa('chime' | 'horn' | 'organ_charge' | 'organ_defense'); sfx.band('cadence' | 'fight' | null);
-crowd.update(dt, { excitement, size, home }); crowd.react('cheer' | 'roar' | 'ooh' | 'groan' | 'boo' | 'gasp' | 'chant' | 'stomp', strength);
-music.play(theme, { fade }); music.stinger('td' | 'turnover' | 'bigplay' | 'win' | 'lose');
+sfx.pa('chime' | 'horn' | 'organ_charge' | 'organ_defense' | 'organ_letsgo'); sfx.footsteps(0..1);
+sfx.prewarm(keys?)                           // render buffers now (behind LOADING); first use renders on the spot
+band.play('cadence' | 'fight' | 'charge' | null)
+crowd.update(dt, { excitement, size, home, indoor }); crowd.react(kind, strength, 'home' | 'away' | 'all');
+crowd.prewarm(keys?)
+music.play(theme, { fade }); music.stinger('td' | 'turnover' | 'bigplay' | 'kickoff' | 'win' | 'lose' | 'twominute');
 voice.say(text, { kind: 'pa' | 'ref' })      // optional speech synthesis, settings.announcer
 ```
 
@@ -149,9 +158,10 @@ Menu themes (one per huddle wristband line): `hud_glory` (cinematic brass),
 | Situation | Controls |
 | --- | --- |
 | Menus | D-pad / stick, ✕ select, ◯ back, L1/R1 tabs [arrows, Enter, Esc, Q/E] |
-| Play call | ← → plays, ↑ ↓ / L1 R1 formation sets, ✕ call, △ flip [A/D, W/S, Enter, I] |
-| Pre-snap offense | ✕ snap, □ hard count, △ audible, R1 hot route, L1 motion, R stick look |
-| QB | face button = throw to that receiver (tap = touch, hold = bullet), L stick leads, L1 pump, R2 scramble, R3 throw away |
+| Play call | stick / D-pad across the wristband, L1 R1 formation sets, ✕ call, △ flip, □ coach's pick [arrows or WASD, Q/E, K, I, J] |
+| Pre-snap offense | ✕ snap, □ hard count, △ audible, R1 hot route, L1 motion |
+| Pre-snap defense | ◯ switch player, △ audible, L stick shift your man (careful: offside) |
+| QB | face button = throw to that receiver (tap = touch, hold = bullet), hold L2 and the stick leads it (or PASS LEAD: MANUAL), L1 pump, R3 throw away; run plays hand off by themselves, the option rides and reads by itself until the stick is touched (✕ give, △ keep, L1 pitch) |
 | Ball carrier | R2 sprint, L1 lateral/pitch, ✕ dive, ◯ spin, □ stiff arm, △ hurdle, R stick juke ← → / truck ↑, R1 protect ball |
 | Receiver (ball in air) | △ jump catch, ✕ dive catch, ◯ possession catch, L stick drift to the ball |
 | Defense | ◯ switch player, ✕ tackle / dive, R stick ↑ hit stick, ↓ cut tackle, □ swat / strip, △ jump / play the ball, R2 sprint |
@@ -173,6 +183,66 @@ that hits the ground is a live ball. Quarter length is a setting (accelerated
 clock between plays). Clock stops on incompletions, out of bounds in the last two
 minutes of each half, scores, changes of possession and timeouts (3 a half).
 Overtime: alternate possessions from the 20 until someone leads after equal
-possessions. Penalties (setting): offside/encroachment, false start on a hard
-count jump, delay of game, holding, pass interference, illegal forward pass,
-intentional grounding, roughing the passer, face mask.
+possessions. Penalties (setting): offside, delay of game, holding, pass
+interference, illegal forward pass, intentional grounding, roughing the passer,
+face mask. (A defensive lineman can jump offside at a hard count; a person's
+defender lined up over the ball at the snap is offside.)
+
+## The match screen — `src/screens/match.js` + `src/match/`
+
+The sim steps at a fixed 60 Hz (`stepSim`, catching up to 8 steps on a slow
+frame); after every step `captureFrame(m, refs)` takes a plain snapshot of the
+bodies and the ball, and that frame is all the 3D world, the cameras, the
+replay tape and the HUD ever read. Stages: `intro` → `toss` → `game` (the sim's
+own phases: playcall / kickoff / pat → presnap → live → post → penalty /
+halftime / final) with `replay` and `pause` on top.
+
+- A person controls one man per side (`m.userEnt`); the sim asks `userControl`
+  (`src/sim/user.js`) each tick, which may return `'ai'` to let the man's own
+  brain run: the kicking unit until the kick is away, a career man who leaves
+  the stick alone, a QB's run/option footwork until the stick is touched.
+- After a handoff the person takes the carrier (`m.userTakes`) unless he still
+  has a scripted trick-play pitch or handoff to make; after a catch, lateral or
+  recovery they take whoever has it; after a kickoff or punt they take the cover
+  man nearest the landing spot.
+- The person's snap on a jet sweep sends the jet man and snaps the ball to meet
+  him (`m.snap()` arms, `presnapStep` fires `m.snap(true)`).
+- Params: `home`, `away`, `user` (home | away | both | none), `p1`, `difficulty`,
+  `qlen`, `venue`, `time`, `weather`, `field`, `seed`, `mode` (free | career |
+  practice), `drill`, `lock` / `lockReturns` / `rosters` (career), `onDone`,
+  `returnTo`; QA: `qa=play` (first and ten), `qa=kick&kicking=home|away`.
+- The stadium boards get `{ home: {abbr, score, timeouts}, away, quarter, clock
+  ('M:SS'), playClock, down, toGo, ballOn, possession, msg }`; at halftime and
+  the final the camera looks up at the venue's `cams.scoreboard`.
+
+## Practice — `src/match/practice.js`
+
+A `Drill` rides inside the match screen: `start(m)` sets the first situation,
+the screen hands it each play's result (`pending`) and it `settle`s once the
+sim has applied it (after any penalty decision), writing the rep on the
+clipboard and putting the ball back (`reset`). Drills: offense and defense reps
+from the 25, the two-minute drill (Q4 2:00, down 17–21, three timeouts; a lead
+wins, a field goal, turnover, downs or the clock loses), the field goal ladder
+(ten kicks from 25 yards, five more after every make) and kick returns. No
+crowd, no booth, no play clock (except the two-minute drill); the coach talks in
+the captions. Bests are kept in `practiceBests`.
+
+## Road to Glory — `src/career/career.js` + `src/screens/career.js`
+
+`newCareer` → a high school senior season (and its playoffs) → `endSeason`
+returns the next event: `signing` (offers by star rating) → college (declare
+after year 3, `runDraft` ranks you by ratings, production and awards) → `draft`
+on TV → pro seasons → `retireOption` (forced at 34, or after eight pro seasons) → `retire` makes
+the Hall of Fame plaque. `matchParams(c)` builds the match (your team's roster
+with you on its depth chart, `lock` on your man); `applyGame(c, result)` grades
+the game, adds XP and texts, sims the rest of the week and advances the season.
+
+## QA
+
+- `node hardcount/tools/simgame.mjs N` — N CPU-vs-CPU games: points, plays,
+  completion, sacks, laterals, flags, FG, and *stuck* plays (should be 0).
+- `node hardcount/tools/playbench.mjs run|pass|all N [--off id] [--def id]`.
+- `node hardcount/tools/drive.mjs "<query>" steps.json` — drives the real game in
+  headless Chromium (software WebGL, ~7 fps: timing-sensitive steps should use
+  `until`). `{ dualsense: true }` plugs in a virtual DualSense whose presses are
+  held until the game has polled them; rumble lands in `window.__rumbles`.
