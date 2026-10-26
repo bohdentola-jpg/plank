@@ -5,7 +5,7 @@
 // lights, street lamps, sodium lamps). All batched: ~5 draw calls total.
 import * as THREE from 'three';
 import { GeoBuilder } from '../geo.js';
-import { lampTex, glowTex, streakTex, beamTex } from './tex.js';
+import { lampTex, glowTex, streakTex } from './tex.js';
 
 const SPRITE_VERT = /* glsl */`
   attribute vec3 aCenter;
@@ -211,7 +211,6 @@ export class LightRig {
         uniforms: { uColor: { value: new THREE.Color(0.85, 0.9, 1.0) }, uI: { value: bi } },
         transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
       });
-      void beamTex;
       const bm = new THREE.Mesh(g, mat);
       bm.name = 'beams';
       bm.renderOrder = 4;

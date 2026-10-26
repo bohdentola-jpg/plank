@@ -65,7 +65,7 @@ function ballOnNum(b) {
 // ------------------------------------------------------------------ boards
 
 function drawHS(x, W, H, st, o) {
-  const home = o.home, away = o.away;
+  const home = o.home;
   x.fillStyle = '#0b0d0c';
   x.fillRect(0, 0, W, H);
   // header: painted sign with the school's name

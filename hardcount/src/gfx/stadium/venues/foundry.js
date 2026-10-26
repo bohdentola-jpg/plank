@@ -6,8 +6,8 @@
 // sawtooth sheds, a gas holder, cranes and the orange glow of the furnaces.
 import * as THREE from 'three';
 import { RRPath, ringWall, ringFlat, buildTier } from '../bowl.js';
-import { V3, box, beam, pole, spill, smokestack, building, lightPole, exteriorMat } from '../kit.js';
-import { cv, tex, BRANDS, label } from '../tex.js';
+import { V3, beam, spill, smokestack, building, lightPole, exteriorMat } from '../kit.js';
+import { cv, tex, BRANDS } from '../tex.js';
 import { createScoreboard } from '../scoreboard.js';
 import { blockText } from '../blockfont.js';
 import { logoCanvas } from '../../logos.js';
@@ -45,7 +45,7 @@ const SMOKE_VERT = /* glsl */`
     vec3 p = aA.xyz + vec3(uWind.x, 0.0, uWind.y) * age * (0.6 + k) + vec3(sin(aB.w * 20.0 + age * 0.4), 0.0, cos(aB.w * 13.0 + age * 0.3)) * k * 4.0;
     p.y += aB.y * age * (1.0 - 0.35 * k);
     vec4 mvPosition = viewMatrix * vec4(p, 1.0);
-    float s = 3.0 + aB.z * k * 18.0;
+    float s = 4.0 + aB.z * k * 24.0;
     mvPosition.xy += (corner - vec2(0.0, 0.5)) * s;
     vA = smoothstep(0.0, 0.08, k) * (1.0 - k);
     vUv = vec2(corner.x + 0.5, corner.y);
@@ -60,7 +60,7 @@ const SMOKE_FRAG = /* glsl */`
   #include <fog_pars_fragment>
   void main() {
     float d = length(clamp(vUv, 0.0, 1.0) - 0.5) * 2.0;
-    float a = (1.0 - smoothstep(0.2, 1.0, d)) * vA * 0.55;
+    float a = (1.0 - smoothstep(0.15, 1.0, d)) * vA * 0.72;
     if (a < 0.004) discard;
     vec3 c = uColor + uGlow * (1.0 - vUv.y) * 0.6;
     gl_FragColor = vec4(c, a);
@@ -68,7 +68,7 @@ const SMOKE_FRAG = /* glsl */`
   }`;
 
 function smoke(stacks, ctx) {
-  const per = ctx.quality === 'low' ? 10 : 22;
+  const per = ctx.quality === 'low' ? 16 : 34;
   const n = stacks.length * per;
   const g = new THREE.InstancedBufferGeometry();
   g.setAttribute('corner', new THREE.Float32BufferAttribute([-0.5, 0, 0.5, 0, 0.5, 1, -0.5, 1], 2));
@@ -87,10 +87,10 @@ function smoke(stacks, ctx) {
   g.setAttribute('aB', new THREE.InstancedBufferAttribute(Bv, 4));
   g.instanceCount = n;
   const A2 = ctx.atmos;
-  const base = A2.night ? [0.08, 0.08, 0.09] : A2.dusk ? [0.32, 0.28, 0.27] : [0.55, 0.55, 0.56];
+  const base = A2.night ? [0.07, 0.065, 0.07] : A2.dusk ? [0.2, 0.18, 0.18] : [0.5, 0.5, 0.52];
   const u = THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
     uTime: { value: 0 }, uWind: { value: new THREE.Vector2(Math.cos(ctx.windDir), Math.sin(ctx.windDir)).multiplyScalar(1 + ctx.wind * 5) },
-    uColor: { value: new THREE.Color(...base) }, uGlow: { value: new THREE.Color(A2.day ? 0 : 0.35, A2.day ? 0 : 0.12, 0) },
+    uColor: { value: new THREE.Color(...base) }, uGlow: { value: new THREE.Color(A2.day ? 0 : 0.55, A2.day ? 0 : 0.2, A2.day ? 0 : 0.04) },
   }]);
   const m = new THREE.Mesh(g, new THREE.ShaderMaterial({ vertexShader: SMOKE_VERT, fragmentShader: SMOKE_FRAG, uniforms: u, transparent: true, depthWrite: false, fog: true }));
   m.frustumCulled = false;
@@ -232,10 +232,9 @@ export async function build(ctx) {
   const wz = path.az + 90;
   for (let i = 0; i < 6; i++) {
     const x = -150 + i * 58 + (rng() - 0.5) * 20, z = wz + 60 + rng() * 120, h = 55 + rng() * 40;
-    const st = smokestack(B, x, z, h, 2.6 + rng() * 1.2);
+    smokestack(B, x, z, h, 2.6 + rng() * 1.2);
     stacks.push({ x, y: h, z });
     ctx.lightsList.push({ pos: V3(x, h + 1.5, z), color: [1, 0.1, 0.05], size: 2.4, k: 1.5, blink: 1 });
-    void st;
   }
   // sawtooth sheds
   const clad = B.get('clad');

@@ -140,7 +140,7 @@ function drawFigure(x, v, pose) {
 let atlasCache = null;
 export function crowdAtlas(size = 1024) {
   if (atlasCache && atlasCache.image.width === size) return atlasCache;
-  const [c, x] = cv(size, size);
+  const [, x] = cv(size, size);
   x.clearRect(0, 0, size, size);
   const cw = size / COLS, ch = size / ROWS, k = cw / CELL_W;
   for (let r = 0; r < ROWS; r++) {
@@ -423,14 +423,15 @@ const FLASH_VERT = /* glsl */`
   attribute vec3 aCenter;
   attribute vec2 aCorner;
   attribute float aBirth;
-  uniform float uTime;
+  uniform float uTime, uWin;
   varying vec2 vUv;
   varying float vI;
   void main() {
     vec4 mv = modelViewMatrix * vec4(aCenter, 1.0);
+    // a flash lives for exactly the frame it was fired in, whatever the frame rate
     float age = uTime - aBirth;
-    vI = age >= 0.0 ? exp(-age * 28.0) : 0.0;
-    mv.xy += aCorner * (1.4 + 2.0 * vI);
+    vI = (age >= -1e-4 && age < uWin) ? 1.0 : 0.0;
+    mv.xy += aCorner * (1.6 + 1.6 * fract(aBirth * 37.7)) * vI;
     vUv = aCorner + 0.5;
     gl_Position = projectionMatrix * mv;
   }`;
@@ -463,7 +464,7 @@ export function buildFlashes(spots, glowMap) {
   g.setIndex(idx);
   const mat = new THREE.ShaderMaterial({
     vertexShader: FLASH_VERT, fragmentShader: FLASH_FRAG,
-    uniforms: { map: { value: glowMap }, uTime: { value: 0 } },
+    uniforms: { map: { value: glowMap }, uTime: { value: 0 }, uWin: { value: 0.001 } },
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   });
   const mesh = new THREE.Mesh(g, mat);
@@ -477,19 +478,23 @@ export function buildFlashes(spots, glowMap) {
     rate: 0,
     update(dt, t) {
       mat.uniforms.uTime.value = t;
+      mat.uniforms.uWin.value = 0.0005;
       if (!spots.length || this.rate <= 0) return;
       acc += dt * this.rate;
       let dirty = false;
-      while (acc >= 1) {
+      let fired = 0;
+      while (acc >= 1 && fired < N) {
         acc -= 1;
+        fired++;
         const p = spots[(rng() * spots.length) | 0];
         for (let k = 0; k < 4; k++) {
           center.set([p.x, p.y, p.z], ((head * 4) + k) * 3);
-          birth[head * 4 + k] = t + rng() * 0.05;
+          birth[head * 4 + k] = t;
         }
         head = (head + 1) % N;
         dirty = true;
       }
+      if (acc > N) acc = 0;
       if (dirty) { aC.needsUpdate = true; aB.needsUpdate = true; }
     },
   };

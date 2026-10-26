@@ -152,8 +152,8 @@ export function skyDome(A, banks = []) {
         vec3 sd3 = normalize(sunDir);
         float sd = max(dot(d, sd3), 0.0);
         // sun glow + disc
-        col += cGlow * (pow(sd, 5.0) * 0.35 + pow(sd, 60.0) * 0.6) * uSun;
-        col += cGlow * smoothstep(0.9994, 0.99975, sd) * 14.0 * uSun;
+        col += cGlow * (pow(sd, 5.0) * 0.3 + pow(sd, 60.0) * 0.35) * uSun;
+        col += cGlow * smoothstep(0.9994, 0.99975, sd) * 6.0 * uSun;
         // moon
         vec3 md = normalize(vec3(-0.45, 0.55, -0.7));
         float mdd = max(dot(d, md), 0.0);

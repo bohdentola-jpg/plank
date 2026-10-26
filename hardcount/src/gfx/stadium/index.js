@@ -19,6 +19,7 @@ import { LightRig } from './lights.js';
 import { buildCrowd, buildFlashes } from './crowd.js';
 import { buildSideline } from './sideline.js';
 import { glowTex } from './tex.js';
+import { wetStreaks } from './wet.js';
 import { createWeather } from '../fx/weather.js';
 import * as friday from './venues/friday.js';
 import * as college from './venues/college.js';
@@ -102,7 +103,7 @@ export async function buildVenue(renderer, opts = {}) {
   // ---- field
   const F = buildField({
     field, quality, aniso: ctx.aniso, paint: ctx.paint, weather: A.weather, wind, windDir: ctx.windDir,
-    padColor: home.colors.primary, flagColor: mod.FLAG_COLOR, uPool: ctx.uPool, apron: mod.APRON ?? 160, apronRect: mod.apronRect?.(field), apronCanvas: mod.apronCanvas?.(ctx),
+    padColor: home.colors.primary, flagColor: mod.FLAG_COLOR, uPool: ctx.uPool, apron: mod.APRON ?? 450, apronRect: mod.apronRect?.(field), apronCanvas: mod.apronCanvas?.(ctx),
   });
   root.add(F.group);
   await tick();
@@ -114,8 +115,7 @@ export async function buildVenue(renderer, opts = {}) {
   await tick();
   const sideline = buildSideline(ctx, ctx.B, V.sideline || {});
   root.add(sideline.group);
-  const meshes = ctx.B.flush(root);
-  void meshes;
+  ctx.B.flush(root);
   await tick();
 
   // ---- floodlights, point glows, sky
@@ -123,6 +123,12 @@ export async function buildVenue(renderer, opts = {}) {
   const lights = ctx.rig.build(root);
   const sky = A.dome ? null : skyDome(A, ctx.rig.skyBanks());
   if (sky) scene.add(sky);
+  // rain: the banks smear across the wet turf toward the camera
+  let wet = null;
+  if (A.wet && A.lights && ctx.rig.banks.length) {
+    wet = wetStreaks(ctx.rig.banks, field, { gain: A.night ? 1.0 : A.dusk ? 0.6 : 0.3 });
+    root.add(wet.mesh);
+  }
 
   // ---- crowd + flashes
   let crowdObj = null, flashes = null;
@@ -179,6 +185,7 @@ export async function buildVenue(renderer, opts = {}) {
       crowdObj?.state.update(dt, { excitement: st.excitement ?? 0.3, reaction: st.reaction || null, homeHasBall: st.homeHasBall, time: t });
       flashes?.update(dt, t);
       wx.update(dt, cam, t);
+      wet?.update(cam);
       V.update?.(dt, st, t);
     },
     setScoreboard(s) {

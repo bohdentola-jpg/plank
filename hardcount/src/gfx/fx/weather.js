@@ -191,7 +191,7 @@ export function createWeather(scene, opts) {
       uCenter: { value: new THREE.Vector3() }, uBox: { value: new THREE.Vector3(34, 22, 34) },
       uVel: { value: new THREE.Vector3(wv.x * 9, -26, wv.y * 9) }, uTime: { value: 0 },
       uLen: { value: 0.6 }, uWidth: { value: 0.01 },
-      uColor: { value: new THREE.Color(0.3, 0.33, 0.38).multiplyScalar(lit) },
+      uColor: { value: new THREE.Color(0.25, 0.28, 0.33).multiplyScalar(lit) },
     };
     const m = new THREE.Mesh(g, new THREE.ShaderMaterial({
       vertexShader: RAIN_VERT, fragmentShader: RAIN_FRAG, uniforms: u,

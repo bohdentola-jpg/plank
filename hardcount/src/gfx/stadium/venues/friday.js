@@ -11,6 +11,7 @@ import { createScoreboard } from '../scoreboard.js';
 import { blockText } from '../blockfont.js';
 import { makeRng } from '../../../core/util.js';
 import { GeoBuilder } from '../../geo.js';
+import { logoCanvas } from '../../logos.js';
 
 export const SUN_AZ = 2.3;
 export const WIND_DIR = 0.9;
@@ -21,7 +22,7 @@ export function paint(ctx) {
   return {
     surface: 'grass', pattern: 'stripes', grass: ['#3e782c', '#4d8a36'], wear: 0.55, border: 'hs',
     endzone: { style: 'outline', fill: h.colors.primary, text: [h.name.toUpperCase(), h.name.toUpperCase()], color: h.colors.primary, outline: '#ffffff' },
-    logo: null, marginSide: 12, marginEnd: 8,
+    logo: logoCanvas(h, 1024, { flat: true }), logoSize: Math.min(ctx.field.W * 0.22, 9), marginSide: 12, marginEnd: 8,
   };
 }
 
