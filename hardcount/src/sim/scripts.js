@@ -125,6 +125,7 @@ function giveTo(m, qb, carrier) {
   carrier.carry = carrier.mem.carrySide || 'R';
   m.seg(carrier, 'rush');
   m.emit('handoff', { from: qb, to: carrier });
+  m.userTakes(carrier);
   // the QB carries out his fake
   qb.mem.fake = true;
 }
@@ -205,20 +206,31 @@ export function optionBrain(m, e, dt) {
   const tgtZ = behind > 0.5 ? m.los - dir * 0.6 : e.z + dir * 2;
   e.setWant(edgeX - e.x, tgtZ - e.z + dir * (behind > 0.5 ? 0.6 : 1.5), 1);
   // he has to get out on the edge before he can option anybody
-  const outWide = Math.abs(e.x - m.ballX) > 2.4 || m.playT > 0.9;
-  if (e.ctrl === null && pr && outWide) {
+  // (or the read man is already on him: pitch it before he's buried)
+  // (or the read man is already on him and not in the pitch lane: get rid of it before he's buried)
+  const lane = pr && segDist(pr, e, pm);
+  const outWide = Math.abs(e.x - m.ballX) > 2.4 || m.playT > 0.9 || (pr && m.playT > 0.5 && dist(pr, e) < 1.6 && lane > 1.3);
+  if ((e.ctrl === null || !e.mem.userMoved) && pr && outWide) {
     const d = dist(pr, e);
     const closing = (pr.vx * (e.x - pr.x) + pr.vz * (e.z - pr.z)) / Math.max(0.1, d);
     const pmOk = dist(pm, e) < 9 && (pm.z - e.z) * dir < 0.3 && pm.standing;
     // he widened to take the pitch man: keep it and turn it up inside him
     const onPitch = Math.abs(pr.x - e.x) > 1.2 && (pr.x - e.x) * keepSideW > 0 && dist(pr, pm) < d;
-    if (d < 3.4 && !onPitch && (closing > 1 || d < 2) && pmOk) {
+    if (d < 3.4 && !onPitch && (closing > 1 || d < 2) && pmOk && lane > 0.9) {
       if (m.rng() < 0.9 + 0.08 * R99(e.r.awr)) { pitchTo(m, e, pm); return; }
       m.optionDone = true;   // froze: he eats it
     } else if (d < 3.4 && onPitch) m.optionDone = true;
   }
   // past the line: he's a runner now
   if ((e.z - m.los) * dir > 1.2) { m.optionDone = true; }
+}
+
+/** Distance from p to the segment a→b. */
+function segDist(p, a, b) {
+  const vx = b.x - a.x, vz = b.z - a.z;
+  const L = vx * vx + vz * vz || 1;
+  const k = clamp(((p.x - a.x) * vx + (p.z - a.z) * vz) / L, 0, 1);
+  return Math.hypot(p.x - (a.x + vx * k), p.z - (a.z + vz * k));
 }
 
 export function pitchTo(m, from, to) {
@@ -314,6 +326,7 @@ export function runScripts(m, dt) {
         m.seg(to, 'rush');
         m.emit('handoff', { from, to });
         S.done.add(i);
+        m.userTakes(to);
       } else if (m.playT > (st.at || 0) + 0.8) S.done.add(i);
       return;
     }

@@ -53,6 +53,8 @@ export function resolveCollisions(m) {
 export function engage(m, blocker, defender, kind = 'pass') {
   if (blocker.engaged || defender.engaged || !blocker.standing || !defender.standing) return null;
   if (defender === m.ball.carrier || blocker === m.ball.carrier) return null;
+  // a blocker who just got beaten can't grab the same man again right away
+  if (blocker.recover > 0 || (defender.mem.shedFrom === blocker && m.time - defender.mem.shedT < 1.0)) return null;
   const rec = { a: blocker, b: defender, t: 0, shed: 0, bal: 0, kind, side: m.rng() < 0.5 ? 'L' : 'R' };
   blocker.engaged = rec; defender.engaged = rec;
   blocker.state = 'engaged'; defender.state = 'engaged';
@@ -148,6 +150,7 @@ function shedFree(m, a, b, gd) {
   b.boost = { vx: (sl.x * sgn * 0.6 + gd.x) * 2.2, vz: (sl.z * sgn * 0.6 + gd.z) * 2.2, t: 0.3 };
   a.recover = 0.35 + m.rng() * 0.3;
   a.mem.beat = m.time;
+  b.mem.shedFrom = a; b.mem.shedT = m.time;
   m.emit('shed', { a, b });
 }
 
@@ -517,7 +520,8 @@ function attemptCatch(m, e) {
   let pDef = 0.3 + 0.25 * R99(e.r.prc);
   if (e.action?.name === 'swat' || e.action?.name === 'jump_swat') { pInt *= 0.35; pDef = 0.85; }
   if (e.mem.wantInt) { pInt *= 1.35; pDef *= 0.8; }
-  if (b.kind === 'lateral') pInt *= 1.2;
+  // a pitch is soft and going away from him: he knocks it down far more often than he picks it
+  if (b.kind === 'lateral') { pInt *= 0.2; pDef *= 0.7; }
   if (sp > 22) pInt *= 0.8;
   const r = m.rng();
   if (r < pInt) return secure(m, e, 'int');

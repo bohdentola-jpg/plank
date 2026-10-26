@@ -117,7 +117,8 @@ export function userControl(m, e, cmd, dt, presnap) {
 function userQB(m, e, cmd, dt, s, mag) {
   const P = cmd.pressed || new Set();
   const side = e.side;
-  // option: ✕ give, △ keep at the mesh; L1 pitches when he's keeping
+  // option: ✕ give, △ keep at the mesh; L1 pitches when he's keeping. Until he
+  // grabs the stick the option runs itself (the ride, the read, the path)
   if (m.playKind === 'option' && !m.optionDone) {
     if (!m.optDecided && P.has('cross')) e.mem.forceKeep = false;
     if (!m.optDecided && P.has('triangle')) e.mem.forceKeep = true;
@@ -125,11 +126,14 @@ function userQB(m, e, cmd, dt, s, mag) {
       const pm = m.play.option?.pitch ? m.byRole(m.play.option.pitch) : null;
       if (pm) { pitchTo(m, e, pm); return; }
     }
+    if (mag > 0.4 && m.playT > 0.15) e.mem.userMoved = true;
+    if (!e.mem.userMoved) return 'ai';
   }
-  // run plays: the handoff is automatic unless he takes off
-  if (m.playKind === 'run' && !m.mesh?.done) {
-    if (mag > 0.4 && m.playT > 0.15) { e.mem.userMoved = true; e.setWant(cmd.move.x, cmd.move.z, s); }
-    return;
+  // run plays (and tricks that start with a handoff): the footwork and the handoff
+  // are automatic unless he takes off
+  if ((m.playKind === 'run' || (m.playKind === 'trick' && m.play.run)) && !m.mesh?.done) {
+    if (mag > 0.4 && m.playT > 0.15) { e.mem.userMoved = true; e.setWant(cmd.move.x, cmd.move.z, s); return; }
+    return 'ai';
   }
   // auto drop-back until he grabs the stick
   if (!e.mem.userMoved && (e.mem.phase === 'drop' || e.mem.phase === 'snap')) qbBrain(m, e, dt);

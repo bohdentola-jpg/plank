@@ -148,6 +148,8 @@ export function zoneBrain(m, e, dt) {
     const eyes = m.qb?.look && Math.hypot(m.qb.look.x - r.x, m.qb.look.z - r.z) < 2 ? 2.5 * R99(e.r.prc) : 0;
     if (s - eyes < best) { best = s - eyes; threat = r; }
   }
+  // the QB sitting on it: an underneath man with nobody in his area comes after him
+  if (!spot.deep && !threat && c && c === m.qb && m.playT > 3.6 && (c.z - m.los) * m.offDir < 0) return pursue(m, e, dt);
   let tx = spot.x, tz = spot.z;
   if (threat) {
     threat.delayed(0.18, tmp);

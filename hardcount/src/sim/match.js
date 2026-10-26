@@ -259,6 +259,7 @@ export class Match {
     this.center = center;
     this.ball.place(this.ballX, this.los, 'snap');
     this.ball.lastTeam = this.offSide;
+    this.snapArmed = false;
     // the CPU offense snaps after a beat
     this.snapAt = this.userSnaps() ? Infinity : this.hurry[this.offSide] ? 1.0 + this.rng() * 0.6 : 1.8 + this.rng() * 1.6;
     // designed motion: he goes in motion on his own; the CPU snaps when he's crossing the ball
@@ -271,7 +272,8 @@ export class Match {
         // a jet man crosses just in front of a shotgun QB (behind one under center)
         const qbDepth = this.qb ? (this.los - this.qb.z) * this.offDir : 1;
         const depth = mo.jet ? (qbDepth > 2.5 ? qbDepth - 1.15 : 1.6) : 1.2;
-        e.mem.motion = { x: across, speed: mo.jet ? 0.9 : 0.5, startAt: 0.6, jet: !!mo.jet, depth };
+        // (a person's jet sweep: the jet man takes off when the snap is called, and the ball is snapped to meet him)
+        e.mem.motion = { x: across, speed: mo.jet ? 0.9 : 0.5, startAt: mo.jet && this.userSnaps() ? Infinity : 0.6, jet: !!mo.jet, depth };
         this.motionMan = e;
         if (!this.userSnaps()) this.snapAt = Infinity;
       }
@@ -410,8 +412,14 @@ export class Match {
   }
 
   // ------------------------------------------------------------ the snap
-  snap() {
+  snap(force = false) {
     if (this.phase !== 'presnap') return;
+    // a person calling for the snap on a jet sweep: send the jet man, snap it when he gets there
+    const mo = this.motionMan?.mem.motion;
+    if (!force && mo?.jet && this.userSnaps()) {
+      if (!this.snapArmed) { this.snapArmed = true; mo.startAt = Math.min(mo.startAt, this.presnapT); }
+      return;
+    }
     RULES.checkOffsides(this);
     this.phase = 'live';
     this.playT = 0;
@@ -455,7 +463,7 @@ export class Match {
         e.move(dt);
         // a jet man is snapped to so the ball and he reach the QB together
         const lead = this.form.qb === 'under' ? 1.0 : 0.6 + Math.hypot(e.vx, e.vz) * 0.3;
-        if (mo.jet && this.motionMan === e && !this.userSnaps() && Math.abs(e.x - this.ballX) < lead) { this.snap(); return; }
+        if (mo.jet && this.motionMan === e && (!this.userSnaps() || this.snapArmed) && Math.abs(e.x - this.ballX) < lead) { this.snap(true); return; }
         if (Math.abs(e.x - mo.x) < 0.4) { e.mem.motion = null; e.state = 'set'; e.base = 'stance2'; if (this.motionMan === e && !this.userSnaps()) this.snapAt = this.presnapT + 0.2; }
         continue;
       }
@@ -583,6 +591,14 @@ export class Match {
     if (a === 'zone') return D.zoneBrain(this, e, dt);
     if (a === 'spy') return D.spyBrain(this, e, dt);
     return D.pursue(this, e, dt);
+  }
+
+  /** After a handoff the person takes the ball carrier — unless he still has a trick to run (flea flicker, reverse). */
+  userTakes(e) {
+    const side = e.side;
+    if (!this.isUser(side) || (this.lock && this.lock.side === side) || this.userEnt[side] === e) return;
+    if (this.carrierScripted(e)) return;
+    this.setUserEnt(side, e);
   }
 
   /** Before the kick, the kicking team's man runs himself (the kick meter is the person's part). */

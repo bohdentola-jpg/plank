@@ -549,7 +549,7 @@ class MatchScreen {
     // the play clock (a person on offense can run it out)
     if (this.playClock !== null) {
       this.playClock -= dt;
-      if (this.playClock <= 0 && m.isUser(m.offSide) && !this.kick) { RULES.delayOfGame(m); this.playClock = null; return; }
+      if (this.playClock <= 0 && m.isUser(m.offSide) && !this.kick && !m.snapArmed) { RULES.delayOfGame(m); this.playClock = null; return; }
     }
     const camRight = { x: -(this.cam.look.z - this.cam.pos.z), z: this.cam.look.x - this.cam.pos.x };
     const cl = Math.hypot(camRight.x, camRight.z) || 1;

@@ -166,7 +166,8 @@ export class Wristband {
       else if (this.kind === 'defense') id = defenseCall(m);
       else if (this.kind === 'kickoff' || this.kind === 'return' || this.kind === 'pat') {
         const c = cpuCalls(m);
-        id = this.kind === 'kickoff' ? c.off : this.kind === 'return' ? c.def : c.pat;
+        // (the CPU mixes in squibs and pooches; the coach's advice is to kick it deep unless it's onside time)
+        id = this.kind === 'kickoff' ? (c.off === 'ko_onside' ? 'ko_onside' : 'ko_deep') : this.kind === 'return' ? c.def : c.pat;
       }
     } catch { id = null; }
     if (!id) return;

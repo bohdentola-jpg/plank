@@ -2,6 +2,9 @@
 //   node hardcount/tools/drive.mjs "<query>" script.json
 // steps: { wait: ms } | { key: 'KeyK', hold?: ms } | { eval: 'js' } | { shot: 'name.png' }
 //        | { until: 'js expr', timeout: ms } (poll until truthy)
+//        | { dualsense: true } (first step: plug in a virtual DualSense) then
+//          { pad: 'cross', hold?: ms } (a button by name) | { stick: [lx, ly, rx, ry], hold: ms }
+//        Rumble the game asks for lands in window.__rumbles.
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
 import { extname, join } from 'node:path';
@@ -28,12 +31,40 @@ const browser = await chromium.launch({ args: ['--use-gl=angle', '--enable-webgl
 const page = await browser.newPage({ viewport: { width: 1024, height: 768 } });
 page.on('console', (m) => { if (m.type() === 'error' || m.text().startsWith('[qa]')) console.log(`[${m.type()}] ${m.text()}`); });
 page.on('pageerror', (e) => console.log(`[pageerror] ${e.message}\n${e.stack}`));
+// a DualSense on the standard mapping, driven from the steps
+const PAD_BUTTONS = ['cross', 'circle', 'square', 'triangle', 'l1', 'r1', 'l2', 'r2', 'create', 'options', 'l3', 'r3', 'dup', 'ddown', 'dleft', 'dright', 'ps', 'touch'];
+if (steps[0]?.dualsense) {
+  await page.addInitScript(() => {
+    const mk = () => ({ pressed: false, touched: false, value: 0 });
+    const pad = {
+      id: 'DualSense Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)',
+      index: 0, connected: true, mapping: 'standard', timestamp: 0,
+      buttons: Array.from({ length: 18 }, mk),
+      axes: [0, 0, 0, 0],
+      vibrationActuator: { type: 'dual-rumble', playEffect(type, p) { (window.__rumbles ||= []).push({ type, ...p }); return Promise.resolve('complete'); } },
+    };
+    window.__pad = pad;
+    Object.defineProperty(Navigator.prototype, 'getGamepads', { configurable: true, value: () => [pad, null, null, null] });
+    window.__padPress = (i, ms) => { const b = pad.buttons[i]; b.pressed = true; b.value = 1; setTimeout(() => { b.pressed = false; b.value = 0; }, ms); };
+    window.__padAxes = (a, ms) => { pad.axes = a.slice(); setTimeout(() => { pad.axes = [0, 0, 0, 0]; }, ms); };
+  });
+}
 const t0 = Date.now();
 await page.goto(`http://127.0.0.1:${port}/hardcount/index.html?${query}`);
 for (const st of steps) {
   if (st.wait) await page.waitForTimeout(st.wait);
   if (st.key) {
     if (st.hold) { await page.keyboard.down(st.key); await page.waitForTimeout(st.hold); await page.keyboard.up(st.key); } else await page.keyboard.press(st.key);
+  }
+  if (st.pad) {
+    const hold = st.hold || 260;
+    await page.evaluate(([i, ms]) => window.__padPress(i, ms), [PAD_BUTTONS.indexOf(st.pad), hold]);
+    await page.waitForTimeout(hold + 120);
+  }
+  if (st.stick) {
+    const hold = st.hold || 400;
+    await page.evaluate(([a, ms]) => window.__padAxes(a, ms), [st.stick, hold]);
+    await page.waitForTimeout(hold + 120);
   }
   if (st.until) {
     const end = Date.now() + (st.timeout || 20000);
