@@ -263,7 +263,7 @@ export class MatchWorld {
     if (rec) return rec;
     const m = this.m;
     const team = m.teams[side];
-    if (!player) player = buildRoster(team).byId[id] || null;
+    if (!player) player = m.rosters?.[side]?.byId?.[id] || buildRoster(team).byId[id] || null;
     let model = null;
     try {
       model = this.playerMod?.createPlayerModel ? this.playerMod.createPlayerModel({ team, kit: this.kits[side], player, lod: 'high' }) : null;

@@ -65,7 +65,8 @@ export function userControl(m, e, cmd, dt, presnap) {
       if (mag > 0.2) { e.setWant(mv.x, mv.z, s); e.look = { x: b.x, y: b.y, z: b.z }; } else routeBrain(m, e, dt);
       return;
     }
-    // a defender: play the ball
+    // a defender: play the ball (a career man who leaves the stick alone plays it himself)
+    if (m.lock && m.lock.side === side && mag < 0.15 && !P.size) return 'ai';
     if (P.has('triangle') && !e.action) { e.act('jump_swat'); e.vy = 2.8 + (e.r.jmp / 99) * 1.2; e.mem.wantInt = true; e.mem.playBall = true; }
     if (P.has('square') && !e.action) { e.act('swat', { side: 'R' }); e.mem.playBall = true; }
     if (P.has('cross') && !e.action) {
@@ -93,6 +94,8 @@ export function userControl(m, e, cmd, dt, presnap) {
   }
 
   // ---------------------------------------------------------- defense (or blocking)
+  // a career man left alone does his job (his route, his block, his coverage)
+  if (m.lock && m.lock.side === side && mag < 0.15 && !P.size) return 'ai';
   const c = b.carrier;
   if (c && c.side !== side) {
     const d = dist(e, c);

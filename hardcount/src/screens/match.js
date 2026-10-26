@@ -65,6 +65,8 @@ class MatchScreen {
       weather: q.weather || 'clear',
       wind: q.wind !== undefined ? +q.wind : 0.2,
       lock: q.lock || null,
+      lockReturns: !!q.lockReturns,
+      rosters: q.rosters || null,
       settings: {
         quarterLen: +(q.qlen || settings.get('quarterLen') || 4),
         accelClock: settings.get('accelClock') !== false,
@@ -144,6 +146,20 @@ class MatchScreen {
   humanSides() { return ['home', 'away'].filter((s) => this.m.isUser(s)); }
   plFor(side) { return input.players[this.users[side] ?? 0] || input.p1; }
   setStage(s) { this.stage = s; this.stageT = 0; }
+
+  /**
+   * In a career, the plays you're not on the field for go by on fast forward.
+   * (Before the call nobody knows who's out there yet; after it, m.active does.)
+   */
+  ffMode() {
+    const m = this.m;
+    if (!m.lock || this.mode !== 'career') return false;
+    if (m.phase === 'playcall' || m.phase === 'kickoff' || m.phase === 'pat') {
+      // the coach calls it unless you're the quarterback with the ball
+      return !(m.lock.side === m.offSide && m.lock.player.pos === 'QB' && m.phase === 'playcall');
+    }
+    return !m.active.some((e) => e.p?.id === m.lock.player.id);
+  }
 
   /** Which way the camera looks: from behind the person playing (or the offense). */
   desiredViewDir() {
@@ -320,7 +336,8 @@ class MatchScreen {
     let cpu = {};
     try { cpu = cpuCalls(m); } catch (e) { console.error(e); }
     const C = { kind: n.kind, off: null, def: null, flip: !!cpu.flip, pat: null, t: 0, need: n };
-    const hOff = m.isUser(n.off) && !m.lock, hDef = m.isUser(n.def) && !m.lock;
+    const lockQB = m.lock && m.lock.side === n.off && m.lock.player.pos === 'QB';
+    const hOff = m.isUser(n.off) && (!m.lock || (lockQB && n.kind !== 'kickoff' && n.kind !== 'pat')), hDef = m.isUser(n.def) && !m.lock;
     const both = hOff && hDef;
     const areas = both ? [{ x: 22, y: 140, w: 478, h: 392 }, { x: 524, y: 140, w: 478, h: 392 }] : [{ x: 132, y: 112, w: 760, h: 476 }];
     const wbs = [];
@@ -352,7 +369,7 @@ class MatchScreen {
 
   updateCalls(dt) {
     const m = this.m;
-    if (!this.calls) this.beginCalls();
+    if (!this.calls) { this.ff = this.ffMode(); this.beginCalls(); }
     const C = this.calls;
     if (!C) return;
     C.t += dt;
@@ -374,7 +391,7 @@ class MatchScreen {
       if (pl.pressed('touch') && m.phase === 'playcall') { if (!m.callTimeout(side)) this.hud.toast(m.timeouts[side] > 0 ? 'NOT NOW' : 'NO TIMEOUTS LEFT'); }
     }
     const allIn = this.wbs.every((w) => w.applied && w.t - w.doneAt > 0.5);
-    const minT = this.wbs.length ? 0 : C.kind === 'kickoff' ? 1.0 : 1.6;
+    const minT = this.wbs.length || this.ffMode() ? 0 : C.kind === 'kickoff' ? 1.0 : 1.6;
     if (!allIn || C.t < minT) return;
     // make the call
     try {
@@ -450,7 +467,8 @@ class MatchScreen {
       longest = Math.max(longest, d);
     }
     const kick = m.playKind === 'kickoff';
-    this.walk = kick || longest < 0.5 ? null : { t: 0, dur: clamp(longest / 5.2, 0.8, 2.6), list };
+    this.ff = this.ffMode();
+    this.walk = kick || longest < 0.5 || this.ff ? null : { t: 0, dur: clamp(longest / 5.2, 0.8, 2.6), list };
     this.override = null;
     this.playClock = kick ? null : 25;
     this.presnaps = {};
@@ -545,7 +563,8 @@ class MatchScreen {
 
   stepSim(dt) {
     const m = this.m;
-    this.acc = Math.min(this.acc + dt, STEP * 8);
+    const speed = this.ff ? 9 : 1;
+    this.acc = Math.min(this.acc + dt * speed, STEP * 8 * speed);
     while (this.acc >= STEP - 1e-6) {
       this.acc -= STEP;
       const prev = m.phase;
@@ -622,6 +641,7 @@ class MatchScreen {
           : `${s.car || 0} CAR · ${s.rushYds || 0} YDS${s.td ? ` · ${s.td} TD` : ''}`;
       this.hud.showCard({ name: `${e.p.first} ${e.p.last}`.toUpperCase(), number: e.p.number, pos: e.p.pos, team: m.teams[e.side], line, dur: 4 });
     }
+    if (this.ff) { this.stepSim(dt); return; }
     // the broadcast's own replay of the big ones
     if (P.replay && !P.replayed && P.t > 2.0 && this.tape.frames.length > 30) {
       P.replayed = true;
@@ -695,7 +715,7 @@ class MatchScreen {
     } else if (m.phase === 'final') {
       if (any && this.breakT > 2) {
         this.breakT = 0;
-        const result = { score: { ...m.score }, stats: m.stats, home: m.teams.home.id, away: m.teams.away.id, pog: playerOfGame(m) };
+        const result = { score: { ...m.score }, stats: m.stats, home: m.teams.home.id, away: m.teams.away.id, pog: playerOfGame(m), label: this.params.gameLabel };
         if (this.onDone) this.onDone(result);
         else go(this.params.returnTo || 'huddle', { from: 'match', result });
       }
@@ -741,8 +761,9 @@ class MatchScreen {
       { label: 'CLOSED CAPTIONS', type: 'toggle', get: () => self.captions, set: (v) => { self.captions = v; settings.set('captions', v); } },
       { label: 'GAME STATS', type: 'action', id: 'stats' },
       { label: 'CONTROLS', type: 'action', id: 'controls' },
-      { label: 'CALL TIMEOUT', type: 'action', id: 'timeout', disabled: !this.userSide || this.m.phase === 'live' || this.m.timeouts[this.userSide] <= 0 },
-      { label: 'QUIT GAME', type: 'action', id: 'quit' },
+      { label: 'CALL TIMEOUT', type: 'action', id: 'timeout', disabled: !this.userSide || this.m.phase === 'live' || this.m.timeouts[this.userSide] <= 0 || !!this.m.lock },
+      { label: 'SIM TO THE FINAL', type: 'action', id: 'simall' },
+      { label: this.mode === 'career' ? 'QUIT TO THE HUB' : 'QUIT GAME', type: 'action', id: 'quit' },
     ];
     this.pause = { prev: this.stage, menu: new Menu(items), sub: null, confirm: false };
     this.setStage('pause');
@@ -771,8 +792,30 @@ class MatchScreen {
       case 'controls': P.sub = 'controls'; break;
       case 'timeout': if (this.m.callTimeout(this.userSide)) { this.setStage(P.prev); this.pause = null; } break;
       case 'quit': P.confirm = true; break;
+      case 'simall': this.simToFinal(); break;
       default: break;
     }
+  }
+
+  /** Play the rest of the game out headless (the CPU on both sides) and go to the final. */
+  simToFinal() {
+    const m = this.m;
+    m.users = { home: null, away: null };
+    for (const side of ['home', 'away']) { m.cmd[side] = null; if (m.userEnt[side]) m.userEnt[side].ctrl = null; m.userEnt[side] = null; }
+    m.lock = null;
+    m.autoCalls = true;
+    this.calls = null; this.wbs = []; this.walk = null; this.override = null; this.kick = null; this.post = null;
+    if (m.phase === 'presnap') m.snap();
+    let n = 0;
+    while (m.phase !== 'final' && n++ < 60 * 60 * 90) {
+      m.step(STEP);
+      if (m.phase === 'penalty') RULES.choosePenalty(m, true);
+      if (m.phase === 'halftime') RULES.resumeAfterBreak(m);
+    }
+    this.pause = null;
+    this.setStage('game');
+    this.frame = captureFrame(m, this.officials.snapshot());
+    this.cam.cut();
   }
 
   drawPause(ctx) {
@@ -836,8 +879,9 @@ class MatchScreen {
       case 'pause': this.updatePause(dt); break;
       default: break;
     }
+    if (this.ff !== this._ffWas) { game.fx.interference = this.ff ? 0.1 : 0; this._ffWas = this.ff; }
     this.hud.update(dt, m);
-    this.booth.enabled = this.captions;
+    this.booth.enabled = this.captions && !this.ff;
     this.booth.update(dt);
     this.sound.update(dt, { userSide: this.userSide });
     this.updateCamera(dt);
@@ -1094,6 +1138,13 @@ class MatchScreen {
     if (m.phase === 'live' && this.humanSides().length) {
       const u = m.userEnt[this.userSide || 'home'];
       if (u && m.ball.carrier === u && u !== m.qb) hints(ctx, [['square', 'STIFF ARM'], ['circle', 'SPIN'], ['triangle', 'HURDLE'], ['l1', 'LATERAL']], { y: 662 });
+    }
+    // a career's fast forward: the VCR's FF under the picture while you watch from the sideline
+    if (this.ff && ['presnap', 'live', 'post', 'playcall', 'kickoff', 'pat'].includes(m.phase)) {
+      osd(ctx, '▶▶ FF', 60, 92, 30, '#d8ffd8');
+      const lockSide = m.lock?.side;
+      const why = !lockSide ? '' : m.offSide === lockSide ? `${m.teams[lockSide].name.toUpperCase()} OFFENSE — YOU'RE ON THE SIDELINE` : `${m.teams[lockSide].name.toUpperCase()} DEFENSE ON THE FIELD`;
+      text(ctx, why, 60, 120, { size: 13, weight: 900, color: '#d8ffd8', spacing: 2 });
     }
     if (m.phase === 'penalty') this.drawPenalty(ctx);
     if (m.phase === 'halftime') this.drawBreak(ctx, 'HALFTIME');

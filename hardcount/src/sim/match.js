@@ -51,7 +51,8 @@ export class Match {
   constructor(opts = {}) {
     this.field = opts.field || makeField(opts.fieldSize || 'sevens');
     this.teams = { home: opts.home, away: opts.away };
-    this.rosters = { home: buildRoster(opts.home), away: buildRoster(opts.away) };
+    // (a career passes its own rosters: the team with you on its depth chart)
+    this.rosters = { home: opts.rosters?.home || buildRoster(opts.home), away: opts.rosters?.away || buildRoster(opts.away) };
     this.users = { home: opts.users && 'home' in opts.users ? opts.users.home : 0, away: opts.users && 'away' in opts.users ? opts.users.away : null };
     this.lock = opts.lock || null;                 // career: { side, player }
     this.lockReturns = !!opts.lockReturns;
@@ -259,7 +260,7 @@ export class Match {
     this.ball.place(this.ballX, this.los, 'snap');
     this.ball.lastTeam = this.offSide;
     // the CPU offense snaps after a beat
-    this.snapAt = this.isUser(this.offSide) ? Infinity : this.hurry[this.offSide] ? 1.0 + this.rng() * 0.6 : 1.8 + this.rng() * 1.6;
+    this.snapAt = this.userSnaps() ? Infinity : this.hurry[this.offSide] ? 1.0 + this.rng() * 0.6 : 1.8 + this.rng() * 1.6;
     // designed motion: he goes in motion on his own; the CPU snaps when he's crossing the ball
     this.motionMan = null;
     const mo = this.play?.motion;
@@ -272,7 +273,7 @@ export class Match {
         const depth = mo.jet ? (qbDepth > 2.5 ? qbDepth - 1.15 : 1.6) : 1.2;
         e.mem.motion = { x: across, speed: mo.jet ? 0.9 : 0.5, startAt: 0.6, jet: !!mo.jet, depth };
         this.motionMan = e;
-        if (!this.isUser(this.offSide)) this.snapAt = Infinity;
+        if (!this.userSnaps()) this.snapAt = Infinity;
       }
     }
     this.pickUserEnts();
@@ -281,6 +282,12 @@ export class Match {
   }
 
   isUser(side) { return this.users[side] !== null && this.users[side] !== undefined; }
+  /** Does a person snap the ball? (In a career only if he's the quarterback.) */
+  userSnaps() {
+    if (!this.isUser(this.offSide)) return false;
+    if (this.lock && this.lock.side === this.offSide) return this.lock.player.pos === 'QB' && this.qb?.p?.id === this.lock.player.id;
+    return true;
+  }
 
   pickUserEnts() {
     for (const side of ['home', 'away']) {
@@ -346,7 +353,7 @@ export class Match {
     this.prePlay();
     this.ball.place(this.ballX, this.los, 'dead');
     this.ball.y = 0.35; // on the tee
-    this.snapAt = this.isUser(this.offSide) ? Infinity : 1.2;
+    this.snapAt = this.isUser(this.offSide) && !this.lock ? Infinity : 1.2;
     return this;
   }
 
@@ -448,8 +455,8 @@ export class Match {
         e.move(dt);
         // a jet man is snapped to so the ball and he reach the QB together
         const lead = this.form.qb === 'under' ? 1.0 : 0.6 + Math.hypot(e.vx, e.vz) * 0.3;
-        if (mo.jet && this.motionMan === e && !this.isUser(this.offSide) && Math.abs(e.x - this.ballX) < lead) { this.snap(); return; }
-        if (Math.abs(e.x - mo.x) < 0.4) { e.mem.motion = null; e.state = 'set'; e.base = 'stance2'; if (this.motionMan === e && !this.isUser(this.offSide)) this.snapAt = this.presnapT + 0.2; }
+        if (mo.jet && this.motionMan === e && !this.userSnaps() && Math.abs(e.x - this.ballX) < lead) { this.snap(); return; }
+        if (Math.abs(e.x - mo.x) < 0.4) { e.mem.motion = null; e.state = 'set'; e.base = 'stance2'; if (this.motionMan === e && !this.userSnaps()) this.snapAt = this.presnapT + 0.2; }
         continue;
       }
       // a person moving his defender before the snap
@@ -530,9 +537,9 @@ export class Match {
       if (e.recover <= 0 && !e.action) { e.act(e.base === 'lie_back' ? 'getup_back' : 'getup_front'); e.recover = 1.2; }
       return;
     }
+    // a person's man (unless he's left the stick alone in a career, when his job runs itself)
     if (e.ctrl !== null && this.cmd[e.side] && this.userEnt[e.side] === e) {
-      userControl(this, e, this.cmd[e.side], dt, false);
-      return;
+      if (userControl(this, e, this.cmd[e.side], dt, false) !== 'ai') return;
     }
     if (e.state === 'wrapping') return;
     if (e.recover > 0 && e.state !== 'engaged') { e.setWant(e.vx, e.vz, 0.2); return; }
