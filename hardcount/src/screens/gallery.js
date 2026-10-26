@@ -7,18 +7,22 @@
 //   mode=bases    every BASE stance (bases=stand,ready… | all)
 //   mode=run      runners at 2 / 5 / 8 / 10.5 yd/s, backpedal, shuffle, ball carrier, a banking curve, kick-slide
 //   mode=closeup  head / helmet / facemask turntable: helmets on (every facemask + visors) and off (hair styles)
+//                 which=helmet|bare  finish=chrome|matte|pearl|gloss  stripe=skunk|bolt|…  (override every shell)
 //   mode=huddle   six players in the huddle around a first-person camera at QB eye height (the main menu shot)
 //   mode=ball     footballs (pro + striped) spinning in a spiral
 //   mode=perf     22 players running around; shows the animation cost per frame
+//   mode=redress  models changed in place by setKit / setPlayer / setHelmet / setLod / setFlag (cycle=1: soak test)
 // Common: cam=az,el,dist | front | back | side | top | low   fov=   light=night|day   crt=0   full=1
 //   lod=low   dirt=0..1   helmet=0   ts=0.25 (time scale)   rot=deg (closeup)   bones=1 (skeleton overlay)
+//   atlas=N (draw model N's uniform atlas over the view)
 // Drag with the mouse / arrow keys to orbit, wheel to zoom.
 import * as THREE from 'three';
 import { registerScreen, game } from '../main.js';
 import { TEAMS, getTeam } from '../data/teams.js';
 import { buildRoster } from '../data/roster.js';
-import { createPlayerModel, createRefModel } from '../gfx/player/index.js';
+import { createPlayerModel, createRefModel, bodyCacheSize, SEAT_HEIGHT } from '../gfx/player/index.js';
 import { createBallModel } from '../gfx/ball.js';
+import { CLIPS } from '../gfx/player/clips.js';
 import { getEnvMap } from '../core/envmap.js';
 import { ACTIONS, BASES } from '../sim/anims.js';
 import { text } from '../core/ui.js';
@@ -110,6 +114,7 @@ registerScreen('gallery', () => {
   let savedCrt = null;
   let helper = null;
   let fixedCam = null;           // huddle: first-person camera
+  let soak = null;               // redress: random re-dressing every few frames
 
   function lights() {
     scene.environment = getEnvMap(game.renderer.gl, night ? 'stadium' : 'day');
@@ -144,7 +149,7 @@ registerScreen('gallery', () => {
 
   function add(model, A, label, opts = {}) {
     scene.add(model.group);
-    if (dirt) model.setDirt(dirt);
+    if (dirt) { model.setDirt(dirt); A.dirt = dirt; }
     if (q.get('helmet') === '0') model.setHelmet(false);
     const it = { model, A, label, ...opts };
     if (opts.ball || A.carry) {
@@ -159,8 +164,8 @@ registerScreen('gallery', () => {
 
   function lineup() {
     const one = q.get('team');
-    const back = q.get('side') === 'back';
-    const heading = back ? Math.PI : 0;
+    const back = q.get('side') === 'back';     // the camera goes round the back; the players keep facing +z
+    const heading = 0;
     if (one) {
       const team = getTeam(one);
       const order = ['QB', 'RB', 'WR', 'TE', 'C', 'G', 'DL', 'LB', 'CB', 'S', 'K'];
@@ -188,8 +193,8 @@ registerScreen('gallery', () => {
     ['referee', 'umpire', 'judge'].forEach((role, i) => {
       add(createRefModel({ role, lod, seed: i }), blankA({ x: 6.2 + i * 0.9, z: -0.4 - i * 0.7, heading: heading - 0.5, base: 'ref' }), role.toUpperCase().slice(0, 3));
     });
-    focus.set(0.6, 1.0, -0.5);
-    orbit = { az: back ? 180 : 0, el: 9, dist: 15.5 };
+    focus.set(back ? 1.5 : 0.6, 1.0, -0.5);
+    orbit = { az: back ? 180 : 0, el: 9, dist: back ? 17 : 15.5 };
   }
 
   function actionsMode() {
@@ -222,7 +227,16 @@ registerScreen('gallery', () => {
       const team = TEAMS[i % TEAMS.length];
       const pos = { stance3: 'G', center: 'C', qbUnder: 'QB', qbGun: 'QB', block: 'G', rush: 'DL', kick_ready: 'K', stance2: 'WR', ready: 'CB', huddle: 'TE' }[b] || 'RB';
       const model = b === 'ref' ? createRefModel({ lod }) : createPlayerModel({ team, kit: 'home', player: rosterPick(team, pos), lod });
-      add(model, blankA({ x: (c - (cols - 1) / 2) * 2.4, z: -r * 2.6, base: b }), b);
+      const x = (c - (cols - 1) / 2) * 2.4, z = -r * 2.6;
+      add(model, blankA({ x, z, base: b }), b);
+      if (b === 'sit') {
+        // a sideline bench at the seat height the pose sits on
+        const bench = new THREE.Mesh(new THREE.BoxGeometry(1.6, SEAT_HEIGHT, 0.42), new THREE.MeshStandardMaterial({ color: '#3a3f47', roughness: 0.6, metalness: 0.3 }));
+        bench.position.set(x, SEAT_HEIGHT / 2, z - 0.22);
+        bench.castShadow = bench.receiveShadow = true;
+        scene.add(bench);
+        extras.push(bench);
+      }
     });
     const rows = Math.ceil(names.length / cols);
     focus.set(0, 0.8, -(rows - 1) * 1.3);
@@ -263,8 +277,11 @@ registerScreen('gallery', () => {
     const hairs = ['afro', 'dreads', 'mohawk', 'flat', 'long', 'curly'];
     const beards = ['none', 'full', 'goatee', 'stubble', 'chinstrap', 'none'];
     const which = q.get('which') || 'both';
+    const finish = q.get('finish');      // finish=gloss|matte|pearl|chrome overrides every shell
+    const stripe = q.get('stripe');      // stripe=none|single|double|triple|skunk|bolt|wings
     for (let i = 0; i < 6; i++) {
-      const team = teams[i % 4];
+      let team = teams[i % 4];
+      if (finish || stripe) team = { ...team, helmet: { ...team.helmet, ...(finish ? { finish } : {}), ...(stripe ? { stripe } : {}) } };
       const base = rosterPick(team, ['QB', 'WR', 'G', 'LB', 'DL', 'K'][i]);
       if (which !== 'bare') {
         const p = { ...base, look: { ...base.look, facemask: masks[i], visor: visors[i], eyeBlack: i % 2 ? 'stripe' : 'sticker' } };
@@ -286,7 +303,7 @@ registerScreen('gallery', () => {
       extras.push(riser);
     }
     focus.set(0, which === 'both' ? 2.2 : 1.95, which === 'both' ? -0.5 : 0);
-    orbit = { az: 0, el: 6, dist: which === 'both' ? 4.6 : 3.4 };
+    orbit = { az: 0, el: 6, dist: 4.6 };
     camera.fov = parseFloat(q.get('fov') || '32');
   }
 
@@ -359,9 +376,14 @@ registerScreen('gallery', () => {
     const gap = parseFloat(q.get('gap') || '1.6');
     const speed = parseFloat(q.get('speed') || '0');
     const side = q.get('side') || null;
+    // side= mirrors the clip: reach points mirror with it, the ball goes to the throwing hand
+    // (or, for the stiff arm, to the other one)
+    const flip = side && side !== (CLIPS[name]?.side || 'R') ? -1 : 1;
+    let carry0 = cast[2] || null;
+    if (side && carry0 && carry0 !== 'two') carry0 = name === 'stiff' ? (side === 'L' ? 'R' : 'L') : ['throw', 'pump', 'spike', 'celebrate_spike'].includes(name) ? side : carry0;
     times.forEach((tk, k) => {
       const model = cast[0] === 'REF' ? createRefModel({ role: 'referee', lod }) : createPlayerModel({ team, kit: q.get('kit') || 'away', player: rosterPick(team, cast[0]), lod });
-      const A = blankA({ x: (k - (times.length - 1) / 2) * gap, z: 0, heading: parseFloat(q.get('face') || '0') * D2R, base: q.get('base') || cast[1], carry: cast[2] || null, speed, effort: 0.7 });
+      const A = blankA({ x: (k - (times.length - 1) / 2) * gap, z: 0, heading: parseFloat(q.get('face') || '0') * D2R, base: q.get('base') || cast[1], carry: carry0, speed, effort: 0.7 });
       const it = add(model, A, `${name} ${tk.toFixed(2)}`, { strip: true, action: name, carryWas: A.carry });
       // settle in the base, then run the clip with fixed steps up to tk
       for (let i = 0; i < 40; i++) model.update(1 / 60, A);
@@ -371,7 +393,7 @@ registerScreen('gallery', () => {
         A.action = { name, t: Math.min(t, tk), side, power: parseFloat(q.get('power') || '1') };
         if (it.carryWas) A.carry = key.release !== undefined && t > key.release ? null : it.carryWas;
         if (key.ball !== undefined && !it.carryWas) A.carry = t > key.ball + 0.05 ? 'two' : null;
-        A.reach = R ? { x: A.x + R[0], y: R[1], z: A.z + R[2] } : null;
+        A.reach = R ? { x: A.x + R[0] * flip, y: R[1], z: A.z + R[2] } : null;
         if (['throw', 'pump'].includes(name)) A.look = { x: A.x, y: 1.8, z: A.z + 20 };
         model.update(1 / 60, A);
       }
@@ -384,6 +406,85 @@ registerScreen('gallery', () => {
     orbit = { az: parseFloat(q.get('az') || '25'), el: 8, dist: times.length * gap * 0.95 + 2 };
   }
 
+  // linemen locked up: pushes +1 / 0 / −1 (the OL drives, stalemate, the DL drives)
+  function engageMode() {
+    const ol = getTeam('det'), dl = getTeam('hou');
+    const pushes = [1, 0, -1];
+    pushes.forEach((push, i) => {
+      const x = (i - 1) * 2.6;
+      const off = add(createPlayerModel({ team: ol, kit: 'home', player: rosterPick(ol, 'G', i), lod }), blankA({ x, z: -0.45, heading: 0, base: 'block', engage: { dx: 0, dz: 1, push } }), `OL push ${push > 0 ? '+' : ''}${push}`);
+      const def = add(createPlayerModel({ team: dl, kit: 'away', player: rosterPick(dl, 'DL', i), lod }), blankA({ x, z: 0.45, heading: Math.PI, base: 'rush', engage: { dx: 0, dz: -1, push: -push } }), `DL ${-push > 0 ? '+' : ''}${-push}`);
+      // the side that is driven back slides at a walk, the winner chops forward
+      off.A.speed = push < 0 ? 0.9 : push > 0 ? 0.9 : 0;
+      off.A.moveAngle = push < 0 ? Math.PI : 0;
+      def.A.speed = push > 0 ? 0.9 : push < 0 ? 0.9 : 0;
+      def.A.moveAngle = push > 0 ? Math.PI : 0;
+    });
+    focus.set(0, 0.9, 0);
+    orbit = { az: 70, el: 12, dist: 9 };
+  }
+
+  // a ball looping overhead: everyone tracks it with their eyes, two receivers reach for it
+  function lookMode() {
+    const team = getTeam('slc');
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const x = Math.sin(a) * 2.6, z = Math.cos(a) * 2.6;
+      const it = add(createPlayerModel({ team, kit: i % 2 ? 'home' : 'away', player: rosterPick(team, ['WR', 'CB', 'S', 'LB', 'RB', 'TE'][i]), lod }), blankA({ x, z, heading: Math.atan2(-x, -z) + (i % 3 - 1) * 0.6, base: i < 2 ? 'ready' : 'stand' }), i < 2 ? 'look + reach' : 'look', { looker: true, reacher: i < 2 });
+    }
+    const ball = createBallModel({});
+    scene.add(ball.group);
+    items.push({ ballOnly: ball, flying: true });
+    focus.set(0, 1.2, 0);
+    orbit = { az: 30, el: 18, dist: 9.5 };
+  }
+
+  // runtime re-dress: models built one way, then changed in place (setKit / setPlayer / setHelmet / setLod / setFlag).
+  // cycle=1 keeps re-dressing them at random every 0.4 s (leak / error soak; logs the body-geometry cache size).
+  function redressMode() {
+    const [pht, det, hou, slc] = TEAMS;
+    const qb = rosterPick(pht, 'QB'), g = rosterPick(det, 'G'), wr = rosterPick(hou, 'WR'), dl = rosterPick(slc, 'DL');
+    const visored = { ...wr, look: { ...wr.look, visor: 'gold', facemask: 'robot' } };
+    const cases = [
+      ['PHT H → DET A', () => createPlayerModel({ team: pht, kit: 'home', player: qb, lod }), (m) => m.setKit(det, 'away')],
+      ['QB → G', () => createPlayerModel({ team: det, kit: 'home', player: qb, lod }), (m) => m.setPlayer(g)],
+      ['HELMET OFF', () => createPlayerModel({ team: hou, kit: 'home', player: wr, lod }), (m) => m.setHelmet(false)],
+      ['OFF → ON', () => createPlayerModel({ team: hou, kit: 'away', player: visored, lod }), (m) => { m.setHelmet(false); m.setHelmet(true); }],
+      ['HIGH → LOW', () => createPlayerModel({ team: slc, kit: 'home', player: visored, lod: 'high' }), (m) => m.setLod('low')],
+      ['LOW → HIGH', () => createPlayerModel({ team: slc, kit: 'away', player: dl, lod: 'low' }), (m) => m.setLod('high')],
+      ['→ SLC (HELMET #)', () => createPlayerModel({ team: pht, kit: 'away', player: dl, lod }), (m) => m.setKit(slc, 'home')],
+      ['FLAG', () => createRefModel({ role: 'judge', lod }), (m) => m.setFlag(true)],
+    ];
+    cases.forEach(([label, make, change], i) => {
+      const m = make();
+      change(m);
+      add(m, blankA({ x: (i - (cases.length - 1) / 2) * 1.2, z: 0, base: m.ref ? 'ref' : 'stand' }), label, { i });
+    });
+    if (q.get('cycle') === '1') {
+      const rng = makeRng(11);
+      const players = [qb, g, wr, dl, visored];
+      const ops = [
+        (m) => m.setKit(rng.pick(TEAMS), rng() < 0.5 ? 'home' : 'away'),
+        (m) => m.setPlayer(rng.pick(players)),
+        (m) => m.setHelmet(rng() < 0.5),
+        (m) => m.setLod(rng() < 0.5 ? 'low' : 'high'),
+        (m) => m.setDirt(rng()),
+      ];
+      let n = 0;
+      soak = (dt) => {
+        soak.acc = (soak.acc || 0) + dt;
+        if (soak.acc < 0.4) return;
+        soak.acc = 0;
+        const it = items[Math.floor(rng() * items.length)];
+        if (!it.model || it.model.ref) return;
+        rng.pick(ops)(it.model);
+        if (++n % 10 === 0) console.log(`[redress] ${n} changes, body geometries cached: ${bodyCacheSize()}`);
+      };
+    }
+    focus.set(0, 1.0, 0);
+    orbit = { az: 0, el: 8, dist: 11.5 };
+  }
+
   function perfMode() {
     const rng = makeRng(3);
     for (let i = 0; i < 22; i++) {
@@ -393,6 +494,17 @@ registerScreen('gallery', () => {
       add(createPlayerModel({ team, kit: i < 11 ? 'home' : 'away', player: rosterPick(team, pos, i), lod }), A, '', { wander: rng() * 10 });
     }
     for (let i = 0; i < 3; i++) add(createRefModel({ role: ['referee', 'umpire', 'judge'][i], lod, seed: i }), blankA({ x: -8 + i * 8, z: 12, base: 'ref', speed: 2, heading: 1 }), '', { wander: i * 3 });
+    // CPU benchmark: animation updates only (no rendering), fixed 60 Hz steps
+    const models = items.filter((it) => it.model);
+    for (let f = 0; f < 60; f++) for (const it of models) { tickItem(it, 1 / 60, f / 60); it.model.update(1 / 60, it.A); }
+    const frames = 300;
+    const t0 = performance.now();
+    for (let f = 0; f < frames; f++) {
+      for (const it of models) { tickItem(it, 1 / 60, 1 + f / 60); it.model.update(1 / 60, it.A); }
+    }
+    const ms = (performance.now() - t0) / frames;
+    perf.bench = ms;
+    console.log(`[perf] ${models.length} models: ${ms.toFixed(3)} ms per frame for all animation updates (${(ms / models.length * 1000).toFixed(1)} µs per model)`);
     focus.set(0, 0, 0);
     orbit = { az: 30, el: 35, dist: 42 };
   }
@@ -460,6 +572,15 @@ registerScreen('gallery', () => {
       const rot = q.has('rot') ? parseFloat(q.get('rot')) * D2R : t * 0.45;
       A.heading = rot + (q.has('rot') ? 0 : it.i * 0.35);
     }
+    if (it.looker) {
+      const bt = t * 0.9;
+      const bp = { x: Math.sin(bt) * 2.2, y: 1.6 + Math.sin(bt * 2.3) * 0.9 + 0.6, z: Math.cos(bt * 0.7) * 1.6 };
+      A.look = bp;
+      if (it.reacher) {
+        const d = Math.hypot(bp.x - A.x, bp.z - A.z);
+        A.reach = d < 2.2 ? bp : null;
+      }
+    }
     if (it.huddle && q.get('clap') === '1') {
       const ct = (t % 4) - 2.5;
       A.action = ct > 0 && ct < 0.6 ? { name: 'huddle_clap', t: ct, side: null, power: 1 } : null;
@@ -505,7 +626,7 @@ registerScreen('gallery', () => {
       if (q.get('crt') === '0') { savedCrt = game.renderer.crt; game.renderer.crt = 0; }
       game.renderer.setPost({ bloomStrength: 0.7, vignette: 0.4, exposure: night ? 1.05 : 1.0 }, true);
       lights();
-      ({ lineup, actions: actionsMode, bases: basesMode, run: runMode, stride: strideMode, clip: clipMode, closeup: closeupMode, huddle: huddleMode, ball: ballMode, perf: perfMode }[mode] || lineup)();
+      ({ lineup, actions: actionsMode, bases: basesMode, run: runMode, stride: strideMode, clip: clipMode, engage: engageMode, look: lookMode, closeup: closeupMode, huddle: huddleMode, ball: ballMode, perf: perfMode, redress: redressMode }[mode] || lineup)();
       applyCamParam();
       if (q.get('bones') === '1' && items[0]?.model) {
         helper = new THREE.SkeletonHelper(items[0].model.group);
@@ -538,10 +659,15 @@ registerScreen('gallery', () => {
       if (input.pressed('down')) orbit.el = Math.max(-10, orbit.el - 8);
       const sdt = dt * timeScale;
       time += sdt;
+      if (soak) soak(sdt);
       const t0 = performance.now();
       for (const it of items) {
         if (it.strip) continue;
         if (it.ballOnly) {
+          if (it.flying) {
+            const bt = time * 0.9;
+            it.ballOnly.group.position.set(Math.sin(bt) * 2.2, 1.6 + Math.sin(bt * 2.3) * 0.9 + 0.6, Math.cos(bt * 0.7) * 1.6);
+          }
           it.ballOnly.group.rotateZ(sdt * 9);
           continue;
         }
@@ -570,9 +696,15 @@ registerScreen('gallery', () => {
         text(ctx, it.label.toUpperCase(), x, y + 14, { size: 11, align: 'center', color: '#e8eefc', weight: 700 });
         if ((freezeT === null || keyName) && it.action && it.A.action) text(ctx, it.A.action.t.toFixed(2), x, y + 27, { size: 10, align: 'center', color: '#ffb21e' });
       }
+      // atlas=N: show model N's uniform atlas (QA)
+      if (q.has('atlas')) {
+        const m = items.filter((it) => it.model)[parseInt(q.get('atlas'), 10) || 0]?.model;
+        if (m) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 768, 768); ctx.drawImage(m.atlas, 0, 0, 768, 768); }
+      }
       const st = items.find((it) => it.model)?.model.stats();
       const head = `GALLERY · ${mode.toUpperCase()} · ${items.length} MODELS` + (st ? ` · ${st.tris} TRIS / ${st.calls} CALLS / ${st.bones} BONES (FIRST)` : '') + ` · ANIM ${perf.ms.toFixed(2)} MS`;
       text(ctx, head, 24, 30, { size: 13, color: '#9fb4d8', weight: 700 });
+      if (perf.bench) text(ctx, `BENCH ${perf.bench.toFixed(2)} MS / FRAME FOR ${items.filter((it) => it.model).length} MODELS (ANIMATION ONLY)`, 24, 66, { size: 13, color: '#46e8ff', weight: 700 });
       if (freezeT !== null) text(ctx, keyName ? `t = ${keyName}` : `t = ${freezeT.toFixed(2)} s`, 24, 48, { size: 13, color: '#ffb21e', weight: 700 });
     },
     view() { return { scene, camera }; },

@@ -41,11 +41,11 @@ function roundPath(path, r) {
 }
 
 const STYLE = {
-  block: { w: 1.62, join: 'miter', cap: 'butt', round: 0, skew: 0, cond: 1.0, serif: false },
-  pro: { w: 1.5, join: 'round', cap: 'butt', round: 1.05, skew: 0, cond: 0.9, serif: false },
-  college: { w: 1.7, join: 'bevel', cap: 'butt', round: 0, skew: 0, cond: 1.04, serif: true },
-  italic: { w: 1.52, join: 'round', cap: 'butt', round: 0.8, skew: -0.24, cond: 0.94, serif: false },
-  stencil: { w: 1.66, join: 'miter', cap: 'butt', round: 0, skew: 0, cond: 1.0, serif: false, stencil: true },
+  block: { w: 1.52, join: 'miter', cap: 'butt', round: 0, skew: 0, cond: 1.0, serif: false },
+  pro: { w: 1.42, join: 'round', cap: 'butt', round: 1.05, skew: 0, cond: 0.9, serif: false },
+  college: { w: 1.6, join: 'bevel', cap: 'butt', round: 0, skew: 0, cond: 1.04, serif: true },
+  italic: { w: 1.44, join: 'round', cap: 'butt', round: 0.8, skew: -0.24, cond: 0.94, serif: false },
+  stencil: { w: 1.56, join: 'miter', cap: 'butt', round: 0, skew: 0, cond: 1.0, serif: false, stencil: true },
 };
 
 function tracePaths(ctx, ch, st, ox, oy, sx, sy) {
@@ -93,7 +93,7 @@ export function drawNumber(ctx, str, cx, cy, h, opts = {}) {
   str = String(str);
   const st = STYLE[opts.style] || STYLE.block;
   const sy = h / 8, sx = sy * st.cond;
-  const gap = 0.55 * sx;
+  const gap = 0.68 * sx;
   const cw = 5 * sx;
   const totalW = str.length * cw + (str.length - 1) * gap;
   const ow = (opts.ow ?? 0.07) * h;
@@ -156,5 +156,5 @@ export function drawNumber(ctx, str, cx, cy, h, opts = {}) {
 export function numberWidth(str, h, style) {
   const st = STYLE[style] || STYLE.block;
   const sy = h / 8, sx = sy * st.cond;
-  return String(str).length * 5 * sx + (String(str).length - 1) * 0.55 * sx;
+  return String(str).length * 5 * sx + (String(str).length - 1) * 0.68 * sx;
 }

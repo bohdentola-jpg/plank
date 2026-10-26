@@ -223,7 +223,7 @@ export class Locomotion {
     }
 
     // ---- pelvis
-    const crouch = lerp(lerp(0.02, 0.045, run), 0.07, sprint) + wSide * 0.13 + wBack * 0.08 + churn * 0.12 + (posture === 'block' ? 0.1 : 0);
+    const crouch = lerp(lerp(0.02, 0.045, run), 0.07, sprint) + wSide * 0.13 + wBack * 0.08 + churn * 0.05 + (posture === 'block' ? 0.06 : 0);
     const bobAmp = lerp(0.022, 0.05, run) * (1 - 0.6 * wSide) * (1 - 0.4 * wBack) * (opts.highstep ? 1.4 : 1);
     const walkBob = (1 - run) * (comp - 0.55) * 0.04;
     const runBob = run * (flightLift * 0.35 - comp) * bobAmp;
@@ -233,7 +233,7 @@ export class Locomotion {
     const accel = clamp(A.accel || 0, -12, 12);
     const leanT = clamp(accel * 1.6, -12, 16) * (1 - wBack) - clamp(accel, -10, 10) * wBack * 0.8;
     const lean = this.lean.step(leanT, dt);
-    const basePitch = lerp(lerp(3, 9, run), 15, sprint) + effort * 5 * run * wFwd + wSide * 10 + wBack * 12 + churn * 18 + (posture === 'block' ? 10 : 0) - (opts.highstep ? 16 : 0);
+    const basePitch = lerp(lerp(3, 9, run), 15, sprint) + effort * 5 * run * wFwd + wSide * 10 + wBack * 12 + churn * 12 + (posture === 'block' ? 8 : 0) - (opts.highstep ? 16 : 0);
     // banking into turns: lean toward the turn centre
     const bankT = clamp(Math.atan2(speed * turn, 9.81) * R2D, -26, 26) * (1 - wBack * 0.5);
     const bank = this.bank.step(bankT, dt);

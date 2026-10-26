@@ -216,8 +216,10 @@ function paintTorso(ctx, o, { kit, team, num, lm, rng, skin }) {
     for (const th of [90, -90]) boltOnTorso(ctx, T, torsoU(th), v, sc[0], sc[1]);
   }
   // collar: band at the top + V-neck notch at the front
-  const vCol = lm.vFromTop ? lm.vFromTop(padded ? 0.032 : 0.028) : v(1.577);
+  const vCol = lm.vFromTop ? lm.vFromTop(padded ? 0.032 : 0.03) : v(1.577);   // includes the 6 mm skirt
   rectL(ctx, T, 0, vCol, 1, 1, kit.collar || kit.jersey);
+  // the inside of the collar (the skirt that turns in under the neck)
+  if (lm.vFromTop) rectL(ctx, T, 0, lm.vFromTop(0.0032), 1, 1, shade(kit.collar || kit.jersey, -0.72));
   {
     const uF = torsoU(0);
     const [cx, cyTop] = pxOf(T, uF, vCol);
@@ -261,17 +263,17 @@ function paintTorso(ctx, o, { kit, team, num, lm, rng, skin }) {
     const front = pxOf(T, torsoU(0), v(1.355));
     const [, fTop] = pxOf(T, 0, v(1.47)), [, fBot] = pxOf(T, 0, v(1.24));
     const fh = Math.min((fBot - fTop) * 0.98, 0.22 * pxPerM);
-    drawNumber(ctx, num, front[0], front[1], fh, { style: font, fill, outline, ow: 0.075 });
+    drawNumber(ctx, num, front[0], front[1], fh, { style: font, fill, outline, ow: 0.05 });
     const back = pxOf(T, torsoU(180), v(1.3));
     const [, bTop] = pxOf(T, 0, v(1.43)), [, bBot] = pxOf(T, 0, v(1.17));
     const bh = Math.min((bBot - bTop) * 0.98, 0.26 * pxPerM);
-    drawNumber(ctx, num, back[0], back[1], bh, { style: font, fill, outline, ow: 0.075 });
+    drawNumber(ctx, num, back[0], back[1], bh, { style: font, fill, outline, ow: 0.05 });
     // TV numbers on the shoulder tops (read from the side, upright toward the neck)
     if (padded) {
       const tvh = Math.max(9, (pxOf(T, 0, v(1.515))[1] - pxOf(T, 0, v(1.575))[1]) * 0.86);
       for (const th of [90, -90]) {
         const c = pxOf(T, torsoU(th), v(1.546));
-        drawNumber(ctx, num, c[0], c[1], tvh, { style: font, fill, outline, ow: 0.08 });
+        drawNumber(ctx, num, c[0], c[1], tvh, { style: font, fill, outline, ow: 0.065 });
       }
     }
     // name on the back
@@ -279,7 +281,7 @@ function paintTorso(ctx, o, { kit, team, num, lm, rng, skin }) {
       const name = o.player.last.toUpperCase();
       const c = pxOf(T, torsoU(180), v(padded ? 1.468 : 1.45));
       const nh = Math.max(8, fh * 0.26);
-      const maxW = T[2] * 0.26;
+      const maxW = T[2] * 0.2;           // the back curves away beyond ~a fifth of the chest round
       ctx.save();
       ctx.font = `bold ${nh * 1.32}px "Arial Narrow", "Roboto Condensed", Arial, "Helvetica Neue", "DejaVu Sans", sans-serif`;
       ctx.textAlign = 'center';
@@ -303,6 +305,21 @@ function paintTorso(ctx, o, { kit, team, num, lm, rng, skin }) {
       const c = pxOf(T, torsoU(0), v(padded ? 1.53 : 1.48));
       ctx.drawImage(logoCanvas(team, 64), c[0] - 6, c[1] - 6, 12, 12);
     }
+  }
+  // officials: position letter on a white panel between the shoulder blades
+  if (o.ref && o.refLetter) {
+    const c = pxOf(T, torsoU(180), v(1.345));
+    const [, top] = pxOf(T, 0, v(1.45)), [, bot] = pxOf(T, 0, v(1.24));
+    const h = bot - top;
+    ctx.fillStyle = '#121212';
+    ctx.fillRect(c[0] - h * 0.5 - 1, top - 1, h + 2, h + 2);
+    ctx.fillStyle = '#f2f2ee';
+    ctx.fillRect(c[0] - h * 0.5, top, h, h);
+    ctx.font = `900 ${Math.round(h * 0.96)}px "Arial Black", "Helvetica Neue", Arial, "DejaVu Sans", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#121212';
+    ctx.fillText(o.refLetter, c[0], c[1] + h * 0.04);
   }
   ctx.restore();
 }

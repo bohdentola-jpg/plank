@@ -11,7 +11,7 @@
 //   feet / footL / footR [x, y, z, pitch, yaw] | false             (model-space foot IK)
 //   knees / kneeL / kneeR [x, y, z]
 // Groups a clip never mentions are left to the layer underneath.
-import { C, NCH, G, GI, GROUPS, UPPER, neutral, mirror } from './pose.js';
+import { C, NCH, G, GI, GROUPS, GSTART, GLEN, UPPER, neutral, mirror } from './pose.js';
 
 const ARM_DEF = [0, 0, 0, 10, 0, 0, 0, 0.4];
 const LEG_DEF = [0, 0, 0, 0, 0, 0];
@@ -86,9 +86,9 @@ const groupOf = (i) => CHG[i];
  */
 export function sampleTracks(tr, t, out, lag) {
   const { T, V, n, hold, mask } = tr;
-  for (let gi = 0; gi < GROUPS.length; gi++) {
+  for (let gi = 0; gi < GSTART.length; gi++) {
     if (!mask[gi]) continue;
-    const [s, len] = G[GROUPS[gi]];
+    const s = GSTART[gi], len = GLEN[gi];
     let tg = t - (lag ? lag[gi] : 0);
     if (tg <= T[0]) { for (let i = 0; i < len; i++) out[s + i] = V[s + i]; continue; }
     if (tg >= T[n - 1]) { const b = (n - 1) * NCH; for (let i = 0; i < len; i++) out[s + i] = V[b + s + i]; continue; }

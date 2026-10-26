@@ -19,14 +19,15 @@ export function makeBodyMaterial(map) {
       .replace('#include <common>', '#include <common>\nuniform float uDirt;\nuniform sampler2D dirtMap;')
       .replace('#include <map_fragment>', `#include <map_fragment>
   vec3 hcDm = texture2D(dirtMap, vMapUv).rgb;
-  float hcGrass = smoothstep(hcDm.b - 0.12, hcDm.b + 0.06, uDirt * hcDm.r * 1.25);
-  float hcMud = smoothstep(hcDm.b - 0.12, hcDm.b + 0.06, (uDirt * 1.25 - 0.2) * hcDm.g * 1.3);
+  float hcG = uDirt * hcDm.r * 1.25, hcM = (uDirt * 1.25 - 0.2) * hcDm.g * 1.3;
+  float hcGrass = smoothstep(hcDm.b - 0.12, hcDm.b + 0.06, hcG) * smoothstep(0.0, 0.04, hcG);
+  float hcMud = smoothstep(hcDm.b - 0.12, hcDm.b + 0.06, hcM) * smoothstep(0.0, 0.04, hcM);
   diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.085, 0.15, 0.035) * (0.55 + 0.7 * hcDm.b), hcGrass * 0.7);
   diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.12, 0.075, 0.04) * (0.6 + 0.6 * hcDm.b), hcMud * 0.85);
   float hcDirtRough = max(hcGrass, hcMud);`)
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n  roughnessFactor = mix(roughnessFactor, 0.97, hcDirtRough);');
   };
-  m.customProgramCacheKey = () => 'hc-body-v1';
+  m.customProgramCacheKey = () => 'hc-body-v2';
   return m;
 }
 
