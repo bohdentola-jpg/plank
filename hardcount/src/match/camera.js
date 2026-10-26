@@ -120,9 +120,10 @@ export class CameraDirector {
       case 'flyover': {
         // the open: a slow arc over the stadium, settling on the field
         const k = clamp(this.shotT / (s.dur || 7), 0, 1);
-        const a = lerp(-2.2, -0.4, k * k * (3 - 2 * k));
-        // (ends high enough to clear the end-zone stands of the big bowls)
-        const r = lerp(150, 92, k), h = lerp(70, 40, k);
+        const a = lerp(-2.2, -0.25, k * k * (3 - 2 * k));
+        // it stays high until it's over the field itself (every stadium's stands are
+        // outside that), then settles above the goal line
+        const r = lerp(150, 38, k), h = lerp(72, 28, k * k);
         P.set(Math.sin(a) * r, h, Math.cos(a) * r * 0.9);
         L.set(0, 0, 0);
         fov = 44;

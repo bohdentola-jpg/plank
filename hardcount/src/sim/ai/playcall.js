@@ -135,6 +135,8 @@ function pickPlay(m, side, filter, style) {
     if (style === 'option' && (p.form === 'flexbone' || p.form === 'wishbone' || p.kind === 'option')) w *= 2.2;
     if (style === 'airraid' && p.form.startsWith('gun')) w *= 1.6;
     if (style === 'power' && (p.form === 'i_form' || p.form === 'pistol' || p.form === 'goal_line')) w *= 1.8;
+    // the heavy goal-line package comes out for short yardage and the goal line, not first and ten
+    if (p.form === 'goal_line' && m.toGo > 2 && m.field.toGoal(m.los, m.offDir) > 5) w *= 0.03;
     if (p.kind === 'trick') w *= 0.5;
     return [p, w];
   });
