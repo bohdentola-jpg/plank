@@ -49,7 +49,7 @@
 //   founded*, school*, location*, town*, mascot*,
 // }
 import { makeRng, hashString } from '../core/util.js';
-import { MASCOTS, TOWNS, townName, schoolName } from './names.js';
+import { MASCOTS, townName, schoolName } from './names.js';
 
 // ------------------------------------------------------------------ colour math (for kitsFor)
 
@@ -265,7 +265,7 @@ export const TEAMS = [
     id: 'atl', level: 'pro', city: 'Atlanta', name: 'Rattlers', abbr: 'ATL',
     conference: 'AC', division: 'South', founded: 1995, stadium: 'Peachtree Dome',
     colors: { primary: '#00727f', secondary: '#c26a32', accent: '#e8d5a9', dark: '#062b30' },
-    logo: { emblem: 'rattlesnake', fg: '#c26a32', fg2: '#00727f', acc: '#e8d5a9', bg: '#00727f', ring: '#e8d5a9', line: '#0d1112' },
+    logo: { emblem: 'rattlesnake', fg: '#e8d5a9', fg2: '#00727f', acc: '#c26a32', bg: '#00727f', ring: '#e8d5a9', line: '#0d1112' },
     helmet: { shell: '#b8662f', finish: 'pearl', stripe: 'double', stripeColors: ['#00727f', '#0d1112'], facemask: '#0d1112', logo: true, number: false },
     uniform: {
       home: {
@@ -382,7 +382,7 @@ export const TEAMS = [
     id: 'kc', level: 'pro', city: 'Kansas City', name: 'Stampede', abbr: 'KC',
     conference: 'NC', division: 'Central', founded: 1966, stadium: 'Union Yards Stadium',
     colors: { primary: '#f0b323', secondary: '#4b2e1a', accent: '#ffffff', dark: '#24150b' },
-    logo: { emblem: 'bison', fg: '#5a3820', fg2: '#f0b323', acc: '#f6e7c8', bg: '#4b2e1a', ring: '#f0b323', line: '#1c1008' },
+    logo: { emblem: 'bison', fg: '#a8774a', fg2: '#f0b323', acc: '#f6e7c8', bg: '#4b2e1a', ring: '#f0b323', line: '#1c1008' },
     helmet: { shell: '#4b2e1a', finish: 'gloss', stripe: 'double', stripeColors: ['#f0b323', '#ffffff'], facemask: '#f0b323', logo: true, number: false },
     uniform: {
       home: {
@@ -583,7 +583,7 @@ export function divisionTeams(conference, division) {
 const W = '#f4f5f7';
 
 function collegeKits(c, L) {
-  const [p, s, a] = c;
+  const [p, s] = c;
   const home = {
     jersey: L.homeJersey || p, numbers: L.homeNumbers || (L.numbersSecondary ? s : '#ffffff'), numberOutline: L.homeOutline ?? (L.outline ? s : null),
     numberFont: L.font || 'block',
@@ -637,7 +637,7 @@ export const COLLEGES = [
     { offense: 'balanced', defense: 'zone', tempo: 0.45 }),
   college('ohv', 'Ohio Valley', 'Owls', 'OVU', 'Ohio Valley University', 'Marietta Landing, OH', 'Keystone', 0.64,
     ['#141414', '#f26722', '#ffffff', '#0a0a0a'],
-    { emblem: 'owl', fg: '#f26722', fg2: '#3a3a3a', acc: '#ffffff' },
+    { emblem: 'owl', fg: '#ffffff', fg2: '#f26722', acc: '#ffc72c' },
     { helmet: { shell: '#141414', stripe: 'double', stripeColors: ['#f26722', '#ffffff'], facemask: '#f26722' }, font: 'pro', outline: true, homeNumbers: '#f26722', homeOutline: '#ffffff', sleeve: 'stripes3', sleeveHome: ['#f26722', '#ffffff', '#f26722'], sleeveAway: ['#141414', '#f26722', '#141414'], pantsHome: W, pantStripe: 'double', stadium: 'Riverbend Stadium', wordmark: 'italic', wmFill: '#f26722' },
     { offense: 'spread', defense: 'zone', tempo: 0.65 }),
   college('glt', 'Great Lakes Tech', 'Beacons', 'GLT', 'Great Lakes Technological University', 'Port Huron Shores, MI', 'Keystone', 0.54,
@@ -653,7 +653,7 @@ export const COLLEGES = [
   college('chesu', 'Chesapeake', 'Admirals', 'CHES', 'Chesapeake University', 'Severn Point, MD', 'Keystone', 0.6,
     ['#13274f', '#c5a14a', '#ffffff', '#081530'],
     { emblem: 'wheel', fg: '#c5a14a', fg2: '#13274f', acc: '#ffffff' },
-    { helmet: { shell: '#c5a14a', finish: 'pearl', stripe: 'single', stripeColors: ['#13274f'], facemask: '#13274f' }, font: 'college', outline: true, homeNumbers: '#ffffff', homeOutline: '#c5a14a', sleeve: 'stripes2', sleeveHome: ['#c5a14a', '#ffffff'], pantsHome: '#c5a14a', pantsAway: '#c5a14a', pantStripeHome: ['#13274f'], stadium: 'Bay Memorial Stadium', wordmark: 'college', wmFill: '#c5a14a' },
+    { helmet: { shell: '#13274f', finish: 'gloss', stripe: 'single', stripeColors: ['#c5a14a'], facemask: '#c5a14a' }, font: 'college', outline: true, homeNumbers: '#ffffff', homeOutline: '#c5a14a', sleeve: 'stripes2', sleeveHome: ['#c5a14a', '#ffffff'], pantsHome: '#c5a14a', pantsAway: '#c5a14a', pantStripeHome: ['#13274f'], stadium: 'Bay Memorial Stadium', wordmark: 'college', wmFill: '#c5a14a' },
     { offense: 'option', defense: 'zone', tempo: 0.3 }),
   // ------------------------------------------------ Magnolia (South / Southeast)
   college('gcu', 'Gulf Coast', 'Hurricanes', 'GCU', 'Gulf Coast University', 'Port St. Clair, FL', 'Magnolia', 0.84,
@@ -673,7 +673,7 @@ export const COLLEGES = [
     { offense: 'balanced', defense: 'blitz', tempo: 0.55 }),
   college('ozst', 'Ozark State', 'Hillcats', 'OZK', 'Ozark State University', 'Boston Mountain, AR', 'Magnolia', 0.66,
     ['#9d2235', '#ffffff', '#141414', '#4a0f19'],
-    { emblem: 'paw', fg: '#9d2235', fg2: '#ffffff', acc: '#ffffff', line: '#141414' },
+    { emblem: 'paw', fg: '#ffffff', fg2: '#9d2235', acc: '#ffffff', line: '#141414' },
     { helmet: { shell: '#9d2235', stripe: 'double', stripeColors: ['#ffffff', '#141414'], facemask: '#ffffff' }, font: 'pro', outline: true, homeOutline: '#141414', awayOutline: '#141414', sleeve: 'stripes2', sleeveHome: ['#ffffff', '#141414'], sleeveAway: ['#9d2235', '#141414'], pantsHome: W, pantStripe: 'double', pantStripeHome: ['#9d2235', '#141414'], stadium: 'Razorback Ridge Field', wordmark: 'italic', wmFill: '#ffffff' },
     { offense: 'option', defense: 'balanced', tempo: 0.55 }),
   college('pdmt', 'Piedmont State', 'Knights', 'PSU', 'Piedmont State University', 'Chapel Crossing, NC', 'Magnolia', 0.65,
@@ -736,7 +736,7 @@ export const COLLEGES = [
   college('rgst', 'Rio Grande State', 'Coyotes', 'RGS', 'Rio Grande State University', 'Socorro Flats, NM', 'Sunset', 0.63,
     ['#1a9e9a', '#141414', '#d8c39a', '#073c3a'],
     { emblem: 'wolf', fg: '#d8c39a', fg2: '#9a7b52', acc: '#1a9e9a', line: '#141414' },
-    { helmet: { shell: '#d8c39a', finish: 'pearl', stripe: 'double', stripeColors: ['#1a9e9a', '#141414'], facemask: '#141414' }, font: 'pro', homeNumbers: '#ffffff', homeOutline: '#141414', awayNumbers: '#1a9e9a', awayOutline: '#141414', sleeve: 'yoke', sleeveHome: ['#141414'], sleeveAway: ['#1a9e9a'], pantsHome: '#d8c39a', pantsAway: '#d8c39a', pantStripeHome: ['#141414'], socksHome: '#141414', hoopsHome: ['#1a9e9a'], stadium: 'Mesa del Sol Field', wordmark: 'pro', wmFill: '#1a9e9a', wmOutline2: '#d8c39a' },
+    { helmet: { shell: '#1a9e9a', finish: 'pearl', stripe: 'double', stripeColors: ['#d8c39a', '#141414'], facemask: '#141414' }, font: 'pro', homeNumbers: '#ffffff', homeOutline: '#141414', awayNumbers: '#1a9e9a', awayOutline: '#141414', sleeve: 'yoke', sleeveHome: ['#141414'], sleeveAway: ['#1a9e9a'], pantsHome: '#d8c39a', pantsAway: '#d8c39a', pantStripeHome: ['#141414'], socksHome: '#141414', hoopsHome: ['#1a9e9a'], stadium: 'Mesa del Sol Field', wordmark: 'pro', wmFill: '#1a9e9a', wmOutline2: '#d8c39a' },
     { offense: 'option', defense: 'zone', tempo: 0.6 }),
   college('bsky', 'Big Sky', 'Broncs', 'BSU', 'Big Sky University', 'Absaroka, WY', 'Sunset', 0.6,
     ['#492f24', '#ffc425', '#ffffff', '#24160f'],
@@ -745,7 +745,7 @@ export const COLLEGES = [
     { offense: 'power', defense: 'zone', tempo: 0.4 }),
   college('ctech', 'Copper Range Tech', 'Miners', 'CRT', 'Copper Range Institute of Technology', 'Copper Ridge, MT', 'Sunset', 0.56,
     ['#b87333', '#1b2a45', '#ffffff', '#3d230d'],
-    { emblem: 'pickaxe', fg: '#c9cfd4', fg2: '#b87333', acc: '#e9b949', letter: 'M', letterFont: 'block' },
+    { emblem: 'pickaxe', fg: '#c9cfd4', fg2: '#1b2a45', acc: '#e9b949', letter: 'M', letterFont: 'block' },
     { helmet: { shell: '#b87333', finish: 'pearl', stripe: 'double', stripeColors: ['#1b2a45', '#ffffff'], facemask: '#1b2a45' }, font: 'stencil', homeNumbers: '#ffffff', homeOutline: '#1b2a45', awayNumbers: '#b87333', awayOutline: '#1b2a45', sleeve: 'stripes2', sleeveHome: ['#1b2a45', '#ffffff'], sleeveAway: ['#b87333', '#1b2a45'], pantsHome: '#1b2a45', pantsAway: '#1b2a45', pantStripeHome: ['#b87333'], socksHome: '#1b2a45', hoopsHome: ['#b87333'], stadium: 'Headframe Stadium', wordmark: 'stencil', wmFill: '#b87333', wmOutline2: '#ffffff' },
     { offense: 'power', defense: 'balanced', tempo: 0.45 }),
 ];
@@ -787,6 +787,9 @@ const HS_HELMET_STRIPES = ['single', 'single', 'double', 'triple', 'none', 'skun
 const HS_OFFENSE = ['spread', 'option', 'power', 'balanced', 'power', 'option'];
 const HS_DEFENSE = ['blitz', 'zone', 'man', 'balanced'];
 const HS_VENUE_NAMES = ['Memorial Stadium', 'Field', 'Stadium', 'Bowl', 'Veterans Field', 'Booster Field'];
+// emblems whose biggest area is drawn in fg2 (logos.js), and those whose block letter is fg2
+const MAIN_IS_FG2 = new Set(['ram', 'owl', 'longhorn', 'flame']);
+const LETTER_IN_FG2 = new Set(['anvil', 'pickaxe', 'swords', 'horseshoe', 'star']);
 
 // 'North Cedar Falls High' → 'North Cedar Falls'; 'Copperville Regional' → 'Copperville'
 function hsShortName(school) {
@@ -857,6 +860,24 @@ export function makeHighSchool(seed, o = {}) {
   // a few animals keep their natural colours; the school's go to the trim
   const NATURAL = { longhorn: ['#efe6d2', '#6b4423'], eagle: ['#ffffff', p], bison: ['#5e3b22', '#efe6d2'] };
   if (NATURAL[emblem]) { [logo.fg, logo.fg2] = NATURAL[emblem]; logo.acc = emblem === 'eagle' ? '#e8b33a' : s; }
+  // the decal has to show on the shell: if the emblem's main colour (or its
+  // letter's) sits on the helmet colour, swap to the other school colour or white
+  const near = (c) => colorDistance(c, shellColor) < 26;
+  const contrast = () => (near('#ffffff') ? d : '#ffffff');
+  if (!NATURAL[emblem]) {
+    const mainKey = MAIN_IS_FG2.has(emblem) ? 'fg2' : emblem === 'shield' ? 'bg' : 'fg';
+    if (near(logo[mainKey])) {
+      if (mainKey === 'bg') {
+        logo.bg = contrast();
+        if (colorDistance(logo.fg, logo.bg) < 26) logo.fg = p;
+      } else {
+        const other = mainKey === 'fg' ? 'fg2' : 'fg';
+        if (!near(logo[other])) [logo.fg, logo.fg2] = [logo.fg2, logo.fg];
+        else logo[mainKey] = contrast();
+      }
+    }
+  }
+  if (logo.letter && LETTER_IN_FG2.has(emblem) && near(logo.fg2)) logo.fg2 = near(s) ? contrast() : s;
   const strength = o.strength ?? Math.round((0.42 + rng() * 0.36) * 100) / 100;
   return {
     id: o.id || `hs-${seed}`,

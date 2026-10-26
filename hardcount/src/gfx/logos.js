@@ -43,11 +43,6 @@ export function mixHex(a, b, t) {
 }
 const lighten = (hex, t) => mixHex(hex, '#ffffff', t);
 const darken = (hex, t) => mixHex(hex, '#000000', t);
-function luma(hex) {
-  const [r, g, b] = rgbOf(hex);
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-}
-const isHex = (c) => typeof c === 'string' && /^#[0-9a-f]{3,8}$/i.test(c);
 
 // ------------------------------------------------------------------ path helpers
 
@@ -109,11 +104,6 @@ function starPts(cx, cy, R, r, n = 5, rot = -Math.PI / 2) {
   const pts = [];
   for (let i = 0; i < n * 2; i++) pts.push(pol(i % 2 ? r : R, rot + (i * Math.PI) / n, cx, cy));
   return pts;
-}
-/** Mirror a right-half point list (top centre → bottom centre) into a full outline. */
-function mirrorPts(half) {
-  const back = half.slice(1, -1).reverse().map(([x, y]) => [-x, y]);
-  return [...half, ...back];
 }
 /**
  * Mirror a right-half path given as commands, starting on the axis at the top
@@ -651,7 +641,6 @@ def('mountain', (g) => {
   g.line(poly([[-2, -84], [20, B]], false), 3);
   g.line(poly([[52, -50], [70, B]], false), 3);
   // base band with a swoosh
-  const band = smooth([[-96, B - 6], [-40, B - 14], [20, B - 6], [96, B - 18], [96, B + 26], [-96, B + 26]], true, 0.35);
   g.part(rrect(-96, B - 4, 192, 30, 6), 'fg2');
   if (!g.tiny) g.part(smooth([[-84, B + 16], [-20, B + 4], [40, B + 10], [86, B - 2], [40, B + 18], [-20, B + 14]], true, 0.4), 'acc', g.ow * 0.6);
 }, { slot: { x: 0, y: 20, h: 80 } });

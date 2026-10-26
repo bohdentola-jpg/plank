@@ -446,16 +446,6 @@ function teamCard(ctx, team, x, y, w, h, opts = {}) {
   text(ctx, `${team.helmet.finish.toUpperCase()} · ${team.helmet.stripe.toUpperCase()}`, x + w - 8, y + h - 6, { size: 9, color: C.dim, align: 'right', weight: 800, shadow: false });
 }
 
-/** Compact tile for overview pages. */
-function logoTile(ctx, team, x, y, w, h, size) {
-  roundRect(ctx, x, y, w, h, 6);
-  ctx.fillStyle = 'rgba(10,13,22,0.8)';
-  ctx.fill();
-  ctx.fillStyle = team.colors.primary;
-  ctx.fillRect(x + 6, y + h - 5, w - 12, 3);
-  drawLogo(ctx, team, x + w / 2, y + 8 + size / 2, size);
-}
-
 // ------------------------------------------------------------------ pages
 
 const chunk = (arr, n) => Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
