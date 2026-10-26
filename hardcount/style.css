@@ -1,0 +1,196 @@
+/* The game is a picture on an old CRT set in a dark room.
+   --s is the screen height; everything about the set scales from it. */
+:root {
+  --s: min(calc((100vh - 64px) / 1.2), calc((100vw - 48px) / 1.5));
+  --glow: 40, 70, 140;
+  --glow-a: 0.22;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #050506;
+  color: #ccc;
+  font-family: "Bahnschrift", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#room {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 46%, rgba(var(--glow), calc(var(--glow-a) * 0.55)) 0%, rgba(var(--glow), 0) 70%),
+    radial-gradient(ellipse 120% 90% at 50% 40%, #16181d 0%, #0a0b0e 55%, #030304 100%);
+  transition: background 1.2s ease;
+}
+
+/* faint wallpaper texture so the room isn't a void */
+#room::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.012) 0 2px, rgba(0,0,0,0) 2px 9px),
+    radial-gradient(ellipse 100% 70% at 50% 100%, rgba(0,0,0,0.6), rgba(0,0,0,0) 60%);
+  pointer-events: none;
+}
+
+#tv {
+  position: relative;
+  z-index: 1;
+  padding: calc(var(--s) * 0.045) calc(var(--s) * 0.06) 0;
+  border-radius: calc(var(--s) * 0.05) calc(var(--s) * 0.05) calc(var(--s) * 0.035) calc(var(--s) * 0.035);
+  background:
+    linear-gradient(180deg, #2b2d33 0%, #1b1c20 9%, #141518 60%, #0f1012 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.10),
+    inset 0 -3px 6px rgba(0,0,0,0.6),
+    inset 3px 0 6px rgba(255,255,255,0.03),
+    0 calc(var(--s) * 0.03) calc(var(--s) * 0.08) rgba(0,0,0,0.85),
+    0 0 calc(var(--s) * 0.25) rgba(var(--glow), calc(var(--glow-a) * 0.5));
+  transition: box-shadow 1.2s ease;
+}
+
+#tv-bezel {
+  padding: calc(var(--s) * 0.018);
+  border-radius: calc(var(--s) * 0.045);
+  background: linear-gradient(180deg, #0c0c0e, #17181b 50%, #0b0b0d);
+  box-shadow:
+    inset 0 0 calc(var(--s) * 0.02) rgba(0,0,0,0.95),
+    0 1px 0 rgba(255,255,255,0.06);
+}
+
+#tv-screen {
+  position: relative;
+  height: var(--s);
+  width: calc(var(--s) * 4 / 3);
+  border-radius: calc(var(--s) * 0.035) / calc(var(--s) * 0.045);
+  overflow: hidden;
+  background: #000;
+}
+
+#screen {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  outline: none;
+}
+
+/* curved glass: inner shadow at the edges + a soft diagonal glare */
+#tv-glass {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 calc(var(--s) * 0.05) rgba(0,0,0,0.85),
+    inset 0 0 calc(var(--s) * 0.012) rgba(0,0,0,0.9);
+  background:
+    linear-gradient(128deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.018) 22%, rgba(255,255,255,0) 38%),
+    radial-gradient(ellipse 60% 40% at 28% 18%, rgba(255,255,255,0.035), rgba(255,255,255,0) 70%);
+}
+
+#tv-panel {
+  position: relative;
+  height: calc(var(--s) * 0.13);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 calc(var(--s) * 0.01);
+}
+
+.tv-brand {
+  font-family: "Arial Black", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  font-size: calc(var(--s) * 0.026);
+  color: #8d9198;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.9), 0 -1px 0 rgba(255,255,255,0.08);
+  white-space: nowrap;
+}
+.tv-brand span {
+  font-family: Arial, sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  font-size: 0.55em;
+  color: #6a6e74;
+  margin-left: 0.6em;
+}
+
+.tv-grille {
+  flex: 1;
+  height: 42%;
+  margin: 0 calc(var(--s) * 0.04);
+  border-radius: calc(var(--s) * 0.008);
+  background:
+    repeating-linear-gradient(90deg, #070708 0 3px, #1c1d21 3px 6px);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.8), 0 1px 0 rgba(255,255,255,0.05);
+  opacity: 0.9;
+}
+
+.tv-controls {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--s) * 0.012);
+}
+.tv-btn {
+  width: calc(var(--s) * 0.026);
+  height: calc(var(--s) * 0.012);
+  border-radius: 3px;
+  background: linear-gradient(180deg, #2d2f35, #18191c);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.8);
+}
+#tv-led {
+  width: calc(var(--s) * 0.009);
+  height: calc(var(--s) * 0.009);
+  border-radius: 50%;
+  margin: 0 calc(var(--s) * 0.006);
+  background: #3a0d0d;
+  box-shadow: 0 0 2px #000;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+#tv-led.on {
+  background: #4dff7a;
+  box-shadow: 0 0 6px #3dff6a, 0 0 14px rgba(61,255,106,0.5);
+}
+#tv-led.standby {
+  background: #ff3b30;
+  box-shadow: 0 0 5px #ff3b30, 0 0 12px rgba(255,59,48,0.45);
+}
+#tv-power {
+  width: calc(var(--s) * 0.04);
+  height: calc(var(--s) * 0.04);
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  color: #6d7076;
+  font-size: calc(var(--s) * 0.02);
+  line-height: 1;
+  background: radial-gradient(circle at 40% 35%, #34363c, #16171a 70%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.8);
+}
+#tv-power:active { transform: translateY(1px); }
+
+#room-hint {
+  position: relative;
+  z-index: 1;
+  margin-top: 12px;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.18);
+  transition: opacity 1s;
+}
+#room-hint.gone { opacity: 0; }
+
+body.cursor-hidden, body.cursor-hidden * { cursor: none !important; }
