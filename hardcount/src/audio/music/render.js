@@ -625,6 +625,46 @@ function sweep(B, o) {
   return normPeak(buf, 0.8);
 }
 
+// marching tenor drum ("quads"): high-tuned tom with a hard plastic-mallet click
+function tenor(B, f) {
+  const sr = B.sr, buf = B.make(1, 0.42), d = buf.getChannelData(0);
+  let ph = 0;
+  for (let i = 0; i < d.length; i++) {
+    const t = i / sr;
+    ph += (f * (0.9 + 0.1 * Math.exp(-t / 0.05))) / sr;
+    const n = B.noise();
+    d[i] = Math.tanh(1.8 * (tsin(ph) * Math.exp(-t / 0.14) + 0.35 * tsin(ph * 2.3) * Math.exp(-t / 0.04)))
+      + n * 0.5 * Math.exp(-t / 0.003);
+  }
+  biq(d, 'hp', 120, 0.7, sr);
+  fadeOut(d, sr, 0.05);
+  return normPeak(buf, 0.9);
+}
+
+// marching bass drum: big felt mallet, pitched, little pitch drop, long-ish ring
+function marchBass(B, f) {
+  return kick(B, { f0: f * 1.25, f1: f, pd: 0.03, ad: 0.16, tail: 0.45, click: 0.22, drive: 1.3, len: 0.75, lp: 2600 });
+}
+
+// DJ scratch: a vocal-ish stab read forward and back on the platter
+function scratch(B) {
+  const sr = B.sr, len = 0.42, buf = B.make(1, len), d = buf.getChannelData(0);
+  const srcLen = Math.round(sr * 0.5), s = new Float32Array(srcLen);
+  let ph = 0;
+  for (let i = 0; i < srcLen; i++) { ph += 210 / sr; s[i] = (2 * (ph % 1) - 1) * (0.6 + 0.4 * B.noise()); }
+  biq(s, 'bp', 900, 1.4, sr);
+  biq(s, 'peak', 2400, 2, sr, 8);
+  let pos = srcLen * 0.3;
+  for (let i = 0; i < d.length; i++) {
+    const t = i / sr;
+    const rate = 2.2 * Math.sin(2 * Math.PI * 5.5 * t) * (1 - t / len);
+    pos = Math.max(1, Math.min(srcLen - 2, pos + rate));
+    const k = pos | 0, fr = pos - k;
+    d[i] = (s[k] + (s[k + 1] - s[k]) * fr) * Math.min(1, Math.abs(rate) * 1.5) * Math.min(1, t / 0.005, (len - t) / 0.02);
+  }
+  return normPeak(buf, 0.85);
+}
+
 function reverseOf(B, name, secs) {
   const src = B.get(name);
   const n = Math.min(src.length, Math.round(secs * B.sr));
@@ -695,6 +735,25 @@ const DRUMS = {
   down: (B) => sweep(B, { len: 2.4, f0: 7000, f1: 160 }),
   up: (B) => sweep(B, { len: 2.0, f0: 300, f1: 9000, up: true }),
   revcrash: (B) => reverseOf(B, 'crash', 1.3),
+
+  // marching band / orchestral / football extras
+  snare_march: (B) => snare(B, { body: [330, 560], bd: 0.035, hp: 2300, bright: 6800, nd: 0.06, n2: 0.18, nd2: 0.12, drive: 2.7, len: 0.32, bodyAmt: 0.7, stereo: true }),
+  snare_mil: (B) => snare(B, { body: [205, 370], bd: 0.05, hp: 1300, bright: 5000, nd: 0.12, n2: 0.5, nd2: 0.34, drive: 1.6, len: 0.75, stereo: true }),
+  quad_1: (B) => tenor(B, 560),
+  quad_2: (B) => tenor(B, 450),
+  quad_3: (B) => tenor(B, 360),
+  quad_4: (B) => tenor(B, 285),
+  bass_m1: (B) => marchBass(B, 150),
+  bass_m2: (B) => marchBass(B, 123),
+  bass_m3: (B) => marchBass(B, 101),
+  bass_m4: (B) => marchBass(B, 83),
+  bass_m5: (B) => marchBass(B, 67),
+  cym_crash: (B) => cymbal(B, { len: 2.6, decay: 0.85, hp: 2200, n: 12, fmin: 550, fmax: 9000, noiseAmt: 0.65, fast: 0.3, tone: 6000, tg: 3 }),
+  cym_choke: (B) => cymbal(B, { len: 0.4, decay: 0.07, hp: 2400, n: 12, fmin: 550, fmax: 9000, noiseAmt: 0.6, fast: 0.6 }),
+  keyclick: (B) => noiseHit(B, { len: 0.04, f: 2600, q: 0.8, hp: 900, atk: 0.0005, decay: 0.004, stereo: false }),
+  scratch: (B) => scratch(B),
+  kick_boom: (B) => kick(B, { f0: 110, f1: 45, pd: 0.055, ad: 0.22, tail: 0.42, click: 0.3, drive: 2.4, len: 0.7, lp: 3000 }),
+  snare_lofi: (B) => snare(B, { body: [175, 290], bd: 0.06, hp: 900, bright: 2800, nd: 0.11, n2: 0.3, nd2: 0.25, drive: 2.2, len: 0.5, lp: 4200 }),
 };
 
 // --- looped multisamples (spectral) ------------------------------------------------
@@ -925,8 +984,115 @@ function organ(B, ref) {
   return { buf: normPeak(buf, 0.8), f: f0 };
 }
 
+/**
+ * Brass section note (one-shot, half rate): additive lip-reed tone where the
+ * upper harmonics grow faster than the fundamental as the player pushes air
+ * (the brass "blat" on the attack), a formant/bell response per instrument,
+ * a little scoop into pitch, and `players` slightly detuned and staggered.
+ */
+function brassNote(B, ref, o) {
+  const { len = 2.2, players = 2, cents = 7, bright = 1, form, bell, attack = 0.035, blat = 0.25, scoop = 0.035, sus = 0.82 } = o;
+  const f0 = mtof(ref), sr = B.sr / 2, buf = B.make(2, len, sr), n = buf.length;
+  const L = buf.getChannelData(0), R = buf.getChannelData(1);
+  // harmonics up to where the bell has rolled them off (≈ −20 dB)
+  const H = Math.max(1, Math.min(30, Math.floor(Math.min(sr * 0.45, bell * 1.8) / f0)));
+  const w = new Float32Array(H + 1);
+  for (let h = 1; h <= H; h++) {
+    const f = h * f0;
+    let g = 0.3 / h;
+    for (const [fc, a] of form) { const x = Math.log2(f / fc); g += a * Math.exp(-x * x * 1.8); }
+    w[h] = g / (1 + Math.pow(f / bell, 4));
+  }
+  const K = 32, amps = new Float32Array(H + 1);
+  for (let p = 0; p < players; p++) {
+    const det = Math.pow(2, ((p - (players - 1) / 2) * cents * (0.7 + 0.6 * (B.noise() * 0.5 + 0.5))) / 1200);
+    const off = Math.round((p ? 0.004 + (B.noise() * 0.5 + 0.5) * 0.014 : 0) * sr);
+    const pan = players > 1 ? ((p / (players - 1)) * 2 - 1) * 0.6 : 0;
+    const gl = Math.cos(((pan + 1) * Math.PI) / 4), gr = Math.sin(((pan + 1) * Math.PI) / 4);
+    const vr = 4.8 + B.noise() * 0.6, vd = 0.0025 * (0.5 + 0.5 * B.noise());
+    let ph = B.noise() * 0.5 + 0.5, inc = 0;
+    for (let i = off; i < n; i++) {
+      if (((i - off) & (K - 1)) === 0) {
+        const t = (i - off) / sr;
+        // loudness envelope with the attack overshoot; harmonic h ∝ A^(1 + bright·(h−1)·0.3)
+        const A = (1 - Math.exp(-t / attack)) * (1 + blat * Math.exp(-t / 0.07) * (1 - Math.exp(-t / 0.012))) * (sus + (1 - sus) * Math.exp(-t / 0.5));
+        const lA = Math.log(Math.max(1e-6, Math.min(1.3, A)));
+        for (let h = 1; h <= H; h++) amps[h] = w[h] * Math.exp(lA * (1 + bright * (h - 1) * 0.3));
+        inc = (f0 * det * (1 - scoop * Math.exp(-t / 0.04)) * (1 + vd * Math.sin(2 * Math.PI * vr * t) * Math.min(1, t / 0.4))) / sr;
+      }
+      ph += inc;
+      if (ph > 1) ph -= 1;
+      let s = 0, x = ph;
+      for (let h = 1; h <= H; h++, x += ph) s += amps[h] * SIN[((x - Math.floor(x)) * SIN_N) | 0];
+      L[i] += s * gl; R[i] += s * gr;
+    }
+  }
+  // breath on the attack
+  for (let c = 0; c < 2; c++) {
+    const d = c ? R : L;
+    let lp = 0;
+    for (let i = 0; i < Math.min(n, sr * 0.08); i++) {
+      lp += 0.2 * (B.noise() - lp);
+      d[i] += lp * 0.06 * Math.exp(-i / (sr * 0.02));
+    }
+    fadeOut(d, sr, 0.35);
+  }
+  return { buf: normPeak(buf, 0.8), f: f0 };
+}
+
+// timpani: nearly-harmonic membrane modes (air-loaded), a felt-mallet thump and
+// the little downward settle as the head relaxes
+function timpani(B, ref) {
+  const f = mtof(ref), sr = B.sr / 2, len = 3.4, buf = B.make(2, len, sr), n = buf.length;
+  const P = [[1, 1, 2.4], [1.504, 0.5, 1.5], [1.742, 0.22, 0.9], [2.0, 0.3, 1.1], [2.245, 0.12, 0.6], [2.494, 0.15, 0.7], [2.8, 0.06, 0.4], [0.68, 0.45, 0.12]];
+  for (let c = 0; c < 2; c++) {
+    const d = c ? buf.getChannelData(1) : buf.getChannelData(0);
+    const ka = Math.exp(-1 / (0.09 * sr)), atk = sr * 0.003;
+    for (const [r, a, dec] of P) {
+      let ph = B.noise() * 0.5 + 0.5, bend = 0.012, e = a;
+      const fr = f * r * (c ? 1.0015 : 1);
+      if (fr > sr * 0.45) continue;
+      const inc = fr / sr, kd = Math.exp(-1 / (dec * sr));
+      const m = Math.min(n, Math.ceil(dec * 9 * sr));
+      for (let i = 0; i < m; i++) {
+        ph += inc * (1 + bend);
+        if (ph > 1) ph -= 1;
+        d[i] += SIN[(ph * SIN_N) | 0] * e * (i < atk ? i / atk : 1);
+        bend *= ka; e *= kd;
+      }
+    }
+    let lp = 0;
+    for (let i = 0; i < sr * 0.06; i++) { lp += 0.08 * (B.noise() - lp); d[i] += lp * 2.2 * Math.exp(-i / (sr * 0.012)); }
+    fadeOut(d, sr, 0.4);
+  }
+  return { buf: normPeak(buf, 0.85), f };
+}
+
+// tonewheel organ loop: drawbars 16' 8' 5⅓' 4' 2⅔' 2' 1⅗' 1⅓' 1' (stadium registration)
+function tonewheel(B, ref) {
+  const bars = [[0.5, 0.5], [1, 1], [1.5, 0.45], [2, 0.8], [3, 0.4], [4, 0.6], [5, 0.18], [6, 0.26], [8, 0.42]];
+  return specLoop(B, ref, (add, D, snap, sr) => {
+    const f0 = mtof(ref), fc = snap(f0), top = sr * 0.42;
+    for (let ch = 0; ch < 2; ch++) {
+      for (const [m, a] of bars) {
+        let f = f0 * m;
+        while (f > top) f /= 2; // foldback, as on the real thing
+        add(ch, snap(f * (ch ? 1.0006 : 1)), a, (B.noise() * 0.5 + 0.5) * TAU);
+      }
+    }
+    return fc;
+  });
+}
+
 const MS = {
   saw: { step: 6, loop: true, fn: (B, r) => ensemble(B, r, { voices: 7, spread: 24 }) },
+  trumpet: { step: 5, fn: (B, r) => brassNote(B, r, { form: [[1250, 1], [2500, 0.45]], bell: 3800, bright: 1.25, attack: 0.03, blat: 0.32 }) },
+  horn: { step: 5, fn: (B, r) => brassNote(B, r, { form: [[460, 1], [950, 0.3]], bell: 1700, bright: 0.75, attack: 0.055, blat: 0.12, cents: 6 }) },
+  bone: { step: 5, fn: (B, r) => brassNote(B, r, { form: [[580, 1], [1250, 0.4]], bell: 2500, bright: 1.05, attack: 0.04, blat: 0.25 }) },
+  tuba: { step: 5, fn: (B, r) => brassNote(B, r, { form: [[240, 1], [480, 0.35]], bell: 850, bright: 0.8, attack: 0.05, blat: 0.15, cents: 5, len: 2 }) },
+  timp: { step: 2, fn: timpani },
+  tonewheel: { step: 5, loop: true, fn: tonewheel },
+  glock: { step: 6, fn: (B, r) => fmOne(B, r, { len: 1.8, partials: [[1, 1, 1.3], [2.76, 0.28, 0.45], [5.4, 0.1, 0.18], [8.93, 0.05, 0.08]] }) },
   saw3: { step: 6, loop: true, fn: (B, r) => ensemble(B, r, { voices: 3, spread: 9, sg: 0.8 }) },
   pad: { step: 6, loop: true, fn: (B, r) => ensemble(B, r, { voices: 5, spread: 16, lp: Math.min(5200, mtof(r) * 7), lpo: 4, hp: 90 }) },
   strings: { step: 6, loop: true, fn: (B, r) => ensemble(B, r, { voices: 6, spread: 11, lp: Math.min(4200, mtof(r) * 6), lpo: 2, lpq: 1.1, hp: 120, sg: 0.85 }) },

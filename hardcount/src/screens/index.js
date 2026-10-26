@@ -3,3 +3,4 @@ import './boot.js';
 import './huddle.js';
 import './sim2d.js';
 import './logosheet.js';
+import './soundboard.js';

@@ -1,0 +1,687 @@
+// Offline audio QA for HARD COUNT. Renders every sound, crowd reaction, band
+// piece, music theme and stinger through the real audio graph on an
+// OfflineAudioContext in headless Chromium (audio.useContext), then measures
+// each render and prints a table:
+//
+//   peak    sample peak after the master limiter + ceiling (dBFS, must be ≤ −1)
+//   M-max   loudest 400 ms window, K-weighted (≈ LUFS momentary max)
+//   I       gated integrated loudness (≈ LUFS) — what loops / music sit at
+//   len     active length: first → last sample within 50 dB of the peak (s)
+//   cent    spectral centroid (Hz), energy-weighted over the active frames
+//   corr    L/R correlation (1 = mono, ~0 = wide)
+//   bad     non-finite samples (NaN / Infinity)
+//
+// Each row carries plausibility bounds (centroid, length, loudness); misses
+// are flagged. Also checks that every API is safe before audio is unlocked,
+// that a late unlock still starts what was asked for, and that loops tear
+// down to silence when set to 0.
+//
+//   node hardcount/tools/audiocheck.mjs [filter] [--wav dir] [--json file] [--list]
+//     filter   only rows whose name contains this text (comma = several)
+//     --wav    also write each render as a 16-bit WAV into dir (to listen)
+//     --json   write all metrics as JSON
+import { createServer } from 'node:http';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { extname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { chromium } from 'playwright';
+
+const root = fileURLToPath(new URL('../..', import.meta.url));
+const args = process.argv.slice(2);
+const flag = (name) => {
+  const i = args.indexOf(`--${name}`);
+  return i >= 0 ? args[i + 1] : null;
+};
+const filter = args.find((a, i) => !a.startsWith('--') && !(i > 0 && args[i - 1].startsWith('--') && ['wav', 'json', 'spec'].includes(args[i - 1].slice(2))));
+const wavDir = flag('wav');
+const specDir = flag('spec');
+const jsonOut = flag('json');
+const listOnly = args.includes('--list');
+
+// ---------------------------------------------------------------------------
+// In-page code: the test list + metrics. Served as a module.
+const PAGE_JS = String.raw`
+const SR = 48000;
+const A = {};
+async function load() {
+  const imp = async (path, key) => { try { return (await import(path))[key]; } catch (e) { console.error('load ' + path + ': ' + e.message); return null; } };
+  A.audio = await imp('/hardcount/src/audio/audio.js', 'audio');
+  A.sfx = await imp('/hardcount/src/audio/sfx.js', 'sfx');
+  A.crowd = await imp('/hardcount/src/audio/crowd.js', 'crowd');
+  A.band = await imp('/hardcount/src/audio/band.js', 'band');
+  A.music = await imp('/hardcount/src/audio/music.js', 'music');
+  A.voice = await imp('/hardcount/src/audio/voice.js', 'voice');
+  A.THEMES = (await imp('/hardcount/src/audio/music/themes.js', 'THEMES')) || {};
+}
+
+// spectrogram (log frequency 40 Hz – 14 kHz, 60 dB range relative to the
+// render's own maximum) with a peak-level strip on top, as a PNG data URL
+function spectrogram(buf, w = 900, h = 300) {
+  const sr = buf.sampleRate, L = buf.getChannelData(0), R = buf.numberOfChannels > 1 ? buf.getChannelData(1) : L;
+  const N = 2048, n = L.length;
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h + 40;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0, 0, w, h + 40);
+  const img = g.createImageData(w, h);
+  const han = new Float32Array(N);
+  for (let i = 0; i < N; i++) han[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (N - 1));
+  const fmin = 40, fmax = 14000;
+  const fy = (y) => fmin * Math.pow(fmax / fmin, (h - 1 - y) / (h - 1));
+  const cols = [];
+  let top = -200;
+  for (let x = 0; x < w; x++) {
+    const s0 = Math.max(0, Math.floor((x / w) * n - N / 2));
+    const re = new Float64Array(N), im = new Float64Array(N);
+    for (let j = 0; j < N && s0 + j < n; j++) re[j] = (L[s0 + j] + R[s0 + j]) * 0.5 * han[j];
+    fft(re, im);
+    const col = new Float32Array(h);
+    for (let y = 0; y < h; y++) {
+      const k0 = Math.max(1, Math.floor(fy(y + 0.5) / (sr / N))), k1 = Math.max(k0, Math.floor(fy(y - 0.5) / (sr / N)));
+      let p = 0;
+      for (let k = k0; k <= k1; k++) p = Math.max(p, re[k] * re[k] + im[k] * im[k]);
+      col[y] = 10 * Math.log10(p + 1e-18);
+      if (col[y] > top) top = col[y];
+    }
+    cols.push(col);
+  }
+  for (let x = 0; x < w; x++) {
+    for (let y = 0; y < h; y++) {
+      const v = Math.max(0, Math.min(1, (cols[x][y] - top + 60) / 60));
+      const o = (y * w + x) * 4;
+      img.data[o] = 255 * Math.min(1, v * 2); img.data[o + 1] = 255 * Math.max(0, v * 2 - 1); img.data[o + 2] = 255 * Math.max(0, 0.6 - v); img.data[o + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 40);
+  g.fillStyle = '#fff'; g.font = '11px monospace';
+  for (const f of [100, 300, 1000, 3000, 10000]) g.fillText(f >= 1000 ? f / 1000 + 'k' : String(f), 2, 40 + (h - 1) * (1 - Math.log(f / fmin) / Math.log(fmax / fmin)));
+  // level strip
+  g.strokeStyle = '#6f6'; g.beginPath();
+  for (let x = 0; x < w; x++) {
+    const a = Math.floor((x / w) * n), b = Math.floor(((x + 1) / w) * n);
+    let p = 0;
+    for (let i = a; i < b; i++) p = Math.max(p, Math.abs(L[i]), Math.abs(R[i]));
+    const db = 20 * Math.log10(p + 1e-9);
+    const y = 38 - Math.max(0, (db + 60) / 60) * 36;
+    if (x) g.lineTo(x, y); else g.moveTo(x, y);
+  }
+  g.stroke();
+  g.fillText((n / sr).toFixed(2) + 's', w - 40, 12);
+  return cv.toDataURL('image/png');
+}
+
+// ---- metrics ------------------------------------------------------------------
+function fft(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = -2 * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let j = 0; j < len / 2; j++) {
+        const a = i + j, b = a + len / 2;
+        const tr = re[b] * cr - im[b] * ci, ti = re[b] * ci + im[b] * cr;
+        re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+        const ncr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = ncr;
+      }
+    }
+  }
+}
+
+function kweight(x, sr) {
+  // ITU-R BS.1770 pre-filter (coefficients for 48 kHz)
+  const st = [[1.53512485958697, -2.69169618940638, 1.19839281085285, -1.69065929318241, 0.73248077421585],
+    [1, -2, 1, -1.99004745483398, 0.99007225036621]];
+  let y = Float32Array.from(x);
+  for (const [b0, b1, b2, a1, a2] of st) {
+    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    for (let i = 0; i < y.length; i++) {
+      const xi = y[i];
+      const v = b0 * xi + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+      x2 = x1; x1 = xi; y2 = y1; y1 = v; y[i] = v;
+    }
+  }
+  return y;
+}
+
+function measure(buf, from = 0) {
+  const sr = buf.sampleRate;
+  const s0 = Math.floor(from * sr);
+  const L = buf.getChannelData(0).subarray(s0), R = buf.numberOfChannels > 1 ? buf.getChannelData(1).subarray(s0) : L;
+  const n = L.length;
+  let peak = 0, bad = 0, ss = 0, sLR = 0, sLL = 0, sRR = 0;
+  for (let i = 0; i < n; i++) {
+    const l = L[i], r = R[i];
+    if (!Number.isFinite(l) || !Number.isFinite(r)) { bad++; continue; }
+    const a = Math.max(Math.abs(l), Math.abs(r));
+    if (a > peak) peak = a;
+    ss += l * l + r * r; sLR += l * r; sLL += l * l; sRR += r * r;
+  }
+  const db = (v) => (v > 0 ? 20 * Math.log10(v) : -200);
+  // perceived length: 10 ms RMS envelope within 30 dB of its maximum (ignores faint echo tails)
+  const hop10 = Math.round(0.01 * sr), env10 = [];
+  for (let i = 0; i + hop10 <= n; i += hop10) {
+    let e = 0;
+    for (let j = i; j < i + hop10; j++) e += L[j] * L[j] + R[j] * R[j];
+    env10.push(e / hop10);
+  }
+  const emax10 = Math.max(0, ...env10), thr = emax10 * 1e-3;
+  let first = -1, last = -1;
+  for (let i = 0; i < env10.length; i++) if (env10[i] > thr) { if (first < 0) first = i; last = i; }
+  if (first >= 0) { first *= hop10; last = (last + 1) * hop10; }
+  // loudness
+  const kL = kweight(L, sr), kR = kweight(R, sr);
+  const win = Math.round(0.4 * sr), hop = Math.round(0.1 * sr);
+  const blocks = [];
+  for (let i = 0; i + win <= n; i += hop) {
+    let e = 0;
+    for (let j = i; j < i + win; j++) e += kL[j] * kL[j] + kR[j] * kR[j];
+    blocks.push(e / win);
+  }
+  if (!blocks.length) { let e = 0; for (let j = 0; j < n; j++) e += kL[j] * kL[j] + kR[j] * kR[j]; blocks.push(e / Math.max(1, n)); }
+  const lufs = (e) => (e > 0 ? -0.691 + 10 * Math.log10(e) : -200);
+  const mmax = Math.max(...blocks.map(lufs));
+  let gated = blocks.filter((e) => lufs(e) > -70);
+  if (gated.length) {
+    const rel = lufs(gated.reduce((a, b) => a + b, 0) / gated.length) - 10;
+    gated = gated.filter((e) => lufs(e) > rel);
+  }
+  const integ = gated.length ? lufs(gated.reduce((a, b) => a + b, 0) / gated.length) : -200;
+  // spectral centroid over frames within 30 dB of the loudest
+  const N = 2048, hopF = 1024, han = new Float32Array(N);
+  for (let i = 0; i < N; i++) han[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (N - 1));
+  const frames = [];
+  for (let i = 0; i + N <= n; i += hopF) {
+    const re = new Float64Array(N), im = new Float64Array(N);
+    let e = 0;
+    for (let j = 0; j < N; j++) { const v = (L[i + j] + R[i + j]) * 0.5; re[j] = v * han[j]; e += v * v; }
+    if (e <= 1e-12) continue;
+    fft(re, im);
+    // power-weighted: robust to a low broadband noise floor
+    let num = 0, den = 0;
+    for (let k = 1; k < N / 2; k++) { const m = re[k] * re[k] + im[k] * im[k]; num += m * k * sr / N; den += m; }
+    if (den > 0) frames.push({ e, c: num / den });
+  }
+  let cent = 0;
+  if (frames.length) {
+    const emax = Math.max(...frames.map((f) => f.e));
+    let w = 0;
+    for (const f of frames) if (f.e > emax * 1e-3) { cent += f.c * f.e; w += f.e; }
+    cent = w > 0 ? cent / w : 0;
+  }
+  const corr = sLL > 0 && sRR > 0 ? sLR / Math.sqrt(sLL * sRR) : 1;
+  return {
+    peak: db(peak), rms: db(Math.sqrt(ss / Math.max(1, 2 * n))), mmax, integ,
+    len: first >= 0 ? (last - first) / sr : 0, start: first >= 0 ? first / sr : 0,
+    cent, corr, bad,
+  };
+}
+
+function tailRms(buf, secs) {
+  const sr = buf.sampleRate, n = Math.round(secs * sr);
+  let s = 0, c = 0;
+  for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+    const d = buf.getChannelData(ch);
+    for (let i = Math.max(0, d.length - n); i < d.length; i++) { s += d[i] * d[i]; c++; }
+  }
+  const r = Math.sqrt(s / Math.max(1, c));
+  return r > 0 ? 20 * Math.log10(r) : -200;
+}
+
+// Timeline of callbacks during an offline render: OfflineAudioContext allows
+// one suspend() per render quantum, so callbacks at the same time are merged.
+function timeline(ctx) {
+  const m = new Map();
+  const tl = {
+    at(t, fn) {
+      const q = Math.max(128, Math.round((t * SR) / 128) * 128) / SR;
+      if (!m.has(q)) m.set(q, []);
+      m.get(q).push(fn);
+    },
+    every(dur, dt, fn) { for (let t = dt; t < dur - 1e-6; t += dt) { const tt = t; tl.at(tt, () => fn(tt, dt)); } },
+    arm() {
+      for (const [q, fns] of m) {
+        if (q >= ctx.length / SR) continue;
+        ctx.suspend(q).then(() => {
+          for (const f of fns) { try { f(q); } catch (e) { console.error(e); } }
+          ctx.resume();
+        });
+      }
+    },
+  };
+  return tl;
+}
+
+// ---- the test list ------------------------------------------------------------------
+// expect: { cent: [lo, hi] Hz, len: [lo, hi] s, mmax: [lo, hi] LUFS, integ: [lo, hi] LUFS }
+const T = [];
+const add = (name, cat, dur, run, expect = {}, opts = {}) => T.push({ name, cat, dur, run, expect, ...opts });
+
+function sfxTests() {
+  const S = () => A.sfx;
+  for (const k of ['short', 'long', 'double']) add('whistle:' + k, 'sfx', 2.5, () => S().whistle(k), { cent: [2400, 4200], len: k === 'long' ? [0.9, 2] : k === 'double' ? [0.35, 1.2] : [0.2, 1.0], mmax: [-20, -10] });
+  for (const k of ['pads', 'helmet', 'ground', 'tackle']) {
+    const c = { pads: [120, 900], helmet: [500, 3000], ground: [50, 400], tackle: [60, 600] }[k];
+    add('hit:' + k + ':1', 'sfx', 2, () => S().hit(1, k), { cent: c, len: [0.08, k === 'tackle' ? 1.4 : 0.9], mmax: [-24, -12] });
+    add('hit:' + k + ':.3', 'sfx', 2, () => S().hit(0.3, k), { cent: [c[0] * 0.6, c[1]], mmax: [-34, -18] });
+  }
+  for (const k of ['hands', 'body', 'bobble']) add('catch:' + k, 'sfx', 1.5, () => S().catchBall(k), { cent: k === 'body' ? [100, 800] : [200, 2500], len: [0.04, 0.8], mmax: [-36, -16] });
+  for (const k of ['kickoff', 'punt', 'fg']) add('kick:' + k, 'sfx', 2.5, () => S().kickBall(k), { cent: [150, 1200], len: [0.2, 1.4], mmax: [-30, -12] });
+  add('snap', 'sfx', 1.5, () => S().snap(), { cent: [150, 2500], len: [0.05, 0.8], mmax: [-34, -16] });
+  for (const k of ['set', 'hut', 'hard']) add('cadence:' + k, 'sfx', 1.5, () => S().cadence(k), { cent: [500, 2500], len: [0.15, 0.9], mmax: [-24, -12] });
+  add('ballBounce:1', 'sfx', 1.5, () => S().ballBounce(1), { cent: [150, 1500], len: [0.03, 0.5], mmax: [-34, -16] });
+  add('ballBounce:series', 'sfx', 3, (ctx, tl) => {
+    const seq = [[0, 1], [0.42, 0.62], [0.71, 0.4], [0.86, 0.28], [0.95, 0.15], [1.02, 0.08]];
+    for (const [t, s] of seq) { if (t === 0) S().ballBounce(s); else tl.at(t, () => S().ballBounce(s)); }
+  }, { cent: [150, 1500], len: [0.8, 1.4] });
+  add('flagThrow', 'sfx', 1.5, () => S().flagThrow(), { cent: [200, 2500], len: [0.2, 1], mmax: [-36, -16] });
+  add('chains', 'sfx', 2, () => S().chains(), { cent: [1500, 6000], len: [0.3, 1.3], mmax: [-36, -16] });
+  add('grunt', 'sfx', 1, () => S().grunt(1), { cent: [300, 2500], len: [0.08, 0.5], mmax: [-36, -16] });
+  for (const k of ['chime', 'horn', 'organ_charge', 'organ_defense', 'organ_letsgo']) {
+    add('pa:' + k, 'pa', 7, () => S().pa(k), { cent: k === 'chime' ? [700, 3000] : [300, 2500], len: k === 'chime' ? [0.8, 3.5] : [1.2, 5], mmax: [-22, -12] });
+  }
+  for (const k of ['move', 'select', 'back', 'tab', 'error', 'buy', 'unlock']) add('ui:' + k, 'ui', 1.4, () => S().ui(k), { mmax: [-40, -10] });
+  add('staticBurst', 'ui', 1.2, () => S().staticBurst(0.5), { cent: [1500, 7500], mmax: [-30, -10] });
+  add('tvOn', 'ui', 3, () => S().tvOn(), { mmax: [-30, -10] });
+  add('tvOff', 'ui', 1.2, () => S().tvOff(), { mmax: [-30, -10] });
+  add('knob', 'ui', 0.5, () => S().knob(), { mmax: [-44, -14] });
+  add('phone', 'ui', 2.2, () => S().phone(), { mmax: [-30, -12] });
+  // loops (measured 1–4 s) and teardown: run 4 s at 1, then 0; the end must be silent and the loop gone
+  const loop = (name, fn, expect) => add(name, 'loop', 9, (ctx, tl) => {
+    fn(1);
+    tl.every(9, 0.05, (t) => fn(t < 4 ? 1 : 0));
+  }, expect, { from: 1, until: 4, tail: 1.2, teardown: () => !Object.keys(A.sfx._loops || {}).length });
+  loop('footsteps', (v) => S().footsteps(v), { cent: [200, 2500], integ: [-34, -18] });
+  loop('rain', (v) => S().rain(v), { cent: [1000, 7000], integ: [-34, -18] });
+  loop('wind', (v) => S().wind(v), { cent: [150, 2500], integ: [-36, -18] });
+  for (const k of ['stadium', 'dome', 'park', 'bedroom']) {
+    add('ambience:' + k, 'loop', 12, (ctx, tl) => {
+      S().ambience(k);
+      tl.at(8, () => S().ambience(null));
+    }, { integ: [-56, -28] }, { from: 1.5, until: 8, tail: 1, teardown: () => !A.sfx._bed });
+  }
+}
+
+function crowdTests() {
+  const C = () => A.crowd;
+  const bed = (name, st, expect) => add(name, 'crowd', 8, (ctx, tl) => {
+    C().update(0.05, st);
+    tl.every(8, 0.05, (t, dt) => C().update(dt, st));
+  }, expect, { from: 3 });
+  bed('crowd:bed calm small', { excitement: 0.1, size: 0.15, home: 0.7, indoor: false }, { integ: [-48, -32], cent: [250, 2500] });
+  bed('crowd:bed calm big', { excitement: 0.15, size: 1, home: 0.7, indoor: false }, { integ: [-34, -22], cent: [250, 2500] });
+  bed('crowd:bed loud big', { excitement: 0.9, size: 1, home: 0.7, indoor: false }, { integ: [-24, -14], cent: [400, 3000] });
+  bed('crowd:bed loud dome', { excitement: 0.9, size: 1, home: 0.7, indoor: true }, { integ: [-24, -13], cent: [300, 3000] });
+  add('crowd:teardown', 'crowd', 8, (ctx, tl) => {
+    const st = { excitement: 0.6, size: 1, home: 0.7 };
+    C().update(0.05, st);
+    tl.every(8, 0.05, (t, dt) => C().update(dt, t < 3 ? st : { size: 0 }));
+  }, {}, { until: 3, tail: 1, teardown: () => !A.crowd.playing });
+  // reactions in isolation (no bed): length, tone and level of each
+  const lens = { cheer: [2, 5], roar: [4, 8.5], ooh: [0.8, 2.6], aah: [1.5, 3.6], groan: [1, 3], boo: [1.8, 4.2], gasp: [0.25, 1.4], murmur: [2.5, 5], clap: [3.5, 7], chant: [5.5, 9], stomp: [4.5, 8], charge: [0.4, 1.6] };
+  for (const k of Object.keys(lens)) {
+    add('crowd:' + k, 'crowd', 10, (ctx, tl) => {
+      C().state = { excitement: 0.25, size: 0.9, home: 0.8, indoor: false };
+      tl.at(0.2, () => C().react(k, 1));
+    }, { cent: [250, 3000], mmax: [-24, -12], len: lens[k] });
+  }
+  add('crowd:small cheer', 'crowd', 6, (ctx, tl) => {
+    C().state = { excitement: 0.25, size: 0.15, home: 0.8, indoor: false };
+    tl.at(0.2, () => C().react('cheer', 1));
+  }, { cent: [250, 3000], mmax: [-38, -22] });
+  add('crowd:away boo (home 0.9)', 'crowd', 6, (ctx, tl) => {
+    C().state = { excitement: 0.25, size: 0.9, home: 0.9, indoor: false };
+    tl.at(0.2, () => C().react('cheer', 1, 'away'));
+  }, { mmax: [-34, -18] });
+  // the moment: a loud bed, a touchdown roar on top, rhythmic claps after
+  add('crowd:td moment', 'crowd', 14, (ctx, tl) => {
+    const st = { excitement: 0.55, size: 1, home: 0.8, indoor: false };
+    C().update(0.05, st);
+    tl.every(14, 0.05, (t, dt) => C().update(dt, st));
+    tl.at(2, () => C().react('roar', 1));
+    tl.at(8, () => C().react('clap', 0.8));
+  }, { integ: [-24, -14], cent: [400, 3000] });
+}
+
+function bandTests() {
+  const B = () => A.band;
+  for (const k of ['cadence', 'fight', 'charge']) {
+    const dur = k === 'charge' ? 8 : k === 'fight' ? 40 : 16;
+    add('band:' + k, 'band', dur, (ctx, tl) => {
+      B().play(k);
+      B().update();
+      tl.every(dur, 0.05, () => B().update());
+      if (k === 'cadence') tl.at(dur - 4, () => B().play(null));
+    }, { cent: k === 'cadence' ? [400, 4500] : [300, 3500], integ: [-30, -14] }, { until: k === 'cadence' ? dur - 4 : 0, tail: k === 'cadence' ? 1 : 0, teardown: k === 'cadence' ? () => !B().playing : null });
+  }
+}
+
+function musicTests() {
+  const M = () => A.music;
+  const live = (tl, dur) => { M()._schedule(0.25); tl.every(dur, 0.1, (t) => M()._schedule(t + 0.25)); };
+  const names = Object.keys(A.THEMES);
+  for (const th of names) {
+    add('music:' + th, 'music', 24, (ctx, tl) => {
+      M().play(th, { fade: 0.05 });
+      live(tl, 24);
+    }, { integ: [-24, -13] }, { from: 0.5 });
+  }
+  for (const st of ['td', 'turnover', 'bigplay', 'kickoff', 'win', 'lose', 'twominute']) {
+    add('stinger:' + st, 'stinger', 6, () => { M().stop(0.01); M().stinger(st); }, { mmax: [-22, st === 'td' ? -9 : -11], len: [0.6, 6] });
+  }
+  add('stinger:td over playcall', 'stinger', 10, (ctx, tl) => {
+    M().play('playcall', { fade: 0.05 });
+    live(tl, 10);
+    tl.at(4, () => M().stinger('td'));
+  }, { integ: [-24, -13] });
+  add('music:gamestate', 'music', 20, (ctx, tl) => {
+    M().play('playcall', { fade: 0.05 });
+    M().setGameState({ quarter: 1, clock: 600, scoreDiff: 0, redZone: false, twoMinute: false, playLive: false });
+    live(tl, 20);
+    tl.at(6, () => M().setGameState({ quarter: 4, clock: 110, scoreDiff: -4, redZone: true, twoMinute: true }));
+    tl.at(13, () => M().setGameState({ playLive: true }));
+  }, { integ: [-28, -13] });
+}
+
+const GROUPS = { sfx: sfxTests, crowd: crowdTests, band: bandTests, music: musicTests };
+
+// ---- safety: every API before unlock, then a late unlock --------------------------
+async function preUnlockCheck() {
+  const errs = [];
+  const noCtxBefore = !A.audio.ctx;
+  const tryit = (label, fn) => { try { fn(); } catch (e) { errs.push(label + ': ' + e.message); } };
+  const { sfx, crowd, band, music, voice } = A;
+  tryit('sfx.whistle', () => sfx.whistle('short'));
+  tryit('sfx.hit', () => sfx.hit(0.8, 'pads'));
+  tryit('sfx.catchBall', () => sfx.catchBall('hands'));
+  tryit('sfx.kickBall', () => sfx.kickBall('punt'));
+  tryit('sfx.snap', () => sfx.snap());
+  tryit('sfx.cadence', () => sfx.cadence('hut'));
+  tryit('sfx.ballBounce', () => sfx.ballBounce(0.5));
+  tryit('sfx.footsteps', () => sfx.footsteps(0.7));
+  tryit('sfx.pa', () => sfx.pa('horn'));
+  tryit('sfx.flagThrow', () => sfx.flagThrow());
+  tryit('sfx.chains', () => sfx.chains());
+  tryit('sfx.rain', () => sfx.rain(0.5));
+  tryit('sfx.wind', () => sfx.wind(0.5));
+  tryit('sfx.ambience', () => sfx.ambience('dome'));
+  tryit('sfx.grunt', () => sfx.grunt(0.5));
+  tryit('sfx.stopAll', () => sfx.stopAll());
+  tryit('sfx.prewarm', () => sfx.prewarm());
+  tryit('crowd.stop', () => crowd.stop(0.5));
+  tryit('crowd.update again', () => crowd.update(0.016, { excitement: 0.5, size: 0.8 }));
+  tryit('crowd.prewarm', () => crowd.prewarm());
+  tryit('music.setPA', () => music.setPA(null));
+  tryit('music.setIntensity', () => music.setIntensity(0.5));
+  tryit('music.setTuning', () => music.setTuning(0));
+  tryit('audio.duck', () => A.audio.duck(0.5));
+  tryit('audio.setSpace', () => A.audio.setSpace('dome'));
+  tryit('voice.cancel', () => voice.cancel());
+  tryit('sfx.ui', () => sfx.ui('move'));
+  tryit('sfx.staticBurst', () => sfx.staticBurst(0.3));
+  tryit('sfx.tvOn', () => sfx.tvOn());
+  tryit('crowd.update', () => crowd.update(0.016, { excitement: 0.5, size: 0.8, home: 0.6, indoor: false }));
+  tryit('crowd.react', () => crowd.react('cheer', 1));
+  tryit('band.play', () => band.play('cadence'));
+  tryit('band.update', () => band.update());
+  tryit('music.play', () => music.play('hud_glory'));
+  tryit('music.setGameState', () => music.setGameState({ quarter: 2, clock: 100, scoreDiff: 3, twoMinute: true }));
+  tryit('music.stinger', () => music.stinger('td'));
+  tryit('music.update', () => music.update());
+  tryit('music.beatInfo', () => music.beatInfo());
+  tryit('voice.say', () => voice.say('Touchdown', { kind: 'pa' }));
+  // late unlock: what was asked before must start now
+  const ctx = new OfflineAudioContext(2, SR * 6, SR);
+  A.audio.useContext(ctx);
+  const tl = timeline(ctx);
+  tl.every(6, 0.05, (t, dt) => { crowd.update(dt, { excitement: 0.5, size: 0.8, home: 0.6 }); band.update(); music.update(); music._schedule(t + 0.25); });
+  music._schedule(0.25);
+  tl.arm();
+  const buf = await ctx.startRendering();
+  const m = measure(buf, 2);
+  return { errs, lateUnlock: { noCtxBefore, music: music.theme, band: band.current, space: A.audio.spaceKind, loudness: +m.integ.toFixed(1), bad: m.bad } };
+}
+
+async function runOne(t, withWav) {
+  const ctx = new OfflineAudioContext(2, Math.ceil(SR * t.dur), SR);
+  A.audio.setSpace('stadium');
+  A.audio.useContext(ctx);
+  // fresh engine state per test
+  try { A.music.stop(0.01); A.music.setGameState?.({ quarter: 1, clock: 900, scoreDiff: 0, redZone: false, twoMinute: false, playLive: false }); } catch { /* */ }
+  if (A.crowd) { A.crowd._glow = 0; A.crowd._E = 0; A.crowd._act = 0; }
+  try { A.band?.play(null); } catch { /* */ }
+  const tl = timeline(ctx);
+  const c0 = performance.now();
+  // one-shots fire 0.25 s in (the master compressor's state at t = 0 of an
+  // offline render would otherwise squash their first transient)
+  if (t.run.length === 0) { A.sfx?._ok?.(); tl.at(0.25, () => t.run()); } else await t.run(ctx, tl);
+  tl.arm();
+  const c1 = performance.now();
+  const buf = await ctx.startRendering();
+  const c2 = performance.now();
+  let span = buf;
+  const from = t.from || 0;
+  const until = t.until;
+  if (until) {
+    const n = Math.round((until - from) * SR);
+    span = new AudioBuffer({ numberOfChannels: 2, length: n, sampleRate: SR });
+    for (let ch = 0; ch < 2; ch++) span.getChannelData(ch).set(buf.getChannelData(ch).subarray(Math.round(from * SR), Math.round(from * SR) + n));
+  }
+  const m = measure(span, until ? 0 : from);
+  const full = measure(buf);
+  m.peak = full.peak; // the ceiling applies to the whole render
+  m.bad = full.bad;
+  if (t.reaction) m.len = measureReaction(buf, from);
+  m.setupMs = c1 - c0;
+  m.renderMs = c2 - c1;
+  if (t.tail) m.tail = tailRms(buf, t.tail);
+  if (t.teardown) m.torn = !!t.teardown();
+  let wav = null, spec = null;
+  if (withWav === true || withWav === 'wav') wav = toWav(buf);
+  if (withWav === 'spec') spec = spectrogram(buf);
+  return { m, wav, spec };
+}
+
+// reaction length: time the reaction stays within 20 dB of its own peak above the bed
+function measureReaction(buf, from) {
+  const sr = buf.sampleRate, L = buf.getChannelData(0), R = buf.getChannelData(1);
+  const hop = Math.round(0.05 * sr), env = [];
+  for (let i = Math.round(from * sr); i + hop <= L.length; i += hop) {
+    let e = 0;
+    for (let j = i; j < i + hop; j++) e += L[j] * L[j] + R[j] * R[j];
+    env.push(10 * Math.log10(e / hop + 1e-12));
+  }
+  const base = Math.min(...env.slice(0, 2));
+  let pk = -Infinity, pi = 0;
+  env.forEach((v, i) => { if (v > pk) { pk = v; pi = i; } });
+  // span from the first to the last frame within 12 dB of the peak (and above the bed),
+  // so rhythmic reactions (chant, claps, stomps) count their whole run
+  const thr = Math.max(base + 3, pk - 12);
+  let a = -1, b = -1;
+  env.forEach((v, i) => { if (v > thr) { if (a < 0) a = i; b = i; } });
+  return a < 0 ? 0 : (b - a + 1) * 0.05;
+}
+
+function toWav(buf) {
+  const n = buf.length, ch = buf.numberOfChannels, sr = buf.sampleRate;
+  const out = new DataView(new ArrayBuffer(44 + n * ch * 2));
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) out.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); out.setUint32(4, 36 + n * ch * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+  out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, ch, true);
+  out.setUint32(24, sr, true); out.setUint32(28, sr * ch * 2, true); out.setUint16(32, ch * 2, true); out.setUint16(34, 16, true);
+  w(36, 'data'); out.setUint32(40, n * ch * 2, true);
+  const chans = [...Array(ch)].map((_, c) => buf.getChannelData(c));
+  let o = 44;
+  for (let i = 0; i < n; i++) for (let c = 0; c < ch; c++) { const v = Math.max(-1, Math.min(1, chans[c][i] || 0)); out.setInt16(o, v * 32767, true); o += 2; }
+  const bytes = new Uint8Array(out.buffer);
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+
+window.__ac = {
+  async list() {
+    await load();
+    T.length = 0;
+    for (const g of Object.values(GROUPS)) g();
+    return T.map((t) => ({ name: t.name, cat: t.cat }));
+  },
+  async run(name, withWav) {
+    const t = T.find((x) => x.name === name);
+    const r = await runOne(t, withWav);
+    return { name, cat: t.cat, expect: t.expect, lenExpect: t.lenExpect || null, ...r };
+  },
+  async pre() { return preUnlockCheck(); },
+  // peak / duration of each cached variant of an sfx buffer (debugging levels)
+  async bufInfo(name) {
+    const ctx = new OfflineAudioContext(2, SR, SR);
+    A.audio.useContext(ctx);
+    A.sfx._ok();
+    return A.sfx._get(name).map((b) => {
+      let p = 0, at = 0;
+      for (let c = 0; c < b.numberOfChannels; c++) { const d = b.getChannelData(c); for (let i = 0; i < d.length; i++) if (Math.abs(d[i]) > p) { p = Math.abs(d[i]); at = i / b.sampleRate; } }
+      return { peak: +p.toFixed(3), at: +at.toFixed(4), dur: +b.duration.toFixed(3), sr: b.sampleRate };
+    });
+  },
+  // CPU cost of rendering every cached buffer (what idle-time warm-up has to do)
+  async cost() {
+    const ctx = new OfflineAudioContext(2, SR, SR);
+    A.audio.useContext(ctx);
+    const out = {};
+    A.crowd.update(0.01, {});
+    for (const k of A.crowd.constructor.WARM || []) { const t0 = performance.now(); A.crowd._buf(k); out['crowd ' + k] = performance.now() - t0; }
+    A.sfx._ok();
+    for (const k of A.sfx.constructor.WARM || []) { const t0 = performance.now(); A.sfx._get(k); out['sfx ' + k] = performance.now() - t0; }
+    // the music sample bank, as the engine's idle prewarm walks it
+    const R = await import('/hardcount/src/audio/music/render.js');
+    const B = R.bank(ctx);
+    const ranges = { trumpet: [58, 84], horn: [48, 76], bone: [40, 68], tuba: [28, 52], timp: [38, 56], tonewheel: [45, 84], glock: [76, 96] };
+    let tot = 0;
+    for (const n of R.DRUM_NAMES()) { const t0 = performance.now(); B.get(n); tot += performance.now() - t0; }
+    out['music drums (all)'] = tot;
+    for (const k of R.MS_KINDS()) {
+      const [lo, hi] = ranges[k] || [55, 84];
+      let c = 0, n = 0, worst = 0;
+      const seen = new Set();
+      for (let m = lo; m <= hi; m++) {
+        const key = B.msKey(k, m);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const t0 = performance.now(); B.ms(k, m); const d = performance.now() - t0;
+        c += d; n++; worst = Math.max(worst, d);
+      }
+      out['music ms ' + k + ' (' + n + ', worst ' + worst.toFixed(0) + ')'] = c;
+    }
+    return out;
+  },
+};
+window.__acReady = true;
+`;
+
+const PAGE_HTML = '<!doctype html><meta charset="utf-8"><title>audiocheck</title><script type="module" src="/__audiocheck.js"></script>';
+
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json' };
+const server = createServer(async (req, res) => {
+  const p = decodeURIComponent(req.url.split('?')[0]);
+  if (p === '/__audiocheck.html') { res.writeHead(200, { 'content-type': 'text/html' }); res.end(PAGE_HTML); return; }
+  if (p === '/__audiocheck.js') { res.writeHead(200, { 'content-type': 'text/javascript' }); res.end(PAGE_JS); return; }
+  try {
+    const data = await readFile(join(root, p));
+    res.writeHead(200, { 'content-type': MIME[extname(p)] || 'application/octet-stream', 'cache-control': 'no-store' });
+    res.end(data);
+  } catch {
+    res.writeHead(404);
+    res.end('nope');
+  }
+});
+await new Promise((r) => server.listen(0, r));
+const port = server.address().port;
+
+const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+const page = await browser.newPage();
+const errors = [];
+page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`[${m.type()}] ${m.text()}`); });
+page.on('pageerror', (e) => errors.push(`[pageerror] ${e.message}`));
+await page.goto(`http://127.0.0.1:${port}/__audiocheck.html`);
+await page.waitForFunction(() => window.__acReady === true, null, { timeout: 20000 });
+
+const all = await page.evaluate(() => window.__ac.list());
+if (flag('buf')) {
+  console.log(JSON.stringify(await page.evaluate((n) => window.__ac.bufInfo(n), flag('buf'))));
+  await browser.close();
+  server.close();
+  process.exit(0);
+}
+if (args.includes('--cost')) {
+  const c = await page.evaluate(() => window.__ac.cost());
+  let tot = 0;
+  for (const [k, v] of Object.entries(c)) { tot += v; console.log(k.padEnd(28), v.toFixed(1).padStart(8), 'ms'); }
+  console.log('total'.padEnd(28), tot.toFixed(0).padStart(8), 'ms');
+  await browser.close();
+  server.close();
+  process.exit(0);
+}
+const wanted = filter ? all.filter((t) => filter.split(',').some((f) => t.name.includes(f))) : all;
+if (listOnly) {
+  for (const t of wanted) console.log(t.cat.padEnd(8), t.name);
+  await browser.close();
+  server.close();
+  process.exit(0);
+}
+
+const fmt = (v, d = 1) => (v <= -199 ? '  -inf' : v.toFixed(d).padStart(6));
+const inRange = (v, r) => !r || (v >= r[0] && v <= r[1]);
+const rows = [];
+if (wavDir) await mkdir(resolve(wavDir), { recursive: true });
+if (specDir) await mkdir(resolve(specDir), { recursive: true });
+let fails = 0;
+// before anything else (no AudioContext exists yet in this page): every API
+// must be safe to call, and a late unlock must still start what was asked for
+let preLine = null;
+if (!filter || filter.includes('pre')) {
+  const pre = await page.evaluate(() => window.__ac.pre());
+  preLine = ['before-unlock API calls: ' + (pre.errs.length ? pre.errs.join('; ') : 'all safe'), 'late unlock: ' + JSON.stringify(pre.lateUnlock)];
+  if (pre.errs.length || !pre.lateUnlock.music || !pre.lateUnlock.band || pre.lateUnlock.loudness < -60 || pre.lateUnlock.noCtxBefore !== true) fails++;
+}
+console.log('name'.padEnd(30), '  peak', ' M-max', '     I', '  len', '   cent', ' corr', ' ms(set/ren)', ' notes');
+for (const t of wanted) {
+  let r;
+  try {
+    r = await page.evaluate(([n, w]) => window.__ac.run(n, w), [t.name, specDir ? 'spec' : wavDir ? 'wav' : false]);
+  } catch (e) {
+    console.log(t.name.padEnd(30), 'ERROR', e.message.split('\n')[0]);
+    fails++;
+    continue;
+  }
+  const m = r.m, ex = r.expect || {};
+  const notes = [];
+  if (m.bad) notes.push(`${m.bad} NaN/Inf`);
+  if (m.peak > -1.0) notes.push('PEAK>-1');
+  if (m.integ < -60) notes.push('SILENT');
+  if (!inRange(m.cent, ex.cent)) notes.push(`cent∉[${ex.cent}]`);
+  const lenR = r.lenExpect || ex.len;
+  if (!inRange(m.len, lenR)) notes.push(`len∉[${lenR}]`);
+  if (!inRange(m.mmax, ex.mmax)) notes.push(`M∉[${ex.mmax}]`);
+  if (!inRange(m.integ, ex.integ)) notes.push(`I∉[${ex.integ}]`);
+  if (m.tail != null && m.tail > -70) notes.push(`tail ${m.tail.toFixed(0)}dB`);
+  if (m.torn === false) notes.push('NOT TORN DOWN');
+  if (notes.length) fails++;
+  rows.push({ name: t.name, cat: t.cat, ...m, notes });
+  console.log(t.name.padEnd(30), fmt(m.peak), fmt(m.mmax), fmt(m.integ), m.len.toFixed(2).padStart(5), String(Math.round(m.cent)).padStart(7),
+    m.corr.toFixed(2).padStart(5), `${m.setupMs.toFixed(0).padStart(5)}/${m.renderMs.toFixed(0).padEnd(5)}`, notes.join(' '));
+  if (wavDir && r.wav) await writeFile(join(resolve(wavDir), t.name.replace(/[^a-z0-9_.-]+/gi, '_') + '.wav'), Buffer.from(r.wav, 'base64'));
+  if (specDir && r.spec) await writeFile(join(resolve(specDir), t.name.replace(/[^a-z0-9_.-]+/gi, '_') + '.png'), Buffer.from(r.spec.split(',')[1], 'base64'));
+}
+
+if (preLine) console.log('\n' + preLine.join('\n'));
+if (errors.length) console.log('\n' + errors.slice(0, 30).join('\n'));
+if (jsonOut) await writeFile(resolve(jsonOut), JSON.stringify(rows, null, 1));
+console.log(`\n${rows.length} renders, ${fails} with notes`);
+await browser.close();
+server.close();
+process.exit(0);

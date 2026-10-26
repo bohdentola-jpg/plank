@@ -1,8 +1,13 @@
 // Song: one playing theme ("deck"). Owns its sub-mix, a 16th-note transport,
 // the arrangement (sections, layers, fills, builds) and the generic dynamic
-// behaviours (countdown build → GO slam, final-lap key lift, airborne
-// filter-drop, lead/chase switching). Themes subclass it and fill in
-// compose() / setup() / onBar() / onStep().
+// behaviours (two-minute key lift + climax, lead/chase switching when the
+// player's team is behind, the stadium-PA coloration of in-venue music).
+// Themes subclass it and fill in compose() / setup() / onBar() / onStep().
+//
+// Kinds: 'menu' (main-menu stations), 'game' (in-game beds that follow the
+// game state), 'results' (post-game), 'band' (the marching band — always full).
+// static pa (0..1): how much the theme sounds like it's coming through the
+// stadium PA (horn-speaker band-limiting + echo off the stands).
 
 import { audio } from '../audio.js';
 import { Rng, hashStr, mix32, prog, voice, clamp, makeMelody, rhythm, indexNotes } from './util.js';
@@ -36,8 +41,9 @@ const KIT = {
 
 // minimum intensity per layer: pad only → +bass+hats → full drums+chords → +lead+perc
 const TIERS = {
-  race: { pad: 0, fx: 0, extra: 0, cym: 0.1, bass: 0.2, hats: 0.2, kick: 0.45, snare: 0.45, chords: 0.45, gtr: 0.45, arp: 0.45, lead: 0.66, perc: 0.75 },
+  game: { pad: 0, fx: 0, extra: 0, cym: 0.1, bass: 0.15, hats: 0.15, kick: 0.3, snare: 0.3, chords: 0.3, gtr: 0.45, arp: 0.45, lead: 0.62, perc: 0.72 },
   menu: { pad: 0, fx: 0, extra: 0, cym: 0, bass: 0, hats: 0, kick: 0.08, snare: 0.08, chords: 0, gtr: 0, arp: 0.15, lead: 0.26, perc: 0.5 },
+  band: { pad: 0, fx: 0, extra: 0, cym: 0, bass: 0, hats: 0, kick: 0, snare: 0, chords: 0, gtr: 0, arp: 0, lead: 0, perc: 0 },
 };
 TIERS.results = TIERS.menu;
 
@@ -54,8 +60,9 @@ const SECTIONS = {
 };
 
 export class Song {
-  static kind = 'race';
-  static intensity = 0.85;
+  static kind = 'menu';
+  static intensity = 0.6;
+  static pa = 0;
 
   constructor(m, id, seed, opts = {}) {
     this.m = m;
@@ -125,12 +132,12 @@ export class Song {
     for (const k in GROUP) this.layer(k); // every switchable layer exists
     if (m._log) this._wrapLog(m._log);
 
-    const race = opts.race || {};
+    const game = opts.game || {};
     this.intensity = this.targetIntensity = clamp(opts.intensity ?? this.constructor.intensity, 0, 1);
-    this.leading = race.position == null || race.position <= 1;
+    this.leading = !(game.scoreDiff < 0);
     this.wantLead = this.leading;
     this.lastLeadSwitch = -99;
-    this.cdWanted = !!race.countdown && this.kind === 'race';
+    this.cdWanted = false;
     this.climax = false;
     this.mode = 'normal';
     this.solo = m._solo || null; // debug: only these layers
@@ -265,7 +272,19 @@ export class Song {
 
   // ---- graph ------------------------------------------------------------------------
   _graph() {
-    this.out = this.gain(0, this.m.input);
+    this.out = this.gain(0);
+    // stadium PA: blend the clean deck with a horn-speaker version of it, and
+    // send to the engine's PA echo (far speaker clusters + the bowl)
+    const pa = clamp(this.m._paOverride ?? this.constructor.pa ?? 0, 0, 1);
+    this.paDry = this.gain(1 - pa * 0.85, this.m.input);
+    this.paWet = this.gain(pa, this.m.input);
+    const hp = this.filter('highpass', 160, 0.6);
+    const pk = this.filter('peaking', 2100, 0.8, null, 4);
+    const lp = this.filter('lowpass', 6800, 0.6);
+    this.out.connect(this.paDry);
+    this.out.connect(hp); hp.connect(pk); pk.connect(lp); lp.connect(this.paWet);
+    this.paSend = this.gain(pa * 0.55, this.m.paIn || null);
+    lp.connect(this.paSend);
     this.revOut = this.gain(0, this.m.revIn);
     this.lpF = this.filter('lowpass', 22000, 0.5, this.out);
     this.hpF = this.filter('highpass', 10, 0.5, this.lpF);
@@ -635,7 +654,7 @@ export class Song {
       if (this.wantLead !== this.leading && this.barAbs - this.lastLeadSwitch >= 2) {
         this.leading = this.wantLead;
         this.lastLeadSwitch = this.barAbs;
-        if (this.leading && this.kind === 'race' && this.mode === 'normal') this.hit('crash', t, 0.7);
+        if (this.leading && this.kind === 'game' && this.mode === 'normal') this.hit('crash', t, 0.7);
       }
     }
     const forced = this.climax || this.mode === 'countdown' || this.barAbs < this.forceIntensityUntil;
@@ -938,11 +957,23 @@ export class Song {
     this.onGo(t);
   }
 
-  // ---- race reactions ----------------------------------------------------------------
+  // ---- game reactions ----------------------------------------------------------------
+  /** Live PA amount (music.setPA). */
+  setPA(x) {
+    const t = this.ctx.currentTime, pa = clamp(+x || 0, 0, 1);
+    this.paDry.gain.setTargetAtTime(1 - pa * 0.85, t, 0.15);
+    this.paWet.gain.setTargetAtTime(pa, t, 0.15);
+    this.paSend.gain.setTargetAtTime(pa * 0.55, t, 0.15);
+  }
+
+  /** Player's team ahead / tied (hook) or behind (tense ostinato, where the theme has one). */
   setLeading(lead) { this.wantLead = !!lead; }
 
+  /** The two-minute warning: lift the key into the climax form on the next phrase. */
+  lift() { this.finalLap(); }
+
   finalLap() {
-    if (this.liftPending || this.climax || this.kind !== 'race' || this.mode === 'outro') return;
+    if (this.liftPending || this.climax || this.kind !== 'game' || this.mode === 'outro') return;
     this.liftPending = true;
     this.liftAt = null;
   }
@@ -967,7 +998,7 @@ export class Song {
   }
 
   finish() {
-    if (this.kind !== 'race') return;
+    if (this.kind !== 'game' && this.kind !== 'band') return;
     this.finishPending = true;
     this.liftPending = false;
     this.liftAt = null;
