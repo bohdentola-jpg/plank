@@ -62,7 +62,7 @@ export function atmosphere(time, weather, opts = {}) {
   const night = time === 'night', dusk = time === 'dusk';
   if (!dome && w !== 'clear') {
     // clouds roll in: flatter light, lower contrast; lights on for anything gloomy
-    const grey = night ? ['#06080c', '#0c1018', '#1a2028'] : dusk ? ['#2a2a3a', '#4a4650', '#7a6a68'] : ['#7d8692', '#9aa2ac', '#bcc2c8'];
+    const grey = night ? ['#06080c', '#0c1018', '#1a2028'] : dusk ? ['#1e1e2a', '#3a3640', '#5c4e4e'] : ['#7d8692', '#9aa2ac', '#bcc2c8'];
     A.sky = grey;
     A.clouds = 0.95;
     A.stars = 0;
@@ -81,7 +81,8 @@ export function atmosphere(time, weather, opts = {}) {
       A.post.saturation *= 0.95;
       A.wet = true;
     } else if (w === 'snow') {
-      A.fog = [night ? '#1e2634' : dusk ? '#5a5866' : '#b8c0c8', night ? 0.009 : 0.0085];
+      A.fog = [night ? '#1e2634' : dusk ? '#4e4c5a' : '#9aa4b0', night ? 0.0075 : 0.006];
+      if (!night) { A.post.contrast *= 1.07; A.post.exposure *= 0.93; A.post.saturation *= 1.04; }
       A.hemi = [night ? '#4a5a80' : '#d8e0ea', night ? '#2a3038' : '#9aa0a8', A.hemi[2] * 1.15];
       A.haze *= 1.5;
       A.cold = true;
@@ -93,6 +94,8 @@ export function atmosphere(time, weather, opts = {}) {
     A.hazeColor = night ? '#4a5878' : '#9aa0aa';
   }
   if (opts.cold) A.cold = true;
+  // floodlights on before dark: a soft, shadowless fill from above on top of the low sun
+  if (!dome && !night && A.lights) A.fill = { color: '#eef2ff', i: dusk ? 1.5 : 0.9, dir: dirFrom(1.3, az + 1.6) };
   A.night = night;
   A.dusk = dusk;
   A.day = !night && !dusk;

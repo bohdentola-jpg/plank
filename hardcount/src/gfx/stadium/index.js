@@ -53,11 +53,12 @@ export async function buildVenue(renderer, opts = {}) {
   const wind = def.roof === 'dome' ? 0 : Math.max(0, Math.min(1, opts.wind ?? 0.3));
   const crowd = Math.max(0, Math.min(1, opts.crowd ?? 0.85));
   const A = atmosphere(time, weather, { roof: def.roof, sunAz: mod.SUN_AZ, cold: mod.COLD });
+  if (A.night && mod.KEY_NIGHT) Object.assign(A.key, mod.KEY_NIGHT);
 
   const scene = new THREE.Scene();
   scene.name = `venue:${def.id}`;
   scene.background = new THREE.Color(A.fog[0]);
-  scene.fog = new THREE.FogExp2(A.fog[0], A.fog[1]);
+  scene.fog = new THREE.FogExp2(A.fog[0], A.fog[1] * (A.weather === 'clear' ? (mod.FOG ?? 1) : 1));
   scene.environment = getEnvMap(renderer, A.env);
   const root = new THREE.Group();
   root.name = 'venue';
@@ -76,6 +77,12 @@ export async function buildVenue(renderer, opts = {}) {
   key.shadow.radius = A.night || A.dome ? 3.5 : 2;
   scene.add(key);
   scene.add(key.target);
+  if (A.fill) {
+    const fill = new THREE.DirectionalLight(A.fill.color, A.fill.i);
+    fill.name = 'floodFill';
+    fill.position.copy(A.fill.dir).multiplyScalar(100);
+    scene.add(fill);
+  }
 
   const ctx = {
     renderer, def, field, home, away, quality, time, weather: A.weather, wind, crowd, atmos: A,
@@ -95,7 +102,7 @@ export async function buildVenue(renderer, opts = {}) {
   // ---- field
   const F = buildField({
     field, quality, aniso: ctx.aniso, paint: ctx.paint, weather: A.weather, wind, windDir: ctx.windDir,
-    padColor: home.colors.primary, flagColor: mod.FLAG_COLOR, uPool: ctx.uPool, apron: mod.APRON ?? 160, apronCanvas: mod.apronCanvas?.(ctx),
+    padColor: home.colors.primary, flagColor: mod.FLAG_COLOR, uPool: ctx.uPool, apron: mod.APRON ?? 160, apronRect: mod.apronRect?.(field), apronCanvas: mod.apronCanvas?.(ctx),
   });
   root.add(F.group);
   await tick();

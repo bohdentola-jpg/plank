@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { GeoBuilder } from '../geo.js';
 import { makeRng } from '../../core/util.js';
 import {
-  concreteTex, seatTex, aluminiumTex, brickTex, claddingTex, chainLinkTex, facadeTex, tex, cv,
+  concreteTex, seatTex, aluminiumTex, brickTex, claddingTex, chainLinkTex, facadeTex, exteriorTex, tex, cv,
 } from './tex.js';
 
 const DS = THREE.DoubleSide;
@@ -135,8 +135,9 @@ export const POOL_GLSL = /* glsl */`
     return mix(1.0, 1.0 - smoothstep(1.0, 1.4, pd), uPool.z);
   }`;
 
-export function poolPatch(sh, ctx) {
+export function poolPatch(sh, ctx, direct = 1) {
   sh.uniforms.uPool = ctx.uPool;
+  const dk = direct.toFixed(2);
   sh.vertexShader = sh.vertexShader
     .replace('#include <common>', '#include <common>\nvarying vec3 vPoolW;')
     .replace('#include <project_vertex>', `#include <project_vertex>
@@ -150,27 +151,33 @@ export function poolPatch(sh, ctx) {
     .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
       {
         float pool = poolAt(vPoolW);
-        reflectedLight.directDiffuse *= pool;
-        reflectedLight.directSpecular *= pool;
+        // roofs and canopy tops: the floodlights don't light them (night only)
+        float dkk = mix(1.0, ${dk}, uPool.z);
+        reflectedLight.directDiffuse *= pool * dkk;
+        reflectedLight.directSpecular *= pool * dkk;
         float ind = mix(1.0, mix(uPool.w, 1.0, pool), uPool.z);
         reflectedLight.indirectDiffuse *= ind;
         reflectedLight.indirectSpecular *= ind;
       }`);
 }
 
-/** Pool + albedo-proportional "spill" light (floodlit stands at night) on a standard material. */
-export function spill(mat, ctx, k = 1) {
+/**
+ * Pool + albedo-proportional "spill" light (floodlit stands at night) on a
+ * standard material. opts.direct scales the key light at night (roofs).
+ */
+export function spill(mat, ctx, k = 1, opts = {}) {
   const prev = mat.onBeforeCompile;
+  const direct = opts.direct ?? 1;
   mat.onBeforeCompile = (sh, r) => {
     prev?.(sh, r);
-    if (ctx.uPool) poolPatch(sh, ctx);
+    if (ctx.uPool) poolPatch(sh, ctx, direct);
     sh.uniforms.uSpill = ctx.uSpill;
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\nuniform float uSpill;')
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>\ntotalEmissiveRadiance += diffuseColor.rgb * uSpill * ${k.toFixed(2)}${ctx.uPool ? ' * poolAt(vPoolW)' : ''};`);
   };
   const key = mat.customProgramCacheKey?.call(mat) || '';
-  mat.customProgramCacheKey = () => key + 'spill' + k.toFixed(2) + (ctx.uPool ? 'p' : '');
+  mat.customProgramCacheKey = () => key + 'spill' + k.toFixed(2) + (ctx.uPool ? 'p' : '') + direct.toFixed(2);
   return mat;
 }
 
@@ -197,6 +204,15 @@ export const MATS = {
   glowDS: () => new THREE.MeshBasicMaterial({ vertexColors: true, side: DS, toneMapped: false }),
   foliage: (ctx) => spill(std({ vertexColors: true, roughness: 0.95, side: DS }), ctx, 0.4),
 };
+
+/** Stadium exterior facade (columns, concourse openings lit at night), tinted per venue. */
+export function exteriorMat(ctx, key, base, accent) {
+  const t = exteriorTex(key, base, accent);
+  return spill(std({
+    map: t.map, emissive: 0xffffff, emissiveMap: t.emi, emissiveIntensity: ctx.night ? 1.6 : ctx.dusk ? 0.8 : 0.0,
+    roughness: 0.85, vertexColors: true,
+  }), ctx, 0.4);
+}
 
 /** Lit-window material for a facade texture (map + emissive map scaled by `lit`). */
 export function facadeMat(style, seed, ctx, opts = {}) {

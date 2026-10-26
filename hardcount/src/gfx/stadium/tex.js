@@ -549,6 +549,73 @@ export function bannerTex(key, lines, bg, fg, accent, w = 256, h = 512) {
   });
 }
 
+/**
+ * Stadium exterior: precast panels between columns, a concourse band with lit
+ * openings (emissive map), a team-colour stripe. One repeat = 16 × 16 yd.
+ */
+export function exteriorTex(key, base = '#b8b6ae', accent = '#1a3a7a', opts = {}) {
+  return once(`ext|${key}|${base}|${accent}`, () => {
+    const W = 512, H = 512;
+    const [c, x] = cv(W, H);
+    const [e, ex] = cv(W, H);
+    const rng = makeRng('ext' + key);
+    x.fillStyle = base;
+    x.fillRect(0, 0, W, H);
+    ex.fillStyle = '#000';
+    ex.fillRect(0, 0, W, H);
+    speckle(x, W, H, rng, 9000, ['#000', '#fff'], 0.02, 0.1, 1, 2);
+    // panel joints
+    x.strokeStyle = 'rgba(0,0,0,0.18)';
+    x.lineWidth = 2;
+    for (let y = 0; y <= H; y += 64) { x.beginPath(); x.moveTo(0, y); x.lineTo(W, y); x.stroke(); }
+    for (let xx = 0; xx <= W; xx += 128) { x.beginPath(); x.moveTo(xx, 0); x.lineTo(xx, H); x.stroke(); }
+    // columns
+    for (const cx of [0, 256]) {
+      const g = x.createLinearGradient(cx - 20, 0, cx + 20, 0);
+      g.addColorStop(0, 'rgba(0,0,0,0.25)');
+      g.addColorStop(0.3, 'rgba(255,255,255,0.12)');
+      g.addColorStop(1, 'rgba(0,0,0,0.3)');
+      x.fillStyle = g;
+      x.fillRect(cx - 20, 0, 40, H);
+      x.fillRect(cx + W - 20, 0, 40, H);
+    }
+    // concourse band: dark openings with warm light behind
+    const oy = opts.bandY ?? 300, oh = opts.bandH ?? 84;
+    for (let k = 0; k < 4; k++) {
+      const ox = 32 + k * 128;
+      if (k === 0 || k === 2) continue;
+      x.fillStyle = '#1a1814';
+      x.fillRect(ox, oy, 192 - 64, oh);
+      ex.fillStyle = '#ffc890';
+      ex.globalAlpha = 0.55;
+      ex.fillRect(ox + 4, oy + 4, 120, oh - 8);
+      ex.globalAlpha = 1;
+      x.fillStyle = 'rgba(60,40,20,0.8)';
+      for (let p = 0; p < 4; p++) x.fillRect(ox + 10 + rng() * 100, oy + oh - 34, 9, 30);
+    }
+    for (const ox of [32, 288]) {
+      x.fillStyle = '#20242a';
+      x.fillRect(ox + 16, oy, 96, oh);
+      ex.fillStyle = '#ffdcae';
+      ex.globalAlpha = 0.35;
+      ex.fillRect(ox + 20, oy + 4, 88, oh - 8);
+      ex.globalAlpha = 1;
+    }
+    // team stripe + grime
+    x.fillStyle = accent;
+    x.fillRect(0, oy - 34, W, 14);
+    x.fillRect(0, 40, W, 10);
+    for (let i = 0; i < 16; i++) {
+      const g = x.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(1, 'rgba(0,0,0,0.18)');
+      x.fillStyle = g;
+      x.fillRect(rng() * W, rng() * 200, 3 + rng() * 8, H);
+    }
+    return { map: tex(c), emi: tex(e) };
+  });
+}
+
 export function resetTexCache() {
   for (const v of cache.values()) {
     if (v && v.isTexture) v.dispose();

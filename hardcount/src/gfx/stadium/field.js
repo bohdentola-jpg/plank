@@ -81,6 +81,7 @@ export function buildField(ctx) {
   }
   // apron: a ring of ground around the tiles out to `ctx.apron` yd
   const R = ctx.apron || 120;
+  const AR = ctx.apronRect || { x0: -R, z0: -R, x1: R, z1: R };
   const ac = ctx.apronCanvas || apronCanvas(ctx.paint);
   const amap = tex(ac, { aniso });
   const amat = surfaceMaterial(amap, shared);
@@ -89,10 +90,10 @@ export function buildField(ctx) {
   const gb = new GeoBuilder();
   const V = (x, z) => new THREE.Vector3(x, 0, z);
   const rect = (x0, z0, x1, z1) => gb.quad(V(x0, z1), V(x1, z1), V(x1, z0), V(x0, z0), [x0, -z1, x1, -z0]);
-  rect(-R, P.z1, R, R);
-  rect(-R, -R, R, P.z0);
-  rect(-R, P.z0, P.x0, P.z1);
-  rect(P.x1, P.z0, R, P.z1);
+  rect(AR.x0, P.z1, AR.x1, AR.z1);
+  rect(AR.x0, AR.z0, AR.x1, P.z0);
+  rect(AR.x0, P.z0, P.x0, P.z1);
+  rect(P.x1, P.z0, AR.x1, P.z1);
   const apron = new THREE.Mesh(gb.build(), amat);
   apron.receiveShadow = true;
   apron.name = 'apron';

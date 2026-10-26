@@ -123,7 +123,7 @@ export function videoBoard(ctx, x, y, z, w, h, ry, board, opts = {}) {
 /** A block of city buildings (facade textures), returns nothing; batched by style. */
 export function cityBlock(ctx, rng, list) {
   for (const b of list) {
-    building(ctx.B, ctx, b.x, b.z, b.w, b.d, b.h, b.ry || 0, b.style, b.seed || 'a', { tint: b.tint, uw: b.uw, uh: b.uh });
+    building(ctx.B, ctx, b.x, b.z, b.w, b.d, b.h, b.ry || 0, b.style, b.seed || 'a', { tint: b.tint, uw: b.uw, uh: b.uh, glow: b.glow });
     if (b.antenna && (ctx.night || ctx.dusk)) ctx.lightsList.push({ pos: V3(b.x, b.h + 4, b.z), color: [1, 0.15, 0.08], size: 2.2, k: 1.4, blink: 1 });
   }
 }
