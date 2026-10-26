@@ -4,6 +4,7 @@
 //   extra: home= away= (team ids)  crowd=0..1  wind=0..1  quality=high|low  dir=1|-1
 //          exc=0..1  react=cheer|roar|boo|groan|tension  flash=rate  hud=0  t=seconds (orbit angle)
 //          crt=0..1 (TV effect strength, QA)  msg=TEXT (scoreboard message)  breath=1 (steam at the heads)
+//          cam=free&cpos=x,y,z&ctgt=x,y,z&fov=45 (any viewpoint)
 // keys: 1-9 cameras (…, 9 = chains close-up), R cycle crowd reaction, F camera flashes, H hud
 // QA hook: window.__venueview = { venue, camera, stats, setCam(name) }
 import * as THREE from 'three';
@@ -60,6 +61,13 @@ registerScreen('venueview', () => {
         if (V.crowd) { camera.position.copy(V.crowd.pos); look.copy(V.crowd.target); }
         else { camera.position.set(f.halfW + 3, 2.5, 6); look.set(f.halfW + 30, 10, 18); }
         break;
+      case 'free': {
+        const pp = (cfg.cpos || '0,30,-80').split(',').map(Number), tt = (cfg.ctgt || '0,0,0').split(',').map(Number);
+        camera.fov = cfg.fov || 45;
+        camera.position.set(pp[0], pp[1], pp[2]);
+        look.set(tt[0], tt[1], tt[2]);
+        break;
+      }
       case 'chains':
         camera.fov = 50;
         camera.position.set(f.halfW + 9, 2.6, los - dir * 7);
@@ -138,6 +146,7 @@ registerScreen('venueview', () => {
         cam: q.cam || 'broadcast',
         exc: num(q.exc, 0.35), react: q.react || null, flash: num(q.flash, 0),
         hud: q.hud !== '0',
+        cpos: q.cpos, ctgt: q.ctgt, fov: q.fov ? Number(q.fov) : 0,
       };
       t = num(q.t, 0);
       label = 'BUILDING';
