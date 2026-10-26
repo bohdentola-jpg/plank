@@ -43,6 +43,8 @@ function releaseBody(key) {
   if (!e) return;
   if (--e.refs <= 0) { e.geometry.dispose(); geoCache.delete(key); }
 }
+/** Number of distinct body geometries alive (QA: re-dressing must not leak them). */
+export function bodyCacheSize() { return geoCache.size; }
 
 // officials' cap (shared): a crown over the head + a bill, mapped to the CAP swatch
 let capGeo = null;
@@ -354,10 +356,13 @@ class PlayerModel {
       // tucked: lying along the inside of the forearm, nose in the palm
       _bv.set(-sg * 0.075 * s, 0.11 * s, 0.006 * s).applyQuaternion(rot[hb]).add(pos[hb]);
       _bq2.copy(rot[hb]).multiply(_tuckQ);
-      // palm: in the fingers, nose along the thumb, laces under the fingers
+      // palm: in the fingers, nose along the thumb, laces under the fingers — in the
+      // hand the clip throws with (a lefty's throw keeps the ball in his left hand)
       if (an.grip > 0.001) {
-        _bv2.set(-sg * 0.05 * s, -0.075 * s, 0.0).applyQuaternion(rot[hb]).add(pos[hb]);
-        _bq3.copy(rot[hb]).multiply(L ? _palmQL : _palmQR);
+        const PL = an.clipNow && an.clipNow.grip === 'palm' ? an.side === 'L' : L;
+        const pb = PL ? B.handL : B.handR, ps = PL ? 1 : -1;
+        _bv2.set(-ps * 0.05 * s, -0.075 * s, 0.0).applyQuaternion(rot[pb]).add(pos[pb]);
+        _bq3.copy(rot[pb]).multiply(PL ? _palmQL : _palmQR);
         _bv.lerp(_bv2, an.grip);
         _bq2.slerp(_bq3, an.grip);
       }
