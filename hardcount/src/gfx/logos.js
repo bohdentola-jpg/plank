@@ -439,6 +439,7 @@ export function logoPalette(team, opts = {}) {
     shade: mixHex(fg, line, 0.38),
     shade2: mixHex(fg2, line, 0.38),
     light: lighten(fg, 0.45),
+    mid: lighten(fg, 0.2),
     light2: lighten(fg2, 0.35),
     dark: line,
   };
@@ -860,8 +861,12 @@ def('bison', (g) => {
     ['C', 58, 40, 44, 54, 36, 64], ['C', 34, 76, 28, 86, 16, 90], ['L', 0, 92],
   ]);
   g.part(head, 'fg');
-  // shaggy forelock
-  g.fill(sym([['M', 0, -66], ['L', 10, -76], ['L', 18, -58], ['L', 30, -68], ['L', 34, -44], ['C', 30, -30, 18, -22, 10, -12], ['L', 0, -8]]), 'light');
+  // shaggy forelock and mane, a shade lighter than the face, combed with strands
+  g.fill(sym([['M', 0, -66], ['L', 10, -76], ['L', 18, -58], ['L', 30, -68], ['L', 34, -44], ['C', 30, -30, 18, -22, 10, -12], ['L', 0, -8]]), 'mid');
+  if (!g.small) {
+    g.line('M -6 -60 C -10 -46, -12 -34, -8 -22 M 6 -60 C 10 -46, 12 -34, 8 -22 M -20 -54 C -24 -42, -24 -34, -20 -26 M 20 -54 C 24 -42, 24 -34, 20 -26', 2.4, 'shade');
+    g.line('M -60 -30 C -66 -18, -66 -6, -60 4 M 60 -30 C 66 -18, 66 -6, 60 4 M -52 14 C -56 22, -54 30, -48 36 M 52 14 C 56 22, 54 30, 48 36', 2.4, 'shade');
+  }
   // muzzle
   const muzzle = sym([['M', 0, 34], ['C', 18, 34, 34, 44, 34, 62], ['C', 34, 80, 20, 92, 0, 92]]);
   g.part(muzzle, 'shade', g.ow * 0.6);
@@ -1133,24 +1138,30 @@ function hornBand(cx, cy, s, t0, turns, R0, k) {
   return { path: poly([...out, ...inn.slice().reverse()]), out, inn };
 }
 def('ram', (g) => {
-  const face = sym([['M', 0, -64], ['C', 16, -64, 30, -56, 32, -36], ['C', 34, -6, 28, 30, 22, 52], ['C', 22, 70, 16, 84, 0, 88]]);
+  // a broad, wedge-shaped head between two heavy curled horns
+  const face = sym([['M', 0, -62], ['C', 20, -62, 34, -54, 36, -34], ['C', 38, -12, 32, 14, 26, 32], ['C', 24, 46, 26, 60, 18, 72], ['C', 12, 80, 6, 82, 0, 82]]);
   for (const s of [-1, 1]) {
-    const h = hornBand(s * 52, -8, s, -Math.PI * 0.62, 0.9, 52, 0.16);
+    const h = hornBand(s * 54, -4, s, -Math.PI * 0.64, 0.92, 56, 0.17);
     g.part(h.path, 'fg');
     if (!g.small) {
-      for (let i = 4; i < h.out.length - 4; i += 5) g.line(poly([h.out[i], h.inn[i]], false), 2.4, 'shade');
+      for (let i = 4; i < h.out.length - 4; i += 4) g.line(poly([h.out[i], h.inn[i]], false), 2.4, 'shade');
+      g.line(poly(h.out.slice(2, 40).map(([x, y], i) => [x + (h.inn[i + 2][0] - x) * 0.3, y + (h.inn[i + 2][1] - y) * 0.3]), false), 2.4, 'light');
     }
   }
   g.part(face, 'fg2');
-  g.fill(sym([['M', 0, -58], ['C', 10, -56, 16, -44, 14, -30], ['L', 8, 40], ['L', 0, 46]]), 'light2');
-  g.part(sym([['M', 0, 54], ['C', 14, 54, 22, 62, 22, 72], ['C', 20, 82, 10, 88, 0, 88]]), 'shade2', g.ow * 0.6);
-  g.fill(ell(-9, 72, 3.5, 5.5, 0.4), 'line');
-  g.fill(ell(9, 72, 3.5, 5.5, -0.4), 'line');
+  // the bony ridge down the face, the darker muzzle
+  g.fill(sym([['M', 0, -58], ['C', 8, -56, 12, -46, 11, -34], ['L', 7, 26], ['L', 0, 34]]), 'light2');
+  g.part(sym([['M', 0, 40], ['C', 16, 40, 26, 50, 25, 62], ['C', 22, 76, 12, 84, 0, 84]]), 'shade2', g.ow * 0.6);
+  g.fill('M -14 58 C -10 52, -4 54, -4 60 C -6 66, -12 66, -14 58 Z', 'line');
+  g.fill('M 14 58 C 10 52, 4 54, 4 60 C 6 66, 12 66, 14 58 Z', 'line');
+  g.line('M -8 74 C -4 78, 4 78, 8 74', 2.6);
   for (const s of [-1, 1]) {
-    g.fill(ell(s * 20, -8, 6, 4.5, s * 0.3), 'acc');
-    g.fill(circ(s * 20, -8, 2.6), 'line');
-    g.fill(poly([[s * 8, -18], [s * 32, -20], [s * 28, -12], [s * 10, -12]]), 'line');
+    g.fill(ell(s * 21, -10, 6.5, 4.5, s * 0.3), 'acc');
+    g.fill(circ(s * 21, -10, 2.8), 'line');
+    // a hard, angry brow
+    g.fill(poly([[s * 6, -22], [s * 36, -24], [s * 32, -14], [s * 10, -14]]), 'line');
   }
+  if (!g.small) g.line('M -30 30 C -24 38, -22 44, -22 50 M 30 30 C 24 38, 22 44, 22 50', 2.6, 'shade2');
 }, { slot: { x: 0, y: 46, h: 70 } });
 
 // ---------------------------------------------------------------- spartan / trojan helmet
