@@ -4,3 +4,4 @@ import './huddle.js';
 import './sim2d.js';
 import './logosheet.js';
 import './soundboard.js';
+import './match.js';
