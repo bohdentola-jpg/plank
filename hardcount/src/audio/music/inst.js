@@ -202,7 +202,7 @@ export class Poly {
     }
     if (this.o.hp) { const h = song.filter('highpass', this.o.hp, 0); last.connect(h); last = h; }
     if (this.o.out) { const g = song.gain(this.o.out); last.connect(g); last = g; }
-    last.connect(song.dest(layer, this.o.pan));
+    last.connect(this.o.dest || song.dest(layer, this.o.pan));
   }
 
   note(t, midi, dur, vel = 0.8, o = {}) {
@@ -435,6 +435,45 @@ export class Breath {
     for (const prm of [this.amp.gain, this.bAmp.gain, this.pitch.offset]) prm.cancelScheduledValues(t);
     this.amp.gain.setTargetAtTime(0, t, 0.008);
     this.bAmp.gain.setTargetAtTime(0, t, 0.008);
+  }
+}
+
+/**
+ * Stadium / ballpark organ: tonewheel loops (render.js 'tonewheel') through a
+ * Leslie — horn and drum rotors as two modulated delays at slightly different
+ * speeds, panned apart, with amplitude tremolo — plus a key click per note.
+ * o: { level, rate (rotor Hz, ~6.7 fast / ~0.8 slow), cut, click, rel }
+ */
+export class Organ {
+  constructor(song, layer, opts = {}) {
+    this.s = song;
+    this.layer = layer;
+    this.o = { level: 0.3, rate: 6.7, cut: 5500, click: 0.25, rel: 0.06, ...opts };
+    const out = song.dest(layer);
+    const inp = song.gain(1);
+    const lp = song.filter('lowpass', this.o.cut, 0.5);
+    inp.connect(lp);
+    lp.connect(song.gain(0.45, out)); // straight through the bass rotor's baffle
+    [[-0.75, 1], [0.75, 1.09]].forEach(([pan, k]) => {
+      const d = song.delayNode(0.004, 0.05);
+      const trem = song.gain(0.72);
+      lp.connect(d);
+      d.connect(trem);
+      trem.connect(song.panner(pan, out));
+      song.lfo(this.o.rate * k, 0.0011, d.delayTime);
+      song.lfo(this.o.rate * k, 0.26, trem.gain);
+    });
+    this.poly = new Poly(song, layer, 'tonewheel', { level: this.o.level, atk: 0.004, rel: this.o.rel, dest: inp });
+  }
+
+  note(t, midi, dur, vel = 0.8, o = {}) {
+    if (!o.force && !this.s.isOn(this.layer)) return;
+    this.poly.note(t, midi, dur, vel, o);
+    if (this.o.click) this.s.hit('keyclick', t, vel * this.o.click, { layer: this.layer, force: true, pan: (midi - 64) / 40 });
+  }
+
+  chord(t, notes, dur, vel = 0.8, o = {}) {
+    for (const m of notes) this.note(t, m, dur, vel / Math.sqrt(notes.length / 2), o);
   }
 }
 

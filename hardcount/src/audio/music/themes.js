@@ -1,29 +1,28 @@
 // Theme registry: id → Song subclass.
-import { Nitro, City, Boss } from './th_dnb.js';
-import { Underground, Lose } from './th_beats.js';
-import { Records } from './th_garage.js';
-import { Talk } from './th_jazz.js';
-import { Showroom, Win } from './th_house.js';
-import { Circuit, Desert, Docks } from './th_rock.js';
-import { Mountain } from './th_euro.js';
-import { Highway } from './th_trance.js';
+import { Glory, Pregame, PostWin, PostLoss, Draft } from './th_brass.js';
+import { FreePlay, Playbook, HallOfFame, Options } from './th_hud.js';
+import { Playcall, CareerHub } from './th_game.js';
+import { Practice, Halftime, BandCadence, BandFight, BandCharge } from './th_band.js';
 
 export const THEMES = {
-  // radio stations (main menu)
-  nitro: Nitro,
-  underground: Underground,
-  records: Records,
-  talk: Talk,
-  showroom: Showroom,
-  // races
-  race_city: City,
-  race_circuit: Circuit,
-  race_mountain: Mountain,
-  race_desert: Desert,
-  race_docks: Docks,
-  race_highway: Highway,
-  race_boss: Boss,
-  // results
-  results_win: Win,
-  results_lose: Lose,
+  // the huddle: one station per wristband line (stadium PA)
+  hud_glory: Glory,
+  hud_free: FreePlay,
+  hud_practice: Practice,
+  hud_book: Playbook,
+  hud_hof: HallOfFame,
+  hud_options: Options,
+  // game day
+  playcall: Playcall,
+  pregame: Pregame,
+  halftime: Halftime,
+  postgame_win: PostWin,
+  postgame_loss: PostLoss,
+  // career
+  career_hub: CareerHub,
+  draft: Draft,
+  // the band in the stands (played by band.js through its own engine instance)
+  band_cadence: BandCadence,
+  band_fight: BandFight,
+  band_charge: BandCharge,
 };
