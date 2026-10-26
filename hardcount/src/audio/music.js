@@ -311,17 +311,18 @@ export class Music {
     return clamp(x, 0, 1);
   }
 
-  // live play: the music steps back under the action (ducked and darkened)
+  // live play: the music steps back under the action (ducked after the
+  // compressor so it can't make the level back up, and darkened before it)
   _applyLive(force) {
     const t = this.ctx.currentTime;
-    const dg = this.dip.gain, tf = this.tone.frequency;
-    dg.cancelScheduledValues(t);
+    const og = this.out.gain, tf = this.tone.frequency;
+    og.cancelScheduledValues(t);
     tf.cancelScheduledValues(t);
     if (this._live) {
-      dg.setTargetAtTime(0.28, t, force ? 0.005 : 0.25);
+      og.setTargetAtTime(0.3, t, force ? 0.005 : 0.25);
       tf.setTargetAtTime(1600, t, force ? 0.005 : 0.3);
     } else {
-      dg.setTargetAtTime(1, t, 0.5);
+      og.setTargetAtTime(1, t, 0.5);
       tf.setTargetAtTime(22000, t, 0.4);
     }
   }

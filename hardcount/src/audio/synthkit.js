@@ -1,6 +1,6 @@
-// Tiny offline DSP kit for the racing audio. Everything here renders straight
-// into Float32Arrays (no WebAudio graph), so engine cycles and one-shot sfx can
-// be synthesized once, cached as AudioBuffers and replayed cheaply.
+// Tiny offline DSP kit for the game audio. Everything here renders straight
+// into Float32Arrays (no WebAudio graph), so one-shot sfx, loop beds and crowd
+// material can be synthesized once, cached as AudioBuffers and replayed cheaply.
 
 export const TAU = Math.PI * 2;
 export const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
