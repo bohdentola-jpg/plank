@@ -36,7 +36,8 @@ const L = {
   tdLong: ['{e}... {e}... HE COULD GO ALL THE WAY... TOUCHDOWN!', 'NOBODY IS CATCHING {e}! {yds} YARDS, TOUCHDOWN!'],
   sack: ['SACKED! {def} BRINGS DOWN {qb}.', '{qb} GOES DOWN. A SACK FOR {def}.', 'AND THE QUARTERBACK IS BURIED.'],
   bigRun: ['{e} BREAKS INTO THE CLEAR!', '{e} TURNS THE CORNER!', 'DAYLIGHT FOR {e}!'],
-  lateral: ['THEY PITCH IT BACK!', 'A LATERAL! IT\'S STILL ALIVE!', 'AND HE FLIPS IT BACK TO {to}!', 'ANOTHER LATERAL!'],
+  lateral: ['THEY PITCH IT BACK!', 'A LATERAL! IT\'S STILL ALIVE!', 'AND HE FLIPS IT BACK TO {to}!', 'HE PITCHES IT TO {to}!'],
+  lateral2: ['ANOTHER LATERAL!', 'AND ANOTHER ONE, TO {to}!', 'STILL ALIVE! THEY KEEP PITCHING IT!'],
   firstDown: ['FIRST DOWN.', 'THAT\'LL MOVE THE CHAINS.', 'AND THAT\'S ENOUGH FOR THE FIRST.'],
   flag: ['THERE\'S A FLAG ON THE PLAY.', 'LAUNDRY ON THE FIELD.', 'WE HAVE A FLAG.'],
   fgGood: ['THE KICK IS... GOOD!', 'RIGHT DOWN THE MIDDLE. IT\'S GOOD.', 'IT\'S GOOD FROM {dist}.'],
@@ -152,7 +153,7 @@ export class Booth {
         // (a toss sweep's pitch and a designed handoff aren't laterals worth shouting about)
         if (ev.type === 'pitch' && (m.play?.run?.give === 'toss' || m.playKind === 'run')) break;
         this.play.lats++;
-        this.say('lateral', { to: nm(ev.to) });
+        this.say(this.play.lats > 1 ? 'lateral2' : 'lateral', { to: nm(ev.to) });
         break;
       case 'hit': if (ev.kind === 'big' && ev.power > 0.75 && this.rng() < 0.6) this.say('hit', {}, 0.2); break;
       case 'move':
