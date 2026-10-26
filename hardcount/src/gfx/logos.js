@@ -1236,10 +1236,10 @@ def('torch', (g) => {
   g.part(poly([[-20, -6], [20, -6], [9, 96], [-9, 96]]), 'fg2');
   g.part(rrect(-32, -22, 64, 22, 5), 'fg');
   if (!g.small) g.line('M -12 20 L 12 20 M -11 44 L 11 44 M -9 68 L 9 68', 2.6, 'shade2');
-  const f = scaleAbout(moveBy(FLAME, 0, 0), 0.66, 0, 94);
-  const fl = moveBy(f, 0, -116);
+  // the flame stands in the cup: FLAME spans y −98…94, scaled to sit on top
+  const fl = moveBy(scaleAbout(FLAME, 0.44, 0, 94), 0, -110);
   g.part(fl, 'fg');
-  g.part(scaleAbout(fl, 0.62, 2, -22), 'acc', g.ow * 0.6);
+  g.part(scaleAbout(fl, 0.62, 2, -18), 'acc', g.ow * 0.6);
 }, { slot: { x: 30, y: 50, h: 70 } });
 
 // ---------------------------------------------------------------- bulldog
