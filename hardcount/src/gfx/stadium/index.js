@@ -103,7 +103,7 @@ export async function buildVenue(renderer, opts = {}) {
   // ---- field
   const F = buildField({
     field, quality, aniso: ctx.aniso, paint: ctx.paint, weather: A.weather, wind, windDir: ctx.windDir,
-    padColor: home.colors.primary, flagColor: mod.FLAG_COLOR, uPool: ctx.uPool, apron: mod.APRON ?? 160, apronRect: mod.apronRect?.(field), apronCanvas: mod.apronCanvas?.(ctx),
+    padColor: home.colors.primary, flagColor: mod.FLAG_COLOR, uPool: ctx.uPool, apron: mod.APRON ?? 450, apronRect: mod.apronRect?.(field), apronCanvas: mod.apronCanvas?.(ctx),
   });
   root.add(F.group);
   await tick();

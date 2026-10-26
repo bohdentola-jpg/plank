@@ -148,6 +148,13 @@ export function buildSideline(ctx, B, opts = {}) {
 
   const figs = buildFigures(list, ctx);
   group.add(figs.mesh);
+  // people who follow the ball with their eyes (and lenses)
+  const watchers = [];
+  list.forEach((f, i) => {
+    if (f.kind === 'photo' || f.kind === 'coach' || (f.kind === 'player' && !f.kneel)) {
+      watchers.push({ i, f, ry: f.ry || 0, base: f.ry || 0, lag: 1.5 + rng() * 2.5, limit: f.kind === 'photo' ? 1.4 : 1.1 });
+    }
+  });
 
   // ---- sticks, chain, down box
   const gear = new THREE.Group();
@@ -208,7 +215,23 @@ export function buildSideline(ctx, B, opts = {}) {
       const k = Math.max(1, Math.min(4, d | 0)) - 1;
       dTex.offset.x = k * 0.25;
     },
-    update(dt, t) { figs.uniforms.uTime.value = t; },
+    update(dt, t, st) {
+      figs.uniforms.uTime.value = t;
+      const b = st?.ball;
+      if (!b || !Number.isFinite(b.x) || !Number.isFinite(b.z)) return;
+      for (const w of watchers) {
+        const want = Math.atan2(b.x - w.f.x, b.z - w.f.z);
+        // stay within a comfortable turn of how they're standing
+        let d = want - w.base;
+        d = Math.atan2(Math.sin(d), Math.cos(d));
+        const target = w.base + Math.max(-w.limit, Math.min(w.limit, d));
+        let e = target - w.ry;
+        e = Math.atan2(Math.sin(e), Math.cos(e));
+        if (Math.abs(e) < 0.002) continue;
+        w.ry += e * Math.min(1, dt * w.lag);
+        figs.setAt(w.i, w.f.x, w.f.z, w.ry, w.f.scale || 1, w.f.y || 0);
+      }
+    },
   };
   api.setChains({ los: 0, firstDown: 10, dir: 1, show: false });
   api.setDown(1);
