@@ -7,8 +7,13 @@
 //                (AC American, NC National) of two 4-team divisions each
 //   COLLEGES     24 college programs in four conferences (venue 'college')
 //   HS_RIVALS    the 12 high schools of the career's first act (venue 'friday')
-//   makeHighSchool(seed)  any other high school, deterministic from a seed
-//                (its id 'hs-<seed>' round-trips through getTeam)
+//   makeHighSchool(seed, overrides?)  any other high school, deterministic
+//                from a seed (its id 'hs-<seed>' round-trips through getTeam)
+//   ALL_TEAMS, TEAM_BY_ID           pros + colleges + rivals
+//   getTeam(id)                     any of the above, or a generated 'hs-<seed>'
+//   kitsFor(home, away)             { home, away, homeKit, awayKit }: the visitors
+//                                   wear road whites unless they'd clash
+//   LEAGUE, divisionTeams(conf, div), COLLEGE_CONFERENCES, HS_PALETTES, colorDistance(a, b)
 //
 // SCHEMA (every field is used by the 3D kit, the menus or the sim; fields
 // marked * are optional extras):
