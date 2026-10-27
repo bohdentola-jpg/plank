@@ -25,6 +25,7 @@ const BUILDS = [['LEAN', 0.15], ['ATHLETIC', 0.45], ['BUILT', 0.72], ['JACKED', 
 const PADS = [['SLIM', 0.1], ['STANDARD', 0.5], ['BIG', 0.9]];
 const SKINS = ['#f1d3bd', '#e5b896', '#d4a07a', '#c08a63', '#a8714b', '#8d5a3a', '#73452b', '#5c3521', '#4a2a1a', '#3a2015'];
 const HAIRS = ['buzz', 'fade', 'short', 'twists', 'dreads', 'braids', 'afro', 'mohawk', 'bald', 'curly', 'long', 'flat'];
+const HAIR_COLORS = [['BLACK', '#1b1612'], ['DARK BROWN', '#2b1d14'], ['BROWN', '#3d2a1c'], ['CHESTNUT', '#5a3d24'], ['LIGHT BROWN', '#8a6a3d'], ['DIRTY BLOND', '#b48c55'], ['BLOND', '#c9b28a'], ['AUBURN', '#6d2f16']];
 const STAGE_NAME = { hs: 'HIGH SCHOOL', college: 'COLLEGE', pro: 'THE SEVENS LEAGUE', retired: 'RETIRED' };
 const YEAR_NAME = { 1: 'FRESHMAN', 2: 'SOPHOMORE', 3: 'JUNIOR', 4: 'SENIOR' };
 
@@ -230,7 +231,7 @@ registerScreen('career', () => {
     const rng = makeRng(Date.now() & 0xffffff);
     const nm = playerName(rng);
     cr = {
-      row: 0, pos: 'WR', arche: 0, first: nm.first, last: nm.last, number: 11, skin: 5, hair: 1, build: 1, pads: 0,
+      row: 0, pos: 'WR', arche: 0, first: nm.first, last: nm.last, number: 11, skin: 5, hair: 1, hairc: 0, build: 1, pads: 0,
       school: HS_RIVALS[Math.floor(rng() * HS_RIVALS.length)].id, rng, seed: Math.floor(rng() * 1e9),
       hometown: HOMETOWNS[Math.floor(rng() * HOMETOWNS.length)],
     };
@@ -239,7 +240,7 @@ registerScreen('career', () => {
 
   function rebuildDraft() {
     const a = CR.ARCHETYPES[cr.pos][cr.arche % CR.ARCHETYPES[cr.pos].length];
-    cr.p = CR.draftPlayer({ first: cr.first, last: cr.last, pos: cr.pos, arche: a.id, number: cr.number, hometown: cr.hometown, seed: cr.seed, look: { skin: cr.skin / 9, skinHex: SKINS[cr.skin], hair: HAIRS[cr.hair], muscle: BUILDS[cr.build][1], pads: PADS[cr.pads][1] } });
+    cr.p = CR.draftPlayer({ first: cr.first, last: cr.last, pos: cr.pos, arche: a.id, number: cr.number, hometown: cr.hometown, seed: cr.seed, look: { skin: cr.skin / 9, skinHex: SKINS[cr.skin], hair: HAIRS[cr.hair], hairColor: HAIR_COLORS[cr.hairc][1], muscle: BUILDS[cr.build][1], pads: PADS[cr.pads][1] } });
     if (model) {
       try { model.setKit(getTeam(cr.school), 'home'); model.setPlayer(cr.p); } catch (e) { console.warn(e); }
     }
@@ -267,7 +268,7 @@ registerScreen('career', () => {
     try { model = pmod.createPlayerModel({ team: school, kit: 'home', player: cr.p, lod: 'high' }); scene.add(model.group); } catch (e) { console.warn(e); model = null; }
   }
 
-  const CREATE_ROWS = ['pos', 'arche', 'first', 'last', 'number', 'skin', 'hair', 'build', 'pads', 'school', 'go'];
+  const CREATE_ROWS = ['pos', 'arche', 'first', 'last', 'number', 'skin', 'hair', 'hairc', 'build', 'pads', 'school', 'go'];
 
   function updateCreate(dt) {
     const r = CREATE_ROWS[cr.row];
@@ -283,6 +284,7 @@ registerScreen('career', () => {
         case 'number': cr.number = clamp(cr.number + d, 1, 99); break;
         case 'skin': cr.skin = (cr.skin + d + SKINS.length) % SKINS.length; break;
         case 'hair': cr.hair = (cr.hair + d + HAIRS.length) % HAIRS.length; break;
+        case 'hairc': cr.hairc = (cr.hairc + d + HAIR_COLORS.length) % HAIR_COLORS.length; break;
         case 'build': cr.build = clamp(cr.build + d, 0, BUILDS.length - 1); break;
         case 'pads': cr.pads = clamp(cr.pads + d, 0, PADS.length - 1); break;
         case 'school': { const i = HS_RIVALS.findIndex((h) => h.id === cr.school); cr.school = HS_RIVALS[(i + d + HS_RIVALS.length) % HS_RIVALS.length].id; break; }
@@ -304,10 +306,15 @@ registerScreen('career', () => {
       cr.row = CREATE_ROWS.length - 1; uiSound('move');
     }
     if (input.pressed('back')) { disposeScene(); go('huddle'); return; }
-    model?.update(dt, { x: 0, z: 0, heading: Math.PI + Math.sin(t * 0.35) * 0.9, speed: 0, moveAngle: 0, accel: 0, turnRate: 0, effort: 0, base: 'stand', action: null, carry: null, look: null, reach: null, engage: null, dirt: 0 });
+    // choosing his skin or his hair: helmet off and in close on his face
+    const close = r === 'skin' || r === 'hair' || r === 'hairc';
+    cr.zoom = (cr.zoom ?? 0) + ((close ? 1 : 0) - (cr.zoom ?? 0)) * (1 - Math.exp(-6 * dt));
+    if (model && (cr.zoom > 0.5) === !!model.helmetOn) model.setHelmet(cr.zoom <= 0.5);
+    model?.update(dt, { x: 0, z: 0, heading: Math.PI + Math.sin(t * 0.35) * (0.9 - 0.45 * cr.zoom), speed: 0, moveAngle: 0, accel: 0, turnRate: 0, effort: 0, base: 'stand', action: null, carry: null, look: null, reach: null, engage: null, dirt: 0 });
     if (camera) {
-      camera.position.set(0.2, 1.3, -4.9);
-      camera.lookAt(-0.95, 1.05, 0);   // him on the left, the cards on the right
+      const z = cr.zoom * cr.zoom * (3 - 2 * cr.zoom);
+      camera.position.set(0.2 - 0.15 * z, 1.3 + 0.65 * z, -4.9 + 2.9 * z);
+      camera.lookAt(-0.95 + 0.55 * z, 1.05 + 0.85 * z, 0);   // him on the left, the cards on the right
     }
     try { venue?.update(dt, { camera, excitement: 0.15, time: t }); } catch { /* */ }
   }
@@ -328,18 +335,22 @@ registerScreen('career', () => {
     const a = CR.ARCHETYPES[cr.pos][cr.arche % 2];
     const rows = {
       pos: ['POSITION', CR.POS_NAMES[cr.pos]], arche: ['STYLE', a.name], first: ['FIRST NAME', cr.first.toUpperCase()], last: ['LAST NAME', cr.last.toUpperCase()],
-      number: ['NUMBER', `#${cr.number}`], skin: ['SKIN TONE', ''], hair: ['HAIR', HAIRS[cr.hair].toUpperCase()],
+      number: ['NUMBER', `#${cr.number}`], skin: ['SKIN TONE', ''], hair: ['HAIR', HAIRS[cr.hair].toUpperCase()], hairc: ['HAIR COLOR', ''],
       build: ['BUILD', BUILDS[cr.build][0]], pads: ['SHOULDER PADS', PADS[cr.pads][0]],
       school: ['HIGH SCHOOL', `${getTeam(cr.school).city} ${getTeam(cr.school).name}`.toUpperCase()], go: ['', ''],
     };
     CREATE_ROWS.forEach((r, i) => {
-      const y = py + 38 + i * 31.5;
+      const y = py + 38 + i * 28.6;
       const on = i === cr.row;
-      if (on) { ctx.fillStyle = 'rgba(255,58,44,0.22)'; ctx.fillRect(px + 10, y - 22, pw - 20, 29); }
+      if (on) { ctx.fillStyle = 'rgba(255,58,44,0.22)'; ctx.fillRect(px + 10, y - 21, pw - 20, 27); }
       if (r === 'go') { vText(ctx, 'START YOUR CAREER', px + pw / 2, y + 2, 22, { align: 'center', color: on ? '#ffd23a' : '#ffffff', weight: 0.2 }); return; }
       text(ctx, rows[r][0], px + 24, y - 6, { size: 10, weight: 900, color: on ? C.accent : C.dim, spacing: 2 });
-      if (r === 'skin') {
-        SKINS.forEach((s, k) => { ctx.fillStyle = s; ctx.fillRect(px + 170 + k * 22, y - 18, 18, 18); if (k === cr.skin) { ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = 2; ctx.strokeRect(px + 169 + k * 22, y - 19, 20, 20); } });
+      if (r === 'skin' || r === 'hairc') {
+        const sw = r === 'skin' ? SKINS : HAIR_COLORS.map((h) => h[1]);
+        const cur = r === 'skin' ? cr.skin : cr.hairc;
+        const x0 = px + pw - 24 - sw.length * 22 + 4;
+        sw.forEach((s, k) => { ctx.fillStyle = s; ctx.fillRect(x0 + k * 22, y - 17, 18, 18); if (k === cur) { ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = 2; ctx.strokeRect(x0 - 1 + k * 22, y - 18, 20, 20); } });
+        if (r === 'hairc' && on) text(ctx, HAIR_COLORS[cr.hairc][0], x0 - 10, y + 6, { size: 11, weight: 800, color: '#ffffff', align: 'right' });
       } else text(ctx, rows[r][1], px + pw - 24, y + 6, { size: 15, weight: 800, color: on ? '#ffffff' : '#cfd5df', align: 'right' });
     });
     // the ratings that matter for the position

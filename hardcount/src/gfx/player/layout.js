@@ -1,25 +1,35 @@
-// The per-player uniform atlas layout (512 × 512). Every player's body mesh
+// The per-player uniform atlas layout (512 × 768). Every player's body mesh
 // maps into the same rectangles, so the painter (atlas.js), the shared
 // roughness / dirt masks and the geometry agree. Rects are [x, y, w, h] in
 // canvas pixels (y down); a region's local (u, v) runs 0..1 with v = 1 at the
 // rect's TOP edge.
-export const ATLAS = 512;
+export const ATLAS_W = 512, ATLAS_H = 768;
+export const ATLAS = ATLAS_W;
 
 export const R = {
   TORSO: [2, 2, 380, 236],     // u around the body (seam back-right), v crotch (0) → collar (1)
   LEG: [386, 2, 124, 236],     // shared by both legs: u around (outer side at 0.5), v ankle (0) → hip (1)
-  HEAD: [2, 242, 220, 156],    // face + scalp: u around (front at 0.5), v chin/neck (0) → crown (1)
+  HEAD: [2, 242, 220, 156],    // scalp and the back and sides of the head: u around (front at 0.5), v chin/neck (0) → crown (1)
   ARM_L: [226, 242, 76, 216],  // u around (outer side at 0.5), v wrist (0) → shoulder (1)
   ARM_R: [306, 242, 76, 216],
   HAND: [386, 242, 124, 76],   // glove / hand, shared (mirrored)
   SHOE: [386, 322, 124, 76],   // shoe, shared (mirrored)
   HAIR: [2, 402, 124, 108],
-  EYE: [130, 402, 30, 30],
   HNUM: [164, 402, 58, 40],    // number on the back of the helmet
   MISC: [130, 436, 92, 74],    // towel / neck roll / hand warmer / whistle colour swatches
   CAP: [226, 462, 156, 48],    // officials' cap, penalty flag
   EXTRA: [386, 402, 124, 108],
+  // the face up close: linear in (λ, φ) over FACE_LAM / FACE_PHI (see faceUV)
+  FACE: [2, 514, 380, 252],
+  EYE: [386, 514, 64, 64],     // an eyeball, front-on (the right eye mirrors it)
 };
+
+/** The face patch of the head: longitude ±FACE_LAM, latitude FACE_PHI[0] (under the chin) … FACE_PHI[1]. */
+export const FACE_LAM = 95, FACE_PHI = [-89.5, 52];
+/** (λ, φ) degrees → the face region's local (u, v). */
+export function faceUV(lamDeg, phiDeg, out = [0, 0]) {
+  return uvOf(R.FACE, (lamDeg + FACE_LAM) / (2 * FACE_LAM), (phiDeg - FACE_PHI[0]) / (FACE_PHI[1] - FACE_PHI[0]), out);
+}
 
 // The hand's strips inside R.HAND: the palm and back of the hand, the fingers (all four
 // share one), the thumb. On each, u = 0 is the palm side and the strip's middle the back
@@ -38,8 +48,8 @@ export const SWATCH = {
 /** Region-local (u, v) → texture UV (flipY canvas texture). */
 export function uvOf(rect, u, v, out = [0, 0]) {
   const [x, y, w, h] = rect;
-  out[0] = (x + u * w) / ATLAS;
-  out[1] = 1 - (y + (1 - v) * h) / ATLAS;
+  out[0] = (x + u * w) / ATLAS_W;
+  out[1] = 1 - (y + (1 - v) * h) / ATLAS_H;
   return out;
 }
 

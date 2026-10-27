@@ -8,7 +8,7 @@
 // little). Everything maps into the per-player uniform atlas (layout.js).
 import * as THREE from 'three';
 import { B, HB, HAND, handScale } from './rig.js';
-import { R, SWATCH, SLEEVE_HEM, HAND_U, uvOf, limbU, headU, headV } from './layout.js';
+import { R, SWATCH, SLEEVE_HEM, HAND_U, FACE_LAM, FACE_PHI, uvOf, faceUV, limbU, headU, headV } from './layout.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const sstep = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
@@ -601,14 +601,14 @@ export function headPoint(phiDeg, lamDeg, out, F = null) {
   let disp = 0;
   // the face's landmarks down the middle (fy = sin φ): brow 0.21, eyes 0.08, nose root 0.1,
   // nose tip −0.28, nose base −0.36, mouth −0.535, chin −0.84 (the thirds of a real face)
-  // nose: a ridge from the root that grows to the tip, a rounded tip, undercut to the base,
-  // the wings either side; narrow at the bridge, wide at the nostrils
+  // nose: the bridge rises out of a shallow root between the eyes to a rounded tip, undercut
+  // to the base, the wings flaring either side; a real nose's width, not a blade
   const nk = 1 + 0.22 * fNose;
-  const ramp = lerp(0.004, 0.0245, sstep(0.07, -0.27, fy)) * sstep(0.15, 0.06, fy);
-  const under = sstep(-0.38, -0.29, fy);
-  const noseW = lerp(0.05, 0.11, sstep(0.05, -0.3, fy)) * (1 + 0.16 * fNose);
-  disp += (ramp * under * Math.exp(-((fx / noseW) ** 2)) + 0.0035 * g(fx / 0.06, (fy + 0.265) / 0.05)) * nk * front;
-  disp += 0.0055 * nk * g((ax - 0.1 * (1 + 0.16 * fNose)) / 0.034, (fy + 0.315) / 0.036) * front;
+  const ramp = lerp(0.003, 0.0205, sstep(0.1, -0.25, fy)) * sstep(0.17, 0.08, fy);
+  const under = sstep(-0.385, -0.295, fy);
+  const noseW = lerp(0.085, 0.15, sstep(0.06, -0.28, fy)) * (1 + 0.16 * fNose);
+  disp += (ramp * under * Math.exp(-((fx / noseW) ** 2)) + 0.0048 * g(fx / 0.08, (fy + 0.262) / 0.055)) * nk * front;
+  disp += 0.0058 * nk * g((ax - 0.15 * (1 + 0.16 * fNose)) / 0.05, (fy + 0.315) / 0.045) * front;
   // brow ridge over the eyes, and the bridge between them
   disp += (0.0075 + 0.0035 * fBrow) * Math.exp(-(((fy - 0.21) / 0.07) ** 2)) * Math.exp(-((fx / 0.55) ** 4)) * front;
   // eye sockets, centred on the eyeballs
@@ -623,12 +623,15 @@ export function headPoint(phiDeg, lamDeg, out, F = null) {
     disp -= 0.0013 * Math.exp(-((Math.hypot(ax - lx, fy - ly) / 0.028) ** 2)) * front;
   }
   disp += (0.0065 + 0.0035 * fJaw) * g((ax - 0.72) / 0.16, (fy + 0.58) / 0.16) * sstep(-0.2, 0.3, dz);
-  // the groove above the lip, the lips and the line between them, the corners
-  disp -= 0.001 * g(fx / 0.04, (fy + 0.43) / 0.05) * front;
-  disp += 0.0046 * g(fx / 0.27, (fy + 0.5) / 0.045) * front;
-  disp -= 0.0028 * g(fx / 0.25, (fy + 0.535) / 0.018) * front;
-  disp += 0.0046 * g(fx / 0.23, (fy + 0.585) / 0.04) * front;
-  disp -= 0.0012 * g((ax - 0.27) / 0.04, (fy + 0.535) / 0.04) * front;
+  // the groove above the lip, the lips and the line between them, the corners (a mouth as
+  // wide as the eyes are apart)
+  // (flat-bottomed across the width, so the lower lip's shadow never curls up into a grin)
+  const g4 = (a, b) => Math.exp(-(a * a * a * a) - (b * b));
+  disp -= 0.0012 * g(fx / 0.045, (fy + 0.43) / 0.05) * front;
+  disp += 0.0048 * g4(fx / 0.33, (fy + 0.498) / 0.044) * front;
+  disp -= 0.003 * g4(fx / 0.33, (fy + 0.535) / 0.017) * front;
+  disp += 0.0046 * g4(fx / 0.28, (fy + 0.58) / 0.04) * front;
+  disp -= 0.0012 * g((ax - 0.34) / 0.045, (fy + 0.535) / 0.04) * front;
   // the crease under the lip, then the chin: a broad, squared block (some with a cleft)
   disp -= 0.0018 * g(fx / 0.2, (fy + 0.67) / 0.035) * front;
   const cw = 0.38 + 0.07 * fChin;
@@ -657,6 +660,165 @@ const HEAD_PHIS_HI = [-89.5, -75, -64, -56, -49, -43, -38, -34, -30.5, -27, -23.
 const HEAD_LAMS_LO = [-180, -135, -90, -55, -25, 0, 25, 55, 90, 135, 180];
 const HEAD_PHIS_LO = [-89.5, -55, -28, 0, 22, 50, 89.5];
 
+// ---- eyes: eyeballs with lids over them
+// the eyeball (head-local metres, before headScale): radii wide / tall / deep, how far
+// behind the socket's surface its centre sits, and the eye opening's corners (degrees
+// round the eyeball from straight ahead)
+export const EYE_R = [0.0122, 0.0114, 0.0104];
+const EYE_DEPTH = 0.0079;
+export const EYE_BC = 64;
+
+/** The eyeball of one side (sd +1 left): centre and rotation, head-local. */
+export function eyeFrame(sd, F) {
+  const ep = new THREE.Vector3();
+  headPoint(EYE_PHI, sd * EYE_LAM, ep, F);
+  const en = new THREE.Vector3(Math.sin(sd * EYE_LAM * D2R) * 0.7, 0.05, Math.cos(EYE_LAM * D2R)).normalize();
+  return { c: ep.addScaledVector(en, -EYE_DEPTH), q: new THREE.Quaternion().setFromEuler(new THREE.Euler(0.04, sd * 0.1, 0)) };
+}
+
+/**
+ * The lid margins in degrees round the eyeball: t −1 (inner corner) … 1 (outer).
+ * The upper lid's arch peaks a little in from the middle, the lower lid's is flatter,
+ * and the outer corner sits a touch higher than the inner one.
+ */
+export function lidMargin(upper, t) {
+  const tilt = 1.25 * t + 0.25;
+  const k = Math.max(0, 1 - t * t);
+  return upper ? 25 * k ** 0.72 * (1 - 0.1 * t) + tilt : -17 * k ** 0.85 * (1 + 0.12 * t) + tilt;
+}
+
+/** A point on (or off, r > 1) the eyeball's surface at (β, α) degrees, head-local. */
+export function eyePoint(E, sd, beta, alpha, r, out = new THREE.Vector3()) {
+  const b = beta * D2R, a = alpha * D2R;
+  out.set(Math.sin(b) * Math.cos(a) * EYE_R[0] * r, Math.sin(a) * EYE_R[1] * r, Math.cos(b) * Math.cos(a) * EYE_R[2] * r);
+  return out.applyQuaternion(E.q).add(E.c);
+}
+
+/** The head's own (λ, φ) of the surface point in the direction of p (head-local): inverts headPoint. */
+export function headParam(p, F, out = [0, 0]) {
+  const q = _hpQ;
+  const tl = Math.atan2(p.x, p.z), tp = Math.asin(clamp(p.y / (p.length() || 1), -1, 1));
+  let lam = tl / D2R, phi = Math.asin(clamp((p.y / 0.112) / Math.hypot(p.x / 0.0775, p.y / 0.112, p.z / 0.096), -1, 1)) / D2R;
+  for (let it = 0; it < 4; it++) {
+    headPoint(phi, lam, q, F);
+    lam += (tl - Math.atan2(q.x, q.z)) / D2R;
+    phi += (tp - Math.asin(clamp(q.y / (q.length() || 1), -1, 1))) / D2R;
+  }
+  out[0] = lam; out[1] = phi;
+  return out;
+}
+const _hpQ = new THREE.Vector3();
+
+/**
+ * Where the eye's outlines fall on the face texture, (λ, φ) degrees: the upper and lower lid
+ * margins (inner corner → outer), the upper lid's crease. The painter traces its lash lines
+ * and creases on these, so the paint sits exactly on the lids the geometry builds.
+ */
+export function eyeContours(sd, F, n = 16) {
+  const E = eyeFrame(sd, F);
+  const p = new THREE.Vector3();
+  const trace = (fn) => {
+    const out = [];
+    for (let k = 0; k <= n; k++) {
+      const t = -1 + (2 * k) / n;
+      const [alpha, r] = fn(t);
+      eyePoint(E, sd, sd * t * EYE_BC, alpha, r, p);
+      out.push(headParam(p, F, [0, 0]));
+    }
+    return out;
+  };
+  return {
+    upper: trace((t) => [lidMargin(true, t), 1.07]),
+    lower: trace((t) => [lidMargin(false, t), 1.05]),
+    crease: trace((t) => [lidMargin(true, t) + 17 * (1 - 0.5 * t * t), 1.1]),
+  };
+}
+
+/** Eyelids: shells just off the eyeball from each margin back into the socket, mapped to the face. */
+function buildLids(mb, C, hs, E, sd, F, wHead) {
+  const cols = 14;
+  const p = new THREE.Vector3(), lp = [0, 0], uv = [0, 0];
+  for (const upper of [true, false]) {
+    const s = upper ? 1 : -1;
+    // [offset from the margin (deg, away from the opening), radius]: the lid's edge, its face, back into the socket
+    const rows = [[0, 1.012], [0, 1.13], [5, 1.125], [15, 1.105], [30, 1.08], [48, 1.045]];
+    const grid = [];
+    for (let j = 0; j <= cols; j++) {
+      const t = -1.1 + (2.2 * j) / cols;
+      const beta = sd * t * EYE_BC;
+      const m = lidMargin(upper, clamp(t, -1, 1));
+      const row = [];
+      for (const [off, r] of rows) {
+        const alpha = clamp(m + s * off * (1 - 0.35 * Math.max(0, Math.abs(t) - 0.8)), -80, 80);
+        eyePoint(E, sd, beta, alpha, r, p);
+        row.push(p.clone());
+      }
+      grid.push(row);
+    }
+    const base = mb.count;
+    const nr = rows.length;
+    const t1 = new THREE.Vector3(), t2 = new THREE.Vector3(), nn = new THREE.Vector3();
+    for (let j = 0; j <= cols; j++) {
+      for (let i = 0; i < nr; i++) {
+        const q = grid[j][i];
+        t1.subVectors(grid[Math.min(cols, j + 1)][i], grid[Math.max(0, j - 1)][i]);
+        t2.subVectors(grid[j][Math.min(nr - 1, i + 1)], grid[j][Math.max(0, i - 1)]);
+        nn.crossVectors(t1, t2).normalize();
+        // outward: away from the eyeball's centre (the edge row faces the opening)
+        _ev.subVectors(q, E.c);
+        if (i === 0) _ev.set(0, -s, 0).applyQuaternion(E.q);
+        if (nn.dot(_ev) < 0) nn.negate();
+        headParam(q, F, lp);
+        faceUV(lp[0], lp[1], uv);
+        mb.vert(C.x + q.x * hs, C.y + q.y * hs, C.z + q.z * hs, nn.x, nn.y, nn.z, uv[0], uv[1], wHead);
+      }
+    }
+    // wind each quad so its face agrees with the outward normals (upper / lower, left / right)
+    const P3 = (k) => _ew.set(mb.P[k * 3], mb.P[k * 3 + 1], mb.P[k * 3 + 2]);
+    for (let j = 0; j < cols; j++) {
+      for (let i = 0; i < nr - 1; i++) {
+        const a = base + j * nr + i, b = a + nr, c = b + 1, d = a + 1;
+        const pa = P3(a).clone();
+        t1.subVectors(P3(b), pa); t2.subVectors(P3(c), pa);
+        nn.crossVectors(t1, t2);
+        const out = nn.x * mb.N[a * 3] + nn.y * mb.N[a * 3 + 1] + nn.z * mb.N[a * 3 + 2];
+        if (out >= 0) { mb.tri(a, b, c); mb.tri(a, c, d); } else { mb.tri(a, c, b); mb.tri(a, d, c); }
+      }
+    }
+  }
+}
+const _ev = new THREE.Vector3(), _ew = new THREE.Vector3();
+
+/** An ear: a thin, tall shell tipped back off the side of the head, its outer face hollowed behind a rim. */
+function buildEar(mb, C, hs, sd, F, wHead) {
+  const ep = new THREE.Vector3();
+  headPoint(-3, sd * 92, ep, F);
+  const g = new THREE.SphereGeometry(1, 14, 10);
+  const pos = g.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    // the outline: broad at the top (the helix), a softer, narrower lobe
+    z *= 0.82 + 0.22 * y;
+    // the bowl of the ear: the outer face pushed in, the rim left standing
+    if (sd * x > 0) {
+      const r = Math.hypot((y + 0.08) / 0.78, z / 0.72);
+      x *= 1 - 0.78 * Math.exp(-(r ** 6));
+    }
+    pos.setXYZ(i, x, y, z);
+  }
+  g.computeVertexNormals();
+  const m = new THREE.Matrix4().compose(
+    new THREE.Vector3(C.x + (ep.x - sd * 0.001) * hs, C.y + ep.y * hs, C.z + (ep.z - 0.008) * hs),
+    new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.2, sd * 0.3, 0)),
+    new THREE.Vector3(0.0088 * hs, 0.0285 * hs, 0.0165 * hs),
+  );
+  // the ear's colours sit in the head region round (±86°, −3°), where the face patch covers the head
+  mb.piece(g, m, (lx, ly, lz, gu, gv, out) => {
+    uvOf(R.HEAD, headU(sd * (86 - lz * 5)), lerp(0.1, 1, headV(-3 + ly * 7)), out);
+  }, () => wHead);
+  g.dispose();
+}
+
 function buildHead(mb, bd, dims, lod) {
   const C = headCenter(dims);
   const hs = headScale(bd);
@@ -664,10 +826,13 @@ function buildHead(mb, bd, dims, lod) {
   const lams = lod === 'high' ? HEAD_LAMS_HI : HEAD_LAMS_LO;
   const phis = lod === 'high' ? HEAD_PHIS_HI : HEAD_PHIS_LO;
   const nLon = lams.length - 1, nLat = phis.length - 1;
+  // the face patch (its own hi-res texture) on the grid lines nearest its bounds
+  const pLam = Math.max(...lams.filter((l) => l <= FACE_LAM + 1e-6)), pPhi = Math.max(...phis.filter((f) => f <= FACE_PHI[1] + 1e-6));
   const base = mb.count;
   const p = new THREE.Vector3(), q = new THREE.Vector3(), nn = new THREE.Vector3(), t1 = new THREE.Vector3(), t2 = new THREE.Vector3();
   const uv = [0, 0];
   const wHead = W(B.head, 1);
+  const pts = [];
   for (let i = 0; i <= nLat; i++) {
     for (let j = 0; j <= nLon; j++) {
       const lam = lams[j], phi = phis[i];
@@ -678,49 +843,50 @@ function buildHead(mb, bd, dims, lod) {
       nn.crossVectors(t1, t2).normalize();
       if (!(nn.lengthSq() > 0.5)) nn.copy(p).normalize();
       if (nn.dot(p) < 0) nn.negate();
+      pts.push([p.x, p.y, p.z, nn.x, nn.y, nn.z]);
       uvOf(R.HEAD, headU(lam), lerp(0.1, 1, headV(phi)), uv);
       mb.vert(C.x + p.x * hs, C.y + p.y * hs, C.z + p.z * hs, nn.x, nn.y, nn.z, uv[0], uv[1], wHead);
     }
   }
+  // the patch's points again, mapped to the face
+  const inPatch = (i, j) => Math.abs(lams[j]) <= pLam + 1e-6 && phis[i] <= pPhi + 1e-6;
+  const fIdx = new Int32Array((nLat + 1) * (nLon + 1)).fill(-1);
+  for (let i = 0; i <= nLat; i++) {
+    for (let j = 0; j <= nLon; j++) {
+      if (!inPatch(i, j)) continue;
+      const k = i * (nLon + 1) + j, v = pts[k];
+      faceUV(lams[j], phis[i], uv);
+      fIdx[k] = mb.vert(C.x + v[0] * hs, C.y + v[1] * hs, C.z + v[2] * hs, v[3], v[4], v[5], uv[0], uv[1], wHead);
+    }
+  }
   for (let i = 0; i < nLat; i++) {
     for (let j = 0; j < nLon; j++) {
-      const a = base + i * (nLon + 1) + j, b = a + 1, d = a + nLon + 1, c = d + 1;
+      const k = i * (nLon + 1) + j;
+      const face = inPatch(i, j) && inPatch(i, j + 1) && inPatch(i + 1, j) && inPatch(i + 1, j + 1);
+      const a = face ? fIdx[k] : base + k, b = face ? fIdx[k + 1] : base + k + 1;
+      const d = face ? fIdx[k + nLon + 1] : base + k + nLon + 1, c = face ? fIdx[k + nLon + 2] : base + k + nLon + 2;
       // λ increases toward the left (+x); φ upward: (a, b, c) normal = t_λ × t_φ → outward
       mb.tri(a, b, c); mb.tri(a, c, d);
     }
   }
   if (lod !== 'high') return;
-  // ears: small, flat against the head, tipped back
+  for (const sd of [1, -1]) buildEar(mb, C, hs, sd, F, wHead);
+  // eyes: eyeballs set into the sockets, lids over them
   for (const sd of [1, -1]) {
-    const g = new THREE.SphereGeometry(1, 6, 4);
-    const ep = new THREE.Vector3();
-    headPoint(-3, sd * 92, ep, F);
-    const m = new THREE.Matrix4().compose(
-      new THREE.Vector3(C.x + (ep.x - sd * 0.002) * hs, C.y + ep.y * hs, C.z + (ep.z - 0.008) * hs),
-      new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.22, sd * 0.32, 0)),
-      new THREE.Vector3(0.0085 * hs, 0.026 * hs, 0.0155 * hs),
-    );
-    const earUv = uvOf(R.HEAD, headU(sd * 90), lerp(0.1, 1, headV(-3)), [0, 0]);
-    mb.piece(g, m, (lx, ly, lz, gu, gv, out) => { out[0] = earUv[0] + lz * 0.003; out[1] = earUv[1] + ly * 0.004; }, () => wHead);
-    g.dispose();
-  }
-  // eyes: flattened eyeballs set into the sockets (the socket rims hide their edges)
-  const ep = new THREE.Vector3(), en = new THREE.Vector3();
-  for (const sd of [1, -1]) {
-    headPoint(EYE_PHI, sd * EYE_LAM, ep, F);
-    en.set(Math.sin(sd * EYE_LAM * D2R) * 0.7, 0.05, Math.cos(EYE_LAM * D2R)).normalize();
-    ep.addScaledVector(en, -0.0079);
-    const g = new THREE.SphereGeometry(1, 9, 5, 0, Math.PI * 2, 0, Math.PI * 0.62);
+    const E = eyeFrame(sd, F);
+    const g = new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.62);
     g.rotateX(Math.PI / 2);
     const m = new THREE.Matrix4().compose(
-      new THREE.Vector3(C.x + ep.x * hs, C.y + ep.y * hs, C.z + ep.z * hs),
-      new THREE.Quaternion().setFromEuler(new THREE.Euler(0.04, sd * 0.1, 0)),
-      new THREE.Vector3(0.0124 * hs, 0.0085 * hs, 0.0106 * hs),
+      new THREE.Vector3(C.x + E.c.x * hs, C.y + E.c.y * hs, C.z + E.c.z * hs),
+      E.q,
+      new THREE.Vector3(EYE_R[0] * hs, EYE_R[1] * hs, EYE_R[2] * hs),
     );
+    // the eye's texture is drawn for the inner corner at u 0, the outer at u 1
     mb.piece(g, m, (lx, ly, lz, gu, gv, out) => {
-      uvOf(R.EYE, 0.5 + lx * 0.5, 0.5 + ly * 0.5, out);
+      uvOf(R.EYE, 0.5 + sd * lx * 0.5, 0.5 + ly * 0.5, out);
     }, () => wHead);
     g.dispose();
+    buildLids(mb, C, hs, E, sd, F, wHead);
   }
 }
 

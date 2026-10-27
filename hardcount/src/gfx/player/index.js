@@ -21,7 +21,7 @@ import { makeBodyMaterial, visorMaterial } from './materials.js';
 import { helmetGeometry, helmetMaterialFor, visorGeometry, addHelmetNumberDecal } from './helmet.js';
 import { hairParts } from './hair.js';
 import { Animator } from './animator.js';
-import { R, uvOf, ATLAS } from './layout.js';
+import { R, uvOf, ATLAS_W, ATLAS_H } from './layout.js';
 import { ACTIONS } from '../../sim/anims.js';
 
 export { createBallModel } from '../ball.js';
@@ -135,7 +135,7 @@ class PlayerModel {
     this.group.name = this.ref ? `official-${this.ref}` : `player-${this.player.number ?? ''}`;
     this.group.scale.setScalar(M_TO_YD);
     this.atlas = document.createElement('canvas');
-    this.atlas.width = this.atlas.height = ATLAS;
+    this.atlas.width = ATLAS_W; this.atlas.height = ATLAS_H;
     this.atlasTex = new THREE.CanvasTexture(this.atlas);
     this.atlasTex.colorSpace = THREE.SRGBColorSpace;
     this.atlasTex.anisotropy = 4;

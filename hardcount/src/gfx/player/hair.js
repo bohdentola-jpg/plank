@@ -39,13 +39,16 @@ function flatBox() {
 }
 
 // cap thickness (metres) per style at (λ, φ) and lateral x
+// (the bumps go round the head a whole number of times, so the cap meets itself at the back)
+const D2R = Math.PI / 180;
 function thickness(style, lam, phi, x, y, z) {
   const top = sstep(20, 75, phi);
+  const la = lam * D2R;
   switch (style) {
     case 'short': return 0.006 + 0.007 * top;
-    case 'curly': return 0.013 + 0.006 * top + 0.0035 * Math.sin(lam * 0.31) * Math.sin(phi * 0.42);
-    case 'twists': return 0.017 + 0.006 * top + 0.006 * Math.abs(Math.sin(lam * 0.55) * Math.sin(phi * 0.6));
-    case 'afro': return 0.046 + 0.024 * top + 0.012 * sstep(-10, 30, phi) + 0.004 * Math.sin(lam * 0.4) * Math.sin(phi * 0.5);
+    case 'curly': return 0.013 + 0.006 * top + 0.0035 * Math.sin(la * 18) * Math.sin(phi * 0.42);
+    case 'twists': return 0.017 + 0.006 * top + 0.006 * Math.abs(Math.sin(la * 32) * Math.sin(phi * 0.6));
+    case 'afro': return 0.046 + 0.024 * top + 0.012 * sstep(-10, 30, phi) + 0.004 * Math.sin(la * 23) * Math.sin(phi * 0.5);
     case 'flat': {
       // high-top: the ray from the head centre stops at a flat top or at the straight sides
       const F = flatBox();
@@ -85,7 +88,8 @@ function capGrid(mb, style, C, hs, lod) {
     for (let j = 0; j <= nc; j++) {
       const c = j / nc, s = Math.pow(k / ns, 1.1);
       pos(c, s, p);
-      pos(Math.min(1, c + 0.01), s, q).sub(pos(Math.max(0, c - 0.01), s, r));
+      // round the cap (it closes at the back): wrap, so the seam's two sides get the same normal
+      pos((c + 0.01) % 1, s, q).sub(pos((c + 0.99) % 1, s, r));
       const tc = q.clone();
       pos(c, Math.min(1, s + 0.02), q).sub(pos(c, Math.max(0, s - 0.02), r));
       n.crossVectors(tc, q).normalize();
@@ -145,16 +149,19 @@ function hanging(mb, style, C, hs, lod) {
     }
     return;
   }
-  const count = style === 'dreads' ? (lod === 'high' ? 11 : 5) : 6;
+  const count = style === 'dreads' ? (lod === 'high' ? 15 : 6) : 6;
   const len = style === 'dreads' ? 0.2 : 0.12;
-  const rad = style === 'dreads' ? 0.0075 : 0.0055;
+  const rad = style === 'dreads' ? 0.0072 : 0.0055;
+  const steps = lod === 'high' ? 6 : 3, sides = lod === 'high' ? 6 : 4;
+  const tan = new THREE.Vector3(), X = new THREE.Vector3(), Z = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
   for (let i = 0; i < count; i++) {
     const f = count === 1 ? 0 : i / (count - 1) - 0.5;
-    const lam = 180 + f * (style === 'dreads' ? 150 : 70);
-    headPoint(-34, lam, p);
+    const lam = 180 + f * (style === 'dreads' ? 150 : 70) + (style === 'dreads' ? 4 * Math.sin(i * 4.1) : 0);
+    headPoint(-34 + (style === 'dreads' ? 3 * Math.sin(i * 1.7) : 0), lam, p);
     const start = new THREE.Vector3(C.x + p.x * hs * 1.02, C.y + p.y * hs, C.z + p.z * hs * 1.02);
     const out = new THREE.Vector3(p.x, 0, p.z).normalize();
     const L = len * (0.85 + 0.3 * Math.abs(Math.sin(i * 2.3))) * hs;
+    const r0 = rad * hs * (0.85 + 0.3 * Math.abs(Math.sin(i * 3.7)));
     const pts = [
       start,
       start.clone().add(new THREE.Vector3(out.x * 0.02, -L * 0.35, out.z * 0.03 - 0.01)),
@@ -162,13 +169,25 @@ function hanging(mb, style, C, hs, lod) {
       start.clone().add(new THREE.Vector3(out.x * 0.045, -L, out.z * 0.05 - 0.04)),
     ];
     const curve = new THREE.CatmullRomCurve3(pts);
-    const g = new THREE.TubeGeometry(curve, lod === 'high' ? 5 : 3, rad * hs, lod === 'high' ? 4 : 3, false);
     const py = start.y;
-    mb.piece(g, new THREE.Matrix4(), (lx, ly, lz, gu, gv, o) => { o[0] = uv[0] + gu * 0.03; o[1] = uv[1] + gv * 0.1; }, (x, y) => {
+    const w = (x, y) => {
       const t = clamp((py - y) / L, 0, 1);
       return [B.head, 1 - t * 0.6, B.neck, t * 0.3, B.chest, t * 0.3];
-    });
-    g.dispose();
+    };
+    // a round strand, thinning a little to a rounded end (not an open, square tube)
+    const rings = [];
+    for (let k = 0; k <= steps + 1; k++) {
+      const t = Math.min(1, k / steps);
+      curve.getTangentAt(t, tan);
+      X.crossVectors(up, tan).normalize();
+      if (X.lengthSq() < 0.5) X.set(1, 0, 0);
+      Z.crossVectors(tan, X).normalize();
+      const c = curve.getPointAt(t);
+      if (k > steps) c.addScaledVector(tan, r0 * 0.8);
+      const r = r0 * (1 - 0.18 * t);
+      rings.push({ c, X: X.clone(), Z: Z.clone(), sec: k > steps ? { pole: true } : { rx: r, rzF: r, rzB: r, sq: 2 }, v: 0.5 + 0.4 * (1 - t), w: (th, x, y) => w(x, y) });
+    }
+    mb.loft(rings, { X: rings[0].X, Z: rings[0].Z, A: curve.getTangentAt(0, new THREE.Vector3()), n: sides, rect: R.HAIR, th0: 0, uMap: (u) => 0.05 + 0.04 * u + (i % 6) * 0.15 });
   }
 }
 
