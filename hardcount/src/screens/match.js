@@ -520,7 +520,7 @@ class MatchScreen {
     // the pre-snap tools are the quarterback's and the defensive play-caller's; a
     // career man who isn't the QB just lines up and waits for the snap
     for (const side of this.humanSides()) {
-      if (m.lock && m.lock.side === side && !(m.lock.player.pos === 'QB' && side === m.offSide && m.qb?.p?.id === m.lock.player.id)) continue;
+      if (m.lock && m.lock.side === side && !(side === m.offSide && m.userSnaps())) continue;
       this.presnaps[side] = new Presnap(m, side, this.plFor(side));
     }
     // the kick meter for a person kicking

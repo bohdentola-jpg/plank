@@ -294,11 +294,24 @@ export class Match {
   }
 
   isUser(side) { return this.users[side] !== null && this.users[side] !== undefined; }
-  /** Does a person snap the ball? (In a career only if he's the quarterback.) */
+  /**
+   * Does a person snap the ball? In a career only the quarterback does, and only on a down
+   * from scrimmage: on a kick the snap goes back to the holder or the punter (a career QB
+   * holds for PATs and field goals) and the CPU snaps it, since a person kicks only with
+   * the kick meter, which a career never shows.
+   */
   userSnaps() {
     if (!this.isUser(this.offSide)) return false;
-    if (this.lock && this.lock.side === this.offSide) return this.lock.player.pos === 'QB' && this.qb?.p?.id === this.lock.player.id;
+    if (this.lock && this.lock.side === this.offSide) {
+      if (this.isKickPlay()) return false;
+      return this.lock.player.pos === 'QB' && this.qb?.p?.id === this.lock.player.id;
+    }
     return true;
+  }
+
+  /** A kick: kickoff, field goal or PAT kick (the holder takes the snap), punt. */
+  isKickPlay() {
+    return this.playKind === 'kickoff' || this.playKind === 'fg' || this.playKind === 'punt' || this.form?.qb === 'hold' || this.form?.qb === 'punt';
   }
 
   pickUserEnts() {
