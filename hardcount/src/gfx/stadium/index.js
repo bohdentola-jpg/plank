@@ -8,6 +8,7 @@
 //   v.update(dt, { camera, time, excitement, reaction, homeHasBall, ball });
 //   v.setScoreboard({...}); v.setMarkers({ los, firstDown, dir, show }); v.focusShadow(x, z, r); v.flashes(rate); v.dispose();
 import * as THREE from 'three';
+import { buildClearance } from './clearance.js';
 import { getEnvMap } from '../../core/envmap.js';
 import { disposeTree, makeRng } from '../../core/util.js';
 import { makeField } from '../../sim/field.js';
@@ -141,6 +142,9 @@ export async function buildVenue(renderer, opts = {}) {
   }
   await tick();
 
+  // ---- where the broadcast cameras can stand (out of the stands' concrete)
+  const clear = buildClearance(root, { skip: [F.group, sideline.group, crowdObj?.mesh, flashes?.mesh, wet?.mesh] });
+
   // ---- weather
   const wx = createWeather(scene, {
     weather: A.weather, wind, windDir: ctx.windDir, quality, night: A.night, dusk: A.dusk, field,
@@ -198,6 +202,9 @@ export async function buildVenue(renderer, opts = {}) {
       sideline.setDown(lastDown);
     },
     focusShadow,
+    /** Keep a camera at P (moved in place) out of the structure, looking at `look`; returns the distance ratio. */
+    clearView: clear.clearView,
+    sightBlockedAt: clear.blockedAt,
     flashes(rate = 0) { if (flashes) flashes.rate = Math.max(0, rate); },
     dispose() {
       wx.dispose();

@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { clamp, lerp } from '../core/util.js';
 
-const v = new THREE.Vector3(), v2 = new THREE.Vector3();
+const v = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3();
 
 // the game cams (settings.camera): over the offense's shoulder at two heights,
 // the all-22, and the press box's sideline angle
@@ -31,6 +31,7 @@ export class CameraDirector {
     this.shotT = 0;
     this.shotName = null;
     this.free = { yaw: 0, pitch: 0.35, dist: 22, x: 0, z: 0 };
+    this.clear = null;           // (look, pos) → distance ratio: keeps shots out of the venue's structure
   }
 
   get camera() { return this.cam; }
@@ -200,6 +201,15 @@ export class CameraDirector {
     if (s.shot === 'broadcast' || s.shot === 'low' || s.shot === 'high' || s.shot === 'kickoff') {
       const lim = F.end - 1.2;
       if (Math.abs(P.z) > lim) { const over = Math.abs(P.z) - lim; P.z = Math.sign(P.z) * lim; P.y += over * 0.6; }
+    }
+    // never inside the stands or behind a wall: a high camera climbs to see over what's in
+    // the way, else it comes in along the line of sight to open air, the lens widening so
+    // the framing holds (the venue's own camera spots are already placed)
+    if (this.clear && s.shot !== 'fixed' && s.shot !== 'flyover') {
+      // traced from where it's looking, kept on the field (a deep look can be past the end line)
+      const O = v3.set(clamp(L.x, -F.halfW - 3, F.halfW + 3), L.y, clamp(L.z, -F.end - 3, F.end + 3));
+      const k = this.clear(O, P, { raise: P.y > 6 ? 10 : 0 });
+      if (k < 0.999) fov = Math.min(64, (2 * Math.atan(Math.tan((fov * Math.PI) / 360) / Math.max(0.2, k)) * 180) / Math.PI);
     }
     if (this.jump) {
       this.pos.copy(P); this.look.copy(L); this.fov = fov;

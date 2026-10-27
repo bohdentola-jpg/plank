@@ -128,6 +128,19 @@ the stride phase driven by distance travelled so feet don't skate:
 - **No arms through the body**: after the IK the animator pushes the elbows,
   forearms, wrists and hands out of the jersey (`dims.torso`, the build's own
   cross-sections from `torsoProfile`) and re-solves the arm, eased in by depth.
+- **Hands**: up close every hand has fifteen bones after the 23 the animator
+  poses (`HB`, `NBX`): knuckle, middle and end joints per finger, and the
+  thumb's base in the heel of the palm, its knuckle and end joint.
+  `handPose()` sets them from the arm's fingers channel after the animator
+  writes its bones, so every clip gets them: 0 open and spread (a catch), ~0.2
+  an open blade, ~0.4 relaxed, 1 a fist with the thumb folded over the
+  fingers, up to 2 the index finger pointing back out of it. The little finger
+  leads a curl and the index trails it. Far away the hand is a one-joint mitten.
+- **Going for the ball**: the sim's brains set `reachAt` every tick they play
+  the ball (it's cleared at the top of every think), so arms never stay
+  reaching after a catch. Without a clip the hands come up only over the
+  ball's last few yards. Under a reach the elbows hang down and out and the
+  palms turn to the ball: fingers up for the diamond, out for the basket.
 
 **Builds.** `makeBuild(player)` reads height, weight, `look.bodyType` and three
 look fields every roster player has (drawn from the player's own seed, so they
@@ -139,12 +152,18 @@ lineman pads: width, depth and how tall the arch stands) and `look.face`
 the cranium the hair and helmet sit on never changes). The jersey sleeve is
 geometry, stretched over the pad cap down to a hem just below the pads
 (`SLEEVE_HEM`, shared with the painter); the collar is a V-neck under a visible
-neck. Heads have real facial thirds and a dense face grid; the painted features
-ride on the (λ, φ) grid so paint and shape always agree.
+neck. Heads have real facial thirds and a dense face grid. The face patch
+(±95° of longitude, up to the forehead) maps to its own `R.FACE` region,
+linear in (λ, φ), at twice the head's texels. The painter draws in those
+degrees, so paint and shape always agree. Eyes are eyeballs (`R.EYE`, one
+texture mirrored) under upper and lower lid shells; `eyeContours()` gives the
+painter the lids' own outlines for the lash lines and creases. Skin noise is
+3D, shared by the face and the head textures, so their seam never shows.
 
-Budgets: ≤ 6 draw calls and ~7.5k triangles per player at `high` (the face
-grid is most of the growth), ≤ 3 calls / ~2k triangles at `low`; ≤ 24 bones; one ≤ 512² uniform atlas per player plus a
-shared helmet decal per team. 14 players + 3 officials + sideline extras must
+Budgets: ≤ 6 draw calls and ~9.5k triangles per player at `high` (face grid,
+lids, ears and jointed hands), ≤ 3 calls / ~2k triangles at `low`; 53 bones up
+close, the 23 core bones far away; one 512 × 768 uniform atlas per player plus
+a shared helmet decal per team. 14 players + 3 officials + sideline extras must
 hold 60 fps on a mid-range laptop at 600 lines.
 
 ## Venues — `src/gfx/stadium/`
@@ -163,8 +182,18 @@ v.setScoreboard({ home: {abbr, score, timeouts}, away: {…}, quarter, clock, pl
 v.setMarkers({ los, firstDown, dir, show })  // chain crew + down box, broadcast LOS (blue) / 1st-down (yellow) lines
 v.focusShadow(x, z, radius)                  // fit the shadow camera to the action
 v.flashes(rate)                              // camera flashes in the stands
+v.clearView(look, pos, { raise })            // keep a camera out of the structure (moves pos; returns distance ratio)
 v.dispose()
 ```
+
+The broadcast cameras are placed by the yard, so in the big bowls the press box
+angle, the reverse and the end zone can land inside the stands. Each venue bins
+its solid triangles (no field, sideline, crowd or light) into two-yard columns
+(`clearance.js`), and every frame the camera director traces the shot's line of
+sight from the play out to the lens. A high camera blocked by something solid
+climbs over it (up to 10 yards, looking down past the rows in front of it, as a
+press box does); otherwise it comes in along the line of sight to open air and
+the lens widens to hold the framing. Posts, trusses and rails are let through.
 
 Venues: `friday` (small-town high school, night), `college` (big college bowl),
 `bayside` (Port Halcyon's waterfront pro stadium), `dome` (indoor pro),

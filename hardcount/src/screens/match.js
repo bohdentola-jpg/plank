@@ -96,6 +96,7 @@ class MatchScreen {
     this.timeOfDay = this.world.venue?.time || q.time || vmeta.defaultTime || 'night';
     // the crew
     this.cam = new CameraDirector(m.field);
+    this.cam.clear = (L, P, o) => this.world?.venue?.clearView?.(L, P, o) ?? 1;
     this.hud = new Hud();
     this.booth = new Booth(m, this.hud, { seed: (q.seed ?? 7) + 3, venueName: vmeta.name, enabled: true });
     this.officials = new Officials(m);
@@ -1052,7 +1053,7 @@ class MatchScreen {
           away: { abbr: m.teams.away.abbr, score: m.score.away, timeouts: m.timeouts.away },
           quarter: m.quarter, clock: `${Math.floor(Math.ceil(Math.max(0, m.clock)) / 60)}:${String(Math.ceil(Math.max(0, m.clock)) % 60).padStart(2, '0')}`,
           playClock: m.phase === 'presnap' && this.playClock !== null ? Math.ceil(Math.max(0, this.playClock)) : '',
-          down: m.tryMode || m.playKind === 'kickoff' || m.phase === 'kickoff' ? 0 : m.down,
+          down: m.tryMode || (m.playKind === 'kickoff' && m.phase !== 'playcall') || m.phase === 'kickoff' ? 0 : m.down,
           toGo: m.goalToGo ? 0 : Math.round(m.toGo), possession: m.possession,
           ballOn: m.field.spotText(m.los, m.offDir),
           msg: td ? 'TOUCHDOWN' : m.phase === 'final' ? 'FINAL' : null,

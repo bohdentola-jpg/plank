@@ -75,7 +75,8 @@ export function fmtClock(sec) {
 export function downText(m) {
   if (m.tryMode === 'pat') return 'EXTRA POINT';
   if (m.tryMode === 'two') return '2-POINT TRY';
-  if (m.phase === 'kickoff' || m.playKind === 'kickoff') return 'KICKOFF';
+  // (the series after a kickoff is called while playKind still says 'kickoff')
+  if (m.phase === 'kickoff' || (m.playKind === 'kickoff' && m.phase !== 'playcall')) return 'KICKOFF';
   const goal = m.firstDownZ !== undefined && Math.abs(m.firstDownZ) >= m.field.halfL - 0.01 && Math.sign(m.firstDownZ) === Math.sign(m.offDir);
   const togo = goal ? 'GOAL' : m.toGo < 1 ? 'INCHES' : String(Math.round(m.toGo));
   return `${ordinal(m.down).toUpperCase()} & ${togo}`;

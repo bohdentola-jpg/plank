@@ -43,8 +43,9 @@ on your wristband.
 | ![The huddle main menu](docs/hc-menu.jpg) | ![The coin toss at midfield](docs/hc-coin-toss.jpg) |
 
 - **Road to Glory.** Build a player (quarterback, running back, receiver, tight
-  end, linebacker, corner or safety; an archetype; name, number, skin, hair,
-  build from lean to jacked, slim or big shoulder pads; your high school) under the lights on a Friday night, then live a career off a flip
+  end, linebacker, corner or safety; an archetype; name, number, skin tone,
+  hair and hair colour (the helmet comes off while you choose them), build
+  from lean to jacked, slim or big shoulder pads; your high school) under the lights on a Friday night, then live a career off a flip
   phone: a senior season in high school, signing day with the offers your stars
   earned, up to four years of college (declare after three), the Sevens League
   draft on TV, a pro career, and retirement into the Hall of Fame. Texts from
@@ -166,4 +167,6 @@ every, prefix } }` shoots a contact sheet of whatever is playing. `VW=1600
 VH=900` sets the window size. URL shortcuts:
 `?screen=match&home=pht&away=det&qa=play` (straight to a first and ten),
 `qa=kick&kicking=home`, `screen=practice`, `screen=playbook`, `screen=gallery`
-(every animation), `screen=venueview` (the stadiums).
+(every animation; `mode=hands` for the hands at fixed curls, `mode=closeup` for
+heads and faces, `focus=x,y,z&cam=az,el,dist` to aim the camera),
+`screen=venueview` (the stadiums).
