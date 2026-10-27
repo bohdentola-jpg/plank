@@ -21,6 +21,11 @@ export const R = {
   EXTRA: [386, 402, 124, 108],
 };
 
+// The hand's strips inside R.HAND: the palm and back of the hand, the fingers (all four
+// share one), the thumb. On each, u = 0 is the palm side and the strip's middle the back
+// (the nails); v = 1 at the wrist / the base of the digit, 0 at the fingertips.
+export const HAND_U = { palm: [0, 0.58], finger: [0.6, 0.82], thumb: [0.84, 1] };
+
 /** Where the jersey sleeve's hem is along the arm (t: 0 shoulder … 1 elbow), geometry and paint. */
 export const SLEEVE_HEM = 0.54;
 

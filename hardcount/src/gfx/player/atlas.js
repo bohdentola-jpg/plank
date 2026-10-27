@@ -4,7 +4,7 @@
 // skin (arms, neck, face with eyes / brows / eye black / beard, scalp hair),
 // gloves, cleats, eyes, hair and the small props. Regions come from layout.js.
 import * as THREE from 'three';
-import { R, SWATCH, ATLAS, SLEEVE_HEM, pxOf, torsoU, headU, headV } from './layout.js';
+import { R, SWATCH, ATLAS, SLEEVE_HEM, HAND_U, pxOf, torsoU, headU, headV } from './layout.js';
 import { drawNumber, numberWidth } from './numfont.js';
 import { logoCanvas } from '../logos.js';
 import { makeRng, hashString, shade, hexToRgb, rgbToHex } from '../../core/util.js';
@@ -727,44 +727,61 @@ function paintHair(ctx, look, rng) {
   ctx.restore();
 }
 
-function paintHands(ctx, o, { kit, team, skin, skinDark, look }) {
+function paintHands(ctx, o, { kit, team, skin, look }) {
   const Hd = R.HAND;
   clipRect(ctx, Hd);
+  // the strips body.js maps the palm, the fingers and the thumb to (u 0 = the palm side,
+  // 0.5 = the back / the nails; v 1 = wrist or knuckle … 0 = fingertips)
+  const sub = ([a, b]) => [Hd[0] + a * Hd[2], Hd[1], (b - a) * Hd[2], Hd[3]];
+  const Pm = sub(HAND_U.palm), Fg = sub(HAND_U.finger), Th = sub(HAND_U.thumb);
+  const creases = (R2, vs, color, w0 = 0.3, w1 = 0.7) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    for (const v of vs) {
+      const [a, yv] = pxOf(R2, w0, v), [b] = pxOf(R2, w1, v);
+      ctx.beginPath(); ctx.moveTo(a, yv); ctx.lineTo(b, yv); ctx.stroke();
+    }
+  };
   const gloved = look.gloves && !o.ref;
   if (gloved) {
     const gc = kit.gloves || '#222';
     const palm = lum(gc) > 0.7 ? '#cfcfc8' : mix(gc, '#9a9a96', 0.35);
     rectL(ctx, Hd, 0, 0, 1, 1, gc);
-    // palm side (seam at the palm: u near 0 and 0.78), thumb inner side
-    rectL(ctx, Hd, 0, 0, 0.1, 0.86, palm);
-    rectL(ctx, Hd, 0.68, 0, 0.78, 0.86, palm);
-    rectL(ctx, Hd, 0.8, 0, 0.88, 1, palm);
-    // cuff band and a logo patch on the back of the hand
-    rectL(ctx, Hd, 0, 0.84, 0.78, 1, shade(gc, -0.25));
-    rectL(ctx, Hd, 0, 0.86, 0.78, 0.9, team?.colors?.secondary || '#888');
-    const [lx, ly] = pxOf(Hd, 0.39, 0.62);
-    ctx.fillStyle = lum(gc) > 0.6 ? (team?.colors?.primary || '#333') : '#e8e8e8';
-    ctx.beginPath(); ctx.arc(lx, ly, 3.5, 0, Math.PI * 2); ctx.fill();
-    // finger seams
-    ctx.strokeStyle = shade(gc, -0.35);
-    ctx.lineWidth = 1;
-    for (const u of [0.3, 0.39, 0.48]) {
-      const [a, b] = pxOf(Hd, u, 0.4), [, c] = pxOf(Hd, u, 0.0);
-      ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(a, c); ctx.stroke();
-    }
+    // the tacky grip: the palm, the inside of every finger, the thumb's pad
+    rectL(ctx, Pm, -0.17, 0, 0.17, 0.8, palm);
+    rectL(ctx, Fg, -0.2, 0, 0.2, 1, palm);
+    rectL(ctx, Th, -0.22, 0, 0.22, 1, palm);
+    // cuff band with a team stripe round it
+    rectL(ctx, Pm, 0, 0.8, 1, 1, shade(gc, -0.25));
+    rectL(ctx, Pm, 0, 0.84, 1, 0.88, team?.colors?.secondary || '#888');
+    // logo on the back of the hand, stitched knuckle panels on the fingers
+    const [lx, ly] = pxOf(Pm, 0.5, 0.5);
+    ctx.fillStyle = mix(gc, lum(gc) > 0.6 ? (team?.colors?.primary || '#333') : '#e8e8e8', 0.7);
+    ctx.beginPath(); ctx.ellipse(lx, ly, 2.6, 3.4, 0, 0, Math.PI * 2); ctx.fill();
+    creases(Pm, [0.16], shade(gc, -0.4), 0.3, 0.7);
+    creases(Fg, [0.5, 0.23], shade(gc, -0.4), 0.3, 0.7);
+    creases(Th, [0.52], shade(gc, -0.4), 0.32, 0.68);
     texture(ctx, Hd, sheenTile, 0.3);
   } else {
     rectL(ctx, Hd, 0, 0, 1, 1, skin);
     texture(ctx, Hd, skinTile, 0.5);
-    rectL(ctx, Hd, 0, 0, 0.1, 0.84, mix(skin, '#e8c0b0', 0.25));
-    rectL(ctx, Hd, 0.68, 0, 0.78, 0.84, mix(skin, '#e8c0b0', 0.25));
+    const palmSkin = mix(skin, '#e8c0b0', 0.25);
+    rectL(ctx, Pm, -0.15, 0, 0.15, 0.78, palmSkin);
+    rectL(ctx, Fg, -0.16, 0, 0.16, 1, palmSkin);
+    rectL(ctx, Th, -0.18, 0, 0.18, 1, palmSkin);
     // wrist tape
-    rectL(ctx, Hd, 0, 0.8, 0.78, 1, '#f2f2ee');
-    ctx.strokeStyle = `rgba(0,0,0,0.25)`;
-    for (const u of [0.3, 0.39, 0.48]) {
-      const [a, b] = pxOf(Hd, u, 0.4), [, c] = pxOf(Hd, u, 0.0);
-      ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(a, c); ctx.stroke();
-    }
+    rectL(ctx, Pm, 0, 0.8, 1, 1, '#f2f2ee');
+    // knuckles and joint creases (darker across the back, lines in the palm side), nails
+    const crease = `rgba(0,0,0,${lum(skin) > 0.5 ? 0.2 : 0.3})`;
+    creases(Pm, [0.12, 0.16], crease, 0.36, 0.64);
+    creases(Fg, [0.47, 0.49, 0.22], crease, 0.34, 0.66);
+    creases(Fg, [0.47, 0.22], 'rgba(0,0,0,0.18)', -0.1, 0.1);
+    creases(Th, [0.5, 0.24], crease, 0.34, 0.66);
+    const nail = mix(skin, '#f1d6cf', 0.55);
+    rectL(ctx, Fg, 0.37, 0.025, 0.63, 0.15, nail);
+    rectL(ctx, Fg, 0.37, 0.025, 0.63, 0.05, mix(nail, '#ffffff', 0.4));
+    rectL(ctx, Th, 0.35, 0.025, 0.65, 0.18, nail);
+    rectL(ctx, Th, 0.35, 0.025, 0.65, 0.055, mix(nail, '#ffffff', 0.4));
   }
   ctx.restore();
 }

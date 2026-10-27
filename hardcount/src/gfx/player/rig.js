@@ -9,7 +9,7 @@
 //   spine/chest/neck/head [flex(+fwd), twist(+left), side(+left)]
 //   clav   [elev(+up), protract(+fwd)]
 //   arm    [elev(0 hanging … 180 straight up), plane(0 = out to the side, 90 = forward, −90 = back),
-//           twist(+external), elbow(+bend), wflex(+palm), wdev(+thumb side), pronate, fingers(0 open … 1 fist)]
+//           twist(+external), elbow(+bend), wflex(+palm), wdev(+thumb side), pronate, fingers(0 open … 1 fist … 2 pointing)]
 //   leg    [flex(+knee forward), abd(+out), twist(+toe out), knee(+bend), ankle(+toes down), toe(+curl down)]
 import * as THREE from 'three';
 
@@ -20,12 +20,59 @@ export const B = {
   thighL: 15, shinL: 16, footL: 17, toeL: 18,
   thighR: 19, shinR: 20, footR: 21, toeR: 22,
 };
-export const NB = 23;
+export const NB = 23;              // the core bones: what the animator poses
 export const PARENT = [-1, 0, 1, 2, 3, 2, 5, 6, 7, 8, 2, 10, 11, 12, 13, 0, 15, 16, 17, 0, 19, 20, 21];
 export const BONE_NAMES = Object.keys(B);
 
+// The hands: after the core, three bones per finger (knuckle, middle and end joints)
+// and three for the thumb (its base in the palm, knuckle, end joint), per hand. They
+// follow the fingers channel (handPose below), so a clip's grip, fist or open catching
+// hand all come from that one number; the low-detail body keeps the single fingers bone.
+export const HAND_BONES = 15;
+export const HB = [NB, NB + HAND_BONES];          // first hand bone: left, right
+export const NBX = NB + 2 * HAND_BONES;           // the whole skeleton
+const DIGITS = ['idx', 'mid', 'rng', 'pky', 'thb'];
+for (let si = 0; si < 2; si++) {
+  const hand = si === 0 ? B.handL : B.handR;
+  for (let k = 0; k < 5; k++) {
+    for (let j = 0; j < 3; j++) {
+      const i = HB[si] + k * 3 + j;
+      PARENT[i] = j === 0 ? hand : i - 1;
+      BONE_NAMES[i] = DIGITS[k] + (j + 1) + (si === 0 ? 'L' : 'R');
+    }
+  }
+}
+
+/**
+ * Hand geometry at a hand scale of 1, in the bind frame of the hand hanging at the side:
+ * d = down from the wrist joint, f = toward the thumb (forward), p = toward the palm (in).
+ * Fingers (index, middle, ring, little): knuckle position, phalanx lengths (knuckle → middle
+ * joint → end joint → tip), half-width at the base and at the tip. The thumb: its base
+ * joint deep in the heel of the palm, the metacarpal's and the phalanges' directions.
+ * The body mesh (body.js) is built on the same numbers.
+ */
+export const HAND = {
+  fingers: [
+    { d: 0.089, f: 0.0292, len: [0.041, 0.025, 0.021], r0: 0.0099, r1: 0.008 },
+    { d: 0.093, f: 0.0098, len: [0.045, 0.028, 0.022], r0: 0.0101, r1: 0.0082 },
+    { d: 0.09, f: -0.0098, len: [0.043, 0.027, 0.021], r0: 0.0096, r1: 0.0078 },
+    { d: 0.083, f: -0.0284, len: [0.034, 0.02, 0.019], r0: 0.0086, r1: 0.007 },
+  ],
+  knuckleP: -0.004,          // the knuckles sit toward the back of the hand
+  thumb: { d: 0.022, f: 0.019, p: 0.008, dir1: [0.25, 0.82, 0.5], dir2: [0.14, 0.95, -0.02], len: [0.044, 0.031, 0.027] },
+};
+
+/** Hands scale a little with the build (bigger men, bigger hands). */
+export const handScale = (bd) => bd.s * (0.96 + 0.06 * bd.girth);
+
+/** A hand-frame direction [p, d, f] → model space for a side (s = +1 left). */
+function handDir(s, a, out = new THREE.Vector3()) {
+  return out.set(-s * a[0], -a[1], a[2]).normalize();
+}
+
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const lerp = (a, b, t) => a + (b - a) * t;
+const sstep = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
 // body-type flavour on top of what height/weight already say
 const TYPES = {
@@ -87,7 +134,7 @@ export function makeBuild(player, opts = {}) {
 /** Bind positions (model space, metres) for a build. */
 export function bindPositions(bd) {
   const s = bd.s, w = bd.wide;
-  const P = new Array(NB);
+  const P = new Array(NBX);
   const v = (x, y, z) => new THREE.Vector3(x, y, z);
   P[B.hips] = v(0, 1.0 * s, 0);
   P[B.spine] = v(0, 1.1 * s, -0.012 * s);
@@ -105,6 +152,21 @@ export function bindPositions(bd) {
     const wr = v(sh.x, el.y - 0.262 * s, sh.z + 0.004 * s);
     P[L ? B.handL : B.handR] = wr;
     P[L ? B.fingL : B.fingR] = v(wr.x, wr.y - 0.092 * s, wr.z + 0.004 * s);
+    // finger and thumb joints
+    const hs = handScale(bd), h0 = HB[L ? 0 : 1];
+    HAND.fingers.forEach((F, k) => {
+      let d = F.d;
+      for (let j = 0; j < 3; j++) {
+        P[h0 + k * 3 + j] = v(wr.x - side * HAND.knuckleP * hs, wr.y - d * hs, wr.z + F.f * hs);
+        d += F.len[j];
+      }
+    });
+    const T = HAND.thumb;
+    const t1 = v(wr.x - side * T.p * hs, wr.y - T.d * hs, wr.z + T.f * hs);
+    const t2 = t1.clone().addScaledVector(handDir(side, T.dir1), T.len[0] * hs);
+    P[h0 + 12] = t1;
+    P[h0 + 13] = t2;
+    P[h0 + 14] = t2.clone().addScaledVector(handDir(side, T.dir2), T.len[1] * hs);
     const hip = v(side * 0.092 * bd.hip * s, 0.952 * s, 0.004 * s);
     P[L ? B.thighL : B.thighR] = hip;
     const knee = v(hip.x, hip.y - 0.44 * s, hip.z + 0.006 * s);
@@ -191,6 +253,65 @@ export function qFoot(out, s, ankle, roll = 0) {
 }
 export function qToe(out, toe) {
   return qAxis(out, X, toe * D2R);
+}
+
+// ------------------------------------------------------------------ hands
+
+const LEAD = [-0.1, 0, 0.06, 0.14];      // into a curl the little finger leads and the index trails
+const SPREAD = [-7, -1.5, 3, 9];         // an open hand fans out (deg, − = toward the thumb)
+// The thumb's bind pose is the relaxed hand (its pad by the index finger). Open, it splays away
+// from the fingers; in a fist it folds across the index and middle fingers' middle joints.
+// Directions of its metacarpal, first and second phalanx, [p, d, f] as in HAND.
+const THUMB_OPEN = [[0.35, 0.7, 0.62], [0.18, 0.78, 0.6], [0.12, 0.8, 0.58]];
+const THUMB_FIST = [[0.544, 0.726, 0.423], [0.62, 0.43, -0.65], [0.13, 0.26, -0.95]];
+const THUMB_Q = [1, -1].map((s) => {
+  const b1 = handDir(s, HAND.thumb.dir1), b2 = handDir(s, HAND.thumb.dir2);
+  const key = (dirs) => {
+    const [m, p1, p2] = dirs.map((a) => handDir(s, a));
+    const q1 = new THREE.Quaternion().setFromUnitVectors(b1, m);
+    const q2 = new THREE.Quaternion().setFromUnitVectors(b2, p1.clone().applyQuaternion(q1.clone().invert()));
+    const q12 = q1.clone().multiply(q2);
+    const q3 = new THREE.Quaternion().setFromUnitVectors(b2, p2.clone().applyQuaternion(q12.invert()));
+    return [q1, q2, q3];
+  };
+  return { open: key(THUMB_OPEN), fist: key(THUMB_FIST) };
+});
+const _qi = new THREE.Quaternion();
+
+/** The fingers channel (0 open … 1 fist … 2 pointing) back out of the fingers bone's rotation. */
+export function fingersCurl(q, s) {
+  let a = -s * 2 * Math.atan2(q.z, q.w);
+  if (a < -0.5) a += Math.PI * 2;          // past a fist the bone turns beyond 180°: q and −q agree
+  return a / (95 * D2R);
+}
+
+/**
+ * Local rotations of one hand's finger and thumb bones for a curl (the fingers channel:
+ * 0 open and spread, ~0.2 an open blade, ~0.4 relaxed, 1 a fist, 2 pointing). q = the skeleton's quaternions, si 0 left / 1 right.
+ */
+export function handPose(q, si, curl) {
+  const s = si === 0 ? 1 : -1, h0 = HB[si];
+  const c = clamp(curl, 0, 1);
+  const open = 1 - sstep(0, 0.22, c);
+  // past a fist (1 … 2) the index finger straightens back out of it: pointing
+  const point = sstep(1.05, 1.8, curl);
+  for (let k = 0; k < 4; k++) {
+    let ck = clamp(c + LEAD[k] * 4 * c * (1 - c), 0, 1);
+    if (k === 0) ck = lerp(ck, 0.03, point);
+    const i = h0 + k * 3;
+    // the knuckle bends, then fans in the plane of the palm; the end joint follows the middle one
+    qAxis(_qa, X, SPREAD[k] * open * D2R);
+    qAxis(_qb, Z, -s * (4 + 84 * ck) * D2R);
+    q[i].multiplyQuaternions(_qa, _qb);
+    qAxis(q[i + 1], Z, -s * (6 + 98 * ck) * D2R);
+    qAxis(q[i + 2], Z, -s * (3 + 60 * ck) * D2R);
+  }
+  // thumb: open → relaxed (the bind pose) by 0.25 → folded over the fingers
+  const tq = THUMB_Q[si];
+  for (let j = 0; j < 3; j++) {
+    if (c < 0.25) q[h0 + 12 + j].copy(tq.open[j]).slerp(_qi, sstep(0, 0.25, c));
+    else q[h0 + 12 + j].identity().slerp(tq.fist[j], (c - 0.25) / 0.75);
+  }
 }
 
 // ------------------------------------------------------------------ FK / IK

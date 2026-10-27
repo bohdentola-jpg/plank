@@ -4,7 +4,7 @@
 // out of that key). spec keys (side-relative limbs, see pose.js):
 //   root [x,y,z,pitch,yaw,roll]  spine/chest/neck/head [flex,twist,side]
 //   clav / clavL / clavR [elev, prot]
-//   arms / armL / armR [elev, plane, twist, elbow, wflex, wdev, pron, fingers]
+//   arms / armL / armR [elev, plane, twist, elbow, wflex, wdev, pron, fingers (0 open … 1 fist … 2 pointing)]
 //   legs / legL / legR [flex, abd, twist, knee, ankle, toe]          (FK legs; feet:false)
 //   hands / handL / handR [x, y, z, space] | false                 (wrist IK; space 0 chest, 1 model, 2 knee, 3 head)
 //   poles / poleL / poleR [x, y, z]

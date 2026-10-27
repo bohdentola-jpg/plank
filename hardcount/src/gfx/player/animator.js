@@ -31,6 +31,7 @@ const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vect
 const _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion();
 const _qI = new THREE.Quaternion();
 const _target = new THREE.Vector3(), _pole = new THREE.Vector3();
+const _m4 = new THREE.Matrix4();
 const _maskM = new Uint8Array(GROUPS.length);
 const TRUNK = [B.chest, B.spine, B.hips];
 
@@ -353,13 +354,17 @@ export class Animator {
   }
 
   reach(A, clip, act, P, dt) {
-    // envelope: clip-defined around its key moment, otherwise on whenever the sim gives a point
+    this.reachPt = A.reach ? this.toModel(A, A.reach, this._reachPt || (this._reachPt = new THREE.Vector3())) : null;
+    // envelope: clip-defined around its key moment; otherwise late hands, up for the ball
+    // only over its last few yards (no running half the route with the arms out)
     let env = 0;
     if (A.reach) {
       if (clip && clip.reach) {
         const t = act.t || 0, [a, b, c, e] = clip.reach;
         env = t < b ? sstep(a, b, t) : 1 - sstep(c, e, t);
-      } else if (!clip) env = 1;
+      } else if (!clip) {
+        env = 1 - sstep(2.2, 4.2, _v1.copy(this.reachPt).sub(this.pos[B.chest]).length() / this.dims.s);
+      }
     }
     const both = !clip || clip.reachHands !== 'side';
     for (let i = 0; i < 2; i++) {
@@ -369,7 +374,6 @@ export class Animator {
       const target = on && !(ballHand && !clip) ? env : 0;
       this.reachW[i] = clip ? target : damp(this.reachW[i], target, 9, dt);
     }
-    this.reachPt = A.reach ? this.toModel(A, A.reach, this._reachPt || (this._reachPt = new THREE.Vector3())) : null;
   }
 
   armIK(P, i) {
@@ -400,13 +404,56 @@ export class Animator {
       T.lerp(_v4, rw);
       w = Math.max(w, rw);
     }
-    // elbow pole (chest frame, x outward)
+    // elbow pole (chest frame, x outward); going for the ball the elbows hang down and out
+    // whatever the clip says, so they never wing up over a ball caught in close
     const pl = i === 0 ? C.POLE_L : C.POLE_R;
-    _pole.set(sg * P[pl], P[pl + 1], P[pl + 2]).applyQuaternion(this.rot[B.chest]);
+    _pole.set(sg * P[pl], P[pl + 1], P[pl + 2]).applyQuaternion(this.rot[B.chest]).normalize();
+    if (rw > 0.001) {
+      _v3.set(sg, 0, 0).applyQuaternion(this.rot[B.chest]);
+      _v3.y = 0;
+      _v3.normalize().multiplyScalar(0.65);
+      _v3.y = -0.75;
+      _pole.lerp(_v3.normalize(), rw);
+    }
     twoBoneIK(this.pos[ua], T, _pole, d.upperArm, d.foreArm, this.rot[cl], false, _q3, _q1);
     if (w >= 0.999) { this.local[ua].copy(_q3); this.local[fa].copy(_q1); }
     else { this.local[ua].slerp(_q3, w); this.local[fa].slerp(_q1, w); }
     fkChain(d, this.local, this.rot, this.pos, ua, ua + 3);
+    if (rw > 0.001) this.palmToBall(i, rw);
+  }
+
+  /**
+   * Going for the ball the palms turn to it: fingers up for a ball at the chest or above
+   * (thumbs in, the diamond), pointing out at it for one below the belt (pinkies in, the basket).
+   */
+  palmToBall(i, rw) {
+    const d = this.dims, R = this.reachPt, sg = i === 0 ? 1 : -1;
+    const fa = i === 0 ? B.foreL : B.foreR, hd = fa + 1;
+    const W = this.pos[hd];
+    const pn = _v1.subVectors(R, W);
+    if (pn.lengthSq() < 1e-6) return;
+    pn.normalize();
+    // fingers: up, tipping toward the ball as it drops below the shoulders
+    const low = sstep(0.1, -0.45, (R.y - this.pos[i === 0 ? B.armL : B.armR].y) / d.s);
+    const fg = _v2.subVectors(R, this.pos[B.chest]).normalize().multiplyScalar(low);
+    fg.y += 1 - low;
+    fg.addScaledVector(pn, -fg.dot(pn));
+    if (fg.lengthSq() < 1e-6) return;
+    fg.normalize();
+    // the hand's frame: palm (−sg x), fingers (−y), thumb (z = x × y)
+    _v3.copy(pn).multiplyScalar(-sg);
+    _v4.copy(fg).negate();
+    _target.crossVectors(_v3, _v4);
+    _m4.makeBasis(_v3, _v4, _target);
+    _q2.setFromRotationMatrix(_m4);
+    // into the forearm's frame; a wrist only goes so far
+    _q1.copy(this.rot[fa]).invert().multiply(_q2);
+    if (_q1.w < 0) { _q1.x = -_q1.x; _q1.y = -_q1.y; _q1.z = -_q1.z; _q1.w = -_q1.w; }
+    const ang = 2 * Math.acos(clamp(_q1.w, -1, 1));
+    const lim = 100 * D2R;
+    if (ang > lim) _q1.copy(_qI.identity()).slerp(_q1, lim / ang);
+    this.local[hd].slerp(_q1, rw * 0.85);
+    fkChain(d, this.local, this.rot, this.pos, hd, hd + 1);
   }
 
   /**

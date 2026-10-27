@@ -142,6 +142,8 @@ export class Locomotion {
       { x: -0.12, z: 0, lx: -0.12, lz: 0, stance: true, prevPh: 0.5, yaw: 0, y: 0, pitch: 0 },
     ];
     this.styleW = { fwd: 1, side: 0, back: 0 };
+    // how this man carries his hands running: most a loose fist, some open blades
+    this.blade = ((seed * 7.31) % 1) < 0.3;
     this.dist = 0;
     // the travel direction in the world and how fast it is turning (smoothed): what banks the body
     this.velDir = null;
@@ -358,14 +360,17 @@ export class Locomotion {
     // (+1 when the left leg reaches forward; the arms lead the legs a touch)
     const legL = Math.cos(TAU * (this.phase + 0.04));
     const pump = 1 + effort * 0.18 * run;
-    const ampF = lerp(lerp(16, 36, run), 58, sprint) * pump;        // forward flexion at the front of the swing
+    // the front of the swing brings the hand up to the chest / chin, not out by the helmet
+    const ampF = lerp(lerp(16, 32, run), 47, sprint) * pump;        // forward flexion at the front of the swing
     const ampB = lerp(lerp(14, 26, run), 42, sprint) * pump;        // extension behind
-    const eFront = lerp(lerp(28, 86, run), 94, sprint);             // elbow bend, front of the swing
+    const eFront = lerp(lerp(28, 86, run), 96, sprint);             // elbow bend, front of the swing
     const eBack = lerp(lerp(16, 66, run), 58, sprint);              // … and behind: the arm opens
+    const legV = Math.sin(TAU * (this.phase + 0.04));                // how fast the arms are swinging
     for (let i = 0; i < 2; i++) {
       const side = i === 0 ? 1 : -1;
       const ch = i === 0 ? C.ARM_L : C.ARM_R;
       const k = -side * legL;                                         // +1: this arm forward
+      const kv = side * legV;                                         // + while it swings forward
       const flex = (lerp(3, 7, run) + (k > 0 ? k * ampF : k * ampB)) * (1 - 0.75 * wSide);
       const abd = lerp(9, 14, run) + (posture === 'block' ? 9 : 0) + wSide * 8;
       // the hand comes in toward the sternum on the front swing; behind, the forearm runs straight back
@@ -375,10 +380,11 @@ export class Locomotion {
       out[ch + 1] = _as[1];
       out[ch + 2] = _as[2];
       out[ch + 3] = lerp(eBack, eFront, (k + 1) / 2);
-      out[ch + 4] = lerp(4, 10, run);
+      // a relaxed wrist: the hand trails the swing a touch, palm in, thumb up
+      out[ch + 4] = lerp(3, 4, run) - 7 * run * kv;
       out[ch + 5] = 0;
-      out[ch + 6] = lerp(5, 15, run);
-      out[ch + 7] = lerp(0.35, 0.6, run);
+      out[ch + 6] = lerp(5, 8, run);
+      out[ch + 7] = this.blade ? lerp(0.3, 0.2, run) : lerp(0.35, 0.55, run);
       const cl = i === 0 ? C.CLAV_L : C.CLAV_R;
       out[cl] = 2 + run * 2 + Math.max(0, k) * 2 * run;
       out[cl + 1] = k * lerp(2, 7, run);                             // the shoulder reaches with the arm

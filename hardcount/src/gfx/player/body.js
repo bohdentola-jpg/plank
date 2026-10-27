@@ -7,8 +7,8 @@
 // torso shape, rigid on the chest bone (their caps follow the clavicles a
 // little). Everything maps into the per-player uniform atlas (layout.js).
 import * as THREE from 'three';
-import { B } from './rig.js';
-import { R, SWATCH, SLEEVE_HEM, uvOf, limbU, headU, headV } from './layout.js';
+import { B, HB, HAND, handScale } from './rig.js';
+import { R, SWATCH, SLEEVE_HEM, HAND_U, uvOf, limbU, headU, headV } from './layout.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const sstep = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
@@ -53,7 +53,8 @@ export class MeshBuilder {
   tri(a, b, c) { this.I.push(a, b, c); }
 
   /**
-   * Loft a tube through rings. ring = { c: Vector3, sec, v, w: (thDeg, x, y, z) => weights, dy?: (thDeg) => metres }
+   * Loft a tube through rings. ring = { c: Vector3, sec, v, w: (thDeg, x, y, z) => weights, dy?: (thDeg) => metres,
+   *   X?, Z?: this ring's own section axes (same handedness as opts) }
    * opts: { X: side axis (θ = 90°), Z: front axis (θ = 0°), A: loft axis (first → last ring),
    *         n, rect, th0 (seam angle, deg), uMap(j/n) → u (default identity) }
    * A ring with sec.pole = true collapses to its centre.
@@ -75,7 +76,8 @@ export class MeshBuilder {
         if (r.sec.pole) p.copy(r.c);
         else {
           sectionPoint(r.sec, th, tmp);
-          p.copy(r.c).addScaledVector(X, tmp[0]).addScaledVector(Z, tmp[1]);
+          // a ring may carry its own section frame (a tube that bends, like the thumb)
+          p.copy(r.c).addScaledVector(r.X || X, tmp[0]).addScaledVector(r.Z || Z, tmp[1]);
           if (r.dy) p.y += r.dy(th);
         }
         pts[i * (n + 1) + j] = p;
@@ -724,29 +726,151 @@ function buildHead(mb, bd, dims, lod) {
 
 // ------------------------------------------------------------------ hands & shoes
 
+const uStrip = ([a, b]) => (u) => a + u * (b - a);
+
 function buildHand(mb, bd, dims, side, lod) {
-  const P = dims.bind, s = bd.s * (0.96 + 0.06 * bd.girth);
+  if (lod !== 'high') { buildMitt(mb, bd, dims, side); return; }
+  const P = dims.bind, s = handScale(bd);
+  const L = side > 0;
+  const wr = P[L ? B.handL : B.handR];
+  const hd = L ? B.handL : B.handR, fa = L ? B.foreL : B.foreR, h0 = HB[L ? 0 : 1];
+  const X = new THREE.Vector3(side, 0, 0), Z = new THREE.Vector3(0, 0, 1), A = new THREE.Vector3(0, -1, 0);
+  const F = HAND.fingers;
+  // across the hand (f, toward the thumb) → the two nearest knuckles and the blend between them
+  const knuckleAt = (f) => {
+    let k = 0;
+    while (k < 2 && f < F[k + 1].f) k++;
+    const u = clamp((F[k].f - f) / (F[k].f - F[k + 1].f), 0, 1);
+    return [h0 + k * 3, h0 + (k + 1) * 3, u];
+  };
+
+  // ---- the palm and the back of the hand: wrist cuff → heel → knuckles, closed past them
+  // [d, half thickness, half width toward the thumb, toward the little finger, toward the back, squareness]
+  const PALM = [
+    [-0.034, 0.0285, 0.033, 0.033, 0.001, 2.4],
+    [-0.014, 0.028, 0.034, 0.033, 0.001, 2.4],
+    [-0.002, 0.0215, 0.032, 0.031, 0.001, 2.5],
+    [0.016, 0.0188, 0.0345, 0.0335, 0.0006, 2.6],
+    [0.04, 0.0184, 0.0385, 0.0365, 0, 2.6],
+    [0.062, 0.0178, 0.0405, 0.0375, 0.0004, 2.6],
+    [0.08, 0.0164, 0.0402, 0.0366, 0.0012, 2.4],
+    [0.09, 0.014, 0.0385, 0.0335, 0.0018, 2.2],
+    [0.097, 0.0096, 0.0335, 0.0285, 0.0018, 2.1],
+    [0.1, 0, 0, 0, 0, 2],
+  ];
+  const d0 = PALM[0][0], d1 = PALM[PALM.length - 1][0];
+  mb.loft(PALM.map(([d, rx, rzF, rzB, cx, sq]) => ({
+    c: wr.clone().addScaledVector(A, d * s),
+    sec: rx === 0 ? { pole: true } : { rx: rx * s, rzF: rzF * s, rzB: rzB * s, cx: cx * s, cz: 0, sq },
+    // the knuckle line runs back toward the little finger
+    dy: d > 0.07 ? (th) => -0.004 * s * Math.cos(th * D2R) * sstep(0.07, 0.09, d) : undefined,
+    v: 1 - (d - d0) / (d1 - d0),
+    w: (th, x, y, z) => {
+      if (d < -0.02) return W(fa, 0.65, hd, 0.35);
+      if (d < 0) return W(fa, 0.35, hd, 0.65);
+      if (d < 0.078) return W(hd, 1);
+      // past the knuckles the palm's end goes some way with the fingers (a fist's knuckles)
+      const k = 0.45 * sstep(0.078, 0.1, d);
+      const [ka, kb, u] = knuckleAt((z - wr.z) / s);
+      return W(hd, 1 - k, ka, k * (1 - u), kb, k * u);
+    },
+  })), { X, Z, A, n: 10, rect: R.HAND, th0: -90, uMap: uStrip(HAND_U.palm) });
+
+  // ---- fingers: a tube from a ball over the knuckle to the tip, bending at both joints
+  F.forEach((fd, k) => {
+    const [l1, l2, l3] = fd.len;
+    const tip = l1 + l2 + l3;
+    const b1 = h0 + k * 3, b2 = b1 + 1, b3 = b1 + 2;
+    const base = wr.clone().addScaledVector(A, fd.d * s).addScaledVector(Z, fd.f * s).addScaledVector(X, -HAND.knuckleP * s);
+    const r0 = fd.r0, r1 = fd.r1;
+    const rAt = (t) => lerp(r0, r1, clamp(t / tip, 0, 1));
+    const j1 = 0.42 * rAt(l1), j2 = 0.38 * rAt(l1 + l2);
+    // [distance from the knuckle, radius factor]
+    // the ball over the knuckle is a little fuller than the finger: a fist's knuckles
+    const st = [
+      [-1.0 * r0, 0], [-0.66 * r0, 0.82], [0, 1.06], [0.5 * l1, 0.95],
+      [l1 - j1, 0.97], [l1 + j1, 0.98], [l1 + 0.55 * l2, 0.92],
+      [l1 + l2 - j2, 0.95], [l1 + l2 + j2, 0.95], [tip - 0.5 * r1, 0.9], [tip - 0.12 * r1, 0.52], [tip, 0],
+    ];
+    mb.loft(st.map(([t, f]) => {
+      const r = rAt(t) * f * s;
+      return {
+        c: base.clone().addScaledVector(A, t * s),
+        sec: f === 0 ? { pole: true } : { rx: r * 0.92, rzF: r, rzB: r, cx: 0.0006 * s, sq: 2.25 },
+        v: 1 - clamp((t + r0) / (tip + r0), 0, 1),
+        w: () => {
+          if (t < l1 - j1 * 1.4) return W(b1, 1);
+          if (t < l1 + j1 * 1.4) { const q = sstep(l1 - j1 * 1.4, l1 + j1 * 1.4, t); return W(b1, 1 - q, b2, q); }
+          if (t < l1 + l2 - j2 * 1.4) return W(b2, 1);
+          if (t < l1 + l2 + j2 * 1.4) { const q = sstep(l1 + l2 - j2 * 1.4, l1 + l2 + j2 * 1.4, t); return W(b2, 1 - q, b3, q); }
+          return W(b3, 1);
+        },
+      };
+    }), { X, Z, A, n: 6, rect: R.HAND, th0: -90, uMap: uStrip(HAND_U.finger) });
+  });
+
+  // ---- the thumb: the heel of the palm (its metacarpal, thick) bending out to the tip.
+  // Sections turn with the thumb: X = the nail side, Z = toward the index finger's front.
+  const T = HAND.thumb;
+  const hdir = (a) => new THREE.Vector3(-side * a[0], -a[1], a[2]).normalize();
+  const dir1 = hdir(T.dir1), dir2 = hdir(T.dir2);
+  const t1 = P[h0 + 12], t2 = P[h0 + 13];
+  const pad = new THREE.Vector3(-side, 0, -0.6);            // where the thumb's pad faces (and bends)
+  const frame = (dir) => {
+    const nx = pad.clone().addScaledVector(dir, -pad.dot(dir)).normalize().negate();   // the nail side
+    const nz = new THREE.Vector3().crossVectors(dir, nx).multiplyScalar(side);
+    return [nx, nz.normalize()];
+  };
+  const [X1, Z1] = frame(dir1), [X2, Z2] = frame(dir2);
+  const Xm = X1.clone().add(X2).normalize(), Zm = Z1.clone().add(Z2).normalize();
+  const [m1, m2, m3] = T.len;
+  const tip = m1 + m2 + m3;
+  // [distance from the base joint, half width, half thickness]
+  const ts = [
+    [-0.012, 0, 0], [-0.007, 0.0105, 0.0095], [0.006, 0.0142, 0.0128], [0.022, 0.0138, 0.0122],
+    [m1 - 0.006, 0.0118, 0.0104], [m1 + 0.006, 0.0112, 0.0098], [m1 + 0.55 * m2, 0.0104, 0.0092],
+    [m1 + m2 - 0.004, 0.0102, 0.0088], [m1 + m2 + 0.005, 0.0099, 0.0086], [tip - 0.006, 0.0088, 0.0074],
+    [tip - 0.0015, 0.0048, 0.004], [tip, 0, 0],
+  ];
+  const b1 = h0 + 12, b2 = h0 + 13, b3 = h0 + 14;
+  mb.loft(ts.map(([t, rz, rx]) => {
+    const c = t <= m1 ? t1.clone().addScaledVector(dir1, t * s) : t2.clone().addScaledVector(dir2, (t - m1) * s);
+    const seg = t < m1 - 0.004 ? 0 : t > m1 + 0.004 ? 2 : 1;
+    return {
+      c,
+      X: seg === 0 ? X1 : seg === 2 ? X2 : Xm, Z: seg === 0 ? Z1 : seg === 2 ? Z2 : Zm,
+      sec: rz === 0 ? { pole: true } : { rx: rx * s, rzF: rz * s, rzB: rz * s, sq: 2.15 },
+      v: 1 - clamp((t + 0.012) / (tip + 0.012), 0, 1),
+      w: () => {
+        // its root stays in the heel of the hand; the knuckle and end joints bend with their bones
+        if (t < 0.016) { const q = sstep(-0.012, 0.016, t); return W(hd, 1 - q, b1, q); }
+        if (t < m1 - 0.007) return W(b1, 1);
+        if (t < m1 + 0.007) { const q = sstep(m1 - 0.007, m1 + 0.007, t); return W(b1, 1 - q, b2, q); }
+        if (t < m1 + m2 - 0.006) return W(b2, 1);
+        if (t < m1 + m2 + 0.006) { const q = sstep(m1 + m2 - 0.006, m1 + m2 + 0.006, t); return W(b2, 1 - q, b3, q); }
+        return W(b3, 1);
+      },
+    };
+  }), { X: X1, Z: Z1, A: dir1, n: 7, rect: R.HAND, th0: -90, uMap: uStrip(HAND_U.thumb) });
+}
+
+/** Far away: a mitten on the hand and fingers bones (no thumb). */
+function buildMitt(mb, bd, dims, side) {
+  const P = dims.bind, s = handScale(bd);
   const L = side > 0;
   const wr = P[L ? B.handL : B.handR];
   const hd = L ? B.handL : B.handR, fg = L ? B.fingL : B.fingR, fa = L ? B.foreL : B.foreR;
   const X = new THREE.Vector3(side, 0, 0), Z = new THREE.Vector3(0, 0, 1), A = new THREE.Vector3(0, -1, 0);
-  const knuck = 0.092;
   // [d below the wrist, rx (thickness), rz (width), cx (toward the back of the hand), cz]
   const rows = [
     [-0.034, 0.029, 0.033, 0.002, 0.0],
-    [-0.012, 0.029, 0.034, 0.002, 0.0],
     [-0.002, 0.022, 0.032, 0.001, 0.0],
-    [0.02, 0.019, 0.037, 0.0, 0.0],
     [0.05, 0.019, 0.043, 0.0, -0.002],
-    [0.08, 0.018, 0.045, 0.001, -0.003],
     [0.1, 0.0165, 0.043, 0.002, -0.004],
-    [0.135, 0.0145, 0.04, 0.003, -0.005],
     [0.162, 0.012, 0.036, 0.004, -0.006],
-    [0.176, 0.006, 0.026, 0.004, -0.006],
     [0.18, 0, 0, 0.004, -0.006],
   ];
-  const keep = lod === 'high' ? rows.filter((r, i) => i !== 1 && i !== 6) : rows.filter((r, i) => i % 2 === 0 || i === rows.length - 1);
-  const rings = keep.map(([d, rx, rz, cx, cz], i) => ({
+  mb.loft(rows.map(([d, rx, rz, cx, cz]) => ({
     c: wr.clone().addScaledVector(A, d * s),
     sec: rx === 0 ? { pole: true } : { rx: rx * s, rzF: rz * s, rzB: rz * s, cx: cx * s, cz: cz * s, sq: 3.0 },
     v: 1 - (d + 0.034) / 0.214,
@@ -757,21 +881,7 @@ function buildHand(mb, bd, dims, side, lod) {
       const k = sstep(0.075, 0.112, d);
       return W(hd, 1 - k, fg, k);
     },
-  }));
-  mb.loft(rings, { X, Z, A, n: lod === 'high' ? 8 : 5, rect: R.HAND, th0: -90, uMap: (u) => u * 0.78 });
-  if (lod !== 'high') return;
-  // thumb: a short tube on the thumb side, angled toward the palm
-  const t0 = wr.clone().add(new THREE.Vector3(-side * 0.008 * s, -0.03 * s, 0.03 * s));
-  const dir = new THREE.Vector3(-side * 0.3, -0.72, 0.62).normalize();
-  const tl = 0.062 * s;
-  const TX = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 0, 1)).normalize();
-  const TZ = new THREE.Vector3().crossVectors(TX, dir).normalize();
-  const trings = [];
-  const tr = [[0, 0.014], [0.3, 0.0135], [0.65, 0.011], [0.9, 0.0085], [1.0, 0.005], [1.03, 0]];
-  for (const [t, r] of tr) {
-    trings.push({ c: t0.clone().addScaledVector(dir, t * tl), sec: r === 0 ? { pole: true } : { rx: r * s, rzF: r * s, rzB: r * s, sq: 2 }, v: 0.5 - t * 0.4, w: () => W(hd, 1) });
-  }
-  mb.loft(trings, { X: TX, Z: TZ, A: dir, n: 5, rect: R.HAND, th0: 0, uMap: (u) => 0.8 + u * 0.18 });
+  })), { X, Z, A, n: 5, rect: R.HAND, th0: -90, uMap: uStrip(HAND_U.palm) });
 }
 
 function buildShoe(mb, bd, dims, side, cut, lod) {

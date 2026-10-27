@@ -297,6 +297,7 @@ export function specialBrain(m, e, dt) {
         }
         e.mem.fielding = true;
         e.goTo(land.x, land.z, 1, headingOf(0, -dir), 0.3);
+        e.reachAt = { x: b.x, y: b.y, z: b.z };     // the hands go up for it as it comes down
         return true;
       }
       if (b.state === 'loose') { e.goTo(b.x, b.z, 1, null, 0.05); return true; }

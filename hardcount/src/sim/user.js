@@ -63,6 +63,7 @@ export function userControl(m, e, cmd, dt, presnap) {
         e.boost = { vx: n.x * 3.2, vz: n.z * 3.2, t: 0.25 };
       }
       if (mag > 0.2) { e.setWant(mv.x, mv.z, s); e.look = { x: b.x, y: b.y, z: b.z }; } else routeBrain(m, e, dt);
+      e.reachAt = { x: b.x, y: b.y, z: b.z };      // the hands go to the ball as it gets near
       return;
     }
     // a defender: play the ball (a career man who leaves the stick alone plays it himself)
@@ -78,6 +79,7 @@ export function userControl(m, e, cmd, dt, presnap) {
     if (P.has('circle')) m.switchDefender(side);
     e.setWant(mv.x, mv.z, s);
     e.look = { x: b.x, y: b.y, z: b.z };
+    if (e.mem.playBall) e.reachAt = { x: b.x, y: b.y, z: b.z };
     return;
   }
 

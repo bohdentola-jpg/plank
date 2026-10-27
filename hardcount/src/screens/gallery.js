@@ -6,6 +6,8 @@
 //   mode=actions  actions=throw,catch_high,juke | all   t=0.25 freezes every clip at that time (else loops)
 //   mode=bases    every BASE stance (bases=stand,ready… | all)
 //   mode=run      runners at 2 / 5 / 8 / 10.5 yd/s, backpedal, shuffle, ball carrier, a banking curve, kick-slide
+//   mode=tread    one man running in place, live (speed, ma, pos, carry, effort): film him close up
+//   mode=hands    hands up close at fixed curls (curls=0,0.5,1  h=heading  base=stand  gloves=0|1)
 //   mode=closeup  head / helmet / facemask turntable: helmets on (every facemask + visors) and off (hair styles)
 //                 which=helmet|bare  finish=chrome|matte|pearl|gloss  stripe=skunk|bolt|…  (override every shell)
 //   mode=huddle   six players in the huddle around a first-person camera at QB eye height (the main menu shot)
@@ -52,8 +54,8 @@ const ACTION_CAST = {
 };
 // reach points (yards, model frame: x left, y up, z forward) for the clips that reach
 const REACH = {
-  catch_chest: [0, 1.5, 0.5], catch_high: [0, 2.65, 0.35], catch_low: [0, 0.22, 0.65], catch_dive: [0, 0.75, 1.25],
-  catch_shoulder: [0.25, 1.95, -0.15], catch_side: [-0.75, 1.5, 0.35], catch_onehand: [-0.45, 2.4, 0.35], catch_snap: [0, 1.25, 0.5],
+  catch_chest: [0, 1.45, 0.75], catch_high: [0, 2.65, 0.35], catch_low: [0, 0.22, 0.65], catch_dive: [0, 0.75, 1.25],
+  catch_shoulder: [0.25, 1.95, -0.15], catch_side: [-0.75, 1.5, 0.35], catch_onehand: [-0.45, 2.4, 0.35], catch_snap: [0, 1.25, 0.65],
   swat: [-0.3, 2.25, 0.45], jump_swat: [-0.25, 2.95, 0.35], strip: [-0.1, 1.15, 0.55], jam: [0, 1.4, 0.6], tackle: [0, 1.05, 0.6],
 };
 
@@ -362,6 +364,37 @@ registerScreen('gallery', () => {
     orbit = { az: 0, el: 4, dist: n * 1.25 * 1.05 };
   }
 
+  // hands up close: one man per curl (curls=0,0.5,1 …), the right hand toward the camera
+  // (h = heading in degrees, base = stance, gloves=0|1 overrides the look)
+  function handsMode() {
+    const team = getTeam(q.get('team') || 'det');
+    const curls = (q.get('curls') || '0,0.25,0.45,0.65,0.85,1').split(',').map(Number);
+    const gl = q.get('gloves');
+    const h = parseFloat(q.get('h') || '90') * D2R;
+    curls.forEach((c, i) => {
+      const pick = rosterPick(team, 'WR', i);
+      const p = gl === null ? pick : { ...pick, look: { ...pick.look, gloves: gl === '1' } };
+      const m = createPlayerModel({ team, kit: 'home', player: p, lod });
+      m.curlOverride = c;
+      add(m, blankA({ x: (i - (curls.length - 1) / 2) * 0.44, z: 0, heading: h, base: q.get('base') || 'stand' }), c.toFixed(2));
+    });
+    focus.set(0, 0.84, 0.15);
+    orbit = { az: 0, el: 4, dist: 2.2 };
+  }
+
+  // one man running in place, live (film it frame by frame from close up)
+  function treadMode() {
+    const team = getTeam(q.get('team') || 'det');
+    const speed = parseFloat(q.get('speed') || '7');
+    const ma = parseFloat(q.get('ma') || '0') * D2R;
+    const pos = q.get('pos') || 'RB';
+    const model = createPlayerModel({ team, kit: q.get('kit') || 'home', player: rosterPick(team, pos), lod });
+    const A = blankA({ x: 0, z: 0, heading: Math.PI / 2 - ma, speed, moveAngle: ma, effort: parseFloat(q.get('effort') || String(Math.min(1, speed / 10))), base: q.get('base') || 'stand', carry: q.get('carry') || null });
+    add(model, A, `${speed} YD/S`);
+    focus.set(0, 1.0, 0);
+    orbit = { az: 0, el: 6, dist: 3.4 };
+  }
+
   // filmstrip of one action: copies frozen at evenly spaced moments (plus its key moments)
   function clipMode() {
     const name = q.get('action') || 'throw';
@@ -605,6 +638,8 @@ registerScreen('gallery', () => {
   }
 
   function applyCamParam() {
+    const f = q.get('focus');            // focus=x,y,z moves what the orbit camera looks at
+    if (f) { const [x, y, z] = f.split(',').map(parseFloat); focus.set(x || 0, y || 0, z || 0); }
     const c = q.get('cam');
     if (!c) return;
     const presets = { front: [0, 8], back: [180, 8], side: [90, 6], top: [0, 70], low: [15, -2] };
@@ -626,7 +661,7 @@ registerScreen('gallery', () => {
       if (q.get('crt') === '0') { savedCrt = game.renderer.crt; game.renderer.crt = 0; }
       game.renderer.setPost({ bloomStrength: 0.7, vignette: 0.4, exposure: night ? 1.05 : 1.0 }, true);
       lights();
-      ({ lineup, actions: actionsMode, bases: basesMode, run: runMode, stride: strideMode, clip: clipMode, engage: engageMode, look: lookMode, closeup: closeupMode, huddle: huddleMode, ball: ballMode, perf: perfMode, redress: redressMode }[mode] || lineup)();
+      ({ lineup, actions: actionsMode, bases: basesMode, run: runMode, stride: strideMode, tread: treadMode, hands: handsMode, clip: clipMode, engage: engageMode, look: lookMode, closeup: closeupMode, huddle: huddleMode, ball: ballMode, perf: perfMode, redress: redressMode }[mode] || lineup)();
       applyCamParam();
       if (q.get('bones') === '1' && items[0]?.model) {
         helper = new THREE.SkeletonHelper(items[0].model.group);
@@ -635,7 +670,11 @@ registerScreen('gallery', () => {
       // settle everyone into their first pose (fixed steps; frozen clips get a full second)
       const pre = freezeT !== null ? 60 : 3;
       for (let i = 0; i < pre; i++) for (const it of items) if (it.model && !it.strip) { tickItem(it, 1 / 60, 0); it.model.update(1 / 60, it.A); }
-      window.__gallery = { items, scene, camera, stats: () => items.filter((it) => it.model).map((it) => it.model.stats()) };
+      window.__gallery = {
+        items, scene, camera, stats: () => items.filter((it) => it.model).map((it) => it.model.stats()),
+        // QA: aim the orbit camera (focus [x, y, z], orbit { az, el, dist })
+        aim: (f, o) => { if (f) focus.set(f[0], f[1], f[2]); if (o) Object.assign(orbit, o); },
+      };
       if (q.get('debug') === '1') {
         for (const it of items.slice(0, 4)) {
           if (!it.model) continue;

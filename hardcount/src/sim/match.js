@@ -563,6 +563,9 @@ export class Match {
   /** One player's decision for this tick. */
   think(e, dt) {
     const b = this.ball;
+    // the hands only go for the ball while a brain says so this tick (it isn't left hanging
+    // in the air once the ball's been caught, batted or dropped)
+    e.reachAt = null;
     if (e.state === 'falling' || e.state === 'down' || e.state === 'dead') return;
     if (e.onGround) {
       if (e.recover <= 0 && !e.action) { e.act(e.base === 'lie_back' ? 'getup_back' : 'getup_front'); e.recover = 1.2; }

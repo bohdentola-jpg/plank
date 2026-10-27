@@ -14,7 +14,7 @@
 import * as THREE from 'three';
 import { M_TO_YD } from '../../sim/field.js';
 import { makeRng, hashString } from '../../core/util.js';
-import { B, NB, PARENT, BONE_NAMES, makeBuild, makeRigDims } from './rig.js';
+import { B, NB, NBX, PARENT, BONE_NAMES, makeBuild, makeRigDims, handPose, fingersCurl, qFingers } from './rig.js';
 import { buildBody, headCenter, headScale, MeshBuilder, armCapR, legCapR, torsoProfile } from './body.js';
 import { paintAtlas, REF_KIT } from './atlas.js';
 import { makeBodyMaterial, visorMaterial } from './materials.js';
@@ -173,10 +173,11 @@ class PlayerModel {
     // skeleton
     if (!this.bones) {
       this.bones = BONE_NAMES.map((n) => { const b = new THREE.Bone(); b.name = n; return b; });
-      for (let i = 1; i < NB; i++) this.bones[PARENT[i]].add(this.bones[i]);
+      for (let i = 1; i < NBX; i++) this.bones[PARENT[i]].add(this.bones[i]);
       this.skeleton = new THREE.Skeleton(this.bones, this.bones.map(() => new THREE.Matrix4()));
+      this.boneQ = this.bones.map((b) => b.quaternion);
     }
-    for (let i = 0; i < NB; i++) {
+    for (let i = 0; i < NBX; i++) {
       this.bones[i].position.copy(d.off[i]);
       this.bones[i].quaternion.identity();
       const bp = d.bind[i];
@@ -289,6 +290,14 @@ class PlayerModel {
     if (A.dirt !== undefined && A.dirt !== this.dirt) this.setDirt(A.dirt);
     this.animator.update(dt, A);
     this.animator.writeBones(this.bones);
+    // up close the fingers and thumbs bend joint by joint, from the fingers channel; far away
+    // the mitten's one joint stops at a fist (pointing is up close only)
+    for (let si = 0; si < 2; si++) {
+      const fq = this.boneQ[si ? B.fingR : B.fingL], sg = si ? -1 : 1;
+      const curl = this.curlOverride ?? fingersCurl(fq, sg);
+      if (this.lod === 'high') handPose(this.boneQ, si, curl);
+      else if (curl > 1) qFingers(fq, sg, 1);
+    }
     if (this.flag) {
       const throwing = A.action?.name === 'sig_flag' && (A.action.t || 0) < (ACTIONS.sig_flag.key.release);
       this.flag.visible = this.flagOn || throwing;
@@ -401,7 +410,7 @@ class PlayerModel {
     if (this.helmet?.visible) { tris += this.helmet.geometry.index.count / 3; calls++; }
     if (this.visor?.visible) { tris += this.visor.geometry.index.count / 3; calls++; }
     if (this.cap) { tris += this.cap.geometry.index.count / 3; calls++; }
-    return { tris: Math.round(tris), calls, bones: NB };
+    return { tris: Math.round(tris), calls, bones: this.lod === 'high' ? NBX : NB };
   }
 
   dispose() {
