@@ -710,6 +710,18 @@ export class Match {
     return this.handedOff || this.playKind === 'qbrun' || (c.mem.phase === 'scramble' && (c.z - this.los) * this.offDir > 0) || (c.z - this.los) * this.offDir > 0.5;
   }
   ballThrown() { const b = this.ball; return b.state === 'air' && (b.kind === 'pass' || b.kind === 'tip') && b.lastTeam === this.offSide; }
+  /**
+   * The score as the broadcast shows it: points go up at the whistle (the sim adds them
+   * when the play is applied, after the celebration and the replay), unless a flag is down.
+   */
+  scoreShown() {
+    const r = this.result, s = { ...this.score };
+    if (this.phase !== 'post' || !r || this.flags.length) return s;
+    const off = r.offense;
+    const add = { td: [r.side, 6], safety: [other(r.side), 2], fgGood: [off, 3], patGood: [off, 1], twoGood: [off, 2], defTwo: [other(off), 2] }[r.type];
+    if (add) s[add[0]] += add[1];
+    return s;
+  }
   runCarrier() { return this.offense.find((e) => e.asg?.type === 'carrierDesignate') || null; }
   holePoint() { return this.runHole || { x: this.ballX, z: this.los }; }
   optionLive(e) { return (this.playKind === 'option') && e.side === this.offSide && !this.optionDone && (this.los - e.z) * this.offDir > -1 && (e === this.qb); }

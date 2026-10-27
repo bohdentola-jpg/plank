@@ -900,7 +900,8 @@ class MatchScreen {
     panel(ctx, 300, 150, 424, 162 + P.menu.items.length * 40, { accentLen: 260 });
     vText(ctx, 'PAUSED', 340, 206, 34, { color: '#ffffff', weight: 0.2 });
     const m = this.m;
-    const sub = this.drill && this.drill.id !== 'twominute' ? `PRACTICE  ·  ${this.drill.name}` : `${m.teams.away.abbr} ${m.score.away}  ·  ${m.teams.home.abbr} ${m.score.home}  ·  ${quarterText(m)} ${fmtClock(m.clock)}`;
+    const sc = m.scoreShown();
+    const sub = this.drill && this.drill.id !== 'twominute' ? `PRACTICE  ·  ${this.drill.name}` : `${m.teams.away.abbr} ${sc.away}  ·  ${m.teams.home.abbr} ${sc.home}  ·  ${quarterText(m)} ${fmtClock(m.clock)}`;
     text(ctx, sub, 342, 234, { size: 14, weight: 800, color: C.dim, spacing: 1 });
     P.menu.draw(ctx, 352, 286, 340, { rowH: 40, size: 20 });
     if (P.confirm) {
@@ -1048,9 +1049,10 @@ class MatchScreen {
         this._sbT = this.t;
         // the boards in the stadium (gfx/stadium/scoreboard.js state)
         const td = this.post?.r && (this.post.r.type === 'td' || this.post.r.type === 'twoGood') && m.phase === 'post';
+        const sc = m.scoreShown();
         this.world.venue.setScoreboard({
-          home: { abbr: m.teams.home.abbr, score: m.score.home, timeouts: m.timeouts.home },
-          away: { abbr: m.teams.away.abbr, score: m.score.away, timeouts: m.timeouts.away },
+          home: { abbr: m.teams.home.abbr, score: sc.home, timeouts: m.timeouts.home },
+          away: { abbr: m.teams.away.abbr, score: sc.away, timeouts: m.timeouts.away },
           quarter: m.quarter, clock: `${Math.floor(Math.ceil(Math.max(0, m.clock)) / 60)}:${String(Math.ceil(Math.max(0, m.clock)) % 60).padStart(2, '0')}`,
           playClock: m.phase === 'presnap' && this.playClock !== null ? Math.ceil(Math.max(0, this.playClock)) : '',
           down: m.tryMode || (m.playKind === 'kickoff' && m.phase !== 'playcall') || m.phase === 'kickoff' ? 0 : m.down,

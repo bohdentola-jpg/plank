@@ -129,8 +129,9 @@ export class Hud {
     for (const t of this.toasts) t.t += dt;
     this.toasts = this.toasts.filter((t) => t.t < t.dur);
     if (m) {
-      if (this.lastScore) for (const s of ['home', 'away']) if (m.score[s] !== this.lastScore[s]) this.scoreFlash[s] = 1.6;
-      this.lastScore = { ...m.score };
+      const sc = m.scoreShown?.() ?? m.score;
+      if (this.lastScore) for (const s of ['home', 'away']) if (sc[s] !== this.lastScore[s]) this.scoreFlash[s] = 1.6;
+      this.lastScore = sc;
       for (const s of ['home', 'away']) this.scoreFlash[s] = Math.max(0, this.scoreFlash[s] - dt);
     }
   }
@@ -149,6 +150,7 @@ export class Hud {
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.fillRect(x + 4, y + 5, W, H);
     // the two teams: away on the left, home on the right (the way the old bugs read)
+    const score = m.scoreShown?.() ?? m.score;
     for (const side of ['away', 'home']) {
       const team = m.teams[side];
       const col = team.colors.primary;
@@ -171,7 +173,7 @@ export class Hud {
       // score (flashes white when it changes)
       const fl = this.scoreFlash[side];
       glossBar(ctx, x, y, scoreW, H, fl > 0 && Math.floor(fl * 6) % 2 === 0 ? '#f4f4f4' : '#262c38', fl > 0 && Math.floor(fl * 6) % 2 === 0 ? '#d8d8d8' : '#05070b');
-      vText(ctx, String(m.score[side]), x + scoreW / 2, y + 30, 25, { align: 'center', color: fl > 0 && Math.floor(fl * 6) % 2 === 0 ? '#111' : '#fff', weight: 0.2, skew: -0.08 });
+      vText(ctx, String(score[side]), x + scoreW / 2, y + 30, 25, { align: 'center', color: fl > 0 && Math.floor(fl * 6) % 2 === 0 ? '#111' : '#fff', weight: 0.2, skew: -0.08 });
       x += scoreW;
     }
     // quarter + clock
