@@ -265,7 +265,7 @@ export function applyGame(c, result) {
   const xp = GRADE_XP[grade] + (won ? 60 : 0) + (g.kind !== 'regular' ? 120 : 0);
   c.xp += xp;
   const opp = getTeam(g.opp);
-  headline(c, gameHeadline(c, opp, us, them, won, line));
+  headline(c, gameHeadline(c, opp, us, them, won, line, grade));
   reactTexts(c, g, won, grade, opp);
   s.week = g.week;
   advanceSeason(c);
@@ -280,12 +280,22 @@ function pickLine(pos, s) {
   return `${s.tackles || 0} TKL${s.sacks ? `, ${s.sacks} SACK` : ''}${s.ints ? `, ${s.ints} INT` : ''}${s.passDefended ? `, ${s.passDefended} PD` : ''}`;
 }
 
-function gameHeadline(c, opp, us, them, won, line) {
-  const me = getTeam(c.team);
+// the verb agrees with the team: THE GRIZZLIES ROUT, THE TIDE ROUTS
+const verb = (team, plural, singular) => (/(S|MEN)$/.test(team) ? plural : singular);
+
+function gameHeadline(c, opp, us, them, won, line, grade) {
+  const me = getTeam(c.team).name.toUpperCase(), op = opp.name.toUpperCase();
   const nm = c.player.last.toUpperCase();
-  if (won && us - them >= 21) return `${me.name.toUpperCase()} ROUT ${opp.name.toUpperCase()} ${us}-${them}; ${nm}: ${line}`;
-  if (won) return `${nm} LEADS ${me.name.toUpperCase()} PAST ${opp.name.toUpperCase()}, ${us}-${them}`;
-  return `${opp.name.toUpperCase()} HOLD OFF ${me.name.toUpperCase()} ${them}-${us} DESPITE ${nm} (${line})`;
+  // the paper only writes about you when you did something
+  const good = /^[AB]/.test(grade || '');
+  if (won) {
+    if (us - them >= 21) return `${me} ${verb(me, 'ROUT', 'ROUTS')} ${op} ${us}-${them}${good ? `; ${nm}: ${line}` : ''}`;
+    if (good) return `${nm} LEADS ${me} PAST ${op}, ${us}-${them}`;
+    return `${me} ${us - them <= 3 ? verb(me, 'EDGE', 'EDGES') : verb(me, 'BEAT', 'BEATS')} ${op} ${us}-${them}`;
+  }
+  const by = them - us;
+  const how = by <= 7 ? verb(op, 'HOLD OFF', 'HOLDS OFF') : by >= 21 ? verb(op, 'ROUT', 'ROUTS') : verb(op, 'BEAT', 'BEATS');
+  return `${op} ${how} ${me} ${them}-${us}${good ? ` DESPITE ${nm} (${line})` : ''}`;
 }
 
 function reactTexts(c, g, won, grade, opp) {
