@@ -231,6 +231,16 @@ class MatchScreen {
       case 'twoMinute':
         hud.banner('TWO-MINUTE WARNING', { color: '#ffd23a', kind: 'info', dur: 2.6 });
         break;
+      case 'overtime': {
+        // a possession each from the 20; from the third round on, two-point tries
+        const n = ev.round;
+        const ord = n === 2 ? '2ND' : n === 3 ? '3RD' : `${n}TH`;
+        hud.banner(n === 1 ? 'OVERTIME' : n === 3 ? 'TWO-POINT SHOOTOUT' : `${ord} OVERTIME`, {
+          color: '#ffd23a', kind: 'info', big: true, dur: 3.4,
+          sub: `${m.teams[ev.first].abbr} ${n >= 3 ? 'GO FIRST' : 'BALL FIRST'}`,
+        });
+        break;
+      }
       case 'quarterEnd':
         if (ev.quarter === 1 || ev.quarter === 3) hud.banner(`END OF ${quarterText({ quarter: ev.quarter, phase: '' })} QUARTER`, { color: '#38383e', kind: 'info', dur: 2.6 });
         break;

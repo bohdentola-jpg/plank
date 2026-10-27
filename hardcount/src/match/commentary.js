@@ -48,6 +48,9 @@ const L = {
   safety: ['SAFETY! TWO POINTS FOR {team}!'],
   tod: ['TURNOVER ON DOWNS. THE DEFENSE HOLDS!', 'STOPPED SHORT! {team} TAKE{s} OVER.'],
   twoMin: ['TWO-MINUTE WARNING.', 'AND THAT\'LL BRING US TO THE TWO-MINUTE WARNING.'],
+  ot: ['WE ARE GOING TO OVERTIME! {team} GET{s} THE BALL FIRST.', 'NOBODY BLINKED. IT\'S OVERTIME, AND {team} START{s} WITH THE BALL.'],
+  ot2: ['STILL TIED! ANOTHER ROUND OF OVERTIME.', 'NEITHER ONE WILL GO AWAY. WE PLAY ON.'],
+  shootout: ['STILL TIED! NOW IT\'S A SHOOTOUT: TWO-POINT TRIES, ONE EACH.', 'A SHOOTOUT! TWO-POINT TRIES UNTIL SOMEBODY MISSES.'],
   qEnd: ['THAT WILL DO IT FOR THE QUARTER.', 'END OF THE QUARTER HERE.'],
   half: ['THAT\'S HALFTIME. {lead}.', 'WE\'LL TAKE A BREAK. AT THE HALF, {lead}.'],
   final: ['AND THAT\'S THE BALLGAME. FINAL SCORE, {lead}.', 'IT\'S OVER! {lead}.'],
@@ -166,6 +169,7 @@ export class Booth {
       case 'firstDown': if (this.rng() < 0.55) this.say('firstDown', {}, 0.5); break;
       case 'turnoverOnDowns': this.say('tod', teamVars(m, m.defSide), 0.4); break;
       case 'twoMinute': this.say('twoMin'); break;
+      case 'overtime': this.say(ev.round === 1 ? 'ot' : ev.round === 3 ? 'shootout' : 'ot2', teamVars(m, ev.first), 0.6); break;
       case 'quarterEnd': if (ev.quarter === 1 || ev.quarter === 3) this.say('qEnd', {}, 0.4); break;
       case 'halftime': this.say('half', { lead: this.lead() }, 0.6); break;
       case 'final': this.say('final', { lead: this.lead() }, 0.6); break;

@@ -180,7 +180,7 @@ export class Hud {
     glossBar(ctx, x, y, midW, H, '#38383e', '#0c0c0f');
     text(ctx, quarterText(m), x + 10, y + 26, { size: 15, weight: 800, color: '#ffd23a', italic: true, spacing: 1 });
     const live = m.clockRunning && m.phase === 'live';
-    vText(ctx, m.phase === 'final' || m.phase === 'halftime' ? '' : fmtClock(m.clock), x + midW - 10, y + 29, 21, { align: 'right', color: live ? '#ffffff' : '#dde3ee', weight: 0.18, skew: -0.06 });
+    vText(ctx, m.phase === 'final' || m.phase === 'halftime' || m.ot ? '' : fmtClock(m.clock), x + midW - 10, y + 29, 21, { align: 'right', color: live ? '#ffffff' : '#dde3ee', weight: 0.18, skew: -0.06 });
     x += midW;
     // down & distance (yellow FLAG when there's laundry on the field)
     const flag = s.flag;
