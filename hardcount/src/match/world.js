@@ -248,7 +248,7 @@ export class MatchWorld {
     }
 
     // broadcast furniture
-    this.rings = [makeRing(0x46e8ff), makeRing(0xff9a2a)];
+    this.rings = [makeRing(0xffd23a), makeRing(0x8fbcff)];
     for (const r of this.rings) this.scene.add(r);
     this.arrow = makeArrow();
     this.scene.add(this.arrow);
@@ -419,7 +419,7 @@ export class MatchWorld {
       ring.rotation.y = f.h;
       const pulse = 1 + Math.sin(this.time * 6) * 0.05;
       ring.scale.set(pulse, 1, pulse);
-      ring.children[0].material.color.set(opts.ringColors?.[side] || (side === 'home' ? 0x46e8ff : 0xff9a2a));
+      ring.children[0].material.color.set(opts.ringColors?.[side] || (side === 'home' ? 0xffd23a : 0x8fbcff));
     }
   }
 

@@ -1,6 +1,7 @@
 // 2D UI toolkit for the canvas layer (1024×768 logical units). Mid-2000s
-// console look: slanted smoked-glass panels, amber/cyan accents, chunky italic
-// display type (font.js), controller glyphs that match the device in use.
+// console look: slanted smoked-glass panels in graphite, HARD COUNT red with
+// broadcast gold, heavy varsity block display type (font.js), condensed
+// gothic body copy, controller glyphs that match the device in use.
 import { vText, vWidth } from './font.js';
 import { input } from './input.js';
 import { clamp } from './util.js';
@@ -9,12 +10,12 @@ export const W = 1024;
 export const H = 768;
 
 export const C = {
-  panel: 'rgba(7,10,18,0.80)',
-  panel2: 'rgba(14,19,32,0.86)',
-  edge: 'rgba(160,180,220,0.20)',
-  accent: '#ffb21e',
-  accentDim: '#a8700f',
-  cyan: '#46e8ff',
+  panel: 'rgba(11,11,13,0.82)',
+  panel2: 'rgba(20,20,24,0.88)',
+  edge: 'rgba(235,235,245,0.16)',
+  accent: '#ff3a2c',
+  accentDim: '#9c1f15',
+  gold: '#ffd23a',
   text: '#eef1f7',
   dim: '#8c95a8',
   faint: '#4a5266',
@@ -23,7 +24,8 @@ export const C = {
   blue: '#5aa9ff',
 };
 
-export const BODY_FONT = '"Bahnschrift", "Segoe UI", "DIN Alternate", "Helvetica Neue", Arial, sans-serif';
+// a condensed sports gothic: Franklin Gothic ships with Windows, Arial Narrow with macOS
+export const BODY_FONT = '"Franklin Gothic Medium", "Franklin Gothic", "Arial Narrow", "Roboto Condensed", "Liberation Sans Narrow", "Helvetica Neue", Arial, sans-serif';
 export const MONO_FONT = '"Consolas", "Lucida Console", "DejaVu Sans Mono", "Courier New", monospace';
 
 export { vText, vWidth };
@@ -97,7 +99,7 @@ export function panel(ctx, x, y, w, h, opts = {}) {
   ctx.lineTo(x, y + h);
   ctx.closePath();
   const g = ctx.createLinearGradient(0, y, 0, y + h);
-  g.addColorStop(0, opts.fillTop || 'rgba(22,28,44,0.86)');
+  g.addColorStop(0, opts.fillTop || 'rgba(30,30,34,0.88)');
   g.addColorStop(1, opts.fill || C.panel);
   ctx.fillStyle = g;
   ctx.shadowColor = 'rgba(0,0,0,0.55)';
@@ -119,26 +121,38 @@ export function panel(ctx, x, y, w, h, opts = {}) {
   ctx.restore();
 }
 
-/** Header strip: big italic stroke-font title with an underline swoosh. */
+/** Jersey-twill lettering: white block letters, a red tackle-twill border, a black edge. */
+export function twill(ctx, str, x, y, size, opts = {}) {
+  const base = { align: opts.align, weight: opts.weight ?? 0.17, spacing: opts.spacing, skew: opts.skew };
+  vText(ctx, str, x, y, size, { ...base, color: '#000', outline: size * 0.16, outlineColor: 'rgba(0,0,0,0.85)', shadow: [size * 0.06, size * 0.09, 'rgba(0,0,0,0.55)'] });
+  vText(ctx, str, x, y, size, { ...base, color: opts.color || '#ffffff', outline: size * 0.075, outlineColor: opts.trim || C.accent });
+}
+
+/** Two sleeve stripes under a title: red, then a thin gold one. */
+export function stripes(ctx, x, y, w, opts = {}) {
+  ctx.save();
+  const fade = (col, a) => {
+    const g = ctx.createLinearGradient(x, 0, x + w, 0);
+    g.addColorStop(0, col);
+    g.addColorStop(0.75, col);
+    g.addColorStop(1, a);
+    return g;
+  };
+  ctx.fillStyle = fade(opts.color || C.accent, 'rgba(255,58,44,0)');
+  ctx.fillRect(x, y, w, opts.h || 5);
+  ctx.fillStyle = fade(C.gold, 'rgba(255,210,58,0)');
+  ctx.fillRect(x, y + (opts.h || 5) + 3, w * 0.8, 2);
+  ctx.restore();
+}
+
+/** Header strip: big block title over two sleeve stripes. */
 export function header(ctx, title, sub, x = 64, y = 86, opts = {}) {
   vText(ctx, title, x, y, opts.size || 40, {
     color: C.text, weight: 0.16, outline: 3, outlineColor: 'rgba(0,0,0,0.75)', shadow: [3, 4, 'rgba(0,0,0,0.6)'],
   });
   const w = vWidth(title, opts.size || 40);
-  const g = ctx.createLinearGradient(x, 0, x + w + 260, 0);
-  g.addColorStop(0, opts.color || C.accent);
-  g.addColorStop(1, 'rgba(255,178,30,0)');
-  ctx.save();
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.moveTo(x - 6, y + 10);
-  ctx.lineTo(x + w + 260, y + 10);
-  ctx.lineTo(x + w + 254, y + 14);
-  ctx.lineTo(x - 10, y + 14);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-  if (sub) text(ctx, sub, x + 2, y + 36, { size: 15, color: C.dim, weight: 600, spacing: 2 });
+  stripes(ctx, x - 4, y + 9, w + 260, { color: opts.color });
+  if (sub) text(ctx, sub, x + 2, y + 38, { size: 15, color: C.dim, weight: 600, spacing: 2 });
 }
 
 // ------------------------------------------------------------------ glyphs

@@ -156,21 +156,29 @@ export function buildSideline(ctx, B, opts = {}) {
     }
   });
 
-  // ---- sticks, chain, down box
+  // ---- sticks, chain, down box: orange poles with black feet and grips and
+  // the marker drums on top, so from the booth they read as the chain gang's
+  // gear and not as stray lines rising off the field
   const gear = new THREE.Group();
   gear.name = 'chains';
-  const stickMat = new THREE.MeshStandardMaterial({ color: 0x18181a, roughness: 0.5, metalness: 0.4 });
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0xff6a14, roughness: 0.55, emissive: 0xff4a00, emissiveIntensity: 0.22 });
+  const rubberMat = new THREE.MeshStandardMaterial({ color: 0x1d1d20, roughness: 0.85 });
   const markMat = new THREE.MeshStandardMaterial({ color: 0xff5a0a, roughness: 0.6, emissive: 0xff3a00, emissiveIntensity: 0.4 });
-  const stickGeo = new THREE.CylinderGeometry(0.025, 0.025, 2.6, 6);
-  stickGeo.translate(0, 1.3, 0);
-  const markGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.08, 14);
-  markGeo.rotateX(Math.PI / 2);
-  markGeo.translate(0, 2.55, 0);
+  const shaftGeo = new THREE.CylinderGeometry(0.042, 0.048, 2.15, 8);
+  shaftGeo.translate(0, 0.2 + 2.15 / 2, 0);
+  const footGeo = new THREE.CylinderGeometry(0.06, 0.07, 0.22, 8);
+  footGeo.translate(0, 0.11, 0);
+  const gripGeo = new THREE.CylinderGeometry(0.058, 0.058, 0.34, 8);
+  gripGeo.translate(0, 1.32, 0);
+  const markGeo = new THREE.CylinderGeometry(0.17, 0.17, 0.4, 14);
+  markGeo.translate(0, 2.4 + 0.2, 0);
+  const capGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.05, 14);
+  capGeo.translate(0, 2.4 + 0.42, 0);
   const sticks = [];
   for (let i = 0; i < 3; i++) {
     const g = new THREE.Group();
-    g.add(new THREE.Mesh(stickGeo, stickMat));
-    if (i < 2) g.add(new THREE.Mesh(markGeo, markMat));
+    g.add(new THREE.Mesh(shaftGeo, poleMat), new THREE.Mesh(footGeo, rubberMat), new THREE.Mesh(gripGeo, rubberMat));
+    if (i < 2) g.add(new THREE.Mesh(markGeo, markMat), new THREE.Mesh(capGeo, rubberMat));
     g.children.forEach((m) => { m.castShadow = true; });
     gear.add(g);
     sticks.push(g);
@@ -185,11 +193,13 @@ export function buildSideline(ctx, B, opts = {}) {
   const dTex = tex(dc, { repeat: false, aniso: 4 });
   dTex.repeat.set(0.25, 1);
   const boxMesh = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.42, 0.42), new THREE.MeshStandardMaterial({ map: dTex, roughness: 0.6, emissive: 0xffffff, emissiveMap: dTex, emissiveIntensity: 0.25 }));
-  boxMesh.position.y = 2.75;
+  boxMesh.position.y = 2.56;
+  boxMesh.castShadow = true;
   sticks[2].add(boxMesh);
-  const chainGeo = new THREE.BoxGeometry(0.04, 0.03, 1);
-  chainGeo.translate(0, 0.02, 0.5);
-  const chain = new THREE.Mesh(chainGeo, new THREE.MeshStandardMaterial({ color: 0x9a9a92, roughness: 0.4, metalness: 0.8 }));
+  // the chain: galvanized and thin (dark polished steel read as a black line drawn along the sideline)
+  const chainGeo = new THREE.BoxGeometry(0.03, 0.02, 1);
+  chainGeo.translate(0, 0.015, 0.5);
+  const chain = new THREE.Mesh(chainGeo, new THREE.MeshStandardMaterial({ color: 0xd4d4cc, roughness: 0.5, metalness: 0.3, emissive: 0x2a2a28 }));
   gear.add(chain);
   group.add(gear);
 

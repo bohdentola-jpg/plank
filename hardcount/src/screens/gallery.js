@@ -181,7 +181,7 @@ registerScreen('gallery', () => {
     const front = [['QB', 0], ['WR', 0], ['CB', 0], ['RB', 0], ['S', 0], ['K', 0], ['WR', 1], ['CB', 1]];
     const rear = [['G', 0], ['DL', 0], ['TE', 0], ['LB', 0], ['C', 0], ['DL', 1], ['LB', 1], ['G', 1]];
     let col = 0;
-    for (const team of TEAMS) {
+    for (const team of TEAMS.slice(0, 4)) {
       for (const kit of ['home', 'away']) {
         const x = (col - 3.5) * 1.25;
         const [fp, fi] = front[col], [rp, ri] = rear[col];
@@ -694,7 +694,7 @@ registerScreen('gallery', () => {
         if (v.z > 1) continue;
         const x = (v.x + 1) * 512, y = (1 - v.y) * 384;
         text(ctx, it.label.toUpperCase(), x, y + 14, { size: 11, align: 'center', color: '#e8eefc', weight: 700 });
-        if ((freezeT === null || keyName) && it.action && it.A.action) text(ctx, it.A.action.t.toFixed(2), x, y + 27, { size: 10, align: 'center', color: '#ffb21e' });
+        if ((freezeT === null || keyName) && it.action && it.A.action) text(ctx, it.A.action.t.toFixed(2), x, y + 27, { size: 10, align: 'center', color: '#ff3a2c' });
       }
       // atlas=N: show model N's uniform atlas (QA)
       if (q.has('atlas')) {
@@ -704,8 +704,8 @@ registerScreen('gallery', () => {
       const st = items.find((it) => it.model)?.model.stats();
       const head = `GALLERY · ${mode.toUpperCase()} · ${items.length} MODELS` + (st ? ` · ${st.tris} TRIS / ${st.calls} CALLS / ${st.bones} BONES (FIRST)` : '') + ` · ANIM ${perf.ms.toFixed(2)} MS`;
       text(ctx, head, 24, 30, { size: 13, color: '#9fb4d8', weight: 700 });
-      if (perf.bench) text(ctx, `BENCH ${perf.bench.toFixed(2)} MS / FRAME FOR ${items.filter((it) => it.model).length} MODELS (ANIMATION ONLY)`, 24, 66, { size: 13, color: '#46e8ff', weight: 700 });
-      if (freezeT !== null) text(ctx, keyName ? `t = ${keyName}` : `t = ${freezeT.toFixed(2)} s`, 24, 48, { size: 13, color: '#ffb21e', weight: 700 });
+      if (perf.bench) text(ctx, `BENCH ${perf.bench.toFixed(2)} MS / FRAME FOR ${items.filter((it) => it.model).length} MODELS (ANIMATION ONLY)`, 24, 66, { size: 13, color: '#ffd23a', weight: 700 });
+      if (freezeT !== null) text(ctx, keyName ? `t = ${keyName}` : `t = ${freezeT.toFixed(2)} s`, 24, 48, { size: 13, color: '#ff3a2c', weight: 700 });
     },
     view() { return { scene, camera }; },
   };

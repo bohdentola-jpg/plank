@@ -327,7 +327,7 @@ export class Drill {
     vText(ctx, this.name, x + nameW / 2, y + 27, this.name.length > 14 ? 15 : 17, { align: 'center', color: '#1c1a12', weight: 0.2 });
     x += nameW;
     for (const [k, v] of chips) {
-      glossBar(ctx, x, y, chipW, H, '#2b3346', '#0a0d15');
+      glossBar(ctx, x, y, chipW, H, '#38383e', '#0c0c0f');
       text(ctx, k, x + chipW / 2, y + 13, { size: 9, weight: 900, color: '#ffd23a', align: 'center', spacing: 1, shadow: false });
       vText(ctx, v, x + chipW / 2, y + 34, 18, { align: 'center', color: '#ffffff', weight: 0.18 });
       x += chipW;

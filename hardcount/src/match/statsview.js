@@ -38,7 +38,7 @@ export function drawBoxScore(ctx, m, opts = {}) {
   const x = opts.x ?? 152, y = opts.y ?? 128, w = opts.w ?? 720;
   const title = opts.title || 'GAME STATS';
   ctx.save();
-  glossBar(ctx, x, y, w, 44, '#2b3346', '#0a0d15');
+  glossBar(ctx, x, y, w, 44, '#38383e', '#0c0c0f');
   vText(ctx, title, x + w / 2, y + 31, 24, { align: 'center', color: '#ffd23a', weight: 0.2 });
   // team header
   const hy = y + 44;
@@ -85,7 +85,7 @@ export function drawBoxScore(ctx, m, opts = {}) {
   if (opts.leaders !== false) {
     const L = playerLines(m);
     const ly = ry + 8;
-    glossBar(ctx, x, ly, w, 24, '#2b3346', '#0a0d15', false);
+    glossBar(ctx, x, ly, w, 24, '#38383e', '#0c0c0f', false);
     text(ctx, 'LEADERS', x + w / 2, ly + 17, { size: 12, weight: 900, color: '#ffd23a', align: 'center', spacing: 2 });
     const rowsN = Math.max(L.away.length, L.home.length);
     for (let i = 0; i < rowsN; i++) {

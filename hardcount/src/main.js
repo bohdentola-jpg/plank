@@ -212,7 +212,8 @@ async function boot() {
   await import('./screens/index.js');
 
   const start = game.query.get('screen') || 'boot';
-  if (start !== 'boot') game.renderer.power = 1;
+  // the hint lives on the dark tube before it's switched on, nowhere else
+  if (start !== 'boot') { game.renderer.power = 1; document.getElementById('room-hint')?.classList.add('gone'); }
   await swapScreen(start, Object.fromEntries(game.query.entries()));
   requestAnimationFrame((t) => { last = t; loop(t); });
 

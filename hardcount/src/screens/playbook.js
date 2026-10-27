@@ -141,7 +141,7 @@ registerScreen('playbook', () => {
       tb.plays.slice(first, first + 16).forEach((q, k) => {
         const i = first + k;
         const y = 166 + k * 32;
-        if (i === sel) { ctx.fillStyle = 'rgba(255,178,30,0.22)'; ctx.fillRect(50, y - 22, 310, 30); }
+        if (i === sel) { ctx.fillStyle = 'rgba(255,58,44,0.22)'; ctx.fillRect(50, y - 22, 310, 30); }
         const no = tb.def ? DEF_NO.get(q.id) : PLAY_NO.get(q.id);
         text(ctx, String(no ?? ''), 74, y, { size: 13, weight: 900, color: C.dim, align: 'center' });
         text(ctx, q.name, 98, y, { size: 15, weight: 800, color: i === sel ? '#ffffff' : '#c9d1de' });

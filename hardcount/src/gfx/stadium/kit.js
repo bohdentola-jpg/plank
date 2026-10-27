@@ -237,6 +237,7 @@ export function chainFence(B, pts, h = 2.2, opts = {}) {
   for (let i = 0; i < pts.length - 1; i++) {
     const [x0, z0] = pts[i], [x1, z1] = pts[i + 1];
     const len = Math.hypot(x1 - x0, z1 - z0);
+    if (len < 1e-3) continue;   // a closing point on top of the first: no panel (it would have no normal)
     const y0 = opts.y0 || 0;
     // UV: 1 repeat per 0.5 yd (diamond mesh ~2.2" … exaggerated so it reads)
     mesh.quad(V3(x0, y0, z0), V3(x1, y0, z1), V3(x1, y0 + h, z1), V3(x0, y0 + h, z0), [0, 0, len / 0.55, h / 0.55]);

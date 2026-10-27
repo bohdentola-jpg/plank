@@ -168,7 +168,7 @@ function drawVideo(x, W, H, st, o) {
   }
   // centre: quarter + clock + play clock
   const q = st.quarter > 4 ? 'OT' : ['1ST', '2ND', '3RD', '4TH'][Math.max(0, (st.quarter || 1) - 1)];
-  vText(x, q, W / 2, H * 0.16, 34, { align: 'center', color: '#ffb21e' });
+  vText(x, q, W / 2, H * 0.16, 34, { align: 'center', color: '#ff3a2c' });
   vText(x, st.clock || '0:00', W / 2, H * 0.38, 76, { align: 'center', color: '#ffffff', weight: 0.15 });
   x.fillStyle = 'rgba(255,40,30,0.18)';
   x.fillRect(W / 2 - 46, H * 0.44, 92, 50);

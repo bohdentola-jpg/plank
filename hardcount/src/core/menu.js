@@ -85,9 +85,9 @@ export class Menu {
       hit.add(`${this.id}:${k}`, x - 10, yy - rowH * 0.7, w + 20, rowH);
       if (sel) {
         const g = ctx.createLinearGradient(x - 20, 0, x + w, 0);
-        g.addColorStop(0, 'rgba(255,178,30,0.55)');
-        g.addColorStop(0.7, 'rgba(255,178,30,0.12)');
-        g.addColorStop(1, 'rgba(255,178,30,0)');
+        g.addColorStop(0, 'rgba(255,58,44,0.55)');
+        g.addColorStop(0.7, 'rgba(255,58,44,0.12)');
+        g.addColorStop(1, 'rgba(255,58,44,0)');
         ctx.fillStyle = g;
         const sk = 10;
         ctx.beginPath();

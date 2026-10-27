@@ -1,4 +1,4 @@
-// Boot: the TV is off in a dark room. Any button turns it on — the CRT
+// Boot: the picture tube is dark. Any button turns it on — the CRT
 // collapses open from a bright line, static hisses in, a moment of AV-input
 // blue, and we cut to the main menu: the huddle.
 import { registerScreen, game, go } from '../main.js';
@@ -10,17 +10,13 @@ import { text } from '../core/ui.js';
 registerScreen('boot', () => {
   let on = false;
   let t = 0;
-  const led = document.getElementById('tv-led');
   const hint = document.getElementById('room-hint');
   return {
     enter() {
       game.renderer.power = 0;
-      led?.classList.add('standby');
       if (hint) hint.textContent = 'press any button to turn on the tv';
     },
     exit() {
-      led?.classList.remove('standby');
-      led?.classList.add('on');
       if (hint) hint.textContent = '';
     },
     update(dt) {
@@ -30,8 +26,6 @@ registerScreen('boot', () => {
         t = 0;
         audio.unlock();
         try { sfx.tvOn(); } catch { /* */ }
-        led?.classList.remove('standby');
-        led?.classList.add('on');
         hint?.classList.add('gone');
       }
       if (on) {

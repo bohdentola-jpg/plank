@@ -174,14 +174,14 @@ export class Hud {
       x += scoreW;
     }
     // quarter + clock
-    glossBar(ctx, x, y, midW, H, '#2b3346', '#0a0d15');
+    glossBar(ctx, x, y, midW, H, '#38383e', '#0c0c0f');
     text(ctx, quarterText(m), x + 10, y + 26, { size: 15, weight: 800, color: '#ffd23a', italic: true, spacing: 1 });
     const live = m.clockRunning && m.phase === 'live';
     vText(ctx, m.phase === 'final' || m.phase === 'halftime' ? '' : fmtClock(m.clock), x + midW - 10, y + 29, 21, { align: 'right', color: live ? '#ffffff' : '#dde3ee', weight: 0.18, skew: -0.06 });
     x += midW;
     // down & distance (yellow FLAG when there's laundry on the field)
     const flag = s.flag;
-    glossBar(ctx, x, y, ddW, H, flag ? '#ffe04a' : '#2b3346', flag ? '#c9a200' : '#0a0d15');
+    glossBar(ctx, x, y, ddW, H, flag ? '#ffe04a' : '#38383e', flag ? '#c9a200' : '#0c0c0f');
     if (flag) vText(ctx, 'FLAG', x + ddW / 2, y + 29, 22, { align: 'center', color: '#1a1400', weight: 0.22 });
     else if (m.phase !== 'halftime' && m.phase !== 'final') {
       const dd = downText(m);
@@ -192,7 +192,7 @@ export class Hud {
     // play clock
     const pc = s.playClock;
     const pcRed = pc !== null && pc !== undefined && pc <= 5;
-    glossBar(ctx, x, y, pcW, H, pcRed ? '#7a1018' : '#2b3346', pcRed ? '#2a0306' : '#0a0d15');
+    glossBar(ctx, x, y, pcW, H, pcRed ? '#7a1018' : '#38383e', pcRed ? '#2a0306' : '#0c0c0f');
     if (pc !== null && pc !== undefined) vText(ctx, String(Math.ceil(pc)), x + pcW / 2, y + 28, 19, { align: 'center', color: pcRed ? '#ffd0d0' : '#cfd7e6', weight: 0.18, skew: -0.05 });
     ctx.restore();
 
@@ -335,7 +335,7 @@ export class Hud {
       ctx.save();
       ctx.globalAlpha = a;
       const w = vWidth(t.str, 26) + 50;
-      glossBar(ctx, 512 - w / 2, y - 26, w, 38, '#2b3346', '#0a0d15');
+      glossBar(ctx, 512 - w / 2, y - 26, w, 38, '#38383e', '#0c0c0f');
       vText(ctx, t.str, 512, y + 2, 26, { align: 'center', color: '#ffd23a', weight: 0.2 });
       ctx.restore();
       y += 46;
@@ -391,7 +391,7 @@ export class Hud {
     }
     if (k.needle !== null && k.needle !== undefined) {
       const ny = y + h - h * k.needle;
-      ctx.fillStyle = '#46e8ff';
+      ctx.fillStyle = '#ffd23a';
       ctx.beginPath(); ctx.moveTo(x - 10, ny); ctx.lineTo(x - 2, ny - 6); ctx.lineTo(x - 2, ny + 6); ctx.closePath(); ctx.fill();
       ctx.beginPath(); ctx.moveTo(x + w + 10, ny); ctx.lineTo(x + w + 2, ny - 6); ctx.lineTo(x + w + 2, ny + 6); ctx.closePath(); ctx.fill();
     }

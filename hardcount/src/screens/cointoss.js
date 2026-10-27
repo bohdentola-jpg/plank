@@ -260,7 +260,7 @@ registerScreen('cointoss', () => {
       rows.forEach((r, i) => {
         const y = py + 40 + i * 34;
         const on = rowsDef[row] === r;
-        if (on) { ctx.fillStyle = 'rgba(255,178,30,0.22)'; ctx.fillRect(px + 8, y - 22, 314, 30); }
+        if (on) { ctx.fillStyle = 'rgba(255,58,44,0.22)'; ctx.fillRect(px + 8, y - 22, 314, 30); }
         if (r === 'start') {
           vText(ctx, 'KICK IT OFF', px + 165, y + 2, 22, { align: 'center', color: on ? '#ffd23a' : '#ffffff', weight: 0.2 });
           return;

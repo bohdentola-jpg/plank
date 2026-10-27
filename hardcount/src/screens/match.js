@@ -225,13 +225,13 @@ class MatchScreen {
         if (ev.c) hud.banner('FUMBLE!', { color: '#c4101f', kind: 'live', dur: 1.4 });
         break;
       case 'touchback':
-        hud.banner('TOUCHBACK', { color: '#2b3346', kind: 'result', dur: 1.6 });
+        hud.banner('TOUCHBACK', { color: '#38383e', kind: 'result', dur: 1.6 });
         break;
       case 'twoMinute':
         hud.banner('TWO-MINUTE WARNING', { color: '#ffd23a', kind: 'info', dur: 2.6 });
         break;
       case 'quarterEnd':
-        if (ev.quarter === 1 || ev.quarter === 3) hud.banner(`END OF ${quarterText({ quarter: ev.quarter, phase: '' })} QUARTER`, { color: '#2b3346', kind: 'info', dur: 2.6 });
+        if (ev.quarter === 1 || ev.quarter === 3) hud.banner(`END OF ${quarterText({ quarter: ev.quarter, phase: '' })} QUARTER`, { color: '#38383e', kind: 'info', dur: 2.6 });
         break;
       case 'timeout':
         hud.banner(`TIMEOUT ${m.teams[ev.side].abbr}`, { color: m.teams[ev.side].colors.primary, team: m.teams[ev.side], kind: 'info', dur: 2 });
@@ -318,7 +318,7 @@ class MatchScreen {
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.fillRect(0, 0, 1024, 768);
-    glossBar(ctx, 262, 176, 500, 46, '#2b3346', '#0a0d15');
+    glossBar(ctx, 262, 176, 500, 46, '#38383e', '#0c0c0f');
     vText(ctx, 'THE COIN TOSS', 512, 209, 26, { align: 'center', color: '#ffd23a', weight: 0.2 });
     // the coin
     const cx = 512, cy = 330;
@@ -655,7 +655,7 @@ class MatchScreen {
     } else if (r.sack) {
       this.hud.banner('SACK!', { color: '#c4101f', kind: 'result', dur: 1.6 });
     } else if (r.type === 'incomplete') {
-      this.hud.banner('INCOMPLETE', { color: '#2b3346', kind: 'result', dur: 1.4 });
+      this.hud.banner('INCOMPLETE', { color: '#38383e', kind: 'result', dur: 1.4 });
     } else if (runOrPass && (r.type === 'tackle' || r.type === 'oob') && r.side === m.offSide) {
       const y = r.yards;
       this.hud.banner(y > 0 ? `GAIN OF ${y}` : y === 0 ? 'NO GAIN' : `LOSS OF ${-y}`, { color: y > 0 ? '#1f3f73' : '#5a1a22', kind: 'result', dur: 1.5 });
@@ -1291,7 +1291,7 @@ class MatchScreen {
     if (title === 'FINAL') {
       const p = playerOfGame(m);
       if (p) {
-        glossBar(ctx, 152, 664, 720, 34, '#2b3346', '#0a0d15');
+        glossBar(ctx, 152, 664, 720, 34, '#38383e', '#0c0c0f');
         text(ctx, `PLAYER OF THE GAME: ${p.name.toUpperCase()} (${p.pos})`, 512, 686, { size: 15, weight: 900, color: '#ffd23a', align: 'center', spacing: 1 });
       }
     }

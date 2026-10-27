@@ -19,7 +19,14 @@ uniform float threshold;
 uniform float knee;
 uniform float first;
 varying vec2 vUv;
-vec3 s(vec2 o) { return texture2D(tSrc, vUv + o * texel).rgb; }
+// NaN or Inf, read off the exponent bits (x != x checks get optimised away by some compilers)
+#if __VERSION__ >= 300
+bool badf(float x) { return (floatBitsToUint(x) & 0x7f800000u) == 0x7f800000u; }
+#else
+bool badf(float x) { return !(x == x) || abs(x) > 1e30; }
+#endif
+bool bad(vec3 c) { return badf(c.r) || badf(c.g) || badf(c.b); }
+vec3 s(vec2 o) { vec3 c = texture2D(tSrc, vUv + o * texel).rgb; return bad(c) ? vec3(0.0) : max(c, vec3(0.0)); }
 void main() {
   vec3 a = s(vec2(-2.0, 2.0)), b = s(vec2(0.0, 2.0)), c = s(vec2(2.0, 2.0));
   vec3 d = s(vec2(-2.0, 0.0)), e = s(vec2(0.0)), f = s(vec2(2.0, 0.0));
@@ -27,7 +34,7 @@ void main() {
   vec3 j = s(vec2(-1.0, 1.0)), k = s(vec2(1.0, 1.0)), l = s(vec2(-1.0, -1.0)), m = s(vec2(1.0, -1.0));
   vec3 col = e * 0.125 + (a + c + g + i) * 0.03125 + (b + d + f + h) * 0.0625 + (j + k + l + m) * 0.125;
   // a single NaN/Inf texel would smear into a black hole through the chain
-  if (!(col.r == col.r && col.g == col.g && col.b == col.b) || any(greaterThan(col, vec3(1e6)))) col = vec3(0.0);
+  if (bad(col) || any(greaterThan(col, vec3(1e6)))) col = vec3(0.0);
   if (first > 0.5) {
     col = min(col, vec3(24.0));
     float br = max(col.r, max(col.g, col.b));
@@ -99,9 +106,14 @@ vec3 toSRGB(vec3 c) {
   return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c));
 }
 
+#if __VERSION__ >= 300
+bool badf(float x) { return (floatBitsToUint(x) & 0x7f800000u) == 0x7f800000u; }
+#else
+bool badf(float x) { return !(x == x) || abs(x) > 1e30; }
+#endif
+vec3 clean(vec3 c) { return (badf(c.r) || badf(c.g) || badf(c.b)) ? vec3(0.0) : clamp(c, vec3(0.0), vec3(64.0)); }
 vec3 hdrAt(vec2 uv) {
-  vec3 c = texture2D(tScene, uv).rgb + texture2D(tBloom, uv).rgb * bloomStrength;
-  return (c.r == c.r && c.g == c.g && c.b == c.b) ? min(c, vec3(64.0)) : vec3(0.0);
+  return clean(texture2D(tScene, uv).rgb) + clean(texture2D(tBloom, uv).rgb) * bloomStrength;
 }
 
 void main() {

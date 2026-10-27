@@ -215,11 +215,11 @@ registerScreen('soundboard', () => {
       if (m.items.length * rowH > viewH) {
         const sbH = viewH * (viewH / (m.items.length * rowH));
         const sbY = 180 + (scroll[tab] / (m.items.length * rowH)) * viewH;
-        ctx.fillStyle = 'rgba(255,178,30,0.5)';
+        ctx.fillStyle = 'rgba(255,58,44,0.5)';
         ctx.fillRect(592, sbY, 3, sbH);
       }
       // status + meters
-      panel(ctx, 620, 172, 370, 500, { alpha: 0.7, accent: C.cyan });
+      panel(ctx, 620, 172, 370, 500, { alpha: 0.7, accent: C.gold });
       const live = audio.ctx && audio.ctx.state === 'running';
       text(ctx, live ? 'AUDIO RUNNING' : 'NO SOUND YET — PRESS ANY KEY', 644, 204, { size: 14, weight: 800, color: live ? C.green : '#ffe8a0', spacing: 1 });
       text(ctx, 'LAST', 644, 234, { size: 12, color: C.dim, spacing: 2 });
@@ -256,7 +256,7 @@ registerScreen('soundboard', () => {
           ctx.fillRect(700, y, 260 * Math.max(0, (v + 60) / 60), 12);
         };
         bar(456, 'PEAK', pdb, pdb > -1.5 ? C.red : C.accent);
-        bar(476, 'RMS', rdb, C.cyan);
+        bar(476, 'RMS', rdb, C.gold);
         ctx.fillStyle = '#fff';
         ctx.fillRect(700 + 260 * Math.max(0, (peakHold + 60) / 60), 452, 2, 20);
         text(ctx, `${pdb.toFixed(1)} / ${rdb.toFixed(1)} dBFS`, 960, 506, { size: 12, color: C.dim, align: 'right' });
@@ -265,7 +265,7 @@ registerScreen('soundboard', () => {
         for (let i = 0; i < n; i++) {
           const k = Math.floor(Math.pow(freqBuf.length, i / n));
           const v = freqBuf[Math.min(freqBuf.length - 1, k)] / 255;
-          ctx.fillStyle = `rgba(70,232,255,${0.35 + 0.6 * v})`;
+          ctx.fillStyle = `rgba(255,210,58,${0.35 + 0.6 * v})`;
           ctx.fillRect(644 + i * 6.6, 650 - v * 120, 5, v * 120);
         }
       }

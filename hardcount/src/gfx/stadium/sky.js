@@ -130,7 +130,8 @@ export function skyDome(A, banks = []) {
       void main() {
         vDir = normalize(position);
         vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        gl_Position = p.xyww;
+        // on the far plane, but a hair inside it: exactly on it, some GPUs clip slivers out of the dome
+        gl_Position = vec4(p.xy, p.w * 0.99999, p.w);
       }`,
     fragmentShader: /* glsl */`
       uniform vec3 cTop, cMid, cHor, cGlow, cHaze, cFog, sunDir;

@@ -105,8 +105,10 @@ const BEAM_FRAG = /* glsl */`
   varying vec3 vN;
   varying vec3 vV;
   void main() {
-    float f = abs(dot(vN, vV));
-    float a = pow(f, 1.6) * pow(1.0 - vAlong, 1.7) * smoothstep(0.0, 0.06, vAlong);
+    // MSAA can shade a pixel centre just past the cone's ends: keep pow() off negatives (NaN on real GPUs)
+    float f = clamp(abs(dot(vN, vV)), 0.0, 1.0);
+    float along = clamp(vAlong, 0.0, 1.0);
+    float a = pow(f, 1.6) * pow(1.0 - along, 1.7) * smoothstep(0.0, 0.06, along);
     gl_FragColor = vec4(uColor * a * uI, 1.0);
   }`;
 

@@ -28,7 +28,7 @@ const [query = '', scriptPath] = process.argv.slice(2);
 const steps = JSON.parse(await readFile(scriptPath, 'utf8'));
 await mkdir(join(root, 'qa'), { recursive: true });
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--enable-webgl', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
-const page = await browser.newPage({ viewport: { width: 1024, height: 768 } });
+const page = await browser.newPage({ viewport: { width: +(process.env.VW || 1024), height: +(process.env.VH || 768) } });
 page.on('console', (m) => { if (m.type() === 'error' || m.text().startsWith('[qa]')) console.log(`[${m.type()}] ${m.text()}`); });
 page.on('pageerror', (e) => console.log(`[pageerror] ${e.message}\n${e.stack}`));
 // a DualSense on the standard mapping, driven from the steps

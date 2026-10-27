@@ -329,7 +329,7 @@ registerScreen('career', () => {
     CREATE_ROWS.forEach((r, i) => {
       const y = py + 40 + i * 37;
       const on = i === cr.row;
-      if (on) { ctx.fillStyle = 'rgba(255,178,30,0.22)'; ctx.fillRect(px + 10, y - 23, pw - 20, 32); }
+      if (on) { ctx.fillStyle = 'rgba(255,58,44,0.22)'; ctx.fillRect(px + 10, y - 23, pw - 20, 32); }
       if (r === 'go') { vText(ctx, 'START YOUR CAREER', px + pw / 2, y + 2, 22, { align: 'center', color: on ? '#ffd23a' : '#ffffff', weight: 0.2 }); return; }
       text(ctx, rows[r][0], px + 24, y - 6, { size: 10, weight: 900, color: on ? C.accent : C.dim, spacing: 2 });
       if (r === 'skin') {
@@ -714,7 +714,7 @@ registerScreen('career', () => {
         text(ctx, `${CR.POS_NAMES[c.player.pos]} · OVR ${c.player.ovr}`, cx, 528, { size: 15, weight: 900, color: '#cfd5df', align: 'center', spacing: 2 });
       }
       // the ticker (above the button prompt)
-      glossBar(ctx, 0, 650, 1024, 32, '#2b3346', '#0a0d15', false);
+      glossBar(ctx, 0, 650, 1024, 32, '#38383e', '#0c0c0f', false);
       text(ctx, 'HCN DRAFT CENTER · LIVE FROM PORT HALCYON · TRADES · MEDICALS · COMBINE NUMBERS · ', 1024 - ((ev.t * 120) % 1600), 672, { size: 14, weight: 800, color: '#ffd23a', spacing: 2 });
       if (k === 'drafted') hints(ctx, [['confirm', 'CONTINUE']]);
     } else if (k === 'newSeason') {
@@ -801,7 +801,7 @@ registerScreen('career', () => {
       ctx.drawImage(roomCanvas(c), 0, 0, 1024, 768);
       drawStatusCard(ctx);
       // the last headline, like a ticker on the desk TV
-      if (c.news[0]) { glossBar(ctx, 40, 186, 520, 30, '#2b3346', '#0a0d15', false); text(ctx, c.news[0].h.slice(0, 64), 52, 207, { size: 12, weight: 800, color: '#ffd23a', spacing: 1 }); }
+      if (c.news[0]) { glossBar(ctx, 40, 186, 520, 30, '#38383e', '#0c0c0f', false); text(ctx, c.news[0].h.slice(0, 64), 52, 207, { size: 12, weight: 800, color: '#ffd23a', spacing: 1 }); }
       drawPhone(ctx);
       if (!ev && !overlay) hints(ctx, [['ud', 'SCROLL'], ['confirm', 'OPEN'], ['back', app === 'home' ? 'MAIN MENU' : 'BACK']]);
       drawEventBig(ctx);

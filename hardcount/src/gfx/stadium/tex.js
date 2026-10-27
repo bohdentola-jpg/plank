@@ -356,7 +356,7 @@ export function beamTex() {
 // ------------------------------------------------------------------ signage
 
 export const BRANDS = [
-  ['NOVATRON', '#0c0f16', '#ffffff', '#46e8ff'],
+  ['NOVATRON', '#0c0f16', '#ffffff', '#ffd23a'],
   ['KUROSHIO', '#c8161e', '#ffffff', '#111111'],
   ['RAZOR FUEL', '#111111', '#ffd400', '#ff3a1a'],
   ['HALCYON BANK', '#0b2a6a', '#ffffff', '#46c0ff'],
@@ -366,7 +366,7 @@ export const BRANDS = [
   ['IRONSIDE AUTO', '#2a2d33', '#f26a1b', '#ffffff'],
   ['CLEARWATER', '#0a6ab0', '#ffffff', '#9fe0ff'],
   ['GRIDIRON GRILL', '#6b1220', '#f2d48a', '#ffffff'],
-  ['HARD COUNT', '#05070c', '#ffb21e', '#46e8ff'],
+  ['HARD COUNT', '#05070c', '#ff3a2c', '#ffd23a'],
   ['TRI-STATE INSURANCE', '#ffffff', '#1a3a7a', '#c8161e'],
 ];
 
