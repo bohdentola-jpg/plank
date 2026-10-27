@@ -109,10 +109,12 @@ export class CameraDirector {
         break;
       }
       case 'celebrate': {
-        // in the end zone, looking back up at the scorer
+        // in the end zone, looking back up at the scorer. It stays inside the back line (the
+        // photographers stand past it): when he's deep it swings round to his side instead
         const tg = s.target || f;
         const ez = Math.sign(tg.z || 1);
-        P.set(tg.x * 0.6 + Math.sin(this.shotT * 0.3) * 3, 2.2, tg.z + ez * 9);
+        const back = clamp(F.end + 1 - tg.z * ez, 0, 9), across = Math.sqrt(81 - back * back);
+        P.set(tg.x * 0.6 + Math.sin(this.shotT * 0.3) * 3 - (Math.sign(tg.x) || -1) * across, 2.2, tg.z + ez * back);
         L.set(tg.x, 1.4, tg.z);
         fov = 32;
         rate = 2;

@@ -163,9 +163,10 @@ export function buildClearance(root, { skip = [], cell = 2, half = [170, 190] } 
     }
     return Infinity;
   }
-  // a lens needs air around it: nothing just behind it on the line of sight, nothing right under it
+  // a lens needs air around it: nothing just behind it on the line of sight, and a high one
+  // nothing right under it (a low one is meant to be near the ground)
   const AIR = 1.5, UNDER = 2.5;
-  const roomAt = (look, P) => blockedAt(look, P, AIR) === Infinity && hit(P.x, P.y, P.z, 0, -1, 0, 0, UNDER) === Infinity;
+  const roomAt = (look, P) => blockedAt(look, P, AIR) === Infinity && (P.y < 4 || hit(P.x, P.y, P.z, 0, -1, 0, 0, UNDER) === Infinity);
 
   /**
    * Keep the camera at P (moved in place) out of the structure, looking at `look`.
