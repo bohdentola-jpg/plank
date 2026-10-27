@@ -359,7 +359,7 @@ export class Hud {
         ctx.fillStyle = ic.open > 0.25 ? 'rgba(80,255,140,0.35)' : ic.open > -0.1 ? 'rgba(255,220,80,0.3)' : 'rgba(255,80,80,0.3)';
         ctx.fill();
       }
-      if (usingPad()) padGlyph(ctx, ic.btn === 'r1' ? 'R1' : ic.btn === 'l1' ? 'L1' : ic.btn, ic.p.x, ic.p.y, r);
+      if (ic.pad ?? usingPad()) padGlyph(ctx, ic.btn === 'r1' ? 'R1' : ic.btn === 'l1' ? 'L1' : ic.btn, ic.p.x, ic.p.y, r);
       else keyCap(ctx, BTN_KEYS[ic.btn] || ic.btn.toUpperCase(), ic.p.x, ic.p.y, r * 1.8);
       if (ic.label) text(ctx, ic.label, ic.p.x, ic.p.y - r - 6, { size: 11, weight: 800, align: 'center', color: '#ffffff', spacing: 1 });
       ctx.restore();

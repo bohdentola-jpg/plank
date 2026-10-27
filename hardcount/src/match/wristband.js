@@ -13,7 +13,7 @@ import { FORMATIONS } from '../sim/plays/formations.js';
 import { KICKOFF_PLAYS, RETURN_PLAYS, PUNT_PLAYS, PUNT_RETURN_PLAYS, FG_PLAYS, FG_DEFENSE_PLAYS } from '../sim/plays/special.js';
 import { offenseCall, defenseCall, cpuCalls, fgRange } from '../sim/ai/playcall.js';
 import { drawPlayArt, drawDefArt, drawSpecialArt } from './playart.js';
-import { vText, vWidth, text, padGlyph, usingPad, keyCap, roundRect } from '../core/ui.js';
+import { vText, vWidth, text, padGlyph, usingPadFor, keyCap, roundRect } from '../core/ui.js';
 import { drawLogo } from '../gfx/logos.js';
 import { clamp, easeOutBack } from '../core/util.js';
 import { uiSound } from '../core/menu.js';
@@ -282,7 +282,7 @@ export class Wristband {
     const tab = this.tabs[this.tab];
     const ty = cy + hdrH - 10;
     if (this.tabs.length > 1) {
-      if (usingPad()) { padGlyph(ctx, 'L1', cx + 22, ty - 4, 9); padGlyph(ctx, 'R1', cx + cw - 22, ty - 4, 9); } else { keyCap(ctx, 'Q', cx + 20, ty - 4, 16); keyCap(ctx, 'E', cx + cw - 20, ty - 4, 16); }
+      if (usingPadFor(this.pl)) { padGlyph(ctx, 'L1', cx + 22, ty - 4, 9); padGlyph(ctx, 'R1', cx + cw - 22, ty - 4, 9); } else { keyCap(ctx, 'Q', cx + 20, ty - 4, 16); keyCap(ctx, 'E', cx + cw - 20, ty - 4, 16); }
     }
     vText(ctx, tab?.name || '', cx + cw / 2, ty, small ? 15 : 18, { align: 'center', color: '#ffffff', weight: 0.2 });
     if (this.tabs.length > 1) {
@@ -344,7 +344,7 @@ export class Wristband {
     const hintsList = [['cross', 'CALL'], ...(this.tabs[this.tab].special ? [] : [['triangle', this.flip ? 'FLIPPED' : 'FLIP']]), ['square', "COACH'S PICK"]];
     let hx = cx + 14;
     for (const [btn, lbl] of hintsList) {
-      if (usingPad()) padGlyph(ctx, btn, hx + 8, fy - 4, small ? 7 : 8);
+      if (usingPadFor(this.pl)) padGlyph(ctx, btn, hx + 8, fy - 4, small ? 7 : 8);
       else keyCap(ctx, { cross: 'K', triangle: 'I', square: 'J' }[btn], hx + 8, fy - 4, small ? 13 : 15);
       text(ctx, lbl, hx + 20, fy, { size: small ? 10 : 12, weight: 900, color: lbl === 'FLIPPED' ? '#b4121f' : '#222', shadow: false, spacing: 1 });
       hx += 34 + vWidth(lbl, small ? 9 : 11) * 1.05;

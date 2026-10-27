@@ -196,6 +196,8 @@ const BTN_KEY = {
 export function usingPad() {
   return input.device === 'pad' || (input.padConnected && input.device !== 'keyboard' && input.device !== 'mouse');
 }
+/** Button glyphs for one player's prompts: the keyboard is player one's, so player two only ever has a pad. */
+export function usingPadFor(pl) { return (pl && pl.index > 0) || usingPad(); }
 
 /** PlayStation-style face/shoulder glyph. */
 export function padGlyph(ctx, name, x, y, r = 11) {

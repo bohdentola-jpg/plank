@@ -11,7 +11,7 @@
 import { registerScreen, game, go } from '../main.js';
 import { input } from '../core/input.js';
 import { settings } from '../core/settings.js';
-import { C, vText, vWidth, text, hints, osd, panel, padGlyph, usingPad, keyCap } from '../core/ui.js';
+import { C, vText, vWidth, text, hints, osd, panel, padGlyph, usingPad, usingPadFor, keyCap } from '../core/ui.js';
 import { Menu, uiSound } from '../core/menu.js';
 import { clamp, easeOutCubic, makeRng } from '../core/util.js';
 import { Match } from '../sim/match.js';
@@ -348,27 +348,27 @@ class MatchScreen {
     const away = m.teams.away, home = m.teams.home;
     if (T.step === 'call') {
       text(ctx, `${away.city.toUpperCase()} ${away.name.toUpperCase()} CALL IT IN THE AIR`, 512, 470, { size: 18, weight: 900, color: '#fff', align: 'center', spacing: 2 });
-      if (m.isUser('away') && !m.lock) this.choiceRow(ctx, [['cross', 'HEADS'], ['circle', 'TAILS']], 520);
+      if (m.isUser('away') && !m.lock) this.choiceRow(ctx, [['cross', 'HEADS'], ['circle', 'TAILS']], 520, this.plFor('away'));
     } else if (T.step === 'flip') {
       text(ctx, `${away.abbr} CALLS ${T.call.toUpperCase()}`, 512, 470, { size: 18, weight: 900, color: '#fff', align: 'center', spacing: 2 });
     } else {
       const w = m.teams[T.winner];
       vText(ctx, `${T.result.toUpperCase()}!`, 512, 470, 30, { align: 'center', color: '#ffd23a', weight: 0.2 });
       text(ctx, `${w.city.toUpperCase()} WINS THE TOSS`, 512, 506, { size: 18, weight: 900, color: '#fff', align: 'center', spacing: 2 });
-      if (T.step === 'result' && m.isUser(T.winner) && !m.lock) this.choiceRow(ctx, [['cross', 'RECEIVE'], ['circle', 'KICK']], 552);
+      if (T.step === 'result' && m.isUser(T.winner) && !m.lock) this.choiceRow(ctx, [['cross', 'RECEIVE'], ['circle', 'KICK']], 552, this.plFor(T.winner));
       if (T.choice) text(ctx, T.choice === 'receive' ? 'THEY WILL RECEIVE' : 'THEY WILL KICK OFF', 512, 552, { size: 16, weight: 800, color: '#cfd7e6', align: 'center', spacing: 2 });
     }
     void home;
     ctx.restore();
   }
 
-  choiceRow(ctx, items, y) {
+  choiceRow(ctx, items, y, pl = null) {
     let total = 0;
     const widths = items.map(([, l]) => vWidth(l, 20) + 60);
     for (const w of widths) total += w;
     let x = 512 - total / 2;
     items.forEach(([btn, label], i) => {
-      if (usingPad()) padGlyph(ctx, btn, x + 14, y - 7, 12); else keyCap(ctx, { cross: 'K', circle: 'L', square: 'J', triangle: 'I' }[btn], x + 14, y - 7, 22);
+      if (usingPadFor(pl)) padGlyph(ctx, btn, x + 14, y - 7, 12); else keyCap(ctx, { cross: 'K', circle: 'L', square: 'J', triangle: 'I' }[btn], x + 14, y - 7, 22);
       vText(ctx, label, x + 34, y, 20, { color: '#ffffff', weight: 0.2 });
       x += widths[i];
     });
@@ -776,7 +776,7 @@ class MatchScreen {
     text(ctx, `${m.teams[P.beneficiary].abbr}, YOUR CALL${P.better ? ' (COACH SAYS ACCEPT)' : ' (COACH SAYS DECLINE)'}`, x + 18, y + 152, { size: 13, weight: 800, color: '#8fd0ff', spacing: 1 });
     let bx = x + 18;
     for (const [btn, lbl, rec] of [['cross', 'ACCEPT', P.better], ['circle', 'DECLINE', !P.better]]) {
-      if (usingPad()) padGlyph(ctx, btn, bx + 12, y + 186, 11); else keyCap(ctx, btn === 'cross' ? 'K' : 'L', bx + 12, y + 186, 20);
+      if (usingPadFor(this.plFor(P.beneficiary))) padGlyph(ctx, btn, bx + 12, y + 186, 11); else keyCap(ctx, btn === 'cross' ? 'K' : 'L', bx + 12, y + 186, 20);
       vText(ctx, lbl, bx + 30, y + 193, 18, { color: rec ? '#ffd23a' : '#ffffff', weight: 0.2 });
       bx += 190;
     }
@@ -1206,7 +1206,7 @@ class MatchScreen {
         for (const d of m.defense) if (d.standing) nd = Math.min(nd, Math.hypot(d.x - e.x, d.z - e.z));
         open = (nd - 2.2) / 3;
       }
-      out.push({ btn, p: { x: p.x, y: p.y }, open, big: pick, alpha: m.phase === 'presnap' && !pick ? 0.85 : 1 });
+      out.push({ btn, p: { x: p.x, y: p.y }, open, big: pick, alpha: m.phase === 'presnap' && !pick ? 0.85 : 1, pad: usingPadFor(this.plFor(side)) });
     }
     return out;
   }
