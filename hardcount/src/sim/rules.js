@@ -694,7 +694,8 @@ export function advance(m) {
     const penRes = previewPenalty(m, r, f);
     let accept = true;
     if (f.dead || r.type === 'nullified') accept = true;
-    else if (m.isUser(beneficiary) && !m.autoCalls) {
+    // (in a career it's the coach's call, like the try and, unless you're the QB, the plays)
+    else if (m.isUser(beneficiary) && !m.autoCalls && m.lock?.side !== beneficiary) {
       // a person decides (the screen shows the choice); default: whatever is better
       if (m.penaltyChoice === undefined) {
         m.phase = 'penalty';
