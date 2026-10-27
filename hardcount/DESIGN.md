@@ -1,23 +1,35 @@
 # HARD COUNT — design notes and module contracts
 
 HARD COUNT is a 7-on-7 tackle football game in the style of a 2003–2007 console
-football game, played on the same NOVATRON CRT TV in a dark room as MIDNIGHT
-FREQUENCY. Full pads, real contact, real ball physics, laterals as a core
-mechanic. Plain ES modules + three.js r160 (`../vendor/three.module.js`), no
+football game, shown on the same CRT picture as MIDNIGHT FREQUENCY, with the
+set's cabinet taken off: a bare 4:3 tube as big as the window allows. It has
+its own identity on top: varsity block lettering, HARD COUNT red and broadcast
+gold. Full pads, real contact, real ball physics, laterals as a core mechanic. Plain ES modules + three.js r160 (`../vendor/three.module.js`), no
 build step, no art or audio files: everything is generated in code.
 
 ## Look and feel
 
-- **The TV.** The 3D picture renders at a CRT-ish internal resolution (480/600/720
+- **The picture.** The page (`index.html`, `style.css`) is only the tube: 4:3,
+  as tall as the window (letterboxed on wide screens), rounded tube corners,
+  curved glass with an edge shadow and a glare, the screen's light on the wall
+  behind it. The 3D picture renders at a CRT-ish internal resolution (480/600/720
   lines, 4:3) into an HDR target, then bloom and the CRT pass (curvature,
   aberration, ACES, grading, scanlines, aperture grille, snow, tearing, vignette).
-  The 2D UI is drawn into a 1024×768 canvas that goes *under the glass*, so menus
-  get the same curvature and scanlines. Screen changes are channel changes
-  (static bursts). See `src/core/renderer.js`, `src/main.js`.
+  The bloom chain and the final pass drop NaN/Inf texels, tested by their bit
+  pattern (`x == x` gets optimised away by some shader compilers). The 2D UI is
+  drawn into a 1024×768 canvas that goes *under the glass*, so menus get the same
+  curvature and scanlines. Screen changes are channel changes (static bursts).
+  See `src/core/renderer.js`, `src/main.js`.
 - **The UI kit** (`src/core/ui.js`, `src/core/font.js`): slanted smoked-glass
-  panels, amber `#ffb21e` / cyan `#46e8ff` accents, the chamfered italic stroke
-  font (`vText`) for titles and numbers, Bahnschrift-style body text, PlayStation
-  glyphs that switch to keyboard keycaps when the keyboard is in use.
+  panels in graphite, HARD COUNT red `#ff3a2c` / broadcast gold `#ffd23a`
+  accents, and for titles and numbers the varsity block stroke font (`vText`):
+  condensed, heavy, upright, square-cornered, the jersey and end zone lettering.
+  Titles go in jersey twill (`twill`: white letters, red tackle-twill border,
+  black edge) with a red network-bug `tag` under them; headers sit on two sleeve
+  `stripes`. Body text is a condensed sports gothic (Franklin Gothic on Windows,
+  Arial Narrow on macOS). PlayStation glyphs switch to keyboard keycaps when the
+  keyboard is in use. The resemblance to MIDNIGHT FREQUENCY is the picture, the
+  panels and the menu language; the type and the colours are HARD COUNT's own.
 - **Graphics target:** a good-looking 2005 console game, not a modern one.
   Chunky but well-proportioned bodies, glossy helmets catching the floodlights,
   real team colours, readable numbers, painted fields with wear, crowds that move,
@@ -34,7 +46,7 @@ build step, no art or audio files: everything is generated in code.
 
 ```
 hardcount/
-  index.html, style.css     the TV set (same as MIDNIGHT FREQUENCY)
+  index.html, style.css     the bare picture tube
   src/main.js               loop, screen manager, transitions, auto quality
   src/core/                 renderer, input, ui, font, menu, settings, util, envmap
   src/audio/                audio core, sfx, crowd, music engine + themes, voice
@@ -100,10 +112,38 @@ the `ACTIONS` with their durations and key moments (ball release, catch,
 contact). The sim owns timing: `A.action.t` is the time since the action began.
 Locomotion (walk → jog → run → sprint, backpedal, shuffle, carrying) is
 synthesised from `speed`, `moveAngle`, `accel`, `turnRate` and `effort`, with
-the stride phase driven by distance travelled so feet don't skate.
+the stride phase driven by distance travelled so feet don't skate:
 
-Budgets: ≤ 6 draw calls and ~6k triangles per player at `high`, ≤ 3 calls /
-~2k triangles at `low`; ≤ 24 bones; one ≤ 512² uniform atlas per player plus a
+- **Arms** swing fore and aft from the shoulder (`armFlex`): the upper arm's
+  twist follows its plane so the elbow hinge stays level and the forearm never
+  folds across the chest or flares out; bent tight at the front of the swing,
+  opening behind, the hands converging toward the sternum but never past it.
+- **Legs**: planted feet stay put in the world, yaw included; the swing foot
+  flies a keyed path (walk, jog, sprint, low shuffle, blended by gait): toe-off,
+  the heel recovering up under the hips, the knee driving through, the reach and
+  the paw back down under the body.
+- **Trunk**: leans into acceleration, banks into a real turn as much as the
+  lateral grip asks (from the travel direction's smoothed turn, with a deadzone,
+  never from heading jitter), drops on a hard cut; the head is stabilised.
+- **No arms through the body**: after the IK the animator pushes the elbows,
+  forearms, wrists and hands out of the jersey (`dims.torso`, the build's own
+  cross-sections from `torsoProfile`) and re-solves the arm, eased in by depth.
+
+**Builds.** `makeBuild(player)` reads height, weight, `look.bodyType` and three
+look fields every roster player has (drawn from the player's own seed, so they
+never shift names, ratings or ids; Road to Glory players pick the first two):
+`look.muscle` 0..1 (arm, leg, neck and chest girth, and the definition of the
+biceps, triceps, forearms and calves), `look.pads` 0..1 (slim skill pads → big
+lineman pads: width, depth and how tall the arch stands) and `look.face`
+`{ jaw, chin, nose, brow, cheek, len }` each −1..1 (the face below the brow only:
+the cranium the hair and helmet sit on never changes). The jersey sleeve is
+geometry, stretched over the pad cap down to a hem just below the pads
+(`SLEEVE_HEM`, shared with the painter); the collar is a V-neck under a visible
+neck. Heads have real facial thirds and a dense face grid; the painted features
+ride on the (λ, φ) grid so paint and shape always agree.
+
+Budgets: ≤ 6 draw calls and ~7.5k triangles per player at `high` (the face
+grid is most of the growth), ≤ 3 calls / ~2k triangles at `low`; ≤ 24 bones; one ≤ 512² uniform atlas per player plus a
 shared helmet decal per team. 14 players + 3 officials + sideline extras must
 hold 60 fps on a mid-range laptop at 600 lines.
 
@@ -246,3 +286,9 @@ the game, adds XP and texts, sims the rest of the week and advances the season.
   headless Chromium (software WebGL, ~7 fps: timing-sensitive steps should use
   `until`). `{ dualsense: true }` plugs in a virtual DualSense whose presses are
   held until the game has polled them; rumble lands in `window.__rumbles`.
+  `{ manual: true }` switches the game to deterministic frames, advanced with
+  `{ frames: n }` or filmed with `{ film: { n, every, prefix } }` (fixed 1/60 s
+  steps whatever the real frame rate: contact sheets of real plays). `VW` / `VH`
+  set the viewport size.
+- `screen=gallery&mode=stride&speed=10&n=7` lays one runner out as a filmstrip
+  across his stride; `mode=clip&action=…` does the same for any action.

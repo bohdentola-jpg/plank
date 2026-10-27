@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { registerScreen, game, go } from '../main.js';
 import { input } from '../core/input.js';
 import { settings } from '../core/settings.js';
-import { C, vText, vWidth, text, hints, panel, padGlyph, usingPad, keyCap, paragraph, roundRect, statBar } from '../core/ui.js';
+import { C, vText, vWidth, text, hints, panel, padGlyph, usingPad, keyCap, paragraph, roundRect, statBar, twill, tag } from '../core/ui.js';
 import { uiSound } from '../core/menu.js';
 import { clamp, easeOutCubic, easeOutBack, makeRng, hashString } from '../core/util.js';
 import { getTeam, HS_RIVALS, COLLEGES } from '../data/teams.js';
@@ -320,8 +320,8 @@ registerScreen('career', () => {
 
   function drawCreate(ctx) {
     const p = cr.p;
-    vText(ctx, 'ROAD TO GLORY', 64, 84, 38, { color: '#ffffff', weight: 0.17, outline: 3, outlineColor: 'rgba(0,0,0,0.75)', shadow: [3, 4, 'rgba(0,0,0,0.6)'] });
-    text(ctx, 'FRIDAY NIGHT · WHO ARE YOU?', 68, 108, { size: 13, weight: 900, color: C.accent, spacing: 4 });
+    twill(ctx, 'ROAD TO GLORY', 64, 86, 40, { spacing: 1 });
+    tag(ctx, 'FRIDAY NIGHT · WHO ARE YOU?', 62, 97, { size: 13 });
     // the panel
     const px = 560, py = 118, pw = 420;
     panel(ctx, px, py, pw, 376, { accentLen: 200, alpha: 0.95 });

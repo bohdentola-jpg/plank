@@ -3,11 +3,14 @@
 *Seven a side. Full pads. Every lateral on the table.*
 
 A 7-on-7 tackle football game that looks and plays like a 2005 console game,
-shown on the same NOVATRON TRINIQUE FLAT CRT as MIDNIGHT FREQUENCY: curved
-glass, scanlines, bloom on the stadium lights, channel-change static between
-screens. Everything is generated in code: the players, the seven stadiums, the
-crowd, the band, the play art, the music. No art or audio files, no build step.
-It plays with a PS5 DualSense (any standard controller works, and so does the
+shown the way MIDNIGHT FREQUENCY is, on an old CRT, but with the cabinet taken
+off: a bare 4:3 picture tube as big as your window, with curved glass,
+scanlines, bloom on the stadium lights and channel-change static between
+screens. It has its own look on top: varsity block lettering (the jersey and
+end zone face), titles in jersey twill, HARD COUNT red and broadcast gold.
+Everything is generated in code: the players, the seven stadiums, the crowd,
+the band, the play art, the music. No art or audio files, no build step. It
+plays with a PS5 DualSense (any standard controller works, and so does the
 keyboard).
 
 ![A run play at Bayside Stadium](docs/hc-action.jpg)
@@ -40,8 +43,8 @@ on your wristband.
 | ![The huddle main menu](docs/hc-menu.jpg) | ![The coin toss at midfield](docs/hc-coin-toss.jpg) |
 
 - **Road to Glory.** Build a player (quarterback, running back, receiver, tight
-  end, linebacker, corner or safety; an archetype; name, number, skin, hair; your
-  high school) under the lights on a Friday night, then live a career off a flip
+  end, linebacker, corner or safety; an archetype; name, number, skin, hair,
+  build from lean to jacked, slim or big shoulder pads; your high school) under the lights on a Friday night, then live a career off a flip
   phone: a senior season in high school, signing day with the offers your stars
   earned, up to four years of college (declare after three), the Sevens League
   draft on TV, a pro career, and retirement into the Hall of Fame. Texts from
@@ -99,6 +102,11 @@ on your wristband.
   zone coverage, pass rush against pass protection, pursuit angles, broken
   tackles, gang tackles, fumbles, tipped passes, fatigue. CPU coordinators call
   plays by down, distance, score and clock.
+- **The players.** Every player is built from his height, weight and position
+  and his own look: how muscular he is, how big his pads are, the shape of his
+  jaw, chin, nose, brow and cheekbones. Jersey sleeves stretch over the pads,
+  arms pump fore and aft without ever crossing the body, legs drive under the
+  hips, bodies bank into real turns (and only real ones) and plant on a hard cut.
 - **The broadcast.** Score bug, yellow first-down line, network bug, closed
   captions from the booth, a PA announcer, a crowd that reacts to what happens
   (and to whose fans they are), a band, officials with flags and signals, a
@@ -152,7 +160,10 @@ node hardcount/tools/drive.mjs "screen=practice" script.json   # drive the real 
 `drive.mjs` steps are `{ key }`, `{ wait }`, `{ until: 'js', timeout }`,
 `{ eval: 'js' }`, `{ shot: 'name.png' }`, and with `{ dualsense: true }` first,
 a virtual DualSense: `{ pad: 'cross' }`, `{ stick: [lx, ly, rx, ry], hold }`
-(rumble requests are collected in `window.__rumbles`). URL shortcuts:
+(rumble requests are collected in `window.__rumbles`). `{ manual: true }` makes
+the frames deterministic from there on: `{ frames: n }` advances, `{ film: { n,
+every, prefix } }` shoots a contact sheet of whatever is playing. `VW=1600
+VH=900` sets the window size. URL shortcuts:
 `?screen=match&home=pht&away=det&qa=play` (straight to a first and ten),
 `qa=kick&kicking=home`, `screen=practice`, `screen=playbook`, `screen=gallery`
 (every animation), `screen=venueview` (the stadiums).

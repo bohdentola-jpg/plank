@@ -7,7 +7,7 @@ install, no build step. Boots with a cinematic flyover of America's football tow
 and an original synthesized score.
 
 > **Also in this repo: [HARD COUNT](hardcount/README.md)** — 7-on-7 tackle football
-> on a 2005 CRT TV, played with a DualSense: Road to Glory (high school to the
+> on a bare 2005 CRT picture tube, played with a DualSense: Road to Glory (high school to the
 > Hall of Fame), Free Play, Practice, a chalkboard Playbook and every lateral on
 > the table. Windows: double-click **`hardcount.bat`**. Mac/Linux:
 > `python3 serve.py --open hardcount/`.

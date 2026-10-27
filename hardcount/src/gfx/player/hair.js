@@ -51,7 +51,10 @@ function thickness(style, lam, phi, x, y, z) {
       const F = flatBox();
       const len = Math.hypot(x, y, z);
       const dy = y / len, dr = Math.hypot(x, z * 0.92) / len;
-      const d = Math.min(dy > 0.02 ? F.top / dy : 9, dr > 0.02 ? F.side / dr : 9);
+      // a soft minimum of the two: the top meets the sides in a rounded edge, not a box corner
+      const a = dy > 0.02 ? F.top / dy : 9, b = dr > 0.02 ? F.side / dr : 9, k = 0.011;
+      const m = Math.min(a, b);
+      const d = m - k * Math.log(Math.exp(-(a - m) / k) + Math.exp(-(b - m) / k));
       return clamp(d - len, 0.004, 0.075) * sstep(-8, 22, phi) + 0.002;
     }
     case 'mohawk': return 0.001 + 0.042 * Math.exp(-((x / 0.017) ** 2)) * sstep(-25, 25, phi + (z < 0 ? 25 : 0));

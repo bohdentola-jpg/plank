@@ -128,6 +128,21 @@ export function twill(ctx, str, x, y, size, opts = {}) {
   vText(ctx, str, x, y, size, { ...base, color: opts.color || '#ffffff', outline: size * 0.075, outlineColor: opts.trim || C.accent });
 }
 
+/** A red tag with white type under a title, like a network bug; returns its width. */
+export function tag(ctx, str, x, y, opts = {}) {
+  const size = opts.size || 15;
+  const w = measure(ctx, str, { size, weight: 900, spacing: 5 }) + 26;
+  const h = size + 7;
+  ctx.save();
+  ctx.fillStyle = opts.color || C.accent;
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w - 6, y + h); ctx.lineTo(x - 6, y + h); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = C.gold;
+  ctx.beginPath(); ctx.moveTo(x + w + 2, y); ctx.lineTo(x + w + 8, y); ctx.lineTo(x + w + 2, y + h); ctx.lineTo(x + w - 4, y + h); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  text(ctx, str, x + 8, y + h - 5, { size, weight: 900, color: '#ffffff', spacing: 5 });
+  return w;
+}
+
 /** Two sleeve stripes under a title: red, then a thin gold one. */
 export function stripes(ctx, x, y, w, opts = {}) {
   ctx.save();

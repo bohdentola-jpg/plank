@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { registerScreen, game, go } from '../main.js';
 import { input } from '../core/input.js';
 import { settings, store } from '../core/settings.js';
-import { C, vText, vWidth, text, hints, panel, padGlyph, usingPad, keyCap, paragraph, twill } from '../core/ui.js';
+import { C, vText, vWidth, text, hints, panel, padGlyph, usingPad, keyCap, paragraph, twill, tag } from '../core/ui.js';
 import { uiSound } from '../core/menu.js';
 import { clamp, easeOutBack, easeOutCubic } from '../core/util.js';
 import { getTeam, TEAMS } from '../data/teams.js';
@@ -170,12 +170,7 @@ registerScreen('huddle', () => {
       ctx.save();
       ctx.globalAlpha = 1 - out;
       twill(ctx, 'HARD COUNT', 64, 96, 50, { spacing: 2 });
-      // the tag under it, like a network bug
-      ctx.fillStyle = C.accent;
-      ctx.beginPath(); ctx.moveTo(62, 108); ctx.lineTo(268, 108); ctx.lineTo(262, 128); ctx.lineTo(56, 128); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = C.gold;
-      ctx.fillRect(268, 108, 6, 20);
-      text(ctx, '7-ON-7 FOOTBALL', 70, 124, { size: 15, weight: 900, color: '#ffffff', spacing: 5 });
+      tag(ctx, '7-ON-7 FOOTBALL', 62, 108);
       ctx.restore();
       // the arm and the band, raised into view
       const ax = 52, ay = 168 + (1 - k) * 520 + out * 520;
