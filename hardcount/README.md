@@ -50,8 +50,9 @@ on your wristband.
   earned, up to four years of college (declare after three), the Sevens League
   draft on TV, a pro career, and retirement into the Hall of Fame. Texts from
   coaches and your mom, headlines, standings, a schedule, and XP to spend on
-  training. In games you only control your own man: when you're not on the
-  field the broadcast fast-forwards like a VCR.
+  training. In games you only control your own man (a quarterback also calls
+  the plays and takes the snaps; the coach makes every other call: the try,
+  penalties): when you're not on the field the broadcast fast-forwards like a VCR.
 - **Free Play.** The captains meet the referee at midfield. Any two of 16 pro
   teams, 24 colleges or 12 high schools, seven stadiums (a Friday-night high
   school field, a college bowl, a waterfront pro stadium, a dome, an
