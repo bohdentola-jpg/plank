@@ -614,15 +614,16 @@ export function headPoint(phiDeg, lamDeg, out, F = null) {
   // eye sockets, centred on the eyeballs
   disp -= 0.011 * (g((fx - EYE_FX) / 0.125, (fy - EYE_FY) / 0.085) + g((fx + EYE_FX) / 0.125, (fy - EYE_FY) / 0.085)) * front;
   // cheekbones, the hollow under them, the fold from the nose to the mouth corner, jaw angles
-  disp += (0.0055 + 0.003 * fCheek) * (g((ax - 0.6) / 0.15, (fy + 0.06) / 0.11)) * front;
-  disp -= (0.0025 - 0.0015 * fCheek) * g((ax - 0.52) / 0.14, (fy + 0.4) / 0.1) * front;
+  // (kept shallow: a deep hollow between the bone and the jaw is a pit a high light fills with shadow)
+  disp += (0.0045 + 0.003 * fCheek) * (g((ax - 0.6) / 0.15, (fy + 0.06) / 0.11)) * front;
+  disp -= (0.0011 - 0.0008 * fCheek) * g((ax - 0.52) / 0.16, (fy + 0.4) / 0.12) * front;
   {
     // distance from the line (0.15, −0.33) → (0.3, −0.54)
     const t = clamp(((ax - 0.15) * 0.15 + (fy + 0.33) * -0.21) / (0.15 * 0.15 + 0.21 * 0.21), 0, 1);
     const lx = 0.15 + 0.15 * t, ly = -0.33 - 0.21 * t;
     disp -= 0.0013 * Math.exp(-((Math.hypot(ax - lx, fy - ly) / 0.028) ** 2)) * front;
   }
-  disp += (0.0065 + 0.0035 * fJaw) * g((ax - 0.72) / 0.16, (fy + 0.58) / 0.16) * sstep(-0.2, 0.3, dz);
+  disp += (0.0052 + 0.0035 * fJaw) * g((ax - 0.72) / 0.18, (fy + 0.58) / 0.18) * sstep(-0.2, 0.3, dz);
   // the groove above the lip, the lips and the line between them, the corners (a mouth as
   // wide as the eyes are apart)
   // (flat-bottomed across the width, so the lower lip's shadow never curls up into a grin)
@@ -843,6 +844,12 @@ function buildHead(mb, bd, dims, lod) {
       nn.crossVectors(t1, t2).normalize();
       if (!(nn.lengthSq() > 0.5)) nn.copy(p).normalize();
       if (nn.dot(p) < 0) nn.negate();
+      // bent normals: under the nose the egg the face is built on tucks back and looks at the
+      // floor, so a light from above left everything from the lip to the chin black. The
+      // mouth and the front of the chin shade as if they faced forward (the shape, and so the
+      // helmet's fit, stay put); under the chin still faces down
+      const bend = sstep(-8, -30, phi) * (1 - sstep(-58, -72, phi)) * sstep(75, 35, Math.abs(lam));
+      if (bend > 0 && nn.y < 0) { nn.y *= 1 - 0.6 * bend; nn.normalize(); }
       pts.push([p.x, p.y, p.z, nn.x, nn.y, nn.z]);
       uvOf(R.HEAD, headU(lam), lerp(0.1, 1, headV(phi)), uv);
       mb.vert(C.x + p.x * hs, C.y + p.y * hs, C.z + p.z * hs, nn.x, nn.y, nn.z, uv[0], uv[1], wHead);

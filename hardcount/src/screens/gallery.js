@@ -129,7 +129,9 @@ registerScreen('gallery', () => {
     key.shadow.bias = -0.0004;
     key.shadow.normalBias = 0.03;
     const sc = key.shadow.camera;
-    sc.left = -22; sc.right = 22; sc.top = 22; sc.bottom = -22; sc.near = 1; sc.far = 80;
+    // close-up modes get the shadow map fitted round the models (faces and fingers need it sharp)
+    const S = mode === 'closeup' || mode === 'hands' ? 4 : 22;
+    sc.left = -S; sc.right = S; sc.top = S; sc.bottom = -S; sc.near = 1; sc.far = 80;
     scene.add(key, key.target);
     if (night) {
       const back = new THREE.DirectionalLight('#c8d8ff', 1.6);
@@ -276,7 +278,8 @@ registerScreen('gallery', () => {
     const teams = TEAMS;
     const masks = ['qb', 'skill', 'lineman', 'robot', 'cage', 'kicker'];
     const visors = [null, 'smoke', null, 'gold', null, 'mirror'];
-    const hairs = ['afro', 'dreads', 'mohawk', 'flat', 'long', 'curly'];
+    // hairs=short,twists,… picks the six helmet-off styles
+    const hairs = (q.get('hairs') || 'afro,dreads,mohawk,flat,long,curly').split(',').concat(Array(6).fill('short')).slice(0, 6);
     const beards = ['none', 'full', 'goatee', 'stubble', 'chinstrap', 'none'];
     const which = q.get('which') || 'both';
     const finish = q.get('finish');      // finish=gloss|matte|pearl|chrome overrides every shell

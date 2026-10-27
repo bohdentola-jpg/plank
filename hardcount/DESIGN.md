@@ -158,7 +158,13 @@ linear in (λ, φ), at twice the head's texels. The painter draws in those
 degrees, so paint and shape always agree. Eyes are eyeballs (`R.EYE`, one
 texture mirrored) under upper and lower lid shells; `eyeContours()` gives the
 painter the lids' own outlines for the lash lines and creases. Skin noise is
-3D, shared by the face and the head textures, so their seam never shows.
+3D, shared by the face and the head textures, so their seam never shows. The
+head is built on an egg, and under the nose that egg looks at the floor, so
+the mouth and the front of the chin get bent normals that face forward (the
+shape, and the helmet's fit, don't move). Under an overhead light they shade
+like a face rather than going black. Bare-headed hair is a cap painted per
+style: ropes from the crown for twists and dreads, coils for curly hair and
+afros, combed strands for the rest.
 
 Budgets: ≤ 6 draw calls and ~9.5k triangles per player at `high` (face grid,
 lids, ears and jointed hands), ≤ 3 calls / ~2k triangles at `low`; 53 bones up

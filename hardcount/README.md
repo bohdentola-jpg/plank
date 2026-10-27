@@ -168,5 +168,6 @@ VH=900` sets the window size. URL shortcuts:
 `?screen=match&home=pht&away=det&qa=play` (straight to a first and ten),
 `qa=kick&kicking=home`, `screen=practice`, `screen=playbook`, `screen=gallery`
 (every animation; `mode=hands` for the hands at fixed curls, `mode=closeup` for
-heads and faces, `focus=x,y,z&cam=az,el,dist` to aim the camera),
+heads and faces (`hairs=twists,afro,…` picks the bare-headed styles, `rot=0`
+stops the turntable), `focus=x,y,z&cam=az,el,dist` to aim the camera),
 `screen=venueview` (the stadiums).

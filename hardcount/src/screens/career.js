@@ -255,6 +255,8 @@ registerScreen('career', () => {
       try {
         venue = await mod.buildVenue(game.renderer.gl, { venue: 'friday', home: school, away: getTeam(HS_RIVALS.find((h) => h.id !== cr.school).id), time: 'night', weather: 'clear', crowd: 0.2, quality: 'low' });
         scene = venue.scene;
+        // the shadows fitted to him alone: the whole field's worth smears the nose's shadow across a cheek
+        venue.focusShadow?.(0, 0, 2.5);
         game.renderer.setPost({ ...(venue.post || {}), vignette: 0.8 }, true);
       } catch (e) { console.warn(e); }
     }

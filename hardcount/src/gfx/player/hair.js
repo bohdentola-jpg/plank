@@ -46,8 +46,9 @@ function thickness(style, lam, phi, x, y, z) {
   const la = lam * D2R;
   switch (style) {
     case 'short': return 0.006 + 0.007 * top;
-    case 'curly': return 0.013 + 0.006 * top + 0.0035 * Math.sin(la * 18) * Math.sin(phi * 0.42);
-    case 'twists': return 0.017 + 0.006 * top + 0.006 * Math.abs(Math.sin(la * 32) * Math.sin(phi * 0.6));
+    // (the coils and ropes are in the paint: bumps finer than the grid only alias into lumps)
+    case 'curly': return 0.013 + 0.006 * top + 0.0018 * Math.sin(la * 5 + phi * 0.05);
+    case 'twists': return 0.018 + 0.006 * top + 0.0015 * Math.sin(la * 4 + phi * 0.07);
     case 'afro': return 0.046 + 0.024 * top + 0.012 * sstep(-10, 30, phi) + 0.004 * Math.sin(la * 23) * Math.sin(phi * 0.5);
     case 'flat': {
       // high-top: the ray from the head centre stops at a flat top or at the straight sides
@@ -69,7 +70,7 @@ function thickness(style, lam, phi, x, y, z) {
 }
 
 function capGrid(mb, style, C, hs, lod) {
-  const nc = lod === 'high' ? 22 : 10, ns = lod === 'high' ? 7 : 3;
+  const nc = lod === 'high' ? 40 : 10, ns = lod === 'high' ? 10 : 3;
   // how far in from the hairline the hair reaches its full height (big styles round over)
   const ramp = style === 'afro' ? 0.42 : style === 'curly' || style === 'twists' ? 0.22 : 0.12;
   const p = new THREE.Vector3(), q = new THREE.Vector3(), r = new THREE.Vector3(), n = new THREE.Vector3();

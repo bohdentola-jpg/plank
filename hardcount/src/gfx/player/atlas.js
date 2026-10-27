@@ -1049,25 +1049,56 @@ function paintEyes(ctx, look, rng) {
   ctx.restore();
 }
 
+// The helmet-off hair cap (R.HAIR): across is round the head from the back (the front in
+// the middle), up is from the hairline (bottom) to the crown (top), where every column
+// meets, so a stroke down the rect is a strand growing out from the crown.
 function paintHair(ctx, look, rng) {
-  const Hr = R.HAIR;
+  const Hr = R.HAIR, [x0, y0, W, H] = Hr;
   const hc = look.hairColor || '#1b1612';
-  ctx.save();
+  const style = look.hair || 'short';
+  const light = shade(hc, 0.45), dark = shade(hc, -0.5), deep = shade(hc, -0.72);
+  clipRect(ctx, Hr);
   ctx.fillStyle = hc;
-  ctx.fillRect(Hr[0], Hr[1], Hr[2], Hr[3]);
-  // strands / curls
-  const light = shade(hc, 0.25), dark = shade(hc, -0.4);
-  const curly = ['curly', 'twists', 'afro', 'dreads', 'braids'].includes(look.hair);
-  for (let i = 0; i < 420; i++) {
-    const px = Hr[0] + rng() * Hr[2], py = Hr[1] + rng() * Hr[3];
-    ctx.strokeStyle = rng() < 0.5 ? light : dark;
-    ctx.globalAlpha = 0.35;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    if (curly) ctx.arc(px, py, 1 + rng() * 1.6, 0, Math.PI * 2);
-    else { ctx.moveTo(px, py); ctx.lineTo(px + (rng() - 0.5) * 2, py + 3 + rng() * 5); }
-    ctx.stroke();
+  ctx.fillRect(x0, y0, W, H);
+  const line = (ax, ay, bx, by, col, a, w = 1) => {
+    ctx.globalAlpha = a; ctx.strokeStyle = col; ctx.lineWidth = w;
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+  };
+  if (style === 'twists' || style === 'dreads') {
+    // ropes from the crown to the hairline, each a stack of slanted turns with a parting between
+    const n = style === 'twists' ? 30 : 18, cw = W / n, pitch = style === 'twists' ? 3.2 : 4.6;
+    for (let i = 0; i < n; i++) {
+      const cx = x0 + (i + 0.5) * cw;
+      line(cx - cw / 2, y0, cx - cw / 2, y0 + H, deep, 0.9, 1);
+      for (let y = y0 - pitch + rng() * pitch; y < y0 + H; y += pitch) {
+        line(cx - cw * 0.38, y + pitch * 0.75, cx + cw * 0.38, y, light, 0.6, 1);
+        line(cx - cw * 0.38, y + pitch, cx + cw * 0.38, y + pitch * 0.3, dark, 0.65, 0.8);
+      }
+    }
+  } else if (style === 'curly' || style === 'afro') {
+    // tight coils, lit from above and shadowed underneath
+    const n = style === 'afro' ? 1500 : 1100, r0 = style === 'afro' ? 1.1 : 1.3;
+    for (let i = 0; i < n; i++) {
+      const px = x0 + rng() * W, py = y0 + rng() * H, r = r0 * (0.7 + rng() * 0.7);
+      ctx.globalAlpha = 0.45; ctx.fillStyle = deep;
+      ctx.beginPath(); ctx.arc(px + 0.4, py + 0.5, r, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.6; ctx.strokeStyle = light; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.arc(px, py, r, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+    }
+  } else {
+    // straight hair: fine strands combed down from the crown
+    const n = style === 'long' ? 700 : 900, len = style === 'long' ? 14 : 6;
+    for (let i = 0; i < n; i++) {
+      const px = x0 + rng() * W, py = y0 + rng() * H, l = len * (0.5 + rng());
+      line(px, py, px + (rng() - 0.5) * 1.5, py + l, rng() < 0.45 ? light : dark, 0.3, 0.7);
+    }
   }
+  // the light catches the top of the head
+  const g = ctx.createLinearGradient(0, y0, 0, y0 + H);
+  g.addColorStop(0, 'rgba(255,255,255,0.09)');
+  g.addColorStop(0.4, 'rgba(255,255,255,0.02)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(x0, y0, W, H);
   ctx.restore();
 }
 

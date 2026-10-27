@@ -1072,7 +1072,10 @@ class MatchScreen {
         });
       }
       const b = this.frame.ball;
-      this.world.venue.focusShadow?.(b.x * 0.6, b.z, 34);
+      // the shadows fit round the action; a shot up close on one man gets them sharp round him
+      // (a whole field's worth on a face smears the nose's shadow over a cheek)
+      if (['closeup', 'celebrate', 'coin'].includes(this.cam.shotName)) this.world.venue.focusShadow?.(this.cam.look.x, this.cam.look.z, 10);
+      else this.world.venue.focusShadow?.(b.x * 0.6, b.z, 34);
       this.world.venue.update(dt, { camera: this.cam.camera, excitement: this.sound.excite, homeHasBall: m.possession === 'home', ball: b, time: this.t });
     } catch (e) { /* the venue is decoration */ }
   }
