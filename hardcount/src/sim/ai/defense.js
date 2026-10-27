@@ -24,6 +24,8 @@ export function rushBrain(m, e, dt) {
   const asg = e.asg;
   // read run: a handoff / a runner past the line turns him into a pursuer
   if (m.runRead(e)) return pursue(m, e, dt);
+  // the ball's gone: no more business with the passer (that's roughing), turn and chase the throw
+  if (m.ballThrown()) return pursue(m, e, dt);
   const tgt = qb || m.qb;
   if (!tgt) { e.setWant(0, 0, 0); return; }
   e.mem.goal = { x: tgt.x, z: tgt.z };

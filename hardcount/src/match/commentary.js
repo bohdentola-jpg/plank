@@ -12,13 +12,16 @@ function nm(e) {
   return (e.p.last || '').toUpperCase();
 }
 function teamName(m, side) { return (m.teams[side]?.name || side).toUpperCase(); }
+// the verb after a team agrees with its name: THE GRIZZLIES SCORE, THE TIDE SCORES ({s})
+const agree = (name) => (/(S|MEN)$/.test(name) ? '' : 'S');
+function teamVars(m, side) { const team = teamName(m, side); return { team, s: agree(team) }; }
 function spot(m, z, dir) { return m.field.spotText(z, dir); }
 
 const L = {
   open: [
     'GOOD EVENING EVERYBODY, AND WELCOME TO {venue}. {away} AND {home}, SEVEN ON SEVEN, AND THE PLACE IS ROCKING.',
     'IT IS A BEAUTIFUL NIGHT FOR FOOTBALL HERE AT {venue}. {away} VISITING {home}.',
-    'WELCOME IN TO {venue}, WHERE {home} HOST {away}. I\'M {pbp}, ALONGSIDE {clr}.',
+    'WELCOME IN TO {venue}, WHERE {home} HOST{hs} {away}. I\'M {pbp}, ALONGSIDE {clr}.',
   ],
   kickoff: ['HERE\'S THE KICK.', 'AND WE\'RE UNDERWAY.', 'THE KICK IS AWAY.', 'HIGH, END OVER END.'],
   kickTb: ['TAKES A KNEE IN THE END ZONE. TOUCHBACK.', 'NO RETURN. TOUCHBACK.'],
@@ -30,9 +33,9 @@ const L = {
   drop: ['AND HE DROPS IT!', 'RIGHT THROUGH HIS HANDS.', 'HE HAS TO HAVE THAT ONE.'],
   pick: ['PICKED OFF! {def}!', 'INTERCEPTED! {def} JUMPS THE ROUTE!', 'OH, IT\'S PICKED! {def} HAS IT!'],
   fumble: ['FUMBLE! THE BALL IS LOOSE!', 'HE PUTS IT ON THE GROUND!', 'IT\'S OUT! FUMBLE!'],
-  recoverOff: ['{e} FALLS ON IT. THEY KEEP IT.', 'BUT {team} HANGS ON TO IT.'],
-  recoverDef: ['{e} RECOVERS FOR {team}!', 'AND {team} COMES UP WITH IT! TURNOVER!'],
-  td: ['TOUCHDOWN, {team}!', 'HE\'S IN! TOUCHDOWN!', '{e} INTO THE END ZONE! TOUCHDOWN!', 'TOUCHDOWN! {team} SCORES!'],
+  recoverOff: ['{e} FALLS ON IT. THEY KEEP IT.', 'BUT {team} HANG{s} ON TO IT.'],
+  recoverDef: ['{e} RECOVERS FOR {team}!', 'AND {team} COME{s} UP WITH IT! TURNOVER!'],
+  td: ['TOUCHDOWN, {team}!', 'HE\'S IN! TOUCHDOWN!', '{e} INTO THE END ZONE! TOUCHDOWN!', 'TOUCHDOWN! {team} SCORE{s}!'],
   tdLong: ['{e}... {e}... HE COULD GO ALL THE WAY... TOUCHDOWN!', 'NOBODY IS CATCHING {e}! {yds} YARDS, TOUCHDOWN!'],
   sack: ['SACKED! {def} BRINGS DOWN {qb}.', '{qb} GOES DOWN. A SACK FOR {def}.', 'AND THE QUARTERBACK IS BURIED.'],
   bigRun: ['{e} BREAKS INTO THE CLEAR!', '{e} TURNS THE CORNER!', 'DAYLIGHT FOR {e}!'],
@@ -43,7 +46,7 @@ const L = {
   fgGood: ['THE KICK IS... GOOD!', 'RIGHT DOWN THE MIDDLE. IT\'S GOOD.', 'IT\'S GOOD FROM {dist}.'],
   fgMiss: ['NO GOOD!', 'WIDE! HE MISSES IT.', 'AND IT DOINKS OFF THE UPRIGHT. NO GOOD.'],
   safety: ['SAFETY! TWO POINTS FOR {team}!'],
-  tod: ['TURNOVER ON DOWNS. THE DEFENSE HOLDS!', 'STOPPED SHORT! {team} TAKES OVER.'],
+  tod: ['TURNOVER ON DOWNS. THE DEFENSE HOLDS!', 'STOPPED SHORT! {team} TAKE{s} OVER.'],
   twoMin: ['TWO-MINUTE WARNING.', 'AND THAT\'LL BRING US TO THE TWO-MINUTE WARNING.'],
   qEnd: ['THAT WILL DO IT FOR THE QUARTER.', 'END OF THE QUARTER HERE.'],
   half: ['THAT\'S HALFTIME. {lead}.', 'WE\'LL TAKE A BREAK. AT THE HALF, {lead}.'],
@@ -53,13 +56,13 @@ const L = {
   hit: ['OH, WHAT A HIT!', 'HE GOT BLOWN UP.', 'BOOM! YOU FELT THAT ONE IN THE STANDS.'],
   juke: ['NICE MOVE!', 'HE MAKES HIM MISS!', 'JUKES HIM OUT OF HIS SHOES!'],
   hurdle: ['RIGHT OVER THE TOP!', 'HE HURDLES HIM!'],
-  timeout: ['{team} CALLS TIME OUT.', 'TIMEOUT, {team}.'],
+  timeout: ['{team} CALL{s} TIME OUT.', 'TIMEOUT, {team}.'],
   // the color man, after the whistle
   cBig: ['THAT\'S A PLAYMAKER. YOU GIVE HIM A CREASE AND IT\'S OVER.', 'YOU CAN\'T COACH THAT KIND OF SPEED.', 'GREAT EFFORT. HE WANTED THAT ONE.'],
   cPick: ['HE STARED HIM DOWN THE WHOLE WAY. YOU CAN\'T DO THAT.', 'BAD DECISION. HE SHOULD HAVE THROWN IT AWAY.', 'THE DEFENSIVE BACK READ IT ALL THE WAY.'],
   cSack: ['NOWHERE TO GO WITH IT. COVERAGE WAS GREAT ON THE BACK END.', 'HE HELD IT TOO LONG.', 'THAT\'S A WIN UP FRONT FOR THE DEFENSE.'],
   cTd: ['THAT\'S HOW YOU FINISH A DRIVE.', 'THEY MADE THAT LOOK EASY.', 'WHAT A PLAY CALL. THEY HAD THEM OUTNUMBERED.'],
-  cStuff: ['NOTHING THERE. THEY WERE WAITING FOR IT.', 'THE DEFENSE WIN THAT ONE AT THE LINE.'],
+  cStuff: ['NOTHING THERE. THEY WERE WAITING FOR IT.', 'THE DEFENSE WINS THAT ONE AT THE LINE.'],
   cLat: ['NOW THAT\'S SEVEN-ON-SEVEN FOOTBALL. EVERYBODY GETS A TOUCH.', 'IF IT\'S WORKING, KEEP PITCHING IT!'],
 };
 
@@ -99,7 +102,7 @@ export class Booth {
   /** The open, from the top of the broadcast. */
   intro() {
     const m = this.m;
-    this.say('open', { venue: this.venueName, home: teamName(m, 'home'), away: teamName(m, 'away'), pbp: this.pbp, clr: this.clr });
+    this.say('open', { venue: this.venueName, home: teamName(m, 'home'), hs: agree(teamName(m, 'home')), away: teamName(m, 'away'), pbp: this.pbp, clr: this.clr });
   }
 
   lead() {
@@ -122,7 +125,6 @@ export class Booth {
 
   onEvent(ev) {
     const m = this.m;
-    const v = { team: teamName(m, m.offSide) };
     switch (ev.type) {
       case 'lineup':
         this.play = { lats: 0, big: false };
@@ -147,7 +149,7 @@ export class Booth {
       case 'interception': this.say('pick', { def: nm(ev.e) }); this.say('cPick', {}, 3.2, 'clr'); break;
       case 'fumble': if (ev.c) this.say('fumble'); break;
       case 'recover':
-        if (ev.e) this.say(ev.turnover ? 'recoverDef' : 'recoverOff', { e: nm(ev.e), team: teamName(m, ev.e.side) }, 0.3);
+        if (ev.e) this.say(ev.turnover ? 'recoverDef' : 'recoverOff', { e: nm(ev.e), ...teamVars(m, ev.e.side) }, 0.3);
         break;
       case 'lateral': case 'pitch':
         // (a toss sweep's pitch and a designed handoff aren't laterals worth shouting about)
@@ -162,22 +164,22 @@ export class Booth {
         break;
       case 'flag': this.say('flag', {}, 0.6); break;
       case 'firstDown': if (this.rng() < 0.55) this.say('firstDown', {}, 0.5); break;
-      case 'turnoverOnDowns': this.say('tod', { team: teamName(m, m.defSide) }, 0.4); break;
+      case 'turnoverOnDowns': this.say('tod', teamVars(m, m.defSide), 0.4); break;
       case 'twoMinute': this.say('twoMin'); break;
       case 'quarterEnd': if (ev.quarter === 1 || ev.quarter === 3) this.say('qEnd', {}, 0.4); break;
       case 'halftime': this.say('half', { lead: this.lead() }, 0.6); break;
       case 'final': this.say('final', { lead: this.lead() }, 0.6); break;
-      case 'timeout': this.say('timeout', { team: teamName(m, ev.side) }); break;
+      case 'timeout': this.say('timeout', teamVars(m, ev.side)); break;
       case 'score': {
-        const t = teamName(m, ev.side);
+        const t = teamVars(m, ev.side);
         if (ev.kind === 'td') {
           const yds = Math.abs(Math.round(m.result?.yards ?? 0));
           const e = ev.e;
           if (yds >= 25 && e) this.say('tdLong', { e: nm(e), yds });
-          else this.say('td', { team: t, e: nm(e) });
+          else this.say('td', { ...t, e: nm(e) });
           this.say(this.play.lats >= 2 ? 'cLat' : 'cTd', {}, 3.4, 'clr');
         } else if (ev.kind === 'fg') this.say('fgGood', { dist: ev.dist ? `${ev.dist} YARDS` : 'THERE' });
-        else if (ev.kind === 'safety') this.say('safety', { team: t });
+        else if (ev.kind === 'safety') this.say('safety', t);
         break;
       }
       case 'fgMissed': this.say('fgMiss'); break;
@@ -193,6 +195,5 @@ export class Booth {
       }
       default: break;
     }
-    void v;
   }
 }

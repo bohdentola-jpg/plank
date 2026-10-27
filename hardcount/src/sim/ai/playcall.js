@@ -138,6 +138,8 @@ function pickPlay(m, side, filter, style) {
     // the heavy goal-line package comes out for short yardage and the goal line, not first and ten
     if (p.form === 'goal_line' && m.toGo > 2 && m.field.toGoal(m.los, m.offDir) > 5) w *= 0.03;
     if (p.kind === 'trick') w *= 0.5;
+    // a Road to Glory quarterback takes the snaps: the wildcat is a rare surprise, not the coach's pick
+    if (p.form === 'wildcat' && m.lock?.side === side && m.lock.player?.pos === 'QB') w *= 0.04;
     return [p, w];
   });
   const p = weighted(m.rng, items);
