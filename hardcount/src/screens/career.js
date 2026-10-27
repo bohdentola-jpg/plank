@@ -20,6 +20,9 @@ import { addTrophy, enshrine } from '../data/records.js';
 import * as CR from '../career/career.js';
 import { glossBar, shadeHex, lum } from '../match/hud.js';
 
+// the creator's build and pad choices → look.muscle / look.pads
+const BUILDS = [['LEAN', 0.15], ['ATHLETIC', 0.45], ['BUILT', 0.72], ['JACKED', 0.95]];
+const PADS = [['SLIM', 0.1], ['STANDARD', 0.5], ['BIG', 0.9]];
 const SKINS = ['#f1d3bd', '#e5b896', '#d4a07a', '#c08a63', '#a8714b', '#8d5a3a', '#73452b', '#5c3521', '#4a2a1a', '#3a2015'];
 const HAIRS = ['buzz', 'fade', 'short', 'twists', 'dreads', 'braids', 'afro', 'mohawk', 'bald', 'curly', 'long', 'flat'];
 const STAGE_NAME = { hs: 'HIGH SCHOOL', college: 'COLLEGE', pro: 'THE SEVENS LEAGUE', retired: 'RETIRED' };
@@ -227,7 +230,7 @@ registerScreen('career', () => {
     const rng = makeRng(Date.now() & 0xffffff);
     const nm = playerName(rng);
     cr = {
-      row: 0, pos: 'WR', arche: 0, first: nm.first, last: nm.last, number: 11, skin: 5, hair: 1,
+      row: 0, pos: 'WR', arche: 0, first: nm.first, last: nm.last, number: 11, skin: 5, hair: 1, build: 1, pads: 0,
       school: HS_RIVALS[Math.floor(rng() * HS_RIVALS.length)].id, rng, seed: Math.floor(rng() * 1e9),
       hometown: HOMETOWNS[Math.floor(rng() * HOMETOWNS.length)],
     };
@@ -236,7 +239,7 @@ registerScreen('career', () => {
 
   function rebuildDraft() {
     const a = CR.ARCHETYPES[cr.pos][cr.arche % CR.ARCHETYPES[cr.pos].length];
-    cr.p = CR.draftPlayer({ first: cr.first, last: cr.last, pos: cr.pos, arche: a.id, number: cr.number, hometown: cr.hometown, seed: cr.seed, look: { skin: cr.skin / 9, skinHex: SKINS[cr.skin], hair: HAIRS[cr.hair] } });
+    cr.p = CR.draftPlayer({ first: cr.first, last: cr.last, pos: cr.pos, arche: a.id, number: cr.number, hometown: cr.hometown, seed: cr.seed, look: { skin: cr.skin / 9, skinHex: SKINS[cr.skin], hair: HAIRS[cr.hair], muscle: BUILDS[cr.build][1], pads: PADS[cr.pads][1] } });
     if (model) {
       try { model.setKit(getTeam(cr.school), 'home'); model.setPlayer(cr.p); } catch (e) { console.warn(e); }
     }
@@ -264,7 +267,7 @@ registerScreen('career', () => {
     try { model = pmod.createPlayerModel({ team: school, kit: 'home', player: cr.p, lod: 'high' }); scene.add(model.group); } catch (e) { console.warn(e); model = null; }
   }
 
-  const CREATE_ROWS = ['pos', 'arche', 'first', 'last', 'number', 'skin', 'hair', 'school', 'go'];
+  const CREATE_ROWS = ['pos', 'arche', 'first', 'last', 'number', 'skin', 'hair', 'build', 'pads', 'school', 'go'];
 
   function updateCreate(dt) {
     const r = CREATE_ROWS[cr.row];
@@ -274,12 +277,14 @@ registerScreen('career', () => {
     if (d) {
       uiSound('tab');
       switch (r) {
-        case 'pos': { const i = CR.POSITIONS.indexOf(cr.pos); cr.pos = CR.POSITIONS[(i + d + CR.POSITIONS.length) % CR.POSITIONS.length]; cr.arche = 0; cr.number = { QB: 7, RB: 22, WR: 11, TE: 85, LB: 54, CB: 24, S: 31 }[cr.pos]; break; }
+        case 'pos': { const i = CR.POSITIONS.indexOf(cr.pos); cr.pos = CR.POSITIONS[(i + d + CR.POSITIONS.length) % CR.POSITIONS.length]; cr.arche = 0; cr.number = { QB: 7, RB: 22, WR: 11, TE: 85, LB: 54, CB: 24, S: 31 }[cr.pos]; cr.pads = { QB: 0, RB: 1, WR: 0, TE: 1, LB: 2, CB: 0, S: 1 }[cr.pos] ?? 1; break; }
         case 'arche': cr.arche = (cr.arche + d + 2) % 2; break;
         case 'first': case 'last': { const nm = playerName(cr.rng); cr[r] = nm[r]; break; }
         case 'number': cr.number = clamp(cr.number + d, 1, 99); break;
         case 'skin': cr.skin = (cr.skin + d + SKINS.length) % SKINS.length; break;
         case 'hair': cr.hair = (cr.hair + d + HAIRS.length) % HAIRS.length; break;
+        case 'build': cr.build = clamp(cr.build + d, 0, BUILDS.length - 1); break;
+        case 'pads': cr.pads = clamp(cr.pads + d, 0, PADS.length - 1); break;
         case 'school': { const i = HS_RIVALS.findIndex((h) => h.id === cr.school); cr.school = HS_RIVALS[(i + d + HS_RIVALS.length) % HS_RIVALS.length].id; break; }
         default: break;
       }
@@ -324,12 +329,13 @@ registerScreen('career', () => {
     const rows = {
       pos: ['POSITION', CR.POS_NAMES[cr.pos]], arche: ['STYLE', a.name], first: ['FIRST NAME', cr.first.toUpperCase()], last: ['LAST NAME', cr.last.toUpperCase()],
       number: ['NUMBER', `#${cr.number}`], skin: ['SKIN TONE', ''], hair: ['HAIR', HAIRS[cr.hair].toUpperCase()],
+      build: ['BUILD', BUILDS[cr.build][0]], pads: ['SHOULDER PADS', PADS[cr.pads][0]],
       school: ['HIGH SCHOOL', `${getTeam(cr.school).city} ${getTeam(cr.school).name}`.toUpperCase()], go: ['', ''],
     };
     CREATE_ROWS.forEach((r, i) => {
-      const y = py + 40 + i * 37;
+      const y = py + 38 + i * 31.5;
       const on = i === cr.row;
-      if (on) { ctx.fillStyle = 'rgba(255,58,44,0.22)'; ctx.fillRect(px + 10, y - 23, pw - 20, 32); }
+      if (on) { ctx.fillStyle = 'rgba(255,58,44,0.22)'; ctx.fillRect(px + 10, y - 22, pw - 20, 29); }
       if (r === 'go') { vText(ctx, 'START YOUR CAREER', px + pw / 2, y + 2, 22, { align: 'center', color: on ? '#ffd23a' : '#ffffff', weight: 0.2 }); return; }
       text(ctx, rows[r][0], px + 24, y - 6, { size: 10, weight: 900, color: on ? C.accent : C.dim, spacing: 2 });
       if (r === 'skin') {

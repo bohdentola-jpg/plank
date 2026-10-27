@@ -2,6 +2,9 @@
 //   node hardcount/tools/drive.mjs "<query>" script.json
 // steps: { wait: ms } | { key: 'KeyK', hold?: ms } | { eval: 'js' } | { shot: 'name.png' }
 //        | { until: 'js expr', timeout: ms } (poll until truthy)
+//        | { manual: true } (from here on the game only advances when told: deterministic frames)
+//          then { frames: n, dt? } (advance n frames of dt, default 1/60) and
+//          { film: { n, every, prefix } } (n shots, `every` frames apart: prefix_00.png …)
 //        | { dualsense: true } (first step: plug in a virtual DualSense) then
 //          { pad: 'cross', hold?: ms } (a button by name) | { stick: [lx, ly, rx, ry], hold: ms }
 //        Rumble the game asks for lands in window.__rumbles.
@@ -61,6 +64,15 @@ if (steps[0]?.dualsense) {
     window.__padAxes = (a, ms) => { pad.axes = a.slice(); setTimeout(() => { pad.axes = [0, 0, 0, 0]; }, ms); };
   });
 }
+// manual frames: requestAnimationFrame callbacks queue up and run on demand with fake timestamps
+await page.addInitScript(() => {
+  const raf = window.requestAnimationFrame.bind(window);
+  let q = [];
+  window.__manual = false;
+  window.__rafT = 0;
+  window.requestAnimationFrame = (cb) => { if (window.__manual) { q.push(cb); return 1; } return raf(cb); };
+  window.__frames = (n, dt) => { for (let i = 0; i < n; i++) { const cbs = q; q = []; window.__rafT += dt * 1000; for (const cb of cbs) cb(window.__rafT); } return q.length; };
+});
 const t0 = Date.now();
 await page.goto(`http://127.0.0.1:${port}/hardcount/index.html?${query}`);
 for (const st of steps) {
@@ -87,6 +99,18 @@ for (const st of steps) {
   }
   if (st.eval) { try { const r = await page.evaluate(st.eval); console.log('[eval]', JSON.stringify(r)); } catch (e) { console.log('[eval error]', e.message); } }
   if (st.shot) await page.screenshot({ path: join(root, 'qa', st.shot) });
+  if (st.manual) {
+    await page.evaluate(() => { window.__rafT = performance.now(); window.__manual = true; });
+    await page.waitForTimeout(500);
+  }
+  if (st.frames) await page.evaluate(([n, dt]) => window.__frames(n, dt), [st.frames, st.dt || 1 / 60]);
+  if (st.film) {
+    const { n, every = 4, prefix = 'film', dt = 1 / 60 } = st.film;
+    for (let i = 0; i < n; i++) {
+      await page.evaluate(([k, d]) => window.__frames(k, d), [every, dt]);
+      await page.screenshot({ path: join(root, 'qa', `${prefix}_${String(i).padStart(2, '0')}.png`) });
+    }
+  }
 }
 console.log(`done (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
 await browser.close();

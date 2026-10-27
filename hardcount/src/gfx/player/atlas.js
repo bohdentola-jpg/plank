@@ -4,7 +4,7 @@
 // skin (arms, neck, face with eyes / brows / eye black / beard, scalp hair),
 // gloves, cleats, eyes, hair and the small props. Regions come from layout.js.
 import * as THREE from 'three';
-import { R, SWATCH, ATLAS, pxOf, torsoU, headU, headV } from './layout.js';
+import { R, SWATCH, ATLAS, SLEEVE_HEM, pxOf, torsoU, headU, headV } from './layout.js';
 import { drawNumber, numberWidth } from './numfont.js';
 import { logoCanvas } from '../logos.js';
 import { makeRng, hashString, shade, hexToRgb, rgbToHex } from '../../core/util.js';
@@ -425,14 +425,15 @@ function paintArms(ctx, o, { kit, num, lm, rng, skin, skinDark, look }) {
     shadeU(ctx, A, 0.0, 0.18, 0.18);
     shadeV(ctx, A, av(1.0), 0.02, 0.12);
     // compression sleeves
-    const vSleeveEnd = o.ref ? av(0.55) : av(0.4);
+    // the jersey sleeve ends at the hem the geometry steps down at
+    const vSleeveEnd = av(SLEEVE_HEM);
     if (sleeves === 'long') rectL(ctx, A, 0, av(1.98), 1, vSleeveEnd + 0.01, sleeveCol);
     else if (sleeves === 'arm') rectL(ctx, A, 0, av(1.92), 1, av(0.55), sleeveCol);
     else if (sleeves === 'elbow') rectL(ctx, A, 0, av(1.28), 1, av(0.74), sleeveCol);
     if (sleeves !== 'none') texture(ctx, A, sheenTile, 0.25);
     // wristband / tape
     if (look.wristbands) rectL(ctx, A, 0, av(1.82), 1, av(1.95), side === 'L' ? '#f4f4f0' : (o.team?.colors?.secondary || '#f4f4f0'));
-    if (look.armBand && side === 'R') rectL(ctx, A, 0, av(0.5), 1, av(0.58), '#f4f4f0');
+    if (look.armBand && side === 'R') rectL(ctx, A, 0, av(0.62), 1, av(0.7), '#f4f4f0');
     // jersey sleeve (the deltoid cap and the top of the upper arm)
     rectL(ctx, A, 0, vSleeveEnd, 1, 1, o.ref ? '#f2f2ee' : kit.jersey);
     if (o.ref) {
@@ -487,8 +488,10 @@ function hp(lam, phi) {
 }
 // face landmarks in (λ, φ) degrees — must match body.js's head shape
 export const FACE = {
-  eye: [24.3, 4.6], brow: [23, 12.2], noseTip: [0, -12.5], mouth: [0, -28.7], chin: [0, -50],
+  eye: [24.3, 4.6], brow: [23, 12.2], noseTip: [0, -16.3], noseBase: [0, -21.1], mouth: [0, -32.3], chin: [0, -57],
 };
+// the lower face's (λ, φ) outlines (beards) were drawn for a shorter face: stretch them down to it
+const lf = (phi) => (phi < -8 ? -8 + (phi + 8) * 1.12 : phi);
 
 function paintHead(ctx, o, { skin, skinDark, skinLight, look, rng }) {
   const H = R.HEAD;
@@ -514,67 +517,84 @@ function paintHead(ctx, o, { skin, skinDark, skinLight, look, rng }) {
   };
   const sk = hexToRgb(skin).map((c) => Math.round(c * 255)).join(',');
   const dark = hexToRgb(skinDark).map((c) => Math.round(c * 255)).join(',');
-  // eye sockets, under the brow, nose sides, under the nose and lip, cheek warmth, highlights
+  // eye sockets, the lid crease, under the brow, the nose's sides, cheek warmth, highlights
   for (const s of [1, -1]) {
     blob(s * 24, 5, 8, 5, dark, 0.26);
-    blob(s * 22, 9.5, 9, 3, dark, 0.22);
-    blob(s * 9, -7, 3.5, 8, dark, 0.2);
-    blob(s * 36, -14, 11, 9, '190,80,70', 0.07);
-    blob(s * 40, -3, 8, 6, '255,255,255', 0.05);
+    blob(s * 23, 8.5, 8, 2.2, dark, 0.2);
+    blob(s * 22, 10.5, 9, 3, dark, 0.18);
+    blob(s * 7.5, -8, 3, 10, dark, 0.2);
+    blob(s * 11, -19, 4, 4, dark, 0.22);
+    blob(s * 36, -15, 11, 9, '190,80,70', 0.07);
+    blob(s * 40, -3, 8, 6, '255,255,255', 0.06);
+    blob(s * 30, -24, 9, 8, dark, 0.08);
+    blob(s * 15, -27, 3, 7, dark, 0.12);
+    blob(s * 62, -48, 18, 14, dark, 0.12);
   }
-  blob(0, -18, 6, 3, dark, 0.38);
-  blob(0, -34.5, 8, 3, dark, 0.28);
-  blob(0, -47, 15, 4, dark, 0.14);
+  blob(0, FACE.noseBase[1] - 0.5, 5.5, 2.2, dark, 0.4);
+  blob(0, -37.5, 8, 2.2, dark, 0.26);
+  blob(0, -42.5, 12, 2.6, dark, 0.16);
+  blob(0, -62, 22, 6, dark, 0.12);
   blob(0, 24, 26, 9, '255,255,255', 0.06);
-  blob(0, -1, 2.5, 12, '255,255,255', 0.08);
-  // lips
+  // light down the bridge and on the tip, on the chin
+  blob(0, -4, 2.2, 10, '255,255,255', 0.09);
+  blob(0, FACE.noseTip[1] + 0.5, 3, 2.4, '255,255,255', 0.12);
+  blob(0, -55, 9, 4, '255,255,255', 0.05);
+  // lips: the upper one darker, the lower one fuller with a catch of light
   {
     const [mx, my] = P(0, FACE.mouth[1]);
-    const lipCol = mix(skin, '#7a3028', 0.32);
+    const lipCol = mix(skin, '#7a3028', 0.34);
+    ctx.fillStyle = shade(lipCol, -0.08);
+    ctx.beginPath();
+    ctx.moveTo(mx - W * 0.043, my);
+    ctx.quadraticCurveTo(mx - W * 0.02, my - Hh * 0.024, mx, my - Hh * 0.016);
+    ctx.quadraticCurveTo(mx + W * 0.02, my - Hh * 0.024, mx + W * 0.043, my);
+    ctx.closePath();
+    ctx.fill();
     ctx.fillStyle = lipCol;
     ctx.beginPath();
-    ctx.ellipse(mx, my - 1.0, W * 0.038, Hh * 0.011, 0, 0, Math.PI * 2);
+    ctx.ellipse(mx, my + Hh * 0.012, W * 0.036, Hh * 0.016, 0, 0, Math.PI * 2);
     ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
     ctx.beginPath();
-    ctx.ellipse(mx, my + 1.6, W * 0.034, Hh * 0.014, 0, 0, Math.PI * 2);
+    ctx.ellipse(mx, my + Hh * 0.014, W * 0.016, Hh * 0.006, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = `rgba(${dark},0.95)`;
-    ctx.lineWidth = 1.1;
+    ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.moveTo(mx - W * 0.04, my + 0.4);
-    ctx.quadraticCurveTo(mx, my + 1.0, mx + W * 0.04, my + 0.4);
+    ctx.moveTo(mx - W * 0.045, my + 0.6);
+    ctx.quadraticCurveTo(mx, my + 1.4, mx + W * 0.045, my + 0.6);
     ctx.stroke();
   }
   // nostrils
-  for (const s of [1, -1]) blob(s * 4.5, -16.5, 2.2, 1.6, '20,10,8', 0.55);
+  for (const s of [1, -1]) blob(s * 5.5, FACE.noseBase[1] + 0.8, 2.3, 1.5, '20,10,8', 0.6);
   // eyelids / lashes around the eyeballs, brows
   const brow = shade(look.hairColor || '#1b1612', -0.1);
   for (const s of [1, -1]) {
     const [ex, ey] = P(s * FACE.eye[0], FACE.eye[1]);
-    ctx.strokeStyle = 'rgba(20,12,8,0.85)';
-    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = 'rgba(16,10,6,0.9)';
+    ctx.lineWidth = 1.9;
     ctx.beginPath();
-    ctx.ellipse(ex, ey, W * 0.045, Hh * 0.03, 0, Math.PI * 1.05, Math.PI * 1.95);
+    ctx.ellipse(ex, ey, W * 0.046, Hh * 0.032, 0, Math.PI * 1.04, Math.PI * 1.96);
     ctx.stroke();
-    ctx.strokeStyle = `rgba(${dark},0.6)`;
+    ctx.strokeStyle = `rgba(${dark},0.55)`;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.ellipse(ex, ey + 1, W * 0.04, Hh * 0.026, 0, Math.PI * 0.1, Math.PI * 0.9);
+    ctx.ellipse(ex, ey + 1, W * 0.04, Hh * 0.026, 0, Math.PI * 0.12, Math.PI * 0.88);
     ctx.stroke();
-    // brow
+    // brow: thicker toward the nose, tapering out
     const [bx, by] = P(s * FACE.brow[0], FACE.brow[1]);
-    ctx.strokeStyle = brow;
-    ctx.lineCap = 'round';
-    ctx.lineWidth = Hh * 0.024;
+    ctx.fillStyle = brow;
     ctx.beginPath();
-    ctx.moveTo(bx - s * W * 0.05, by + 1.5);
-    ctx.quadraticCurveTo(bx, by - 1.8, bx + s * W * 0.055, by + 1.0);
-    ctx.stroke();
+    ctx.moveTo(bx - s * W * 0.052, by + Hh * 0.008);
+    ctx.quadraticCurveTo(bx - s * W * 0.01, by - Hh * 0.026, bx + s * W * 0.06, by + Hh * 0.004);
+    ctx.quadraticCurveTo(bx, by - Hh * 0.006, bx - s * W * 0.052, by + Hh * 0.022);
+    ctx.closePath();
+    ctx.fill();
   }
   // eye black
   if (look.eyeBlack === 'stripe' || look.eyeBlack === 'sticker') {
     for (const s of [1, -1]) {
-      const [ex, ey] = P(s * 25, -4);
+      const [ex, ey] = P(s * 25, -5);
       ctx.fillStyle = '#0c0c0e';
       if (look.eyeBlack === 'stripe') {
         ctx.save();
@@ -599,7 +619,7 @@ function paintHead(ctx, o, { skin, skinDark, skinLight, look, rng }) {
     ctx.fillStyle = col;
     const region = (pts) => {
       ctx.beginPath();
-      pts.forEach(([l, p], i) => { const q = P(l, p); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); });
+      pts.forEach(([l, p], i) => { const q = P(l, lf(p)); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); });
       ctx.closePath();
       ctx.fill();
     };
@@ -613,7 +633,7 @@ function paintHead(ctx, o, { skin, skinDark, skinLight, look, rng }) {
       ctx.strokeStyle = hc;
       ctx.lineWidth = Hh * 0.03;
       ctx.beginPath();
-      [[-80, -4], [-64, -36], [-36, -52], [0, -58], [36, -52], [64, -36], [80, -4]].forEach(([l, p], i) => { const q = P(l, p); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); });
+      [[-80, -4], [-64, -36], [-36, -52], [0, -58], [36, -52], [64, -36], [80, -4]].forEach(([l, p], i) => { const q = P(l, lf(p)); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); });
       ctx.stroke();
     }
     if (!stub) texture(ctx, H, fabricTile, 0.0);

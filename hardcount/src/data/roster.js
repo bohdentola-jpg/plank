@@ -11,7 +11,9 @@
 //           visor: null|'clear'|'smoke'|'gold'|'mirror', sleeves: 'none'|'long'|'elbow'|'arm',
 //           gloves: true|false, wristbands: bool, towel: bool, neckRoll: bool, handWarmer: bool,
 //           facemask: 'qb'|'skill'|'lineman'|'robot'|'cage'|'kicker', socks: 'high'|'low', shoes: 'low'|'mid'|'high',
-//           armBand: bool, bodyType: 'lean'|'average'|'thick'|'big' },
+//           armBand: bool, bodyType: 'lean'|'average'|'thick'|'big',
+//           muscle 0..1, pads 0..1 (slim skill pads … big lineman pads),
+//           face: { jaw, chin, nose, brow, cheek, len } each −1..1 },
 // }
 import { makeRng, hashString } from '../core/util.js';
 import { FIRST, LAST } from './names.js';
@@ -122,6 +124,24 @@ function makeLook(pos, rng) {
   };
 }
 
+// how built he is, how big his pads are, the shape of his face: drawn from the
+// player's own seed, so they never shift the roster's stream (names, ratings
+// and ids stay exactly what they were)
+const MUSCLE = { QB: [0.15, 0.6], RB: [0.55, 1], WR: [0.3, 0.8], TE: [0.5, 0.95], C: [0.3, 0.75], G: [0.3, 0.75], DL: [0.4, 0.9], LB: [0.55, 1], CB: [0.35, 0.8], S: [0.45, 0.9], K: [0, 0.45] };
+const PADS = { QB: [0, 0.35], RB: [0.25, 0.65], WR: [0, 0.3], TE: [0.45, 0.85], C: [0.7, 1], G: [0.7, 1], DL: [0.65, 1], LB: [0.5, 0.95], CB: [0, 0.3], S: [0.2, 0.6], K: [0, 0.15] };
+export function buildLook(p) {
+  const rng = makeRng('build:' + p.id);
+  const [m0, m1] = MUSCLE[p.pos] || [0.3, 0.7];
+  const [p0, p1] = PADS[p.pos] || [0.3, 0.7];
+  const q = (v) => Math.round(v * 100) / 100;
+  const f = () => q(rng() * 2 - 1);
+  return {
+    muscle: q(m0 + (m1 - m0) * rng()),
+    pads: q(p0 + (p1 - p0) * rng()),
+    face: { jaw: f(), chin: f(), nose: f(), brow: f(), cheek: f(), len: f() },
+  };
+}
+
 /**
  * Generate one player.  strength 0..1 shifts every rating; `boost` adds to the
  * whole line (starters a little better than backups).
@@ -149,6 +169,7 @@ export function makePlayer(pos, rng, { strength = 0.75, boost = 0, teamId = '', 
     r,
     look: makeLook(pos, rng),
   };
+  Object.assign(p.look, buildLook(p));
   p.ovr = overall(pos, r);
   return p;
 }

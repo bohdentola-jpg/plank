@@ -15,7 +15,7 @@ import * as THREE from 'three';
 import { M_TO_YD } from '../../sim/field.js';
 import { makeRng, hashString } from '../../core/util.js';
 import { B, NB, PARENT, BONE_NAMES, makeBuild, makeRigDims } from './rig.js';
-import { buildBody, headCenter, headScale, MeshBuilder } from './body.js';
+import { buildBody, headCenter, headScale, MeshBuilder, armCapR, legCapR, torsoProfile } from './body.js';
 import { paintAtlas, REF_KIT } from './atlas.js';
 import { makeBodyMaterial, visorMaterial } from './materials.js';
 import { helmetGeometry, helmetMaterialFor, visorGeometry, addHelmetNumberDecal } from './helmet.js';
@@ -155,7 +155,10 @@ class PlayerModel {
     const p = this.player, L = p.look || {};
     const bd = this.bd;
     const hn = !this.ref && !!this.team?.helmet?.number;
-    return [bd.hIn, bd.wLb, bd.type, L.shoes, !!L.towel, !!L.neckRoll, !!L.handWarmer, L.hair, this.lod, hn, this.ref || ''].join('|');
+    // build (muscle, pads) and, up close, the face's shape: quantised so look-alikes still share
+    const q = (v, k) => Math.round((v ?? 0) * k);
+    const F = this.lod === 'high' && bd.face ? ['jaw', 'chin', 'nose', 'brow', 'cheek', 'len'].map((k) => q(bd.face[k], 4)).join(',') : '';
+    return [bd.hIn, bd.wLb, bd.type, L.shoes, !!L.towel, !!L.neckRoll, !!L.handWarmer, L.hair, this.lod, hn, this.ref || '', q(bd.muscle, 10), q(bd.padSize, 10), F].join('|');
   }
 
   _build() {
@@ -164,6 +167,8 @@ class PlayerModel {
     const wq = Math.round((p.weight ?? 215) / 5) * 5;
     this.bd = makeBuild({ ...p, weight: wq }, { pads: !this.ref, type: this.ref ? 'ref' : undefined });
     this.dims = makeRigDims(this.bd);
+    // the jersey's outside, for the animator to keep the arms out of it
+    this.dims.torso = torsoProfile(this.bd);
     const d = this.dims;
     // skeleton
     if (!this.bones) {
@@ -419,12 +424,12 @@ const _palmQR = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 
 
 /** v (texture) along a limb tube for t ∈ [0, 2] (0 joint … 1 middle joint … 2 end), matching body.js. */
 function limbVFn(dims, kind) {
-  const bd = dims.bd, s = bd.s, m = bd.musc * bd.limb;
+  const bd = dims.bd;
   const P = dims.bind;
   const arm = kind === 'arm';
   const L1 = arm ? P[B.armL].distanceTo(P[B.foreL]) : P[B.thighL].distanceTo(P[B.shinL]);
   const L2 = arm ? P[B.foreL].distanceTo(P[B.handL]) : P[B.shinL].distanceTo(P[B.footL]);
-  const capR = arm ? 0.061 * s * m : 0.084 * s * m * bd.hip;
+  const capR = arm ? armCapR(bd) : legCapR(bd);
   const capH = capR * 0.92;
   const total = L1 + L2;
   return (t) => { const dd = t <= 1 ? t * L1 : L1 + (t - 1) * L2; return 1 - (dd + capH) / (total + capH); };

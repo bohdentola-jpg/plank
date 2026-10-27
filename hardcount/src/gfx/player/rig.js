@@ -25,6 +25,7 @@ export const PARENT = [-1, 0, 1, 2, 3, 2, 5, 6, 7, 8, 2, 10, 11, 12, 13, 0, 15, 
 export const BONE_NAMES = Object.keys(B);
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const lerp = (a, b, t) => a + (b - a) * t;
 
 // body-type flavour on top of what height/weight already say
 const TYPES = {
@@ -35,14 +36,21 @@ const TYPES = {
   ref:     { musc: 0.96, waist: 1.04, belly: 0.3, neck: 1.0, pads: 0.0, hip: 1.02, limb: 0.97 },
 };
 
+// default muscle / pad size by position when a player has none (0..1)
+const POS_MUSCLE = { QB: 0.35, RB: 0.75, WR: 0.5, TE: 0.7, C: 0.5, G: 0.5, DL: 0.6, LB: 0.75, CB: 0.5, S: 0.65, K: 0.2 };
+const POS_PADS = { QB: 0.2, RB: 0.45, WR: 0.15, TE: 0.65, C: 0.85, G: 0.85, DL: 0.85, LB: 0.7, CB: 0.15, S: 0.4, K: 0.05 };
+
 /**
- * Build parameters from a player (height in inches, weight in lbs, look.bodyType).
+ * Build parameters from a player (height in inches, weight in lbs, look.bodyType,
+ * look.muscle 0..1, look.pads 0..1 (slim skill pads … big lineman pads),
+ * look.face { jaw, chin, nose, brow, cheek, len } each −1..1).
  * Everything downstream (bones, body mesh, helmet scale) reads this.
  */
 export function makeBuild(player, opts = {}) {
   const hIn = player?.height ?? 73;
   const wLb = player?.weight ?? 215;
-  const type = opts.type || player?.look?.bodyType || 'average';
+  const look = player?.look || {};
+  const type = opts.type || look.bodyType || 'average';
   const T = TYPES[type] || TYPES.average;
   const H = hIn * 0.0254;
   const s = H / 1.854;
@@ -51,17 +59,27 @@ export function makeBuild(player, opts = {}) {
   // girth: how much wider/thicker than the reference 6'1" 210 lb athlete
   const girth = clamp(Math.sqrt(bmi / 27.6), 0.86, 1.3);
   const fat = clamp((bmi - 30) / 9, 0, 1);            // linemen carry some
+  const pos = player?.pos;
+  // muscle: how built the arms, legs, neck and chest are (definition goes with it)
+  const muscle = clamp(look.muscle ?? POS_MUSCLE[pos] ?? 0.5, 0, 1);
+  const padSize = clamp(look.pads ?? POS_PADS[pos] ?? 0.5, 0, 1);
+  const face = look.face || null;
+  const mk = 0.9 + 0.22 * muscle;                      // 0.9 slight … 1.12 built
   return {
-    hIn, wLb, type, H, s, bmi, girth,
-    musc: T.musc,
+    hIn, wLb, type, H, s, bmi, girth, muscle, padSize, face,
+    musc: T.musc * mk,
+    // muscle definition (bumps: deltoids, biceps, calves), less under fat
+    def: clamp(0.25 + muscle * 0.9 - fat * 0.5, 0, 1),
     waist: T.waist * (0.94 + 0.06 * girth) + fat * 0.08,
     belly: clamp(T.belly * (0.4 + fat) + fat * 0.3, 0, 1.1),
-    neck: T.neck * (0.9 + 0.1 * girth),
-    pads: opts.pads === false ? 0 : T.pads * (0.96 + 0.04 * girth),
+    neck: T.neck * (0.9 + 0.1 * girth) * (0.95 + 0.1 * muscle),
+    pads: opts.pads === false ? 0 : T.pads * (0.96 + 0.04 * girth) * (0.92 + 0.17 * padSize),
+    // big pads stand taller over the shoulders, slim ones hug them
+    padRise: opts.pads === false ? 0 : lerp(-0.01, 0.014, padSize),
     hip: T.hip * (0.95 + 0.07 * girth),
     limb: T.limb * (0.92 + 0.1 * girth),
     // lateral width scale for the skeleton (shoulders, hips)
-    wide: clamp(0.94 + 0.09 * girth, 0.95, 1.1) * (type === 'big' ? 1.03 : 1),
+    wide: clamp(0.94 + 0.09 * girth, 0.95, 1.1) * (type === 'big' ? 1.03 : 1) * (0.98 + 0.04 * muscle),
     padded: opts.pads !== false,
   };
 }

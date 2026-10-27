@@ -32,6 +32,7 @@ const _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THRE
 const _qI = new THREE.Quaternion();
 const _target = new THREE.Vector3(), _pole = new THREE.Vector3();
 const _maskM = new Uint8Array(GROUPS.length);
+const TRUNK = [B.chest, B.spine, B.hips];
 
 function mirrorMask(out, m) {
   out.set(m);
@@ -96,9 +97,10 @@ export class Animator {
     const sw = info.sway || 0;
     if (sw) {
       const s = Math.sin(t * 0.55 + sd * 2.1) * 0.7 + Math.sin(t * 0.23 + sd) * 0.3;
-      P[C.ROOT] += s * 0.014 * sw;
-      P[C.ROOT + 5] += s * 1.4 * sw;
-      P[C.SPINE + 2] -= s * 0.9 * sw;
+      // a slow weight shift from foot to foot: felt more than seen
+      P[C.ROOT] += s * 0.009 * sw;
+      P[C.ROOT + 5] += s * 0.9 * sw;
+      P[C.SPINE + 2] -= s * 0.6 * sw;
       P[C.ROOT + 1] -= Math.abs(s) * 0.004 * sw;
     }
     const bo = info.bounce || 0;
@@ -213,10 +215,11 @@ export class Animator {
     // ---- look-at
     this.lookAt(A, clip, dt);
 
-    // ---- hands (clip IK + reach)
+    // ---- hands (clip IK + reach), then keep the arms out of the body
     this.reach(A, clip, actIn, P, dt);
     this.armIK(P, 0);
     this.armIK(P, 1);
+    if (d.torso) { this.collideArm(0); this.collideArm(1); }
 
     // ---- transitions (base, action, carry or side changed, or the action restarted)
     const changed = baseName !== this.sigBase || clip !== this.sigClip || carry !== this.sigCarry || side !== this.sigSide;
@@ -403,6 +406,68 @@ export class Animator {
     twoBoneIK(this.pos[ua], T, _pole, d.upperArm, d.foreArm, this.rot[cl], false, _q3, _q1);
     if (w >= 0.999) { this.local[ua].copy(_q3); this.local[fa].copy(_q1); }
     else { this.local[ua].slerp(_q3, w); this.local[fa].slerp(_q1, w); }
+    fkChain(d, this.local, this.rot, this.pos, ua, ua + 3);
+  }
+
+  /**
+   * How far a model-space point sits inside the torso (with a limb of radius r around it):
+   * writes the point moved out to the surface into `out` and returns the depth (0 = clear).
+   * The torso is the bind-pose cross-sections (dims.torso), carried by the trunk bone at
+   * that height: the chest above 1.2, the spine to 1.0, the hips below.
+   */
+  torsoPush(P, r, out) {
+    const d = this.dims, T = d.torso, s = d.s;
+    for (const bone of TRUNK) {
+      _q1.copy(this.rot[bone]).invert();
+      _v1.copy(P).sub(this.pos[bone]).applyQuaternion(_q1).add(d.bind[bone]);
+      const yr = _v1.y / s;
+      if (bone === B.chest ? yr < 1.2 : bone === B.spine ? yr < 1.0 || yr >= 1.2 : yr >= 1.0) continue;
+      const fi = (_v1.y - T[0].y) / (T[1].y - T[0].y);
+      if (fi < 0 || fi > T.length - 1) return 0;
+      const i0 = Math.min(T.length - 2, Math.floor(fi)), k = fi - i0;
+      const a = T[i0], b = T[i0 + 1];
+      const rx = a.rx + (b.rx - a.rx) * k, cz = a.cz + (b.cz - a.cz) * k;
+      const z = _v1.z - cz;
+      const rz = z > 0 ? a.rzF + (b.rzF - a.rzF) * k : a.rzB + (b.rzB - a.rzB) * k;
+      const e = Math.hypot(_v1.x / rx, z / rz);
+      const eT = 1 + r / ((rx + rz) * 0.5);
+      if (e >= eT) return 0;
+      // out along the section, scaled to the surface plus the limb's radius
+      if (e < 1e-4) { _v1.z = cz + rz * eT; } else { _v1.x *= eT / e; _v1.z = cz + z * (eT / e); }
+      out.copy(_v1).sub(d.bind[bone]).applyQuaternion(this.rot[bone]).add(this.pos[bone]);
+      return (eT - e) * (rx + rz) * 0.5;
+    }
+    return 0;
+  }
+
+  /** Arms never pass through the body: push the elbow and the wrist out to the surface and re-solve. */
+  collideArm(i) {
+    const d = this.dims, s = d.s;
+    const ua = i === 0 ? B.armL : B.armR, fa = ua + 1, hd = ua + 2, cl = i === 0 ? B.clavL : B.clavR;
+    const E = this.pos[fa], W = this.pos[hd];
+    _v3.copy(E).lerp(W, 0.5);
+    const dE = this.torsoPush(E, 0.05 * s, _v2);
+    let push = false;
+    // the elbow: move it out, and the wrist with it
+    _target.copy(W);
+    _pole.subVectors(E, this.pos[ua]);
+    if (dE > 0.002) { _v4.subVectors(_v2, E); _target.add(_v4); _pole.add(_v4); push = true; }
+    // the forearm's middle and the wrist: push the wrist out by whichever is deeper
+    const dM = this.torsoPush(_v3, 0.046 * s, _v2);
+    if (dM > 0.002) { _v4.subVectors(_v2, _v3); _target.add(_v4); push = true; }
+    const dW = this.torsoPush(_target, 0.035 * s, _v2);
+    if (dW > 0.002) { _target.copy(_v2); push = true; }
+    // the hand beyond the wrist (carried along with it)
+    _v3.copy(this.pos[hd + 1]).add(_target).sub(W);
+    const dH = this.torsoPush(_v3, 0.026 * s, _v2);
+    if (dH > 0.002) { _target.add(_v2.sub(_v3)); push = true; }
+    if (!push) return;
+    // the elbow keeps bending the way it was, pushed out with everything else; eased in by
+    // depth, so grazing the jersey never pops the arm
+    twoBoneIK(this.pos[ua], _target, _pole, d.upperArm, d.foreArm, this.rot[cl], false, _q3, _q2);
+    const w = sstep(0.002 * s, 0.018 * s, Math.max(dE, dM, dW, dH));
+    this.local[ua].slerp(_q3, w);
+    this.local[fa].slerp(_q2, w);
     fkChain(d, this.local, this.rot, this.pos, ua, ua + 3);
   }
 

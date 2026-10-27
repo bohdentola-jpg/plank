@@ -21,6 +21,9 @@ export const R = {
   EXTRA: [386, 402, 124, 108],
 };
 
+/** Where the jersey sleeve's hem is along the arm (t: 0 shoulder … 1 elbow), geometry and paint. */
+export const SLEEVE_HEM = 0.54;
+
 // swatches inside MISC (local u, v centres) — solid colours for small props
 export const SWATCH = {
   towel: [0.17, 0.75], neckRoll: [0.5, 0.75], warmer: [0.83, 0.75],

@@ -8,7 +8,7 @@
 // little). Everything maps into the per-player uniform atlas (layout.js).
 import * as THREE from 'three';
 import { B } from './rig.js';
-import { R, SWATCH, uvOf, limbU, headU, headV } from './layout.js';
+import { R, SWATCH, SLEEVE_HEM, uvOf, limbU, headU, headV } from './layout.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const sstep = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
@@ -53,7 +53,7 @@ export class MeshBuilder {
   tri(a, b, c) { this.I.push(a, b, c); }
 
   /**
-   * Loft a tube through rings. ring = { c: Vector3, sec, v, w: (thDeg, x, y, z) => weights }
+   * Loft a tube through rings. ring = { c: Vector3, sec, v, w: (thDeg, x, y, z) => weights, dy?: (thDeg) => metres }
    * opts: { X: side axis (θ = 90°), Z: front axis (θ = 0°), A: loft axis (first → last ring),
    *         n, rect, th0 (seam angle, deg), uMap(j/n) → u (default identity) }
    * A ring with sec.pole = true collapses to its centre.
@@ -76,6 +76,7 @@ export class MeshBuilder {
         else {
           sectionPoint(r.sec, th, tmp);
           p.copy(r.c).addScaledVector(X, tmp[0]).addScaledVector(Z, tmp[1]);
+          if (r.dy) p.y += r.dy(th);
         }
         pts[i * (n + 1) + j] = p;
       }
@@ -236,9 +237,9 @@ const TORSO_LOW = [
   [1.280, 0.181, 0.127, 0.112, 0.000, 2.4, [0, 0, 0.004, 0.004], 'chest'],
 ];
 const TORSO_PADS = [
-  [1.322, 0.196, 0.137, 0.121, 0.000, 2.5, [0, 0, 0.009, 0.006], 'pad'],
-  [1.345, 0.214, 0.144, 0.130, -0.001, 2.6, [0, 0, 0.012, 0.008], 'pad'],
-  [1.390, 0.238, 0.149, 0.138, -0.003, 2.8, [0, 0, 0.012, 0.009], 'pad'],
+  [1.322, 0.204, 0.137, 0.121, 0.000, 2.5, [0, 0, 0.009, 0.006], 'pad'],
+  [1.345, 0.226, 0.144, 0.130, -0.001, 2.6, [0, 0, 0.012, 0.008], 'pad'],
+  [1.390, 0.248, 0.149, 0.138, -0.003, 2.8, [0, 0, 0.012, 0.009], 'pad'],
   [1.440, 0.259, 0.151, 0.142, -0.006, 3.0, [0, 0, 0.009, 0.008], 'pad'],
   [1.482, 0.270, 0.147, 0.140, -0.010, 3.0, [0, 0, 0.006, 0.006], 'pad'],
   [1.515, 0.266, 0.137, 0.132, -0.012, 2.9, [0, 0, 0.003, 0.003], 'pad'],
@@ -276,11 +277,36 @@ function torsoKeys(bd) {
     else if (zone === 'top' || zone === 'skirt') { fx = bd.neck * 0.92 + 0.08 * bd.wide; fzF = fzB = bd.neck * 0.95 + 0.05; }
     const bp = sstep(1.0, 1.09, y) * (1 - sstep(1.16, 1.27, y));
     const belly = b[0] + bd.belly * 0.034 * bp;
+    // the pads' arch over the shoulders: taller on big lineman pads, flatter on slim ones; the
+    // collar sits a little under where it used to so there's a neck between it and the jaw
+    const yy = bd.padded ? y + (bd.padRise || 0) * sstep(1.40, 1.48, y) - 0.024 * sstep(1.50, 1.58, y) : y - 0.012 * sstep(1.48, 1.53, y);
+    // the chest under big pads is deeper too
+    const deep = bd.padded && zone === 'pad' ? 1 + 0.06 * ((bd.padSize ?? 0.5) - 0.5) : 1;
     return {
-      t: y * s, rx: rx * fx * s, rzF: rzF * fzF * s, rzB: rzB * fzB * s, cz: cz * s, sq,
-      b: [belly * s, b[1] * s * bd.hip, b[2] * s, b[3] * s], skirt: zone === 'skirt',
+      t: yy * s, rx: rx * fx * s, rzF: rzF * fzF * deep * s, rzB: rzB * fzB * deep * s, cz: cz * s, sq,
+      b: [belly * s, b[1] * s * bd.hip, b[2] * s, b[3] * s], skirt: zone === 'skirt', yRef: y,
     };
   });
+}
+
+/**
+ * The torso's outside below the pads as cross-sections in the bind pose (metres):
+ * [{ y, rx, rzF, rzB, cz }] every 2 cm from the crotch to the pads' lower edge, bumps
+ * (belly, butt, chest, back) folded into the front / back radii. The animator keeps
+ * the arms out of it.
+ */
+export function torsoProfile(bd) {
+  const keys = torsoKeys(bd);
+  let up = keys.length;
+  for (let i = 1; i < keys.length; i++) if (keys[i].t < keys[i - 1].t) { up = i; break; }
+  const k = keys.slice(0, up);
+  const out = [];
+  for (let yr = 0.86; yr <= 1.34 + 1e-6; yr += 0.02) {
+    const sec = sampleKeys(k, yr * bd.s, TORSO_BUMPS);
+    const b = sec.bumps || [];
+    out.push({ y: yr * bd.s, rx: sec.rx, rzF: sec.rzF + (b[0]?.[1] || 0) + (b[2]?.[1] || 0), rzB: sec.rzB + (b[1]?.[1] || 0) + (b[3]?.[1] || 0), cz: sec.cz || 0 });
+  }
+  return out;
 }
 
 function torsoWeights(bd) {
@@ -320,7 +346,7 @@ function buildTorso(mb, bd, dims, lod) {
   let nSkirt = 0;
   for (let i = up; i < keys.length; i++) {
     const k = keys[i];
-    rows.push({ rx: k.rx, rzF: k.rzF, rzB: k.rzB, cx: 0, cz: k.cz, sq: k.sq });
+    rows.push({ rx: k.rx, rzF: k.rzF, rzB: k.rzB, cx: 0, cz: k.cz, sq: k.sq, skirt: true });
     yOf.push(k.t);
     if (k.skirt) nSkirt++;
   }
@@ -334,11 +360,23 @@ function buildTorso(mb, bd, dims, lod) {
   }
   const total = arc[arc.length - 1];
   const wfn = torsoWeights(bd);
+  // the V-neck: the front of the collar dips toward the sternum (the higher the row, the more it
+  // drops, so rows never cross); the inner lip follows it down
+  const vDepth = (bd.padded ? 0.048 : 0.036) * bd.s;
+  const vneck = (y, inner) => {
+    const k = inner ? 1 : sstep(1.47 * bd.s, 1.575 * bd.s, y);
+    if (k <= 0) return null;
+    return (th) => {
+      const a = Math.abs(((th + 540) % 360) - 180);
+      return -vDepth * k * sstep(44, 0, a);
+    };
+  };
   const rings = rows.map((sec, i) => ({
     c: new THREE.Vector3(0, yOf[i], 0),
     sec: i === 0 ? { ...sec } : sec,
     v: arc[i] / total,
     w: wfn,
+    dy: vneck(yOf[i], !!sec.skirt),
   }));
   // close the crotch with a pole
   rings.unshift({ c: new THREE.Vector3(0, tStart - 0.006 * bd.s, keys[0].cz), sec: { pole: true }, v: 0, w: wfn });
@@ -360,20 +398,31 @@ function buildTorso(mb, bd, dims, lod) {
 
 // ------------------------------------------------------------------ limbs
 
+// t: 0 shoulder joint … 1 elbow … 2 wrist (fractions of the bone lengths). The first stretch
+// is the jersey sleeve stretched over the deltoid and the pad cap, cut at a hem just below the
+// pads (t 0.54) where the arm steps down to the biceps. bumps: [biceps (front), triceps (back), forearm (outer front)]
 const ARM_KEYS = [
-  // t: 0 shoulder joint … 1 elbow … 2 wrist (fractions of the bone lengths)
-  { t: 0.0, rx: 0.058, rzF: 0.058, rzB: 0.058, cz: 0.0, sq: 2 },
-  { t: 0.14, rx: 0.056, rzF: 0.056, rzB: 0.055, cz: 0.0, sq: 2 },
-  { t: 0.32, rx: 0.05, rzF: 0.053, rzB: 0.051, cz: 0.002, sq: 2 },
-  { t: 0.52, rx: 0.046, rzF: 0.054, rzB: 0.049, cz: 0.003, sq: 2 },
-  { t: 0.76, rx: 0.042, rzF: 0.046, rzB: 0.046, cz: 0.0, sq: 2 },
-  { t: 0.96, rx: 0.039, rzF: 0.04, rzB: 0.044, cz: -0.003, sq: 2 },
-  { t: 1.06, rx: 0.039, rzF: 0.039, rzB: 0.043, cz: -0.004, sq: 2 },
-  { t: 1.22, rx: 0.04, rzF: 0.043, rzB: 0.041, cz: 0.0, sq: 2 },
-  { t: 1.5, rx: 0.034, rzF: 0.037, rzB: 0.034, cz: 0.0, sq: 2 },
-  { t: 1.82, rx: 0.025, rzF: 0.031, rzB: 0.028, cz: 0.0, sq: 2.1 },
-  { t: 2.0, rx: 0.022, rzF: 0.029, rzB: 0.027, cz: 0.0, sq: 2.2 },
+  { t: 0.0, rx: 0.07, rzF: 0.072, rzB: 0.072, cz: 0.0, sq: 2.1, sleeve: true },
+  { t: 0.14, rx: 0.069, rzF: 0.071, rzB: 0.07, cz: 0.0, sq: 2.1, sleeve: true },
+  { t: 0.3, rx: 0.066, rzF: 0.068, rzB: 0.067, cz: 0.002, sq: 2.1, sleeve: true },
+  { t: 0.44, rx: 0.063, rzF: 0.066, rzB: 0.064, cz: 0.002, sq: 2.1, sleeve: true },
+  { t: 0.53, rx: 0.061, rzF: 0.064, rzB: 0.062, cz: 0.002, sq: 2.1, sleeve: true },
+  { t: 0.55, rx: 0.052, rzF: 0.058, rzB: 0.055, cz: 0.003, sq: 2, b: [0.006, 0.004, 0] },
+  { t: 0.66, rx: 0.05, rzF: 0.056, rzB: 0.054, cz: 0.003, sq: 2, b: [0.008, 0.006, 0] },
+  { t: 0.8, rx: 0.046, rzF: 0.05, rzB: 0.051, cz: 0.0, sq: 2, b: [0.004, 0.005, 0] },
+  { t: 0.96, rx: 0.042, rzF: 0.043, rzB: 0.047, cz: -0.003, sq: 2, b: [0, 0.001, 0] },
+  { t: 1.06, rx: 0.042, rzF: 0.042, rzB: 0.046, cz: -0.004, sq: 2, b: [0, 0, 0.001] },
+  { t: 1.2, rx: 0.045, rzF: 0.048, rzB: 0.045, cz: 0.0, sq: 2, b: [0, 0, 0.006] },
+  { t: 1.48, rx: 0.038, rzF: 0.041, rzB: 0.037, cz: 0.0, sq: 2, b: [0, 0, 0.002] },
+  { t: 1.82, rx: 0.025, rzF: 0.031, rzB: 0.028, cz: 0.0, sq: 2.1, b: [0, 0, 0] },
+  { t: 2.0, rx: 0.022, rzF: 0.029, rzB: 0.027, cz: 0.0, sq: 2.2, b: [0, 0, 0] },
 ];
+const ARM_BUMPS = [[0, 40], [180, 46], [40, 45]];
+/** Shoulder / hip ball-cap radii (shared with the painter's v mapping). */
+export const armCapR = (bd) => 0.07 * bd.s * lerp(bd.musc * bd.limb, sleeveScale(bd), 0.6) * 1.08;
+export const legCapR = (bd) => 0.084 * bd.s * bd.musc * bd.limb * bd.hip;
+// the sleeve stretches over the pads' cap: it follows the pads more than the arm inside it
+function sleeveScale(bd) { return bd.padded ? 0.92 + 0.12 * (bd.pads || 1) : 1; }
 
 const LEG_KEYS = [
   // t: 0 hip joint … 1 knee … 2 ankle. bumps: [thigh pad (front), knee pad (front), calf (back)]
@@ -398,7 +447,9 @@ const LEG_BUMPS = [[0, 40], [0, 34], [180, 46]];
  * chain = [upperBone, lowerBone, endBone, parentBone]; P = bind positions.
  */
 function buildLimb(mb, opts) {
-  const { side, top, mid, end, keys, bumps, lens, rect, n, capR, weights, f, ringsPerSeg } = opts;
+  const { side, top, mid, end, bumps, lens, rect, n, capR, weights, f, ringsPerSeg } = opts;
+  // muscle definition swells the bumps (biceps, triceps, forearms, calves)
+  const keys = opts.def === undefined ? opts.keys : opts.keys.map((k) => (k.b ? { ...k, b: k.b.map((a) => a * opts.def) } : k));
   const X = new THREE.Vector3(side, 0, 0), Z = new THREE.Vector3(0, 0, 1), A = new THREE.Vector3(0, -1, 0);
   const total = lens[0] + lens[1];
   const posAt = (t) => (t <= 1 ? new THREE.Vector3().lerpVectors(top, mid, t) : new THREE.Vector3().lerpVectors(mid, end, t - 1));
@@ -435,12 +486,14 @@ function buildArm(mb, bd, dims, side, lod) {
   const top = P[L ? B.armL : B.armR], mid = P[L ? B.foreL : B.foreR], end = P[L ? B.handL : B.handR];
   const s = bd.s, m = bd.musc * bd.limb;
   const cl = L ? B.clavL : B.clavR, ua = L ? B.armL : B.armR, fa = L ? B.foreL : B.foreR, hd = L ? B.handL : B.handR;
+  const sl = lerp(m, sleeveScale(bd), 0.6);
   buildLimb(mb, {
-    side, top, mid, end, keys: ARM_KEYS, bumps: null,
+    side, top, mid, end, keys: ARM_KEYS, bumps: ARM_BUMPS, def: 0.5 + bd.def,
     lens: [top.distanceTo(mid), mid.distanceTo(end)],
-    rect: L ? R.ARM_L : R.ARM_R, n: lod === 'high' ? 10 : 6,
-    capR: 0.061 * s * m,
-    f: (t) => s * 1.1 * (t < 1.1 ? m : lerp(m, 1 + (m - 1) * 0.6, sstep(1.1, 2, t))),
+    rect: L ? R.ARM_L : R.ARM_R, n: lod === 'high' ? 12 : 6,
+    capR: armCapR(bd),
+    // the sleeve to the hem scales with the pads, the arm below it with the muscle
+    f: (t) => s * 1.08 * (t < SLEEVE_HEM + 0.002 ? sl : t < 1.1 ? m : lerp(m, 1 + (m - 1) * 0.6, sstep(1.1, 2, t))),
     ringsPerSeg: (a, b) => (lod === 'high' ? (b - a > 0.2 ? 2 : 1) : (b - a > 0.25 ? 1 : (a > 0.9 && a < 1.1 ? 1 : 0)) || 1),
     weights: (t) => {
       if (t < 0.16) { const k = sstep(0, 0.16, t); return W(ua, 0.78 + 0.22 * k, cl, 0.22 * (1 - k)); }
@@ -460,10 +513,10 @@ function buildLeg(mb, bd, dims, side, lod) {
   const s = bd.s, m = bd.musc * bd.limb;
   const th = L ? B.thighL : B.thighR, sh = L ? B.shinL : B.shinR, ft = L ? B.footL : B.footR;
   buildLimb(mb, {
-    side, top, mid, end, keys: LEG_KEYS, bumps: LEG_BUMPS,
+    side, top, mid, end, keys: LEG_KEYS.map((k) => (k.b ? { ...k, b: [k.b[0], k.b[1], k.b[2] * (0.6 + 0.9 * bd.def)] } : k)), bumps: LEG_BUMPS,
     lens: [top.distanceTo(mid), mid.distanceTo(end)],
     rect: R.LEG, n: lod === 'high' ? 12 : 7,
-    capR: 0.084 * s * m * bd.hip,
+    capR: legCapR(bd),
     f: (t) => s * (t < 1 ? lerp(m * bd.hip ** 0.5, m, sstep(0, 1, t)) * lerp(1.1, 1.0, sstep(0.62, 0.98, t)) : lerp(m, 1 + (m - 1) * 0.7, sstep(1.2, 2, t))),
     ringsPerSeg: (a, b) => (lod === 'high' ? (b - a > 0.2 ? 2 : 1) : (b - a > 0.22 ? 1 : (a > 0.9 && a < 1.1 ? 1 : 0)) || 1),
     weights: (t) => {
@@ -494,7 +547,8 @@ function buildNeck(mb, bd, dims, lod) {
     const flare = 1 + 0.18 * (1 - sstep(0, 0.35, t));   // trapezius flare at the base
     rings.push({
       c: new THREE.Vector3().lerpVectors(bot, topP, t),
-      sec: { rx: 0.056 * nf * s * flare, rzF: 0.054 * nf * s, rzB: 0.06 * nf * s * (1 + 0.1 * (1 - t)), cz: 0, sq: 2 },
+      // a football neck: thick, the muscles from behind the ears down to the collarbones
+      sec: { rx: 0.061 * nf * s * flare, rzF: 0.057 * nf * s, rzB: 0.064 * nf * s * (1 + 0.1 * (1 - t)), cz: 0, sq: 2.1 },
       v: t,
       w: () => {
         const yr = y / s;
@@ -517,37 +571,67 @@ export const EYE_FX = 0.41, EYE_FY = 0.08;
 export const EYE_PHI = Math.asin(EYE_FY) / D2R;
 export const EYE_LAM = Math.asin(EYE_FX / Math.cos(EYE_PHI * D2R)) / D2R;
 
-export function headPoint(phiDeg, lamDeg, out) {
+/**
+ * F (optional) = the player's face { jaw, chin, nose, brow, cheek, len }, each −1..1. Only the
+ * face below the brow changes with it (the cranium the hair and helmet sit on never does), and
+ * the painted features ride on the (λ, φ) grid, so paint and shape always agree.
+ */
+export function headPoint(phiDeg, lamDeg, out, F = null) {
+  const fJaw = F?.jaw || 0, fChin = F?.chin || 0, fNose = F?.nose || 0, fBrow = F?.brow || 0, fCheek = F?.cheek || 0, fLen = F?.len || 0;
   const ph = phiDeg * D2R, la = lamDeg * D2R;
   const dx = Math.cos(ph) * Math.sin(la), dy = Math.sin(ph), dz = Math.cos(ph) * Math.cos(la);
-  let x = dx * 0.075, y = dy * (dy > 0 ? 0.112 : 0.104), z = dz * (dz > 0 ? 0.094 : 0.1);
-  // a square jaw: only a little narrower below the cheekbones; the back of the skull tucks into the neck
+  // the lower face a little longer or shorter per player
+  let x = dx * 0.0775, y = dy * (dy > 0 ? 0.114 : 0.108 * (1 + 0.045 * fLen)), z = dz * (dz > 0 ? 0.096 : 0.101);
+  // a square jaw: barely narrower below the cheekbones, the angle of the jaw kept wide, and the
+  // chin a broad block rather than a point; the back of the skull tucks into the neck
   const jaw = sstep(-0.25, -0.92, dy);
-  x *= 1 - 0.13 * jaw;
+  x *= 1 - (0.085 - 0.04 * fJaw) * jaw;
+  // fill the lower outline out toward a squared chin
+  const low = sstep(-0.62, -0.97, dy) * sstep(-0.1, 0.5, dz);
+  x *= 1 + (0.3 + 0.12 * fChin) * low * (1 - Math.abs(dx) * 0.6);
   if (dz < 0) { const k = sstep(-0.25, -0.8, dy) * sstep(0, -0.6, dz); z *= 1 - 0.32 * k; x *= 1 - 0.1 * k; }
-  // flatter temples
+  // flatter temples, and a flatter face across the front (cheeks forward, not a round egg)
   x *= 1 - 0.05 * sstep(0.1, 0.5, dy) * sstep(0.3, 0.8, Math.abs(dx));
+  z *= 1 + 0.08 * sstep(0.18, 0.62, Math.abs(dx)) * sstep(0.35, 0.92, dz) * (1 - sstep(0.35, 0.7, dy));
   const front = sstep(0.12, 0.55, dz);
   const fx = dx, fy = dy, ax = Math.abs(fx);
   const g = (a, b) => Math.exp(-(a * a) - (b * b));
   let disp = 0;
-  // nose: bridge → tip → under the nose, wider at the nostrils
-  const noseProf = fy > -0.22 ? lerp(0.024, 0.004, sstep(-0.22, 0.12, fy)) * sstep(0.2, 0.06, fy) : 0.024 * sstep(-0.34, -0.22, fy);
-  const noseW = lerp(0.13, 0.07, sstep(-0.26, 0.1, fy));
-  disp += noseProf * Math.exp(-((fx / noseW) ** 2)) * front;
-  // brow ridge over the eyes
-  disp += 0.0072 * Math.exp(-(((fy - 0.21) / 0.07) ** 2)) * Math.exp(-((fx / 0.55) ** 4)) * front;
+  // the face's landmarks down the middle (fy = sin φ): brow 0.21, eyes 0.08, nose root 0.1,
+  // nose tip −0.28, nose base −0.36, mouth −0.535, chin −0.84 (the thirds of a real face)
+  // nose: a ridge from the root that grows to the tip, a rounded tip, undercut to the base,
+  // the wings either side; narrow at the bridge, wide at the nostrils
+  const nk = 1 + 0.22 * fNose;
+  const ramp = lerp(0.004, 0.0245, sstep(0.07, -0.27, fy)) * sstep(0.15, 0.06, fy);
+  const under = sstep(-0.38, -0.29, fy);
+  const noseW = lerp(0.05, 0.11, sstep(0.05, -0.3, fy)) * (1 + 0.16 * fNose);
+  disp += (ramp * under * Math.exp(-((fx / noseW) ** 2)) + 0.0035 * g(fx / 0.06, (fy + 0.265) / 0.05)) * nk * front;
+  disp += 0.0055 * nk * g((ax - 0.1 * (1 + 0.16 * fNose)) / 0.034, (fy + 0.315) / 0.036) * front;
+  // brow ridge over the eyes, and the bridge between them
+  disp += (0.0075 + 0.0035 * fBrow) * Math.exp(-(((fy - 0.21) / 0.07) ** 2)) * Math.exp(-((fx / 0.55) ** 4)) * front;
   // eye sockets, centred on the eyeballs
   disp -= 0.011 * (g((fx - EYE_FX) / 0.125, (fy - EYE_FY) / 0.085) + g((fx + EYE_FX) / 0.125, (fy - EYE_FY) / 0.085)) * front;
-  // cheekbones, jaw angles
-  disp += 0.005 * (g((ax - 0.6) / 0.15, (fy + 0.12) / 0.12)) * front;
-  disp += 0.006 * g((ax - 0.72) / 0.16, (fy + 0.55) / 0.16) * sstep(-0.2, 0.3, dz);
-  // lips and mouth line
-  disp += 0.0048 * g(fx / 0.26, (fy + 0.45) / 0.06) * front;
-  disp += 0.0036 * g(fx / 0.22, (fy + 0.54) / 0.045) * front;
-  disp -= 0.0024 * g(fx / 0.23, (fy + 0.49) / 0.02) * front;
-  // chin
-  disp += 0.009 * g(fx / 0.32, (fy + 0.79) / 0.12) * front;
+  // cheekbones, the hollow under them, the fold from the nose to the mouth corner, jaw angles
+  disp += (0.0055 + 0.003 * fCheek) * (g((ax - 0.6) / 0.15, (fy + 0.06) / 0.11)) * front;
+  disp -= (0.0025 - 0.0015 * fCheek) * g((ax - 0.52) / 0.14, (fy + 0.4) / 0.1) * front;
+  {
+    // distance from the line (0.15, −0.33) → (0.3, −0.54)
+    const t = clamp(((ax - 0.15) * 0.15 + (fy + 0.33) * -0.21) / (0.15 * 0.15 + 0.21 * 0.21), 0, 1);
+    const lx = 0.15 + 0.15 * t, ly = -0.33 - 0.21 * t;
+    disp -= 0.0013 * Math.exp(-((Math.hypot(ax - lx, fy - ly) / 0.028) ** 2)) * front;
+  }
+  disp += (0.0065 + 0.0035 * fJaw) * g((ax - 0.72) / 0.16, (fy + 0.58) / 0.16) * sstep(-0.2, 0.3, dz);
+  // the groove above the lip, the lips and the line between them, the corners
+  disp -= 0.001 * g(fx / 0.04, (fy + 0.43) / 0.05) * front;
+  disp += 0.0046 * g(fx / 0.27, (fy + 0.5) / 0.045) * front;
+  disp -= 0.0028 * g(fx / 0.25, (fy + 0.535) / 0.018) * front;
+  disp += 0.0046 * g(fx / 0.23, (fy + 0.585) / 0.04) * front;
+  disp -= 0.0012 * g((ax - 0.27) / 0.04, (fy + 0.535) / 0.04) * front;
+  // the crease under the lip, then the chin: a broad, squared block (some with a cleft)
+  disp -= 0.0018 * g(fx / 0.2, (fy + 0.67) / 0.035) * front;
+  const cw = 0.38 + 0.07 * fChin;
+  disp += (0.0095 + 0.004 * fChin) * Math.exp(-((fx / cw) ** 4) - ((fy + 0.84) / 0.11) ** 2) * front;
+  disp -= 0.0012 * Math.max(0, fChin) * g(fx / 0.05, (fy + 0.84) / 0.06) * front;
   // occiput
   disp += 0.006 * g((dz + 0.85) / 0.35, (fy - 0.12) / 0.32);
   const r = Math.hypot(x, y, z) || 1;
@@ -563,14 +647,18 @@ export function headScale(bd) {
   return bd.s ** 0.55 * (0.97 + 0.035 * bd.girth);
 }
 
-const HEAD_LAMS_HI = [-180, -140, -100, -72, -56, -44, -34, -26, -19, -13, -7, 0, 7, 13, 19, 26, 34, 44, 56, 72, 100, 140, 180];
-const HEAD_PHIS_HI = [-89.5, -68, -50, -38, -29, -21, -14, -7, 0, 6, 12, 20, 30, 44, 62, 80, 89.5];
+// dense across the face (the nose is a few degrees wide), sparse round the back
+const HEAD_LAMS_HI = [-180, -145, -115, -95, -80, -68, -58, -49, -41, -34, -28, -23, -18.5, -14.5, -11, -7.8, -5, -2.4, 0,
+  2.4, 5, 7.8, 11, 14.5, 18.5, 23, 28, 34, 41, 49, 58, 68, 80, 95, 115, 145, 180];
+const HEAD_PHIS_HI = [-89.5, -75, -64, -56, -49, -43, -38, -34, -30.5, -27, -23.5, -20, -16.5, -13, -9.5, -6, -2.5, 1, 4.5, 8,
+  11.5, 15, 19.5, 25, 32, 41, 52, 65, 78, 89.5];
 const HEAD_LAMS_LO = [-180, -135, -90, -55, -25, 0, 25, 55, 90, 135, 180];
 const HEAD_PHIS_LO = [-89.5, -55, -28, 0, 22, 50, 89.5];
 
 function buildHead(mb, bd, dims, lod) {
   const C = headCenter(dims);
   const hs = headScale(bd);
+  const F = lod === 'high' ? bd.face : null;
   const lams = lod === 'high' ? HEAD_LAMS_HI : HEAD_LAMS_LO;
   const phis = lod === 'high' ? HEAD_PHIS_HI : HEAD_PHIS_LO;
   const nLon = lams.length - 1, nLat = phis.length - 1;
@@ -581,10 +669,10 @@ function buildHead(mb, bd, dims, lod) {
   for (let i = 0; i <= nLat; i++) {
     for (let j = 0; j <= nLon; j++) {
       const lam = lams[j], phi = phis[i];
-      headPoint(phi, lam, p);
+      headPoint(phi, lam, p, F);
       // normal by finite differences on the sphere param
-      headPoint(phi, lam + 0.5, q); t1.subVectors(q, p);
-      headPoint(Math.min(89.9, phi + 0.5), lam, q); t2.subVectors(q, p);
+      headPoint(phi, lam + 0.5, q, F); t1.subVectors(q, p);
+      headPoint(Math.min(89.9, phi + 0.5), lam, q, F); t2.subVectors(q, p);
       nn.crossVectors(t1, t2).normalize();
       if (!(nn.lengthSq() > 0.5)) nn.copy(p).normalize();
       if (nn.dot(p) < 0) nn.negate();
@@ -604,7 +692,7 @@ function buildHead(mb, bd, dims, lod) {
   for (const sd of [1, -1]) {
     const g = new THREE.SphereGeometry(1, 6, 4);
     const ep = new THREE.Vector3();
-    headPoint(-3, sd * 92, ep);
+    headPoint(-3, sd * 92, ep, F);
     const m = new THREE.Matrix4().compose(
       new THREE.Vector3(C.x + (ep.x - sd * 0.002) * hs, C.y + ep.y * hs, C.z + (ep.z - 0.008) * hs),
       new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.22, sd * 0.32, 0)),
@@ -617,15 +705,15 @@ function buildHead(mb, bd, dims, lod) {
   // eyes: flattened eyeballs set into the sockets (the socket rims hide their edges)
   const ep = new THREE.Vector3(), en = new THREE.Vector3();
   for (const sd of [1, -1]) {
-    headPoint(EYE_PHI, sd * EYE_LAM, ep);
+    headPoint(EYE_PHI, sd * EYE_LAM, ep, F);
     en.set(Math.sin(sd * EYE_LAM * D2R) * 0.7, 0.05, Math.cos(EYE_LAM * D2R)).normalize();
-    ep.addScaledVector(en, -0.0084);
+    ep.addScaledVector(en, -0.0079);
     const g = new THREE.SphereGeometry(1, 9, 5, 0, Math.PI * 2, 0, Math.PI * 0.62);
     g.rotateX(Math.PI / 2);
     const m = new THREE.Matrix4().compose(
       new THREE.Vector3(C.x + ep.x * hs, C.y + ep.y * hs, C.z + ep.z * hs),
       new THREE.Quaternion().setFromEuler(new THREE.Euler(0.04, sd * 0.1, 0)),
-      new THREE.Vector3(0.0118 * hs, 0.0079 * hs, 0.0104 * hs),
+      new THREE.Vector3(0.0124 * hs, 0.0085 * hs, 0.0106 * hs),
     );
     mb.piece(g, m, (lx, ly, lz, gu, gv, out) => {
       uvOf(R.EYE, 0.5 + lx * 0.5, 0.5 + ly * 0.5, out);
@@ -770,8 +858,10 @@ function buildNeckRoll(mb, bd, dims, lod) {
   const uv = swatchUv('neckRoll');
   const g = new THREE.TorusGeometry(0.105 * s * bd.neck, 0.03 * s, 6, lod === 'high' ? 14 : 8, Math.PI * 1.25);
   // lay the torus flat (Rx 90°) and turn it so the 225° arc wraps the back of the neck
+  // it sits on the collar, wherever the pads put the collar (see torsoKeys)
+  const y = 1.572 + (bd.padRise || 0) - 0.024 * sstep(1.50, 1.58, 1.572);
   const m = new THREE.Matrix4().compose(
-    new THREE.Vector3(0, 1.572 * s, -0.02 * s),
+    new THREE.Vector3(0, y * s, -0.02 * s),
     new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, -157.5 * D2R, 0, 'YXZ')),
     new THREE.Vector3(1.2, 1, 1),
   );

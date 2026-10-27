@@ -5,15 +5,24 @@
 // - The stride phase advances with distance travelled (cadence × dt, stride =
 //   speed / cadence), so every gait from a walk to a sprint keeps its feet.
 // - A foot in stance is planted in the WORLD: each frame it slides back by the
-//   body's velocity and turns against the body's yaw, so feet never skate
-//   while turning or accelerating. The swing foot flies a curve from where it
-//   lifted to where it will land (ahead of the hip along the travel direction).
+//   body's velocity and turns against the body's yaw (its own yaw included),
+//   so feet never skate or swivel while turning or accelerating.
+// - The swing foot flies a sprinter's path from where it lifted to where it
+//   will land: toe-off, the heel recovering up under the hips, the knee
+//   driving through, the foot reaching and pawing back down under the body.
+//   Walk, jog, sprint and the low shuffle paths are keyed and blended by gait.
+// - Arms swing fore and aft from the shoulder with the elbow hinge kept level
+//   (the forearm never folds across the chest): bent tight at the front of the
+//   swing, opening behind, hands converging toward the sternum, not past it.
 // - Gait style follows the travel direction in the hips' frame: run / walk
 //   forward, lateral shuffle (feet never cross), backpedal; running sideways
 //   fast opens the hips into a crossover run while the chest keeps facing.
 // - Springs give the upper body weight: lean into acceleration, rock back on
-//   braking, bank into turns, head stabilised against the bob.
+//   braking, bank into real turns (from the travel direction's turn, smoothed,
+//   never from heading jitter), drop the hips on a hard cut, head stabilised.
+import * as THREE from 'three';
 import { C, NCH, neutral } from './pose.js';
+import { qUpperArm } from './rig.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const sstep = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
@@ -38,20 +47,81 @@ class Spring {
   }
 }
 
-/** Upper-arm direction from a sagittal swing angle and an abduction (degrees) → [elev, plane]. */
-function armSwing(out, swing, abd, inward = 0) {
-  const s = swing * D2R, a = abd * D2R;
-  // direction: down rotated forward by swing and outward by abd
-  const fx = Math.sin(a) * Math.cos(s) - Math.sin(inward * D2R) * Math.max(0, Math.sin(s));
-  const fz = Math.sin(s);
-  const fy = -Math.cos(a) * Math.cos(s);
-  const elev = Math.acos(clamp(-fy / Math.hypot(fx, fy, fz), -1, 1)) * R2D;
-  const plane = Math.atan2(fz, fx) * R2D;
-  out[0] = elev; out[1] = plane;
+// ------------------------------------------------------------------ arms
+
+const _qa = new THREE.Quaternion(), _hv = new THREE.Vector3(), _uv = new THREE.Vector3(), _wv = new THREE.Vector3(), _cv = new THREE.Vector3();
+
+/**
+ * Upper arm flexed `flex`° forward of hanging (− = behind), out `abd`° from the
+ * side, with the elbow hinge kept level so the forearm swings fore and aft,
+ * angled `inward`° toward the midline. Writes [elev, plane, twist] (the arm
+ * channels, side-relative: the same numbers mirror onto the other arm).
+ */
+export function armFlex(out, flex, abd, inward = 0) {
+  const f = flex * D2R, a = abd * D2R;
+  // the bone's direction for the left arm (x = outward)
+  const dx = Math.sin(a) * Math.cos(f), dy = -Math.cos(a) * Math.cos(f), dz = Math.sin(f);
+  const elev = Math.acos(clamp(-dy, -1, 1)) * R2D;
+  const plane = Math.atan2(dz, dx) * R2D;
+  // where the hinge (the upper arm's local x) points with no twist
+  qUpperArm(_qa, 1, elev, plane, 0);
+  _hv.set(1, 0, 0).applyQuaternion(_qa);
+  _uv.set(dx, dy, dz);
+  // where it should point: outward, turned `inward` so the bent forearm angles in, square to the bone
+  const i = inward * D2R;
+  _wv.set(Math.cos(i), 0, Math.sin(i));
+  _wv.addScaledVector(_uv, -_wv.dot(_uv)).normalize();
+  // the twist about the bone that takes one to the other (the twist channel turns about the
+  // bone's local +y, which points back up the bone: hence the sign)
+  const tw = Math.atan2(_cv.crossVectors(_hv, _wv).dot(_uv), _hv.dot(_wv)) * R2D;
+  out[0] = elev; out[1] = plane; out[2] = -tw;
   return out;
 }
 
-const _as = [0, 0];
+const _as = [0, 0, 0];
+
+// ------------------------------------------------------------------ swing-foot paths
+// [k (swing progress), x (0 = where the foot lifted … 1 = where it lands, a
+// little past it while it reaches), y (height of the foot's lowest point, m)]
+
+const PATH_WALK = [[0, 0, 0], [0.2, 0.1, 0.045], [0.45, 0.45, 0.06], [0.7, 0.8, 0.042], [0.88, 0.97, 0.018], [1, 1, 0]];
+const PATH_JOG = [[0, 0, 0], [0.18, 0.1, 0.13], [0.38, 0.38, 0.21], [0.58, 0.7, 0.19], [0.78, 0.98, 0.11], [0.9, 1.02, 0.045], [1, 1, 0]];
+const PATH_SPRINT = [[0, 0, 0], [0.14, 0.07, 0.2], [0.3, 0.3, 0.37], [0.46, 0.56, 0.4], [0.62, 0.84, 0.32], [0.78, 1.05, 0.19], [0.9, 1.05, 0.075], [1, 1, 0]];
+const PATH_SHUFFLE = [[0, 0, 0], [0.3, 0.22, 0.055], [0.62, 0.72, 0.05], [0.86, 0.96, 0.02], [1, 1, 0]];
+
+function samplePath(P, k, out) {
+  let i = 0;
+  while (i < P.length - 2 && k > P[i + 1][0]) i++;
+  const p0 = P[Math.max(0, i - 1)], p1 = P[i], p2 = P[i + 1], p3 = P[Math.min(P.length - 1, i + 2)];
+  const span = p2[0] - p1[0] || 1;
+  const u = clamp((k - p1[0]) / span, 0, 1);
+  const u2 = u * u, u3 = u2 * u;
+  for (let c = 1; c <= 2; c++) {
+    const m1 = p2[0] - p0[0] > 1e-6 ? ((p2[c] - p0[c]) / (p2[0] - p0[0])) * span : 0;
+    const m2 = p3[0] - p1[0] > 1e-6 ? ((p3[c] - p1[c]) / (p3[0] - p1[0])) * span : 0;
+    out[c - 1] = (2 * u3 - 3 * u2 + 1) * p1[c] + (u3 - 2 * u2 + u) * m1 + (-2 * u3 + 3 * u2) * p2[c] + (u3 - u2) * m2;
+  }
+  return out;
+}
+
+const _p1 = [0, 0], _p2 = [0, 0];
+/** Swing path at progress k for a gait mix → [x 0…1, y metres (unscaled)]. */
+function swingPath(k, run, sprint, low, out) {
+  samplePath(PATH_WALK, k, _p1);
+  samplePath(PATH_JOG, k, _p2);
+  let x = lerp(_p1[0], _p2[0], run), y = lerp(_p1[1], _p2[1], run);
+  if (sprint > 0) {
+    samplePath(PATH_SPRINT, k, _p1);
+    x = lerp(x, _p1[0], sprint); y = lerp(y, _p1[1], sprint);
+  }
+  if (low > 0) {
+    samplePath(PATH_SHUFFLE, k, _p1);
+    x = lerp(x, _p1[0], low); y = lerp(y, _p1[1], low);
+  }
+  out[0] = x; out[1] = Math.max(0, y);
+  return out;
+}
+const _sp = [0, 0];
 
 export class Locomotion {
   constructor(dims, seed = 0) {
@@ -61,17 +131,21 @@ export class Locomotion {
     this.ma = 0;
     this.hipYaw = 0;
     this.w = 0;
-    this.lean = new Spring(3.2, 0.75);
-    this.bank = new Spring(2.6, 0.85);
+    this.lean = new Spring(3.0, 0.8);
+    this.bank = new Spring(2.2, 0.9);
     this.bob = new Spring(7, 0.9);
+    this.cut = new Spring(4, 0.9);
     this.out = neutral(new Float32Array(NCH));
-    // feet: model-space ball-of-foot positions (x, z), stance flags, lift positions
+    // feet: model-space ball-of-foot positions (x, z), stance flags, lift positions, yaw (rad, model frame)
     this.feet = [
-      { x: 0.12, z: 0, lx: 0.12, lz: 0, stance: true, prevPh: 0 },
-      { x: -0.12, z: 0, lx: -0.12, lz: 0, stance: true, prevPh: 0.5 },
+      { x: 0.12, z: 0, lx: 0.12, lz: 0, stance: true, prevPh: 0, yaw: 0, y: 0, pitch: 0 },
+      { x: -0.12, z: 0, lx: -0.12, lz: 0, stance: true, prevPh: 0.5, yaw: 0, y: 0, pitch: 0 },
     ];
     this.styleW = { fwd: 1, side: 0, back: 0 };
     this.dist = 0;
+    // the travel direction in the world and how fast it is turning (smoothed): what banks the body
+    this.velDir = null;
+    this.omega = 0;
   }
 
   setDims(d) { this.dims = d; }
@@ -81,6 +155,8 @@ export class Locomotion {
     const s = this.dims.s;
     this.feet[0].x = base[C.IKF_L + 1] * s; this.feet[0].z = base[C.IKF_L + 3] * s;
     this.feet[1].x = -base[C.IKF_R + 1] * s; this.feet[1].z = base[C.IKF_R + 3] * s;
+    this.feet[0].yaw = (base[C.IKF_L + 5] || 0) * D2R;
+    this.feet[1].yaw = -(base[C.IKF_R + 5] || 0) * D2R;
     for (const f of this.feet) { f.lx = f.x; f.lz = f.z; }
   }
 
@@ -104,6 +180,18 @@ export class Locomotion {
     const absMa = Math.abs(ma);
     const effort = clamp(A.effort ?? sstep(5.5, 9, v), 0, 1);
     const posture = opts.posture || 'run';
+
+    // ---- how hard the path is bending: the travel direction's turn in the world, smoothed
+    const vd = (A.heading || 0) + (A.moveAngle || 0);
+    if (this.velDir === null || speed < 0.8 || dt <= 0) { this.velDir = vd; this.omega = damp(this.omega, 0, 6, dt); }
+    else {
+      const om = clamp(wrap(vd - this.velDir) / dt, -8, 8);
+      this.velDir = vd;
+      this.omega = damp(this.omega, om, 5, dt);
+    }
+    // lateral acceleration (m/s²) of a real turn; a deadzone keeps steering wobble out of the trunk
+    const om = Math.sign(this.omega) * Math.max(0, Math.abs(this.omega) - 0.35);
+    const latA = speed * om;
 
     // ---- hips orientation: run toward the travel direction when moving fast forward/sideways
     const kRun = sstep(2.2, 5.2, v) * (posture === 'block' ? 0.15 : 0.92) * (1 - churn);
@@ -143,13 +231,16 @@ export class Locomotion {
     // ---- feet
     const dirX = Math.sin(ma), dirZ = Math.cos(ma);
     const velX = speed * dirX, velZ = speed * dirZ;
-    const width = lerp(lerp(0.1, 0.07, sprint), 0.31, wSide) * s + wBack * 0.035 * s + (posture === 'block' ? 0.06 * s : 0);
+    const width = lerp(lerp(0.1, 0.075, sprint), 0.31, wSide) * s + wBack * 0.035 * s + (posture === 'block' ? 0.06 * s : 0);
     const landAhead = lerp(0.42, 0.36, run) * beta * stride;
-    const swingHBack = lerp(lerp(0.09, 0.32, run), 0.5, sprint) * s * (1 - 0.6 * wBack) * (1 - 0.65 * wSide) * (opts.highstep ? 0.6 : 1);
-    const swingHFront = (lerp(lerp(0.05, 0.14, run), 0.3, sprint) + effort * 0.05) * s * (1 - 0.65 * wBack) * (1 - 0.6 * wSide) + (opts.highstep ? 0.42 * s : 0) + churn * 0.08 * s;
+    // the low paths: shuffling, backpedalling and driving a block keep the feet near the turf
+    const low = clamp(wSide + wBack * 0.75 + churn * 0.6, 0, 1);
+    const hScale = s * (1 - 0.25 * wBack) * (opts.highstep ? 0.85 : 1);
     const cy = Math.cos(hipYaw), sy = Math.sin(hipYaw);
     const dTurn = -turn * dt;
     const cT = Math.cos(dTurn), sT = Math.sin(dTurn);
+    // foot yaw along the travel direction running forward, along the heading shuffling / backpedalling
+    const travelYaw = hipYaw + gma * wFwd * 0.85;
     let comp = 0, stanceL = 0, stanceR = 0, flightLift = 1;
     for (let i = 0; i < 2; i++) {
       const f = this.feet[i];
@@ -159,12 +250,14 @@ export class Locomotion {
       // home position (hips frame → model frame)
       const hx = side * width, hz = 0.0;
       const homeX = hx * cy + hz * sy, homeZ = -hx * sy + hz * cy;
+      const yawT = travelYaw * (1 - wSide - wBack * 0.7) + side * 7 * D2R;
       if (inStance) {
         if (!f.stance) { f.stance = true; }
-        // planted: slide back with the ground, counter-rotate with the body's turn
+        // planted: slide back with the ground, counter-rotate with the body's turn (yaw too)
         f.x -= velX * dt; f.z -= velZ * dt;
         const nx = f.x * cT + f.z * sT, nz = -f.x * sT + f.z * cT;
         f.x = nx; f.z = nz;
+        f.yaw = clamp(wrap(f.yaw + dTurn), yawT - 0.95, yawT + 0.95);
         // keep within reach (teleports, collisions)
         const ox = f.x - homeX, oz = f.z - homeZ;
         const r = Math.hypot(ox, oz), rmax = 0.9 * s;
@@ -179,32 +272,22 @@ export class Locomotion {
         const p0 = lerp(lerp(-10, 4, run), 10, sprint) * (1 - wSide) + wBack * 14;
         const p1 = lerp(lerp(28, 46, run), 58, sprint) * (1 - 0.4 * wSide) * (1 - 0.3 * wBack);
         f.pitch = lerp(p0, p1, sstep(0.42, 1.0, k));
-        f.sw = 0;
       } else {
         if (f.stance) { f.stance = false; f.lx = f.x; f.lz = f.z; }
         const k = (ph - beta) / (1 - beta);                       // swing progress
-        const landX = homeX + dirX * landAhead + (velX * (1 - k) * (1 - beta) / cad) * 0.0;
+        const landX = homeX + dirX * landAhead;
         const landZ = homeZ + dirZ * landAhead;
-        // horizontal: ease that hurries through mid-swing
-        const e = k * k * (3 - 2 * k);
-        let hx2 = lerp(f.lx, landX, e), hz2 = lerp(f.lz, landZ, e);
-        // the heel kicks back behind first, then reaches forward
-        const back = Math.sin(Math.PI * Math.min(1, k * 1.6)) * (1 - k) * 0.12 * stride * run;
-        hx2 -= dirX * back; hz2 -= dirZ * back;
-        f.x = hx2; f.z = hz2;
-        // height: bezier-ish with a high back (heel recovery) and a lower front (knee drive)
-        const hb = swingHBack * Math.sin(Math.PI * Math.min(1, k * 1.45)) * (1 - sstep(0.55, 1, k));
-        const hf = swingHFront * Math.sin(Math.PI * sstep(0.2, 1.0, k));
-        f.y = Math.max(hb, hf) + 0.012 * s * Math.sin(Math.PI * k);
-        // pitch: toe-off → toes up mid-swing → landing attitude
+        swingPath(k, run, sprint, low, _sp);
+        f.x = lerp(f.lx, landX, _sp[0]);
+        f.z = lerp(f.lz, landZ, _sp[0]);
+        f.y = _sp[1] * hScale * (1 + effort * 0.12 * run) + (opts.highstep ? 0.42 * s * Math.sin(Math.PI * sstep(0.15, 0.95, k)) : 0) + churn * 0.05 * s * Math.sin(Math.PI * k);
+        // pitch: toe-off → toes up as the leg comes through → landing attitude
         const pOff = lerp(lerp(28, 46, run), 58, sprint);
         const pLand = lerp(lerp(-10, 4, run), 10, sprint) + wBack * 14;
         f.pitch = k < 0.5 ? lerp(pOff, -12, sstep(0, 0.5, k)) : lerp(-12, pLand, sstep(0.5, 1, k));
-        f.sw = Math.sin(Math.PI * k);
+        // the foot turns to where it will land
+        f.yaw = damp(f.yaw, yawT, 9, dt);
       }
-      // foot yaw: along travel when running forward, along heading when shuffling / backpedalling
-      const travelYaw = hipYaw + gma * wFwd * 0.85;
-      f.yaw = travelYaw * (1 - wSide - wBack * 0.7) + side * 6 * D2R;
     }
 
     // ---- write feet
@@ -219,34 +302,35 @@ export class Locomotion {
       out[ch + 4] = f.pitch;
       out[ch + 5] = side * f.yaw * R2D;
       const kn = i === 0 ? C.KNEE_L : C.KNEE_R;
-      out[kn] = 0.1 + 0.15 * wSide; out[kn + 1] = 0; out[kn + 2] = 1;
+      // knees track over the toes: a touch outward, more when shuffling
+      out[kn] = 0.12 + 0.15 * wSide; out[kn + 1] = 0; out[kn + 2] = 1;
     }
 
     // ---- pelvis
-    const crouch = lerp(lerp(0.02, 0.045, run), 0.07, sprint) + wSide * 0.13 + wBack * 0.08 + churn * 0.05 + (posture === 'block' ? 0.06 : 0);
-    const bobAmp = lerp(0.022, 0.05, run) * (1 - 0.6 * wSide) * (1 - 0.4 * wBack) * (opts.highstep ? 1.4 : 1);
+    const cutK = this.cut.step(sstep(4, 11, Math.abs(latA)), dt);   // planting on a hard cut
+    const crouch = lerp(lerp(0.02, 0.045, run), 0.07, sprint) + wSide * 0.13 + wBack * 0.08 + churn * 0.05 + (posture === 'block' ? 0.06 : 0) + cutK * 0.06;
+    const bobAmp = lerp(0.022, 0.045, run) * (1 - 0.6 * wSide) * (1 - 0.4 * wBack) * (opts.highstep ? 1.4 : 1);
     const walkBob = (1 - run) * (comp - 0.55) * 0.04;
     const runBob = run * (flightLift * 0.35 - comp) * bobAmp;
-    const bobT = walkBob + runBob;
-    const bob = this.bob.step(bobT, dt);
-    // longitudinal lean: speed posture + acceleration spring + effort
+    const bob = this.bob.step(walkBob + runBob, dt);
+    // longitudinal lean: speed posture + acceleration spring + effort (drive phase leans the most)
     const accel = clamp(A.accel || 0, -12, 12);
-    const leanT = clamp(accel * 1.6, -12, 16) * (1 - wBack) - clamp(accel, -10, 10) * wBack * 0.8;
+    const leanT = clamp(accel * 1.8, -12, 18) * (1 - wBack) - clamp(accel, -10, 10) * wBack * 0.8;
     const lean = this.lean.step(leanT, dt);
-    const basePitch = lerp(lerp(3, 9, run), 15, sprint) + effort * 5 * run * wFwd + wSide * 10 + wBack * 12 + churn * 12 + (posture === 'block' ? 8 : 0) - (opts.highstep ? 16 : 0);
-    // banking into turns: lean toward the turn centre
-    const bankT = clamp(Math.atan2(speed * turn, 9.81) * R2D, -26, 26) * (1 - wBack * 0.5);
+    const basePitch = lerp(lerp(4, 10, run), 14, sprint) + effort * 5 * run * wFwd + wSide * 10 + wBack * 12 + churn * 12 + (posture === 'block' ? 8 : 0) - (opts.highstep ? 16 : 0) + cutK * 6;
+    // banking into a real turn: lean toward its centre, as much as the lateral grip asks for
+    const bankT = clamp(Math.atan2(latA, 9.81) * R2D * 0.85, -18, 18) * (1 - wBack * 0.5) * (1 - wSide * 0.6);
     const bank = this.bank.step(bankT, dt);
     // pelvis twist follows the legs (forward leg's hip leads)
     const fl = this.feet[0], fr = this.feet[1];
-    const gzL = fl.x * Math.sin(hipYaw + 0) * 0 + (fl.x * sy + fl.z * cy), gzR = fr.x * sy + fr.z * cy;
+    const gzL = fl.x * sy + fl.z * cy, gzR = fr.x * sy + fr.z * cy;
     const pelvYaw = clamp(Math.atan2((gzR - gzL) * 0.5, 0.42 * s) * R2D * lerp(0.6, 0.85, run) * wFwd, -14, 14);
     const pelvRoll = (stanceR - stanceL) * 3 * (1 - run) * wFwd + (stanceR - stanceL) * 1.2 * run;
-    const sway = (stanceL - stanceR) * 0.012 * (1 - run) * wFwd;
+    const sway = (stanceL - stanceR) * 0.01 * (1 - run) * wFwd;
     const hipsH = d.hipsY;
     out[C.ROOT] = (sway + Math.sin(bank * D2R) * hipsH * 0.9 * Math.cos(hipYaw)) / s;
-    out[C.ROOT + 1] = (-crouch + bob) / 1 - (1 - Math.cos(bank * D2R)) * 0.5;
-    out[C.ROOT + 2] = (-Math.sin(bank * D2R) * hipsH * 0.9 * Math.sin(hipYaw)) / s * 0 - lean * 0.002;
+    out[C.ROOT + 1] = -crouch + bob - (1 - Math.cos(bank * D2R)) * 0.5;
+    out[C.ROOT + 2] = -lean * 0.002;
     out[C.ROOT + 3] = basePitch * 0.55 + lean * 0.5;
     out[C.ROOT + 4] = hipYaw * R2D + pelvYaw;
     out[C.ROOT + 5] = bank + pelvRoll;
@@ -270,28 +354,36 @@ export class Locomotion {
     out[C.HEAD + 1] = -trunkTwist * 0.45;
     out[C.HEAD + 2] = -bank * 0.3;
 
-    // ---- arms: swing opposite the legs; bent and pumping when running
-    const armAmp = lerp(lerp(20, 40, run), 56, sprint) * (1 + effort * 0.2) * wFwd + wBack * 28 + wSide * 6;
-    const elbowBase = lerp(lerp(22, 88, run), 92, sprint) * (1 - wSide) + wSide * 85;
-    // the arm swing runs off the stride phase: +1 when the left leg reaches forward
-    const legL = Math.cos(Math.PI * 2 * (this.phase + 0.04));
+    // ---- arms: driven fore and aft from the shoulder, opposite the legs
+    // (+1 when the left leg reaches forward; the arms lead the legs a touch)
+    const legL = Math.cos(TAU * (this.phase + 0.04));
+    const pump = 1 + effort * 0.18 * run;
+    const ampF = lerp(lerp(16, 36, run), 58, sprint) * pump;        // forward flexion at the front of the swing
+    const ampB = lerp(lerp(14, 26, run), 42, sprint) * pump;        // extension behind
+    const eFront = lerp(lerp(28, 86, run), 94, sprint);             // elbow bend, front of the swing
+    const eBack = lerp(lerp(16, 66, run), 58, sprint);              // … and behind: the arm opens
     for (let i = 0; i < 2; i++) {
       const side = i === 0 ? 1 : -1;
       const ch = i === 0 ? C.ARM_L : C.ARM_R;
-      const swing = -side * legL * armAmp * (1 - 0.7 * wSide);  // left arm forward when the right leg is forward
-      const abd = 14 + wSide * 14 + (posture === 'block' ? 10 : 0);
-      armSwing(_as, swing + lerp(4, 10, run), abd, 18 * run);
+      const k = -side * legL;                                         // +1: this arm forward
+      const flex = (lerp(3, 7, run) + (k > 0 ? k * ampF : k * ampB)) * (1 - 0.75 * wSide);
+      const abd = lerp(9, 14, run) + (posture === 'block' ? 9 : 0) + wSide * 8;
+      // the hand comes in toward the sternum on the front swing; behind, the forearm runs straight back
+      const inward = lerp(6, 16, run) * Math.max(0, k);
+      armFlex(_as, flex, abd, inward);
       out[ch] = _as[0];
       out[ch + 1] = _as[1];
-      out[ch + 2] = 8 + 10 * run;
-      out[ch + 3] = elbowBase + (swing > 0 ? swing * 0.35 : swing * 0.15) * run;
-      out[ch + 4] = 5;
-      out[ch + 7] = lerp(0.3, 0.75, run);
+      out[ch + 2] = _as[2];
+      out[ch + 3] = lerp(eBack, eFront, (k + 1) / 2);
+      out[ch + 4] = lerp(4, 10, run);
+      out[ch + 5] = 0;
+      out[ch + 6] = lerp(5, 15, run);
+      out[ch + 7] = lerp(0.35, 0.6, run);
       const cl = i === 0 ? C.CLAV_L : C.CLAV_R;
-      out[cl] = 2 + run * 2;
-      out[cl + 1] = swing * 0.08;
+      out[cl] = 2 + run * 2 + Math.max(0, k) * 2 * run;
+      out[cl + 1] = k * lerp(2, 7, run);                             // the shoulder reaches with the arm
     }
-    // shuffle: arms up and in front (ready hands)
+    // shuffle / backpedal: arms up and in front (ready hands)
     if (wSide > 0.01 || wBack > 0.01) {
       const k = Math.max(wSide, wBack * 0.5);
       for (const ch of [C.ARM_L, C.ARM_R]) {
