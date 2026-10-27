@@ -258,10 +258,16 @@ that hits the ground is a live ball. Quarter length is a setting (accelerated
 clock between plays). Clock stops on incompletions, out of bounds in the last two
 minutes of each half, scores, changes of possession and timeouts (3 a half).
 Overtime: alternate possessions from the 20 until someone leads after equal
-possessions. Penalties (setting): offside, delay of game, holding, pass
+possessions, two-point tries from the third round. Penalties (setting): offside, delay of game, holding, pass
 interference, illegal forward pass, intentional grounding, roughing the passer,
 face mask. (A defensive lineman can jump offside at a hard count; a person's
-defender lined up over the ball at the snap is offside.)
+defender lined up over the ball at the snap is offside.) A flag on an extra
+point sends the try round again, kicked from where the flag left it.
+
+No play goes on forever: a man knocked down gets back up after a second or so
+(`liveStep`), and when a quarterback just stands there with the ball behind
+the line, the cover men give up their men and come for him one at a time from
+about 5.5 s, the nearest first (`m.qbHolding`). Rushers stop at the throw.
 
 ## The match screen — `src/screens/match.js` + `src/match/`
 
@@ -289,6 +295,9 @@ halftime / final) with `replay` and `pause` on top.
 - The stadium boards get `{ home: {abbr, score, timeouts}, away, quarter, clock
   ('M:SS'), playClock, down, toGo, ballOn, possession, msg }`; at halftime and
   the final the camera looks up at the venue's `cams.scoreboard`.
+- The bug and the boards show `m.scoreShown()`: a score's points go up at the
+  whistle (unless a flag is down), though the sim only adds them when the
+  play is applied, after the celebration and the replay.
 
 ## Practice — `src/match/practice.js`
 
