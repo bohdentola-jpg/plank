@@ -552,7 +552,12 @@ export class Match {
     for (const e of this.active) {
       const done = e.tickAction(dt);
       if (done && e.base.startsWith('lie') && e.state !== 'down') { e.state = 'down'; e.downT = 0; }
-      if (e.state === 'down') e.downT += dt;
+      if (e.state === 'down') {
+        e.downT += dt;
+        // knocked down in a play that goes on: back on his feet after a moment (the man with
+        // the ball going down ends it); think() sees him on the ground and gets him up
+        if (e !== b.carrier && e.downT > 1.1 + (e.id.length % 4) * 0.15) { e.state = 'active'; e.recover = 0; }
+      }
       e.tire(dt, this.settings.fatigue);
       e.record(dt);
     }
@@ -613,6 +618,8 @@ export class Match {
     }
     const a = e.asg?.type;
     if (a === 'rush') return D.rushBrain(this, e, dt);
+    // a quarterback who just stands there with it: the cover men come for him, nearest first
+    if (this.qbHolding(e)) return D.rushBrain(this, e, dt);
     if (a === 'man') return D.manBrain(this, e, dt);
     if (a === 'zone') return D.zoneBrain(this, e, dt);
     if (a === 'spy') return D.spyBrain(this, e, dt);
@@ -710,6 +717,13 @@ export class Match {
     return this.handedOff || this.playKind === 'qbrun' || (c.mem.phase === 'scramble' && (c.z - this.los) * this.offDir > 0) || (c.z - this.los) * this.offDir > 0.5;
   }
   ballThrown() { const b = this.ball; return b.state === 'air' && (b.kind === 'pass' || b.kind === 'tip') && b.lastTeam === this.offSide; }
+  /** Has the QB held the ball behind the line so long that this cover man gives up his man and comes? */
+  qbHolding(e) {
+    const qb = this.qb, c = this.ball.carrier;
+    if (!qb || c !== qb || this.handedOff || this.passThrown || this.playKind === 'kickoff') return false;
+    if ((qb.z - this.los) * this.offDir > 0) return false;
+    return this.playT > 5.5 + Math.hypot(e.x - qb.x, e.z - qb.z) * 0.12;
+  }
   /**
    * The score as the broadcast shows it: points go up at the whistle (the sim adds them
    * when the play is applied, after the celebration and the replay), unless a flag is down.

@@ -32,7 +32,9 @@ export function choosePat(m, choice) {
   const F = m.field;
   m.tryMode = choice === 'two' ? 'two' : 'pat';
   const dir = m.offDir;
-  m.los = F.halfL * dir - dir * (choice === 'two' ? F.twoPtYard : F.patKickYard);
+  const spot = m.patSpot;
+  m.patSpot = undefined;
+  m.los = choice !== 'two' && spot !== undefined ? spot : F.halfL * dir - dir * (choice === 'two' ? F.twoPtYard : F.patKickYard);
   m.ballX = 0;
   m.down = 1; m.toGo = choice === 'two' ? F.twoPtYard : F.patKickYard; m.firstDownZ = F.halfL * dir;
   if (choice === 'two') { m.phase = 'playcall'; m.emit('try', { kind: 'two' }); return; }
@@ -847,7 +849,12 @@ function nextDown(m, replay = false) {
     if (m.tryMode === 'two') m.phase = 'playcall';
     else if (m.phase !== 'kickoff' && m.phase !== 'pat') m.phase = 'playcall';
   }
-  if (replay) m.phase = m.special === 'kickoff' ? 'kickoff' : 'playcall';
+  if (replay) {
+    // a flag on an extra point: the try goes round again (the kick from where the flag left
+    // it), not on to a play call, which would line up a play from scrimmage for one point
+    if (m.tryMode === 'pat') { m.patSpot = m.los; m.tryMode = 'choose'; m.phase = 'pat'; }
+    else m.phase = m.special === 'kickoff' ? 'kickoff' : 'playcall';
+  }
   if (!m.ot && m.clock <= 0 && !m.tryMode && m.phase !== 'pat') return endQuarter(m);
   m.emit('ready', { phase: m.phase });
 }
