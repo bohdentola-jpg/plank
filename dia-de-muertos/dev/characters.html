@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8" /><title>Character gallery</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#222}#c{width:100%;height:100%}</style>
+<script type="importmap">{ "imports": { "three": "../vendor/three.module.js" } }</script>
+</head><body><div id="c"></div>
+<script type="module">
+import * as THREE from 'three';
+import { makeCharacter, CAST } from '../src/characters.js';
+import { toon, PAL } from '../src/toon.js';
+const el = document.getElementById('c');
+const r = new THREE.WebGLRenderer({ antialias: true });
+r.setSize(el.clientWidth, el.clientHeight);
+r.shadowMap.enabled = true;
+r.shadowMap.type = THREE.PCFSoftShadowMap;
+el.appendChild(r.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#9fd8f5');
+const cam = new THREE.PerspectiveCamera(32, el.clientWidth / el.clientHeight, 0.1, 100);
+const q = new URLSearchParams(location.search);
+const ids = (q.get('ids') || 'lupita,chispa,abuela,mama,papa,nico,chela,tomas,ramon,lucia,pancho,itzel,abuelo').split(',');
+const close = q.has('close');
+cam.position.set(0, close ? 1.1 : 1.6, close ? 2.6 : 9.5);
+cam.lookAt(0, close ? 1.0 : 0.85, 0);
+const hemi = new THREE.HemisphereLight('#fff6e8', '#b5895f', +(q.get('hemi') || 1.6));
+scene.add(hemi);
+const sun = new THREE.DirectionalLight('#fff1d8', +(q.get('sun') || 2.6));
+sun.position.set(3, 6, 5);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -8; sun.shadow.camera.right = 8; sun.shadow.camera.top = 6; sun.shadow.camera.bottom = -2;
+scene.add(sun);
+const ground = new THREE.Mesh(new THREE.CircleGeometry(12, 48), toon('#e9c58f'));
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+const chars = [];
+ids.forEach((id, i) => {
+  const c = makeCharacter(id);
+  const n = ids.length;
+  c.root.position.x = (i - (n - 1) / 2) * (close ? 0.9 : 1.05);
+  scene.add(c.root);
+  chars.push(c);
+  if (q.get('rot')) c.root.rotation.y = +q.get('rot');
+  if (q.get('anim')) c.play(q.get('anim'));
+  if (q.get('emote')) c.emote(q.get('emote'));
+  if (q.has('talk')) c.say(true);
+});
+const clock = new THREE.Clock();
+function loop() {
+  const dt = Math.min(0.05, clock.getDelta());
+  for (const c of chars) c.update(dt);
+  r.render(scene, cam);
+  requestAnimationFrame(loop);
+}
+loop();
+window.__chars = chars;
+</script></body></html>

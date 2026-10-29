@@ -1,5 +1,7 @@
 # VARSITY 27 🏈
 
+> **Also in this repo:** [**The Marigold Path**](dia-de-muertos/) — an educational 3D point-and-click adventure about Día de Muertos, in English and Spanish. Double-click `dia-de-muertos/play-offline.html` to play.
+
 *Sunday has Madden. Saturday has NCAA. Friday is yours.*
 
 The high school chapter of the football-game trinity, in the browser — full 3D, no
