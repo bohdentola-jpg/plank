@@ -593,6 +593,7 @@ function drawSideWall(g, L, m, kd, plan, side, k, seed) {
   DOORS.forEach((d, i) => runs.push({ type: 'door', z0: d[0], z1: d[1], i }));
   runs.sort((a, b) => b.z0 - a.z0);
   const glass = [];
+  const panes = [];
   for (const run of runs) {
     const { z0, z1 } = run;
     // wall plane
@@ -607,6 +608,7 @@ function drawSideWall(g, L, m, kd, plan, side, k, seed) {
         if (b < NZ + 0.05) continue;
         shape(g, wallRR(xw, Math.max(NZ, a - 0.04), b + 0.04, WIN_Y0 - 0.04, WIN_Y1 + 0.04, 0.09).map((p) => p2(L, p)), { fill: m.frame, shade: m.frameSh, sdx: 1.5 * L.u, sdy: 1.5 * L.u, lw: lwAt(L, L.f / ((a + b) / 2)), amp: 0.3 * L.u, seed: seed + w * 13 + run.i });
         glass.push(wallRR(xw, Math.max(NZ, a), b, WIN_Y0, WIN_Y1, 0.07).map((p) => p2(L, p)));
+        panes.push({ z0: Math.max(NZ, a), z1: b });
       }
       // ad strip
       const an = Math.max(1, Math.floor((z1 - z0 - 0.2) / 1.0));
@@ -671,6 +673,15 @@ function drawSideWall(g, L, m, kd, plan, side, k, seed) {
     }
     g.restore();
   }
+  // marker tags written on the glass
+  const MARKER = plan.old ? ['#e8fff6', '#9fffe0'] : ['#fffaf0', '#ff8fc0', '#bff3ff', '#b8ff9a', '#ffd23f'];
+  panes.forEach((pn, i) => {
+    if (pn.z1 > 7.2 || r() < 0.35) return;
+    const word = kd.words[(i + (side > 0 ? 3 : 0)) % kd.words.length];
+    const tex = tagTex(L, k, pn.z0, word, MARKER[(i + (side > 0 ? 1 : 0)) % MARKER.length], seed + 140 + i * 3 + (side > 0 ? 1 : 0), 30);
+    const wm = Math.min(0.95, (pn.z1 - pn.z0) * 0.82);
+    xDecal(g, L, side, xw - side * 0.004, (pn.z0 + pn.z1) / 2, 1.38 + (r() - 0.5) * 0.2, wm, wm * 0.46, tex);
+  });
   // graffiti on the door leaves and window pillars
   DOORS.forEach(([d0, d1], i) => {
     if (d1 < NZ + 0.3) return;
@@ -716,7 +727,7 @@ function drawCove(g, L, m, kd, k, seed) {
   }
 }
 
-function drawSeats(g, L, m, kd, plan, side, seed) {
+function drawSeats(g, L, m, kd, plan, side, seed, K = 1) {
   const sx = side * SEAT_X, bx = side * BACK_X;
   const skip = side < 0 ? plan.skipLeft : plan.skipRight;
   const secs = [];
@@ -736,6 +747,14 @@ function drawSeats(g, L, m, kd, plan, side, seed) {
       quad3(g, L, [[sx, SEAT_Y, z0], [bx, SEAT_Y, z0], [bx, SEAT_Y, z1], [sx, SEAT_Y, z1]], { fill: tint(c, 0.14), seed: sd + 1 });
       // seat front
       quad3(g, L, [[sx, 0.14, z0], [sx, SEAT_Y, z0], [sx, SEAT_Y, z1], [sx, 0.14, z1]], { fill: c, shade: shade(c, 0.22), sdx: 0, sdy: -2 * L.u, seed: sd + 2 });
+      // marker tag on the backrest now and then
+      if (z0 < 6 && (hashStr(`${plan.kind}:${side}:${Math.round(z0 * 10)}`) % 3) === 0) {
+        const word = kd.words[(Math.round(z0 * 7) + (side > 0 ? 1 : 0)) % kd.words.length];
+        const col = ['#fffaf0', INK, '#ffd23f', '#ff4f9a'][hashStr(word + side) % 4];
+        const tex = tagTex(L, K, z0, word, col === c ? '#fffaf0' : col, sd + 9, 28);
+        const wm = (z1 - z0) * 0.9;
+        xDecal(g, L, side, bx - side * 0.003, (z0 + z1) / 2, 0.72, wm, Math.min(0.34, wm * 0.46), tex);
+      }
     }
     // dark kick recess under the bench
     quad3(g, L, [[sx + side * 0.08, 0.001, Math.max(NZ, a)], [sx + side * 0.08, 0.14, Math.max(NZ, a)], [sx + side * 0.08, 0.14, b], [sx + side * 0.08, 0.001, b]], { fill: m.kick, lw: 0, amp: 0 });
@@ -1112,23 +1131,28 @@ function planFor(L, kind) {
     if (kind === 'ice') plan.disco = [0, 2.1, 4.8];
   } else if (kind === 'arcade') {
     if (w) {
-      plan.npc = [0.6, 4.2];
-      plan.npc2 = [-1.2, 2.9];
-      plan.props.push({ type: 'shell', id: 'shell', layer: 'front', x0: -1.45, x1: -0.8, z: 2.5 });
-      plan.props.push({ type: 'claw', id: 'claw', layer: 'front', x0: 1.0, x1: 1.45, z: 2.4 });
+      // landscape: the claw on the left in front of the tag wall, Eight's shell
+      // table on the right, Joy mid-aisle by the runner cabinet (all clear of the player)
+      plan.npc = [0.45, 5.0];
+      plan.npc2 = [1.17, 3.1];
+      plan.props.push({ type: 'claw', id: 'claw', layer: 'front', x0: -1.45, x1: -1.0, z: 2.4 });
+      plan.props.push({ type: 'shell', id: 'shell', layer: 'front', x0: 0.75, x1: 1.45, z: 2.5, anchorY: 0.5 });
       plan.props.push({ type: 'runner', layer: 'back', x0: 1.0, x1: 1.45, z: 6.2 });
-      plan.skipLeft.push([1.8, 3.1]);
-      plan.skipRight.push([2.0, 2.95], [5.9, 6.9]);
-      plan.nearPoles = [[0.62, 2.0]];
+      plan.props.push({ type: 'hang', id: 'tagwall', layer: 'back', x: -0.9, z: 3.4, w: 0.8, y0: HANG_Y0, y1: HANG_Y1, faceKind: 'tagwall' });
+      plan.skipLeft.push([2.0, 3.0]);
+      plan.skipRight.push([2.1, 3.5], [5.9, 6.9]);
+      plan.nearPoles = [];
     } else {
-      plan.npc = [0.35, 6.4];
-      plan.npc2 = [0.98, 4.6];
-      plan.props.push({ type: 'shell', id: 'shell', layer: 'front', x0: 0.62, x1: 1.3, z: 4.2 });
-      plan.props.push({ type: 'claw', id: 'claw', layer: 'front', x0: 0.72, x1: 1.18, z: 2.85 });
-      plan.skipRight.push([4.45, 5.0]);
+      // portrait: everything lives right of the player, farthest nearest the center:
+      // Joy at the back, Eight behind his table mid-aisle, the claw in the near corner
+      plan.npc = [0.33, 7.4];
+      plan.npc2 = [0.72, 4.6];
+      plan.props.push({ type: 'shell', id: 'shell', layer: 'front', x0: 0.4, x1: 1.05, z: 4.15, anchorY: 0.5 });
+      plan.props.push({ type: 'claw', id: 'claw', layer: 'front', x0: 0.88, x1: 1.34, z: 2.8 });
+      plan.props.push({ type: 'hang', id: 'tagwall', layer: 'back', ...hangL, y0: HANG_Y0 - 0.05, y1: HANG_Y1, faceKind: 'tagwall' });
+      plan.skipRight.push([2.6, 3.4], [4.1, 4.7]);
     }
     plan.props.push({ type: 'crt', id: 'runner', layer: 'back', ...hangR, y0: HANG_Y0, y1: HANG_Y1 });
-    plan.props.push({ type: 'hang', id: 'tagwall', layer: 'back', ...hangL, y0: HANG_Y0 - 0.05, y1: HANG_Y1, faceKind: 'tagwall' });
   } else if (kind === 'capsules') {
     if (w) {
       plan.props.push({ type: 'capsule', id: 'basic', layer: 'front', x0: 0.98, x1: 1.42, z: 2.4, deluxe: false });
@@ -1153,9 +1177,9 @@ function planFor(L, kind) {
     plan.nearPoles = [];
     plan.farPoles = [];
     const spots = w
-      ? [[1.05, 2.6, 1.74], [-1.05, 2.6, 1.74], [1.05, 4.0, 1.74], [-1.05, 4.0, 1.74], [0.0, 5.4, 1.74], [1.0, 5.4, 1.74]]
+      ? [[1.0, 2.7, 1.72], [-1.0, 2.7, 1.72], [1.02, 4.0, 1.74], [-1.02, 4.0, 1.74], [-0.25, 5.4, 1.78], [0.75, 5.5, 1.78]]
       : [[0.95, 2.9, 1.86], [1.05, 4.4, 1.9], [1.0, 6.0, 1.9], [0.3, 6.0, 1.9], [-0.55, 6.1, 1.92], [-1.05, 4.6, 1.92]];
-    for (const [X, Z, Y] of spots) plan.slots.push({ X, Y, Z, hang: false, float: true, size: 0.42, pedestal: true });
+    for (const [X, Z, Y] of spots) plan.slots.push({ X, Y, Z, hang: false, float: true, size: w ? 0.5 : 0.42, pedestal: true });
   } else if (kind === 'cab') {
     plan.geom = 'cab';
     plan.player = null;
@@ -1191,10 +1215,16 @@ export function carLayout(W, H, kind) {
   L.npc2 = anchor(plan.npc2);
   // hotspots
   const hs = [];
-  const push = (id, r, label) => {
+  const push = (id, r, label, at = null) => {
     const rr = clipRect(L, r);
     if (rr[2] < 4 || rr[3] < 4) return;
-    hs.push({ id, rect: rr, label, anchor: [rr[0] + rr[2] / 2, rr[1]] });
+    // the anchor is where the name tag goes: top-center unless the plan says otherwise,
+    // kept inside the rect and far enough from the screen edges for a tag to fit
+    let ax = at ? at[0] : rr[0] + rr[2] / 2, ay = at ? at[1] : rr[1];
+    const m = 56 * L.u;
+    ax = clamp(clamp(ax, rr[0] + 4, rr[0] + rr[2] - 4), Math.min(m, W / 2), Math.max(W - m, W / 2));
+    ay = clamp(ay, rr[1], rr[1] + rr[3]);
+    hs.push({ id, rect: rr, label, anchor: [ax, ay] });
   };
   const kd = KIND[kind] || KIND.threads;
   const LABELS = {
@@ -1206,8 +1236,13 @@ export function carLayout(W, H, kind) {
   }
   const PROP_LABEL = { calendar: 'STREAK', board: 'JOBS', lockers: 'WARDROBE', reader: 'PUNCH IN', display: kd.label, tagwall: 'TAG WALL', runner: 'TUNNEL RUN', claw: 'THE GRABBER', shell: 'SHELL GAME', basic: 'BASIC CAPSULE', deluxe: 'DELUXE CAPSULE', vault: '???' };
   for (const p of plan.props) {
-    if (!p.id || p.id === 'runner-screen') continue;
-    push(p.id, propRect(L, p), PROP_LABEL[p.id] || p.id.toUpperCase());
+    if (!p.id) continue;
+    let at = null;
+    if (p.anchorY != null) {
+      const q = P(((p.x0 ?? p.x) + (p.x1 ?? p.x)) / 2, p.anchorY, p.z);
+      at = [q[0], q[1]];
+    }
+    push(p.id, propRect(L, p), PROP_LABEL[p.id] || p.id.toUpperCase(), at);
   }
   if (plan.slots.length) {
     // the hanging stock, one rect per side (plus the counter, already pushed)
@@ -1423,7 +1458,7 @@ function bakeBack(L, kind, state, K) {
       const tex = tagTex(L, K, 6, kd.words[0], kd.spray[3 % kd.spray.length], seed + 81, 30);
       floorDecal(g, L, -0.35, 7.2, 1.0, 0.45, tex);
     }
-    for (const side of [1, -1]) drawSeats(g, L, m, kd, plan, side, seed);
+    for (const side of [1, -1]) drawSeats(g, L, m, kd, plan, side, seed, K);
     // grab rails + brackets (behind the player), far poles
     drawRails(g, L, m, false);
     const farPoles = plan.farPoles.slice().sort((a, b) => b[1] - a[1]);
@@ -1635,7 +1670,7 @@ function bakeVault(g, L, kd, K, seed) {
   const FZ = 6.4, VH = 2.45, VW = 1.5;
   g.fillStyle = '#05040a';
   g.fillRect(0, 0, L.W, L.H);
-  const steel = '#3c4250', steelSh = '#2c313c';
+  const steel = '#4a5262', steelSh = '#353b47';
   quad3(g, L, [[-VW, VH, NZ], [VW, VH, NZ], [VW, VH, FZ], [-VW, VH, FZ]], { fill: '#2a2e38', lw: 0, amp: 0 });
   quad3(g, L, [[-VW, 0, NZ], [VW, 0, NZ], [VW, 0, FZ], [-VW, 0, FZ]], { fill: '#30343c', lw: 0, amp: 0 });
   // diamond-plate floor
@@ -1648,11 +1683,23 @@ function bakeVault(g, L, kd, K, seed) {
   }
   for (const s of [-1, 1]) {
     quad3(g, L, [[s * VW, 0, NZ], [s * VW, VH, NZ], [s * VW, VH, FZ], [s * VW, 0, FZ]], { fill: steel, seed: seed + s });
-    // plates + rivets
-    for (let z = 1.0; z < FZ; z += 1.1) line3(g, L, [s * VW, 0, z], [s * VW, VH, z], { color: steelSh, lw: 1.2 * L.u });
-    for (let z = 1.0; z < FZ; z += 1.1) for (let y = 0.25; y < VH; y += 0.45) {
-      const q = L.P(s * VW, y, z + 0.06);
-      dot(g, q[0], q[1], Math.max(0.8, 0.012 * q[2]), 'rgba(255,255,255,0.35)');
+    // walls of safe-deposit boxes, far to near
+    const cols = [];
+    for (let z = 0.75; z < FZ - 0.2; z += 0.42) cols.push(z);
+    cols.reverse();
+    for (const z of cols) {
+      for (let y = 0.22; y < VH - 0.25; y += 0.34) {
+        const z0 = z + 0.03, z1 = z + 0.39, y0 = y + 0.03, y1 = y + 0.31;
+        const k = hashStr(`box${s}${z.toFixed(2)}${y.toFixed(2)}`);
+        const open = k % 23 === 0;
+        quad3(g, L, [[s * VW, y0, z0], [s * VW, y1, z0], [s * VW, y1, z1], [s * VW, y0, z1]], { fill: open ? '#14161c' : k % 5 === 0 ? '#5a6274' : '#566072', shade: open ? null : steelSh, sdx: 1.2 * L.u, sdy: 1.2 * L.u, lw: lwAt(L, L.f / z, 0.8), seed: seed + k % 997 });
+        if (open) continue;
+        const kh = L.P(s * VW, y0 + 0.12, (z0 + z1) / 2);
+        dot(g, kh[0], kh[1], Math.max(0.8, 0.014 * kh[2]), '#1a1c22');
+        const pl = L.P(s * VW, y1 - 0.05, (z0 + z1) / 2);
+        g.fillStyle = '#c9a14a';
+        g.fillRect(pl[0] - 0.025 * pl[2], pl[1] - 0.012 * pl[2], 0.05 * pl[2], 0.024 * pl[2]);
+      }
     }
   }
   // far wall with the big piece
@@ -1670,15 +1717,13 @@ function bakeVault(g, L, kd, K, seed) {
     const tex = tagTex(L, K, 2.5, side < 0 ? 'RICH' : 'GOLD', side < 0 ? '#ffd23f' : '#fffaf0', seed + 20 + side, 34);
     xDecal(g, L, side, side * VW - side * 0.003, 3.2, 1.95, 1.0, 0.45, tex);
   }
-  // gold piles in the far corners
-  for (const [x, z] of [[-1.2, 5.9], [1.15, 6.0]]) {
-    face(g, L, x - 0.25, 0.32, z, (gg) => {
-      const r = mulberry32(seed + Math.round(x * 10));
-      for (let i = 0; i < 16; i++) {
-        const cx = 6 + r() * 38, cy = 30 - r() * r() * 22;
-        shape(gg, ellipsePts(cx, cy, 5, 2.4), { fill: '#ffd23f', lw: 1, amp: 0.1, seed: seed + i });
-      }
-    });
+  // stacks of gold bars in the far corners
+  for (const [x, z] of [[-1.15, 5.5], [1.12, 5.6]]) {
+    const bars = [[0, 0, 0], [0.24, 0, 0], [0.12, 0.09, 0], [0, 0, 0.32], [0.24, 0, 0.32], [0.12, 0.09, 0.32], [0.12, 0.18, 0.16]];
+    bars.sort((a, b) => b[2] - a[2] || a[1] - b[1]);
+    for (const [dx, dy, dz] of bars) {
+      box3(g, L, { x0: x - 0.12 + dx - 0.11, x1: x - 0.12 + dx + 0.11, y0: dy, y1: dy + 0.09, z0: z + dz, d: 0.28 }, { fill: '#e8b830', top: '#ffd96a', side: '#b8861a', seed: seed + Math.round((dx + dy + dz) * 100) });
+    }
   }
   // spotlight cans on the ceiling
   for (const sl of L.plan.slots) {
