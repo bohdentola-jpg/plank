@@ -95,14 +95,28 @@ async function boot() {
     setTimeout(() => { $('#boot').hidden = true; }, 520);
     start();
   };
-  if (Q.has('quick')) {
-    $('#boot').hidden = true;
-    if (!E.S.profile) E.setProfile({ ...randomLook(), name: 'QA RAT' });
-    start();
-  } else {
-    $('#boot-go').addEventListener('click', enter, { once: true });
-    $('#boot-go').focus({ preventScroll: true });
-  }
+  // When hosted somewhere that hot-swaps new versions (the Claude artifact
+  // viewer), keep the player where they were instead of showing the title again.
+  const hot = window.claude?.hot;
+  hot?.snapshot?.(() => ({ entered: G.mode !== 'boot', scene: G.scene, x: Math.round(G.player.x) }));
+  const begin = (data = {}) => {
+    if (data.entered && E.S.profile && SCENES[data.scene]) {
+      loadScene(data.scene, data.x);
+      $('#boot').hidden = true;
+      audio.init();
+      applySound();
+      start();
+    } else if (Q.has('quick')) {
+      $('#boot').hidden = true;
+      if (!E.S.profile) E.setProfile({ ...randomLook(), name: 'QA RAT' });
+      start();
+    } else {
+      $('#boot-go').addEventListener('click', enter, { once: true });
+      $('#boot-go').focus({ preventScroll: true });
+    }
+  };
+  if (hot?.ready) hot.ready(begin);
+  else begin(hot?.data ?? {});
   // QA: ?open=shop:threads | bag | map | stash | catalog | creator  ·  ?game=tag
   if (Q.get('open') || Q.get('game')) setTimeout(qaOpen, 300);
 }
