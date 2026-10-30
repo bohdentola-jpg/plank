@@ -137,6 +137,8 @@ button { font: inherit; color: inherit; }
 
 /* ------------------------------------------------------------------ toasts + flyers */
 #toasts { position: absolute; left: 50%; top: calc(86px + var(--safe-t)); transform: translateX(-50%); z-index: 60; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; width: min(92vw, 520px); }
+/* while a minigame is open, toasts drop to the bottom so they never cover the play area */
+#app:has(#ov-game) #toasts { top: auto !important; bottom: calc(14px + var(--safe-b)); flex-direction: column-reverse; }
 .toast { display: flex; align-items: center; gap: 10px; padding: 8px 16px 9px; background: var(--ink); color: var(--cream); border: 3px solid var(--cream); border-radius: var(--r-ink);
   box-shadow: var(--shadow); font: 15px var(--f-sign); letter-spacing: 0.5px; animation: toastIn 0.35s cubic-bezier(.2,1.6,.4,1) both; text-align: center; }
 .toast.out { animation: toastOut 0.3s ease-in both; }

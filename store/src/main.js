@@ -23,8 +23,7 @@ import { initStash, openStash } from './ui/stash.js';
 import { openCreator, drawLogo, randomLook } from './ui/creator.js';
 import { openGame } from './games/index.js';
 import { ellipse, dot, rgba, text, FONTS, INK, shape, makeCanvas } from './ink.js';
-
-const Q = new URLSearchParams(location.search);
+import { devParams as Q } from './dev.js';
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -158,7 +157,9 @@ async function firstRun() {
 
 function controlsHint() {
   if (input.touch || matchMedia('(pointer: coarse)').matches) {
-    setTimeout(() => hud.toast('Tap to walk · tap things to use them · tap your rat to hop', '', 5200), 2600);
+    setTimeout(() => {
+      if (!anyOverlay() && !dlg.open) hud.toast('Tap to walk · tap things to use them · tap your rat to hop', '', 5200);
+    }, 2600);
     return;
   }
   hud.showHint('<b>A/D</b> or <b>←/→</b> walk · <b>SHIFT</b> run · <b>SPACE</b> hop · <b>E</b> talk / use · <b>M</b> map · <b>B</b> bag · or just click things', 10000);

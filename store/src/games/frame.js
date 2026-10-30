@@ -175,12 +175,3 @@ export function openArcade(spec, ctx) {
     }, { label: spec.title, panelClass: 'game-panel', dismissable: false });
   });
 }
-
-// Grade helper shared by score-based games.
-export function gradeFor(pct) {
-  if (pct >= 0.9) return 'S';
-  if (pct >= 0.75) return 'A';
-  if (pct >= 0.55) return 'B';
-  if (pct >= 0.35) return 'C';
-  return 'D';
-}

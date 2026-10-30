@@ -2,9 +2,10 @@
 // grab tokens, duck the pigeons (by not jumping), and pray for pizza.
 // Tap / click / SPACE / ↑ / W to jump; hold for height; one double jump.
 import { openArcade } from './frame.js';
-import { rrect, rect, ellipse, blob, stroke, text, dot, shape, FONTS, INK, rgba, shade, mulberry32, makeCanvas } from '../ink.js';
+import { rrect, rect, ellipse, blob, stroke, text, dot, shape, FONTS, INK, mulberry32, makeCanvas } from '../ink.js';
 import { drawRat, drawPizza } from '../art/critters.js';
 import { tag } from '../art/station.js';
+import { devParams } from '../dev.js';
 
 const W = 800, H = 450;
 const GROUND = 366;       // feet line
@@ -212,11 +213,11 @@ export function playRunner(ctx) {
       const trail = [];
       let pillarOff = 0, fgOff = 0, sparkT = 1;
       const best0 = econ.S.bests.runner || 0;
-      // QA: ?qa=god turns every hit into a smash (and serves pizza early) for testing
-      const god = typeof location !== 'undefined' && /[?&]qa=god\b/.test(location.search);
+      // QA (local only, see dev.js): ?qa=god turns every hit into a smash and serves pizza early
+      const god = devParams.get('qa') === 'god';
       if (god) nextPizzaM = 60;
-      // QA: ?qa=auto plays with good timing, to prove every spawn pattern is clearable
-      const auto = typeof location !== 'undefined' && /[?&]qa=auto\b/.test(location.search);
+      // QA (local only): ?qa=auto plays with good timing, to prove every spawn pattern is clearable
+      const auto = devParams.get('qa') === 'auto';
       let autoHold = 0;
 
       const meters = () => Math.floor(dist * UNIT_M);
@@ -383,9 +384,11 @@ export function playRunner(ctx) {
           return;
         }
         if (h > 0) return;
-        const next = obs.filter((o) => !o.smashed && o.type !== 'pigeon' && o.x + o.w > RAT_X - 10).sort((a, b) => a.x - b.x)[0];
+        const ahead = obs.filter((o) => !o.smashed && o.type !== 'pigeon' && o.x + o.w > RAT_X - 10).sort((a, b) => a.x - b.x);
+        const next = ahead[0];
         if (!next) return;
-        const tall = next.type === 'turnstile';
+        // two obstacles close together need one long (held) jump
+        const tall = next.type === 'turnstile' || (ahead[1] && ahead[1].x - (next.x + next.w) < 260);
         const lead = tall ? 0.2 : 0.17;
         const d = next.x - (RAT_X + 20);
         if (d > sp * lead) return;

@@ -130,9 +130,12 @@ checkout math) without a browser. `npm run store:build` bundles everything
 into one self-contained file, `store/dist/3rd-rail.html`, that you can host
 anywhere or open straight from disk.
 
-QA helpers: `?quick` skips the title, `?scene=drip&x=1500` starts anywhere,
+QA helpers (these only work when the store is served from `localhost` or
+`127.0.0.1`, so shoppers on a live site can't use them to skip secrets or farm
+rewards): `?quick` skips the title, `?scene=drip&x=1500` starts anywhere,
 `?open=shop:threads` / `bag` / `map` / `stash` / `catalog`, `?game=tag`,
-`?day=+1` pretends it's tomorrow (for testing streaks). `dev/sheet.html`,
+`?day=+1` pretends it's tomorrow (for testing streaks), and in Rat Race
+`?qa=god` (smash everything) or `?qa=auto` (autopilot). `dev/sheet.html`,
 `dev/products.html` and `dev/world.html` render the cast, the catalog art and
 the stations on their own.
 

@@ -2,11 +2,13 @@
 // daily roll (deals, missions, floor tokens, claw prizes) is seeded from it,
 // so everyone sees the same deals on the same day.
 import { mulberry32, hashStr } from '../ink.js';
+import { devParams } from '../dev.js';
 
-// QA: ?day=+1 (or -2, or 2026-12-25) shifts "today".
+// QA (local only, see dev.js): ?day=+1 (or -2, or 2026-12-25) shifts "today".
 let offsetDays = 0;
 try {
-  const q = new URLSearchParams(location.search).get('day');
+  // a '+' in a URL arrives as a space, so '?day=+1' reads as ' 1'
+  const q = (devParams.get('day') || '').trim();
   if (q && /^[+-]?\d+$/.test(q)) offsetDays = parseInt(q, 10);
   else if (q && /^\d{4}-\d{2}-\d{2}$/.test(q)) {
     const [y, m, d] = q.split('-').map(Number);
