@@ -1,5 +1,5 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><title>3RD RAIL — product sheet</title>
+<html><head><meta charset="utf-8"><title>DRIP LINE — item sheet</title>
 <style>
 @font-face{font-family:"Bungee";src:url(../fonts/bungee.woff2) format("woff2")}
 @font-face{font-family:"Gochi Hand";src:url(../fonts/gochi-hand.woff2) format("woff2")}
@@ -11,7 +11,7 @@ canvas{display:block}
 </style></head><body>
 <canvas id="c"></canvas>
 <script type="module">
-import { PRODUCTS } from '../src/data/catalog.js';
+import { ITEMS as PRODUCTS, RARITIES } from '../src/data/items.js';
 import { drawProduct } from '../src/art/products.js';
 import { text, FONTS } from '../src/ink.js';
 await Promise.all(['Bungee','Gochi Hand','Permanent Marker','Sedgwick Ave Display','Rubik Wet Paint'].map(f => document.fonts.load(`20px "${f}"`)));
@@ -24,9 +24,10 @@ const g = cv.getContext('2d');
 g.fillStyle = '#2b2350'; g.fillRect(0, 0, W, H);
 PRODUCTS.forEach((p, i) => {
   const x = (i % cols) * cell + cell / 2, y = Math.floor(i / cols) * cell + cell / 2 - 8;
-  g.fillStyle = '#352c62'; g.fillRect(x - cell/2 + 3, y - cell/2 + 11, cell - 6, cell - 6);
+  g.fillStyle = RARITIES[p.rarity].color; g.fillRect(x - cell/2 + 3, y - cell/2 + 11, cell - 6, cell - 6);
+  g.fillStyle = '#fff4dc'; g.fillRect(x - cell/2 + 7, y - cell/2 + 15, cell - 14, cell - 14);
   drawProduct(g, p.art, x, y, 1.05, p.seed);
-  text(g, p.name.slice(0, 22), x, y + 62, { size: 10, font: FONTS.hand, fill: '#f6ecd2', lw: 0 });
+  text(g, p.name.slice(0, 22), x, y + 62, { size: 10, font: FONTS.hand, fill: '#140f26', lw: 0 });
 });
 document.title = 'ready';
 </script></body></html>

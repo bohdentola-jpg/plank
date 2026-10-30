@@ -1,6 +1,6 @@
-> **New in this repo: [3RD RAIL MARKET](store/README.md)**, a walkable underground subway store
-> with daily streaks, minigames and secret shops. Run it with `store.bat` (Windows) or
-> `python3 serve.py --open store/`, then open `/store/`.
+> **New in this repo: [DRIP LINE](store/README.md)**, a phone-friendly collecting game on a
+> graffiti train that never stops: earn tokens daily, collect insanely rare wearable items and
+> dress up your figure. Run it with `store.bat` (Windows) or `python3 serve.py --open store/`.
 
 # VARSITY 27 🏈
 

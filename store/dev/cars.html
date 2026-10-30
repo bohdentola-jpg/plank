@@ -1,0 +1,78 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DRIP LINE — cars</title>
+<style>
+@font-face{font-family:"Bungee";src:url(../fonts/bungee.woff2) format("woff2")}
+@font-face{font-family:"Gochi Hand";src:url(../fonts/gochi-hand.woff2) format("woff2")}
+@font-face{font-family:"Permanent Marker";src:url(../fonts/permanent-marker.woff2) format("woff2")}
+@font-face{font-family:"Sedgwick Ave Display";src:url(../fonts/sedgwick-ave-display.woff2) format("woff2")}
+@font-face{font-family:"Rubik Wet Paint";src:url(../fonts/rubik-wet-paint.woff2) format("woff2")}
+html,body{margin:0;height:100%;background:#000;overflow:hidden}
+canvas{display:block}
+#lbl{position:fixed;left:6px;bottom:6px;font:12px monospace;color:#fff;background:rgba(0,0,0,.6);padding:2px 6px}
+</style></head><body>
+<canvas id="c"></canvas><div id="lbl"></div>
+<script type="module">
+// Dev view of every train car: ?kind=threads&w=390&h=844 (&dpr=2 &boxes=0 &locked=1 &free=1 &glow=reader)
+import { carLayout, drawCar, drawCarFront, CAR_KINDS } from '../src/art/car.js';
+await Promise.all(['Bungee','Gochi Hand','Permanent Marker','Sedgwick Ave Display','Rubik Wet Paint'].map(f => document.fonts.load(`20px "${f}"`)));
+const q = new URLSearchParams(location.search);
+const kind = q.get('kind') || 'threads';
+const W = +(q.get('w') || innerWidth), H = +(q.get('h') || innerHeight);
+const dpr = +(q.get('dpr') || 1);
+const cv = document.getElementById('c');
+cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px';
+const g = cv.getContext('2d');
+const DISPLAY = {
+  threads: [{type:'hoodie',c:'#ff4f9a',a:'#ffd23f',g:'bolt'},{type:'tee',c:'#f4efe6',a:'#d4473f',g:'star'},{type:'jacket',c:'#3ec7b0',a:'#fffaf0'},{type:'puffer',c:'#7b5cff',a:'#ffd23f'},{type:'windbreaker',c:'#ffd23f',c2:'#ff4f9a'},{type:'jeans',c:'#4a6fb0'},{type:'tee',c:'#2a2238',a:'#7ed957',g:'drop'},{type:'cargos',c:'#6b7a4a'}],
+  kicks: [{type:'low',c:'#f4efe6',a:'#d4473f',s:'#f4efe6'},{type:'high',c:'#2a2238',a:'#7b5cff',s:'#f4efe6'},{type:'high',c:'#ffd23f',a:'#2a2238',s:'#3a3456'},{type:'slides',c:'#7ed957'},{type:'boots',c:'#8a5a2a',a:'#ffd23f'},{type:'low',c:'#3ec7b0',a:'#ff4f9a',s:'#f4efe6'},{type:'deck',c:'#ff4f9a',a:'#ffd23f'},{type:'high',c:'#e8453c',a:'#fffaf0',s:'#f4efe6'}],
+  lids: [{type:'cap',c:'#3ec7b0',a:'#2a2238'},{type:'beanie',c:'#ff8a3d',a:'#d4473f'},{type:'bucket',c:'#2a2238',a:'#f4efe6'},{type:'fedora',c:'#4a4560',a:'#ffd23f'},{type:'shades',c:'#ff4f9a',a:'#3ec7b0'},{type:'headphones',c:'#3ec7b0',a:'#2a2238'},{type:'goggles',c:'#ff8a3d',a:'#bff3ff'},{type:'crown',c:'#ffd23f',a:'#ff4f9a'}],
+  ice: [{type:'chain',c:'#ffd23f',g:'drop'},{type:'rope',c:'#ffd23f',g:'crown'},{type:'pendant',c:'#bff3ff',g:'star'},{type:'grill',c:'#ffd23f',a:'#bff3ff'},{type:'scarf',c:'#ff4f9a',a:'#ffd23f'},{type:'bag',c:'#2a2238',a:'#ffd23f'},{type:'shades',c:'#ffd23f',a:'#2a2238',style:'shield'},{type:'chain',c:'#e1e6ee',g:'heart'}],
+  ghost: [{type:'tee',c:'#e8dcc0',a:'#2a5a5e',g:'ghost',finish:'ghost'},{type:'low',c:'#bff8ec',a:'#9ad8c8',s:'#f4efe6',finish:'ghost'},{type:'lantern',c:'#9fffe0'},{type:'fedora',c:'#2a5a5e',a:'#bff8ec'},{type:'scarf',c:'#9fffe0',a:'#e8fff6'},{type:'pendant',c:'#bff8ec',g:'ghost'}],
+  vault: [{type:'crown',c:'#ffd23f',a:'#ff4f9a',finish:'gold'},{type:'halo',c:'#fff6c8'},{type:'rope',c:'#ffd23f',g:'crown',finish:'gold'},{type:'high',c:'#ffd23f',a:'#2a2238',s:'#ffd23f',finish:'gold'},{type:'sparkle',c:'#ffd23f'},{type:'hoodie',c:'#1d1830',a:'#ffd23f',g:'crown',finish:'holo'}],
+};
+const state = {
+  display: DISPLAY[kind] || [],
+  locked: { next: q.get('locked') !== '0' && kind === 'capsules' },
+  free: q.get('free') === '1',
+  glow: q.get('glow') ? { [q.get('glow')]: 1 } : null,
+};
+const L = carLayout(W, H, kind);
+window.__L = L;
+const boxes = q.get('boxes') !== '0';
+function figure(a, col, label) {
+  if (!a) return;
+  const h = 1.55 * a.s, w = 0.62 * a.s;
+  g.fillStyle = col; g.strokeStyle = '#140f26'; g.lineWidth = 3;
+  g.beginPath(); g.ellipse(a.x, a.y - h + h * 0.24, w * 0.5, h * 0.24, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+  g.beginPath(); g.roundRect(a.x - w * 0.36, a.y - h * 0.54, w * 0.72, h * 0.5, 10); g.fill(); g.stroke();
+  g.fillStyle = '#140f26'; g.font = '12px monospace'; g.textAlign = 'center'; g.fillText(label, a.x, a.y + 14);
+}
+let frames = 0, t0 = performance.now(), worst = 0, last = t0;
+window.__fps = null;
+function frame(now) {
+  const t = now / 1000;
+  const dt = now - last; last = now; if (frames > 5) worst = Math.max(worst, dt);
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawCar(g, L, kind, t, state);
+  figure(L.npc2, 'rgba(126,217,87,0.85)', 'npc2');
+  figure(L.npc, 'rgba(255,79,154,0.85)', 'npc');
+  figure(L.player, 'rgba(255,210,63,0.9)', 'player');
+  drawCarFront(g, L, kind, t, state);
+  if (boxes) {
+    g.lineWidth = 1.5;
+    for (const h of L.hotspots) {
+      g.strokeStyle = 'rgba(0,255,200,0.9)';
+      g.strokeRect(...h.rect);
+      g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(h.rect[0], h.rect[1], g.measureText(h.id).width + 6, 13);
+      g.fillStyle = '#0fc'; g.font = '11px monospace'; g.textAlign = 'left'; g.fillText(h.id, h.rect[0] + 3, h.rect[1] + 10);
+    }
+    for (const s of L.spots) { g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(s.x, s.y, 4, 0, Math.PI * 2); g.fill(); }
+  }
+  frames++;
+  if (now - t0 > 3000 && !window.__fps) window.__fps = { fps: Math.round(frames / ((now - t0) / 1000)), worstMs: Math.round(worst) };
+  requestAnimationFrame(frame);
+}
+document.getElementById('lbl').textContent = `${kind} ${W}x${H}`;
+requestAnimationFrame(frame);
+document.title = 'ready';
+</script></body></html>

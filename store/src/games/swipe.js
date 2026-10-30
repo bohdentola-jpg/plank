@@ -1,8 +1,8 @@
-// The daily swipe: drag your fare card through the reader at the right
+// The daily punch-in: drag your rider pass through the reader at the right
 // speed. Too fast or too slow and the reader says SWIPE AGAIN (as is tradition).
 // Keyboard: press SPACE when the speed needle is in the green.
 import { openArcade } from './frame.js';
-import { rrect, rect, ellipse, stroke, text, dot, FONTS, INK, rgba, shape, rrectPts } from '../ink.js';
+import { rrect, rect, stroke, text, dot, FONTS, INK, shape, pathPts, rgba } from '../ink.js';
 
 const SLOT_Y = 250, SLOT_X0 = 190, SLOT_X1 = 610;
 // Judge by how long the card takes to cross the reader, so the same physical
@@ -16,7 +16,7 @@ export function playSwipe(ctx) {
     id: 'swipe',
     title: 'DAILY SWIPE',
     color: '#ffd23f',
-    blurb: 'Swipe your fare card. Not too fast, not too slow.',
+    blurb: 'Swipe your rider pass. Not too fast, not too slow.',
     logical: [800, 450],
     stageBg: '#2b2350',
     intro: {
@@ -62,8 +62,8 @@ export function playSwipe(ctx) {
         setTimeout(() => {
           const lines = [];
           if (checkin) {
-            lines.push(`Streak: ${checkin.count} day${checkin.count === 1 ? '' : 's'}${perfect ? ' · perfect swipe +5' : ''}`);
-            if (checkin.key) lines.push('Bonus: a MAINTENANCE KEY');
+            lines.push(`Streak: ${checkin.count} day${checkin.count === 1 ? '' : 's'}${perfect ? ' · perfect swipe +10' : ''}`);
+            if (checkin.key) lines.push('Bonus: the CAB KEY');
           } else lines.push('Already swiped today.');
           api.finish({ title: perfect ? 'PERFECT SWIPE' : 'GO THROUGH', tokens: checkin ? checkin.tokens : 0, lines, again: false });
         }, 900);
@@ -82,7 +82,7 @@ export function playSwipe(ctx) {
             done = true;
             api.finish({ title: 'ALREADY IN', lines: ['You swiped today. Come back tomorrow to grow your streak.'], again: false });
           }
-          api.setHud('Card reader · Token Sq', `ATTEMPTS: ${attempts}`);
+          api.setHud('Card reader · Front car', `ATTEMPTS: ${attempts}`);
         },
         pointer(type, x) {
           if (done || auto) return;
@@ -134,7 +134,7 @@ export function playSwipe(ctx) {
             }
           }
           if (done && cardX < 820) cardX += dt * 900;
-          api.setHud('Card reader · Token Sq', `ATTEMPTS: ${attempts}`);
+          api.setHud('Card reader · Front car', `ATTEMPTS: ${attempts}`);
         },
         draw(g, t) {
           // wall behind
@@ -189,9 +189,9 @@ export function playSwipe(ctx) {
           g.rotate(dragging || auto ? 0 : -0.04);
           rrect(g, 0, 0, 150, 92, 10, { fill: '#ffd23f', shade: '#e0b020', sdx: 3, sdy: 3, lw: 3.4, seed: 7 });
           rect(g, 0, 18, 150, 14, { fill: '#140f26', lw: 0, amp: 0 });
-          text(g, '3RD RAIL', 75, 56, { size: 20, font: FONTS.sign, fill: '#140f26', lw: 0 });
-          text(g, 'FARE CARD', 75, 78, { size: 12, font: FONTS.sign, fill: '#140f26', lw: 0 });
-          shape(g, [[130, 40], [122, 56], [128, 56], [124, 70], [136, 52], [130, 52], [134, 40]], { fill: '#140f26', lw: 0, smooth: false });
+          text(g, 'DRIP LINE', 70, 56, { size: 19, font: FONTS.sign, fill: '#140f26', lw: 0 });
+          text(g, 'RIDER PASS', 70, 78, { size: 12, font: FONTS.sign, fill: '#140f26', lw: 0 });
+          shape(g, pathPts([['M', 132, 38], ['C', 136, 46, 142, 52, 142, 60], ['C', 142, 67, 137, 71, 132, 71], ['C', 127, 71, 122, 67, 122, 60], ['C', 122, 52, 128, 46, 132, 38]], 6), { fill: '#140f26', lw: 0, smooth: true });
           g.restore();
           if (!dragging && !auto && !done && cardX < 100) {
             const bob = Math.sin(t * 4) * 6;

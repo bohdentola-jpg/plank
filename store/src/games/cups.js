@@ -1,21 +1,22 @@
-// 3-Cup Charlie: a token goes under a cup, Charlie shuffles, you pick.
+// Eight's shell game: a token goes under a cup, Eight shuffles, you pick.
 // Honest game — the token never leaves its cup; bigger bets mean more, faster swaps.
 import { openArcade } from './frame.js';
-import { drawWeasel } from '../art/critters.js';
-import { shape, rect, rrect, ellipse, blob, stroke, tube, dot, text, FONTS, INK, rgba, shade, tint, mulberry32 } from '../ink.js';
+import { dropMark } from './runner.js';
+import { drawNpc } from '../art/figure.js';
+import { shape, rect, rrect, ellipse, stroke, tube, text, FONTS, INK, rgba, shade, tint, mulberry32 } from '../ink.js';
 
 const SLOTS = [250, 400, 550];
 const TABLE_Y = 338;        // where cups stand
 const CUP_W = 46, CUP_TOP = 32, CUP_H = 92;
-const FUR = '#c99a6a', COAT = '#b88a4a';
+const FUR = '#1d1830', COAT = '#7b2d8a';
 const SHUFFLE = { 10: [6, 0.45], 25: [9, 0.36], 50: [12, 0.28], 100: [15, 0.2] };
 
 const QUIPS = {
   show: ['Keep your eye on the token…', 'Watch it close now…', 'See it? Good. Now watch.'],
   shuffle: ['Round and round she goes…', 'Hands faster than the A train!', 'Don\'t blink, pal.', 'Easy money, easy money…'],
   pick: ['Pick a cup. Any cup.', 'Well? Which one?', 'Take your time. Or don\'t.'],
-  win: ['Ahh, lucky! Fine. Take it.', 'Sharp eyes, kid. Real sharp.', 'You\'re bad for business.'],
-  lose: ['Ooh, so close. Better luck next time.', 'Ha! The cups giveth, the cups taketh.', 'Nope! Wanna go again?'],
+  win: ['It is decidedly so. You win.', 'Sharp eyes, kid. Real sharp.', 'Outlook: bad for business.'],
+  lose: ['Very doubtful. Better luck next time.', 'My sources say no.', 'Nope! Ask again?'],
 };
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const ease = (t) => 0.5 - Math.cos(Math.PI * Math.max(0, Math.min(1, t))) / 2;
@@ -35,28 +36,28 @@ export function playCups(ctx) {
   };
   const hudFor = (api) => {
     E.ensureDay();
-    api.setHud(`BET ${bet} · CHARLIE'S LOSSES TODAY ${E.S.day.cupsWins}/5${winStreak > 1 ? ` · STREAK ${winStreak}` : ''}`, `TOKENS ${E.S.tokens.toLocaleString('en-US')}`);
+    api.setHud(`BET ${bet} · EIGHT'S LOSSES TODAY ${E.S.day.cupsWins}/5${winStreak > 1 ? ` · STREAK ${winStreak}` : ''}`, `TOKENS ${E.S.tokens.toLocaleString('en-US')}`);
   };
 
   return openArcade({
     id: 'cups',
-    title: '3-CUP CHARLIE',
+    title: 'SHELL GAME',
     color: '#e0b07a',
     blurb: 'Follow the token. Find it, double your bet.',
     logical: [800, H],
     stageBg: '#3a3170',
     intro: {
       title: 'FIND THE TOKEN',
-      text: 'Charlie hides a token under one cup and shuffles. Pick the cup with the token and you win double your bet.',
-      note: `Your bet: ${bet} tokens · ${SWAPS} swaps · Charlie quits after 5 losses a day.`,
+      text: 'Eight hides a token under one cup and shuffles. Pick the cup with the token and you win double your bet.',
+      note: `Your bet: ${bet} tokens · ${SWAPS} swaps · Eight quits after 5 losses a day.`,
       button: `BET ${bet}`,
     },
     hud: hudFor,
     async beforePlay(api) {
       E.ensureDay();
       if (E.S.day.cupsWins >= 5) {
-        say('Charlie packed up for the day. Come back tomorrow.');
-        api.setHud('Charlie is out of tokens for today.', null);
+        say('Eight packed up for the day. Come back tomorrow.');
+        api.setHud('Eight is out of tokens for today.', null);
         return false;
       }
       if (!E.spend(bet)) {
@@ -127,7 +128,7 @@ export function playCups(ctx) {
         if (won) {
           E.addTokens(bet * 2, 'cups');
           E.S.day.cupsWins += 1;
-          if (E.S.day.cupsWins === 3) E.addSticker('cups');
+          if (E.S.day.cupsWins === 3) E.achieve('shell3');
           winStreak += 1;
           E.S.bests.cupsStreak = Math.max(E.S.bests.cupsStreak || 0, winStreak);
           E.track('win:cups');
@@ -143,8 +144,8 @@ export function playCups(ctx) {
       const finish = () => {
         const out = E.S.day.cupsWins >= 5;
         const lines = won
-          ? [`You bet ${bet}, you get ${bet * 2} back.`, out ? 'Charlie: "That\'s it, I\'m tapped out for today!"' : `Win streak: ${winStreak}`]
-          : [`Charlie keeps your ${bet} tokens.`, 'It was under the glowing cup.'];
+          ? [`You bet ${bet}, you get ${bet * 2} back.`, out ? 'Eight: "That\'s it, I\'m tapped out for today!"' : `Win streak: ${winStreak}`]
+          : [`Eight keeps your ${bet} tokens.`, 'It was under the glowing cup.'];
         api.finish({
           title: won ? 'YOU FOUND IT' : 'NOT THIS TIME',
           tokens: won ? bet * 2 : 0,
@@ -259,8 +260,8 @@ export function playCups(ctx) {
           drawRoom(g, t, OY, TALL);
           g.save();
           g.translate(0, OY);
-          // Charlie behind the table
-          drawWeasel(g, 400, 426, { t, facing: 1, scale: 3.15, blink: (t % 3.3) < 0.12 ? 1 : 0, boil: 81 + (Math.floor(t * 7) % 3) * 101 });
+          // Eight behind the table
+          drawNpc(g, 'eight', 400, 432, { scale: 3.05, t, blink: (t % 3.3) < 0.12 ? 1 : 0, talk: bubbleT < 1.2, boil: 81 + (Math.floor(t * 7) % 3) * 101 });
           // arms reach to the paws (behind the cups)
           for (const [k, sx] of [['L', 366], ['R', 440]]) {
             tube(g, [[sx, 236], [(sx + paws[k].x) / 2, Math.min(paws[k].y, 240) - 4], [paws[k].x, paws[k].y]], COAT, 22, { lw: 3.4, seed: k === 'L' ? 5 : 9 });
@@ -403,14 +404,11 @@ function drawToken(g, x, y, t, s = 1) {
   g.scale(Math.max(0.2, Math.abs(spin)) * s, s);
   ellipse(g, 0, 0, 18, 18, { fill: spin > 0 ? '#f0c24a' : '#d4a030', lw: 3.4, amp: 0.3, seed: 3 });
   ellipse(g, 0, 0, 11, 11, { fill: '#ffe08a', lw: 0, amp: 0, seed: 4 });
-  g.fillStyle = INK;
-  g.beginPath();
-  g.moveTo(2.5, -8); g.lineTo(-5.5, 1.5); g.lineTo(0, 1.5); g.lineTo(-2.5, 8); g.lineTo(5.5, -1.5); g.lineTo(0, -1.5); g.lineTo(3.5, -8);
-  g.fill();
+  dropMark(g, 0, 0, 8.5);
   g.restore();
 }
 
-// big centered bubble for phones, tail pointing down at Charlie
+// big centered bubble for phones, tail pointing down at Eight
 function drawBubbleTall(g, msg, k, oy) {
   if (!msg) return;
   g.save();

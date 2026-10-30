@@ -50,7 +50,7 @@ def main():
 
     url = f'http://localhost:{port}/{OPEN_PATH}'
     print()
-    print('  3RD RAIL MARKET' if OPEN_PATH.startswith('store') else '  VARSITY 27')
+    print('  DRIP LINE' if OPEN_PATH.startswith('store') else '  VARSITY 27')
     print(f'  Live at  {url}')
     if port != START_PORT:
         print(f'  (port {START_PORT} was busy — an old window may still be running)')

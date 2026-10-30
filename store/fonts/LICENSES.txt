@@ -1,4 +1,4 @@
-Third-party fonts bundled with 3RD RAIL (latin subsets, unmodified, from @fontsource):
+Third-party fonts bundled with DRIP LINE (latin subsets, unmodified, from @fontsource):
 
   bungee.woff2               Bungee — The Bungee Project Authors — SIL Open Font License 1.1
   gochi-hand.woff2           Gochi Hand — HT Fonts — SIL Open Font License 1.1

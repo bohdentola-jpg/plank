@@ -1,15 +1,15 @@
-// RAT RACE — the arcade cabinet at Drip St. Run the tunnel, hop the junk,
+// TUNNEL RUN — the arcade cabinet in Car 6. Run the tunnel, hop the junk,
 // grab tokens, duck the pigeons (by not jumping), and pray for pizza.
 // Tap / click / SPACE / ↑ / W to jump; hold for height; one double jump.
 import { openArcade } from './frame.js';
 import { rrect, rect, ellipse, blob, stroke, text, dot, shape, FONTS, INK, mulberry32, makeCanvas } from '../ink.js';
-import { drawRat, drawPizza } from '../art/critters.js';
-import { tag } from '../art/station.js';
+import { drawFigure } from '../art/figure.js';
+import { tag } from '../art/graffiti.js';
 import { devParams } from '../dev.js';
 
 const W = 800, H = 450;
 const GROUND = 366;       // feet line
-const RAT_X = 170;
+const RUN_X = 170;
 const GRAV = 2500, JUMP_V = 860, DOUBLE_V = 760, CUT = 0.42;
 const START_SPEED = 360, MAX_SPEED = 920, ACCEL = 11;
 const UNIT_M = 1 / 30;    // world units → meters
@@ -17,7 +17,7 @@ const PIZZA_TIME = 4;
 const PR = 2;             // pre-render resolution
 
 const GRADES = [['S', 1200], ['A', 800], ['B', 500], ['C', 250], ['D', 0]];
-const CRASH_TITLES = { bag: 'TRASHED', cone: 'CONED', turnstile: 'FARE EVADED (BADLY)', pigeon: "PIGEON'D" };
+const CRASH_TITLES = { bag: 'TRASHED', cone: 'CONED', turnstile: 'TURNSTILED', pigeon: "PIGEON'D" };
 
 // ---------------------------------------------------------------- pre-rendered layers
 
@@ -61,7 +61,7 @@ function makeFarWall() {
     g.stroke();
   }
   // graffiti + signs
-  const words = ['RATZ', 'DRIP', 'NOVA', 'SKUM', 'OKAY', 'ZEEK', 'MOTOR', 'VYBE'];
+  const words = ['DRIP', 'LINE', 'NOVA', 'SKUM', 'OKAY', 'ZEEK', 'MOTOR', 'VYBE'];
   for (let i = 0; i < 8; i++) tag(g, 100 + i * 200 + r() * 60, 210 + r() * 90, { word: words[i], seed: 400 + i, alpha: 0.42, size: 30 + r() * 18 });
   for (let i = 0; i < 4; i++) {
     const x = 160 + i * 400;
@@ -141,7 +141,7 @@ function drawFlyingPigeon(g, x, y, o, t) {
   const flap = Math.sin(t * 18 + o.seed) * 0.9;
   g.save();
   g.translate(x, y);
-  g.scale(-1, 1); // flying toward the rat
+  g.scale(-1, 1); // flying toward the runner
   // far wing
   g.save();
   g.rotate(-0.4 - flap * 0.6);
@@ -172,10 +172,28 @@ function drawCoin(g, x, y, t, k = 1) {
   g.scale(Math.max(0.18, Math.abs(spin)) * k, k);
   ellipse(g, 0, 0, 11, 11, { fill: spin > 0 ? '#f0c24a' : '#d4a030', lw: 3, amp: 0.2, seed: 3 });
   ellipse(g, 0, 0, 6.5, 6.5, { fill: '#ffe08a', lw: 0, amp: 0, seed: 4 });
+  dropMark(g, 0, 0, 5.5);
+  g.restore();
+}
+
+// the paint-drop symbol stamped on every drip token
+export function dropMark(g, x, y, r) {
   g.fillStyle = INK;
   g.beginPath();
-  g.moveTo(1.5, -5); g.lineTo(-3.5, 1); g.lineTo(0, 1); g.lineTo(-1.5, 5); g.lineTo(3.5, -1); g.lineTo(0, -1); g.lineTo(2, -5);
+  g.moveTo(x, y - r);
+  g.bezierCurveTo(x + r * 0.35, y - r * 0.45, x + r * 0.62, y - r * 0.05, x + r * 0.62, y + r * 0.3);
+  g.arc(x, y + r * 0.3, r * 0.62, 0, Math.PI);
+  g.bezierCurveTo(x - r * 0.62, y - r * 0.05, x - r * 0.35, y - r * 0.45, x, y - r);
   g.fill();
+}
+
+function drawSlice(g, x, y, s = 1) {
+  g.save();
+  g.translate(x, y);
+  g.scale(s, s);
+  shape(g, [[0, 0], [34, -10], [36, 0], [34, 10]], { fill: '#ffcf5a', shade: '#e8a83a', sdx: 2, sdy: 2, lw: 2.6, seed: 141 });
+  rrect(g, 30, -12, 8, 24, 4, { fill: '#c8742e', lw: 2.4, seed: 142 });
+  for (const [px, py] of [[14, -1], [24, -4], [24, 4]]) ellipse(g, px, py, 3, 2.6, { fill: '#e8456b', lw: 1.6, seed: 143 + px });
   g.restore();
 }
 
@@ -188,13 +206,13 @@ export function playRunner(ctx) {
   if (!crt) crt = makeCrt();
   return openArcade({
     id: 'runner',
-    title: 'RAT RACE',
+    title: 'TUNNEL RUN',
     color: '#e8456b',
-    blurb: 'The Drip St arcade cabinet. One life. No continues.',
+    blurb: 'The Car 6 arcade cabinet. One life. No continues.',
     logical: [W, H],
     stageBg: '#0c0a18',
     intro: {
-      title: 'RAT RACE',
+      title: 'TUNNEL RUN',
       text: 'Tap, click or press SPACE to jump. Hold for height, tap again in the air to double jump. Hop the junk, stay low under pigeons, grab tokens. Pizza makes you unstoppable.',
       note: `Best: ${econ.S.bests.runner || 0}m · ${paidLeft() > 0 ? `paid plays left today: ${paidLeft()}` : 'no paid plays left today, so this one is for fun'}`,
       button: 'INSERT 25¢',
@@ -238,13 +256,13 @@ export function playRunner(ctx) {
           jumps = 1;
           cutDone = false;
           A.jump?.();
-          puff(RAT_X, GROUND, 6);
+          puff(RUN_X, GROUND, 6);
         } else if (jumps < 2) {
           vh = DOUBLE_V;
           jumps = 2;
           cutDone = false;
           A.jump?.();
-          puff(RAT_X, GROUND - h, 8, 'rgba(255,240,200,0.9)', 120);
+          puff(RUN_X, GROUND - h, 8, 'rgba(255,240,200,0.9)', 120);
         }
       };
       const release = () => {
@@ -316,9 +334,9 @@ export function playRunner(ctx) {
       };
 
       // ---- collisions
-      const ratBox = () => ({ x0: RAT_X - 14, x1: RAT_X + 20, y0: GROUND - h - 78, y1: GROUND - h - 3 });
+      const runnerBox = () => ({ x0: RUN_X - 14, x1: RUN_X + 20, y0: GROUND - h - 78, y1: GROUND - h - 3 });
       const hit = (o) => {
-        const b = ratBox();
+        const b = runnerBox();
         if (o.type === 'pigeon') {
           const py = GROUND - o.alt;
           return b.x1 > o.x - 20 && b.x0 < o.x + 22 && b.y0 < py + 12 && b.y1 > py - 10;
@@ -330,13 +348,13 @@ export function playRunner(ctx) {
         crashed = true;
         crashT = 0;
         crashKind = o.type;
-        crashX = RAT_X;
+        crashX = RUN_X;
         vh = 620;
         h = Math.max(h, 1);
         shake = 12;
         A.clunk?.();
         setTimeout(() => A.sad?.(), 180);
-        puff(RAT_X + 20, GROUND - h - 40, 16, 'rgba(255,255,255,0.9)', 220);
+        puff(RUN_X + 20, GROUND - h - 40, 16, 'rgba(255,255,255,0.9)', 220);
       };
 
       const smash = (o) => {
@@ -359,11 +377,7 @@ export function playRunner(ctx) {
         econ.track('score:runner', m);
         const pay = Math.min(80, Math.floor(m / 10) + coins);
         const tokens = econ.gameReward('runner', pay);
-        let sticker = null;
-        if (grade === 'S') {
-          const sid = econ.randomUnowned(['street', 'under']);
-          if (sid && econ.addSticker(sid)) sticker = sid;
-        }
+        const prize = m >= 1200 ? econ.achieve('run1200') : null;
         const record = m > best0;
         const beatOld = record && best0 > 0;
         if (record) {
@@ -372,7 +386,7 @@ export function playRunner(ctx) {
         }
         const lines = [`Coins grabbed: ${coins}`];
         lines.push(record ? (best0 ? `New record! Old best: ${best0}m` : 'First run on the board!') : `Best: ${econ.S.bests.runner}m`);
-        if (sticker) lines.push('S rank bonus: a new sticker for your book.');
+        if (prize) lines.push(`1,200m! You earned the ${prize.item.name}. It’s in your closet.`);
         lines.push(tokens ? `Paid plays left today: ${paidLeft()}` : 'Playing for fun · the 3 paid plays are used up today');
         api.finish({ title: beatOld ? 'NEW RECORD!' : CRASH_TITLES[crashKind] || 'WIPEOUT', grade, score: `${m}m`, scoreLabel: 'DISTANCE', tokens, lines, againLabel: 'RUN IT BACK' });
       };
@@ -384,16 +398,16 @@ export function playRunner(ctx) {
           return;
         }
         if (h > 0) return;
-        const ahead = obs.filter((o) => !o.smashed && o.type !== 'pigeon' && o.x + o.w > RAT_X - 10).sort((a, b) => a.x - b.x);
+        const ahead = obs.filter((o) => !o.smashed && o.type !== 'pigeon' && o.x + o.w > RUN_X - 10).sort((a, b) => a.x - b.x);
         const next = ahead[0];
         if (!next) return;
         // two obstacles close together need one long (held) jump
         const tall = next.type === 'turnstile' || (ahead[1] && ahead[1].x - (next.x + next.w) < 260);
         const lead = tall ? 0.2 : 0.17;
-        const d = next.x - (RAT_X + 20);
+        const d = next.x - (RUN_X + 20);
         if (d > sp * lead) return;
         const air = tall ? 0.78 : 0.48;
-        const bird = obs.find((o) => o.type === 'pigeon' && !o.smashed && o.x > RAT_X - 40 && (o.x - RAT_X) / (sp + 70) < air + 0.05);
+        const bird = obs.find((o) => o.type === 'pigeon' && !o.smashed && o.x > RUN_X - 40 && (o.x - RUN_X) / (sp + 70) < air + 0.05);
         if (bird) return; // a jump now would meet the pigeon
         press();
         autoHold = tall ? 0.32 : 0.06;
@@ -440,7 +454,7 @@ export function playRunner(ctx) {
               jumps = 0;
               if (!crashed) {
                 A.land?.();
-                puff(RAT_X, GROUND, 5);
+                puff(RUN_X, GROUND, 5);
               }
             }
           }
@@ -452,7 +466,7 @@ export function playRunner(ctx) {
             if (crashT > 1.35) finish();
           }
           if (pizzaT > 0 && !crashed) {
-            trail.push({ x: RAT_X, y: GROUND - h, a: 1, phase });
+            trail.push({ x: RUN_X, y: GROUND - h, a: 1, phase });
             if (trail.length > 10) trail.shift();
           } else if (trail.length) trail.shift();
           if (auto && !crashed) autopilot(dt, sp);
@@ -477,13 +491,13 @@ export function playRunner(ctx) {
             p.x -= sp * dt;
             if (p.taken || crashed) continue;
             const cy = GROUND - p.alt;
-            const dx = p.x - (RAT_X + 4), dy = cy - (GROUND - h - 42);
+            const dx = p.x - (RUN_X + 4), dy = cy - (GROUND - h - 42);
             if (dx * dx + dy * dy < (p.kind === 'pizza' ? 44 : 34) ** 2) {
               p.taken = true;
               if (p.kind === 'pizza') {
                 pizzaT = PIZZA_TIME;
                 A.fanfare?.();
-                fx.push({ x: RAT_X, y: GROUND - h - 110, vx: 0, vy: -40, g: 0, life: 1.2, age: 0, r: 0, col: '#ffcf5a', text: 'PIZZA RAT!' });
+                fx.push({ x: RUN_X, y: GROUND - h - 110, vx: 0, vy: -40, g: 0, life: 1.2, age: 0, r: 0, col: '#ffcf5a', text: 'PIZZA POWER!' });
               } else {
                 coins += 1;
                 A.coin?.();
@@ -562,7 +576,7 @@ export function playRunner(ctx) {
             g.moveTo(x, GROUND + 4); g.lineTo(x + 24, GROUND + 4); g.lineTo(x + 30, H); g.lineTo(x - 6, H);
             g.fill();
           }
-          // rail the rat runs on
+          // the rail you run on
           g.fillStyle = INK;
           g.fillRect(0, GROUND - 1, W, 12);
           g.fillStyle = '#5a5676';
@@ -592,7 +606,7 @@ export function playRunner(ctx) {
               g.save();
               g.translate(p.x, y);
               g.rotate(Math.sin(tt * 3) * 0.25 - Math.PI / 2);
-              drawPizza(g, -18, 0, 1.15, 141);
+              drawSlice(g, -18, 0, 1.15);
               g.restore();
             } else drawCoin(g, p.x, y, tt);
           }
@@ -619,14 +633,14 @@ export function playRunner(ctx) {
             g.save();
             g.globalAlpha = (i / trail.length) * 0.35;
             g.translate(-(trail.length - i) * 12, 0);
-            drawRat(g, tr.x, tr.y, { look: ctx.look, t: tt, walk: tr.phase, run: true, noShadow: true, boil: 11 });
+            drawFigure(g, tr.x, tr.y, { body: ctx.body, outfit: ctx.outfit, scale: 0.92, t: tt, view: 'side', facing: 1, pose: 'run', phase: tr.phase, boil: 11 });
             g.restore();
           }
-          // shadow + rat
+          // shadow + runner
           const shW = Math.max(8, 24 - h * 0.1);
           g.fillStyle = 'rgba(5,3,14,0.45)';
           g.beginPath();
-          g.ellipse((crashed ? crashX : RAT_X) + 2, GROUND + 1, shW, 4, 0, 0, Math.PI * 2);
+          g.ellipse((crashed ? crashX : RUN_X) + 2, GROUND + 1, shW, 4, 0, 0, Math.PI * 2);
           g.fill();
           g.save();
           if (crashed) {
@@ -637,23 +651,23 @@ export function playRunner(ctx) {
           if (pizzaT > 0) {
             g.save();
             g.globalCompositeOperation = 'lighter';
-            const gl = g.createRadialGradient(RAT_X, GROUND - h - 44, 6, RAT_X, GROUND - h - 44, 80);
+            const gl = g.createRadialGradient(RUN_X, GROUND - h - 44, 6, RUN_X, GROUND - h - 44, 80);
             gl.addColorStop(0, `rgba(255,170,60,${0.28 + Math.sin(tt * 20) * 0.08})`);
             gl.addColorStop(1, 'rgba(255,170,60,0)');
             g.fillStyle = gl;
-            g.fillRect(RAT_X - 90, GROUND - h - 134, 180, 180);
+            g.fillRect(RUN_X - 90, GROUND - h - 134, 180, 180);
             g.restore();
           }
-          const pose = crashed ? 'fall' : h > 0.5 ? (vh > 0 ? 'jump' : 'fall') : 'walk';
-          drawRat(g, crashed ? crashX : RAT_X, GROUND - h, {
-            look: ctx.look, t: tt, walk: pose === 'walk' ? phase : null, pose, run: true,
-            noShadow: true, blink: crashed ? 1 : 0, boil: 11 + (Math.floor(tt * 7) % 3) * 101,
+          const pose = crashed ? 'fall' : h > 0.5 ? (vh > 0 ? 'jump' : 'fall') : 'run';
+          drawFigure(g, crashed ? crashX : RUN_X, GROUND - h, {
+            body: ctx.body, outfit: ctx.outfit, scale: 0.92, t: tt, view: 'side', facing: 1, pose, phase,
+            blink: crashed ? 1 : 0, boil: 11 + (Math.floor(tt * 7) % 3) * 101,
           });
           if (pizzaT > 0 && !crashed) {
             g.save();
-            g.translate(RAT_X + 30, GROUND - h - 44);
+            g.translate(RUN_X + 30, GROUND - h - 44);
             g.rotate(-0.4);
-            drawPizza(g, -6, 0, 0.8, 141);
+            drawSlice(g, -6, 0, 0.8);
             g.restore();
           }
           g.restore();
@@ -697,7 +711,7 @@ export function playRunner(ctx) {
           const best = Math.max(best0, econ.S.bests.runner || 0);
           if (best) text(g, `BEST ${best}m`, W - 22, 82, { size: 18, font: FONTS.sign, fill: m > best ? '#6dff9a' : '#b3a9e0', lw: 5, line: INK, align: 'right' });
           if (pizzaT > 0) {
-            text(g, 'PIZZA RAT!', W / 2, 92 + Math.sin(tt * 10) * 3, { size: 34, font: FONTS.drip, fill: '#ffcf5a', lw: 7, line: INK, rot: -0.04 });
+            text(g, 'PIZZA POWER!', W / 2, 92 + Math.sin(tt * 10) * 3, { size: 34, font: FONTS.drip, fill: '#ffcf5a', lw: 7, line: INK, rot: -0.04 });
             rect(g, W / 2 - 80, 104, 160, 10, { fill: '#2a2238', lw: 2.4, amp: 0, seed: 5 });
             rect(g, W / 2 - 80, 104, 160 * (pizzaT / PIZZA_TIME), 10, { fill: '#ff8a3d', lw: 0, amp: 0, seed: 6 });
           }

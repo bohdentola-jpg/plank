@@ -1,6 +1,6 @@
 // Bundle the whole store into ONE self-contained HTML file (fonts inlined,
 // JS bundled) — handy for hosting anywhere or sharing as a single file.
-//   node store/tools/build-single.mjs            → store/dist/3rd-rail.html
+//   node store/tools/build-single.mjs            → store/dist/drip-line.html
 //   node store/tools/build-single.mjs --fragment → body-only fragment (no <html>/<head>)
 // Needs Node 18+; fetches esbuild via npx on first run.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -20,14 +20,14 @@ css = css.replace(/url\("fonts\/([^"]+\.woff2)"\)/g, (_, f) => `url(data:font/wo
 
 const html = readFileSync(join(root, 'index.html'), 'utf8');
 const body = html.slice(html.indexOf('<body>') + 6, html.indexOf('<script type="module"')).trim();
-const title = '<title>3rd Rail Market</title>';
-const meta = '<meta name="description" content="3RD RAIL — the shop under the city. Swipe in daily, play the minigames, find the secret stores." />';
+const title = '<title>Drip Line</title>';
+const meta = '<meta name="description" content="DRIP LINE — a graffiti train that never stops. Ride daily, earn tokens, collect insanely rare fits and wear them." />';
 const safeJs = js.replace(/<\/script/gi, '<\\/script');
 
 const out = fragment
   ? `${title}\n${meta}\n<style>\n${css}\n</style>\n${body}\n<script>\n${safeJs}\n</script>\n`
-  : `<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8" />\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />\n<meta name="theme-color" content="#140f26" />\n${meta}\n${title}\n<style>\n${css}\n</style>\n</head>\n<body>\n${body}\n<script>\n${safeJs}\n</script>\n</body>\n</html>\n`;
+  : `<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8" />\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />\n<meta name="theme-color" content="#1a1430" />\n${meta}\n${title}\n<style>\n${css}\n</style>\n</head>\n<body>\n${body}\n<script>\n${safeJs}\n</script>\n</body>\n</html>\n`;
 
-const file = join(outDir, fragment ? '3rd-rail.fragment.html' : '3rd-rail.html');
+const file = join(outDir, fragment ? 'drip-line.fragment.html' : 'drip-line.html');
 writeFileSync(file, out);
 console.log(`wrote ${file} (${Math.round(out.length / 1024)} KB)`);

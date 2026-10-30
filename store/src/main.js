@@ -1,59 +1,38 @@
-// 3RD RAIL — the shop under the city. Boot, main loop, scene + travel flow,
-// and every conversation script.
+// DRIP LINE — the train that never stops. Boot, the daily flow, every car's
+// interactions and every conversation.
 import * as Eng from './engine.js';
-import { view, keys, input, pressed, clearPressed } from './engine.js';
-import { Stage, FEET } from './world/stage.js';
-import { Player } from './world/player.js';
-import { Train, drawTunnel } from './world/train.js';
+import { view, keys, pressed, clearPressed } from './engine.js';
+import { Ride, CAR_DEFS } from './world/ride.js';
 import { drawScreenFx } from './world/fx.js';
-import { SCENES, LINE } from './world/scenes.js';
-import { SHOPS, productById } from './data/catalog.js';
-import { stickerById, EXCHANGE } from './data/content.js';
-import { CONFIG } from './config.js';
+import { itemById, SHOPS, RARITIES } from './data/items.js';
+import { TICKETS, FREEZE_COST } from './data/content.js';
 import * as E from './systems/econ.js';
-import * as D from './systems/daily.js';
 import * as audio from './audio.js';
 import * as hud from './ui/hud.js';
-import { Dialogue } from './ui/dialogue.js';
+import { Bubbles } from './ui/bubbles.js';
 import { $, anyOverlay, onOverlayChange, closeOverlay, closeAll, topOverlay } from './ui/dom.js';
-import { initShop, openShop, openCatalog, openProduct } from './ui/shop.js';
-import { initBag, openBag } from './ui/bag.js';
-import { initMap, openMap } from './ui/map.js';
-import { initStash, openStash } from './ui/stash.js';
-import { openCreator, drawLogo, randomLook } from './ui/creator.js';
+import { openShop } from './ui/shop.js';
+import { openCloset, initCloset } from './ui/closet.js';
+import { openCapsules, initCapsules } from './ui/capsules.js';
+import { openTrainMap, initTrainMap, CAR_INFO } from './ui/trainmap.js';
+import { openMe, initMe } from './ui/me.js';
+import { openCreator, drawLogo } from './ui/creator.js';
 import { openGame } from './games/index.js';
-import { ellipse, dot, rgba, text, FONTS, INK, shape, makeCanvas } from './ink.js';
 import { devParams as Q } from './dev.js';
+
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (n) => n.toLocaleString('en-US');
 
-const G = {
-  scene: null,
-  stage: null,
-  player: new Player(),
-  train: new Train(),
-  express: new Train(),
-  mode: 'boot', // boot | play | travel | tunnel
-  t: 0,
-  near: null,
-  pickups: [],
-  busy: false,
-  ghostLeft: 0,
-  peeking: false,
-  crackHits: 0,
-  expressT: 70,
-  tunnel: null,
-  tagImg: null,
-};
-
-let ctx, dlg;
+const G = { mode: 'boot', busy: false, t: 0, after: null, tagImg: null };
+let ctx, talk, ride;
 
 // ---------------------------------------------------------------- boot
 
 async function boot() {
   ctx = Eng.initCanvas($('#world'));
-  Eng.initInput($('#world'));
-  dlg = new Dialogue($('#dialogue'));
+  Eng.initInput();
+  talk = new Bubbles($('#bubble'), $('#choices'));
   try {
     await Promise.race([
       Promise.all(['Bungee', 'Gochi Hand', 'Permanent Marker', 'Sedgwick Ave Display', 'Rubik Wet Paint'].map((f) => document.fonts.load(`32px "${f}"`))),
@@ -63,26 +42,36 @@ async function boot() {
 
   E.ensureDay();
   if (E.S.tagImage) loadTagImage(E.S.tagImage);
+  ride = new Ride($('#world'), $('#hotspots'), {
+    body: () => (E.S.profile ? E.S.profile.body : { skin: 'cream', head: 'round', face: 'dots' }),
+    outfit: () => E.outfitOf(),
+    talking: () => talk.talking,
+    state: carState,
+    tags: carTags,
+    pickups: (car, n) => E.pickups(car, n),
+    onHot: (id) => interact(id),
+    onCoin: collectCoin,
+    onSwipe: (dir) => { if (canAct()) (dir === 'next' ? goNext() : goBack()); },
+    onArrive: (id) => arrived(id),
+  });
+  talk.anchorOf = (who) => ride.anchorOf(who);
   setupHud();
   setupEvents();
-  initShop({ openBag });
-  initBag({ openCatalog });
-  initMap({ travel, current: () => G.scene });
-  initStash({ editLook });
-  onOverlayChange(() => { clearPressed(); keys.clear(); $('#hint').hidden = true; });
-  dlg.onOpenChange = (open) => { if (open) $('#hint').hidden = true; };
+  initCloset({ editFigure: () => openCreator((p) => E.setProfile(p)) });
+  initCapsules({ wear: (it) => { ride.pose(RARITIES[it.rarity].rank >= 4 ? 'cheer' : 'pose', 1.8); refreshFace(); } });
+  initTrainMap({ go: (id) => travelTo(id), current: () => ride.car, order: reachable });
+  initMe({ goShop: (sid, item) => { travelTo(sid).then(() => openShop(sid, { item, onBought })); } });
+  onOverlayChange(() => { clearPressed(); keys.clear(); $('#hint').hidden = true; ride.refreshTags(); });
+  talk.onOpenChange = (open) => { if (open) $('#hint').hidden = true; $('#app').classList.toggle('talking', open); };
 
-  G.player.look = E.S.profile || randomLook();
-  G.player.onStep = () => {};
-  G.player.onLand = () => audio.land();
-  const startScene = Q.get('scene') && SCENES[Q.get('scene')] ? Q.get('scene') : (LINE.includes(E.S.scene) ? E.S.scene : 'token');
-  loadScene(startScene, Q.get('x') ? +Q.get('x') : SCENES[startScene].spawn);
-
+  // start car: the front car on a new day (that's where you punch in), else where you left off
+  let start = Q.get('car') && CAR_DEFS[Q.get('car')] ? Q.get('car') : E.canCheckIn() ? 'front' : E.CARS.includes(E.S.car) ? E.S.car : 'front';
+  ride.setCar(start);
   Eng.onResize(() => {
-    if (G.stage) G.stage.invalidate();
+    ride.resize(view.w, view.h, view.dpr);
     drawLogo($('#boot-logo'));
-    Eng.snapCamera(G.player.x);
   });
+  ride.resize(view.w, view.h, view.dpr);
   drawLogo($('#boot-logo'));
   $('#boot-load').textContent = '';
   Eng.startLoop(frame);
@@ -92,103 +81,101 @@ async function boot() {
     applySound();
     $('#boot').classList.add('gone');
     setTimeout(() => { $('#boot').hidden = true; }, 520);
-    start();
+    start = null;
+    begin();
   };
   // When hosted somewhere that hot-swaps new versions (the Claude artifact
   // viewer), keep the player where they were instead of showing the title again.
   const hot = window.claude?.hot;
-  hot?.snapshot?.(() => ({ entered: G.mode !== 'boot', scene: G.scene, x: Math.round(G.player.x) }));
-  const begin = (data = {}) => {
-    if (data.entered && E.S.profile && SCENES[data.scene]) {
-      loadScene(data.scene, data.x);
+  hot?.snapshot?.(() => ({ entered: G.mode !== 'boot', car: ride.car }));
+  const go = (data = {}) => {
+    if (data.entered && E.S.profile && CAR_DEFS[data.car]) {
+      ride.setCar(data.car);
       $('#boot').hidden = true;
       audio.init();
       applySound();
-      start();
+      begin(true);
     } else if (Q.has('quick')) {
       $('#boot').hidden = true;
-      if (!E.S.profile) E.setProfile({ ...randomLook(), name: 'QA RAT' });
-      start();
+      if (!E.S.profile) E.setProfile({ name: 'QA', body: { skin: 'mint', head: 'round', face: 'dots' } });
+      begin(true);
     } else {
       $('#boot-go').addEventListener('click', enter, { once: true });
       $('#boot-go').focus({ preventScroll: true });
     }
   };
-  if (hot?.ready) hot.ready(begin);
-  else begin(hot?.data ?? {});
-  // QA: ?open=shop:threads | bag | map | stash | catalog | creator  ·  ?game=tag
-  if (Q.get('open') || Q.get('game')) setTimeout(qaOpen, 300);
+  if (hot?.ready) hot.ready(go);
+  else go(hot?.data ?? {});
+  if (Q.get('open') || Q.get('game')) setTimeout(qaOpen, 400);
 }
 
-function start() {
-  G.player.look = E.S.profile || G.player.look;
-  hud.showHud(true);
-  hud.setFace(G.player.look);
-  dlg.setPlayer(E.S.profile?.name, G.player.look);
+function begin(quiet = false) {
   G.mode = 'play';
+  hud.showHud(true);
   if (!E.S.profile) {
-    openCreator(null, (look) => {
-      E.setProfile(look);
-      G.player.look = look;
-      hud.setFace(look);
-      dlg.setPlayer(look.name, look);
-      firstRun();
+    openCreator((p) => {
+      E.setProfile(p);
+      talk.setPlayerName(p.name);
+      refreshFace();
+      ride.setCar('front');
+      firstRide();
     }, { first: true });
     return;
   }
-  hud.stationBanner(SCENES[G.scene].name);
-  if (!Q.has('quick')) {
-    if (E.canCheckIn()) setTimeout(() => hud.toast('Your daily swipe is ready at the <b style="color:var(--sun)">Token Booth</b>', 'sun', 4200), 900);
-    else if (E.phoneRinging()) setTimeout(() => hud.toast('The phone booth in Token Sq is ringing…', 'sun', 3600), 900);
+  talk.setPlayerName(E.S.profile.name);
+  refreshFace();
+  arrived(ride.car, true);
+  if (quiet) return;
+  if (E.S.migrated && !E.S.seen.tips.migrated) {
+    E.S.seen.tips.migrated = true;
+    E.commit();
+    setTimeout(() => hud.toast('Welcome back! Your tokens and streak came with you.', 'sun', 4200), 900);
   }
+  if (E.canCheckIn()) setTimeout(() => { if (ride.car === 'front' && canAct()) interact('npc'); }, 1300);
+  else if (E.freePullReady()) setTimeout(() => hud.toast('Your free daily capsule is waiting in CAR 7', 'sun', 3600), 1200);
   controlsHint();
 }
 
-async function firstRun() {
-  hud.stationBanner('TOKEN SQ');
+async function firstRide() {
+  hud.showHud(true);
+  arrived('front', true);
   controlsHint();
-  await wait(700);
-  // walk to Shelly and get the welcome
-  const booth = G.stage.entities.find((e) => e.kind === 'booth');
-  if (booth && G.scene === 'token') {
-    G.player.walkTo(booth.act.x + 40, () => interact(booth));
-  }
+  await wait(900);
+  interact('npc');
 }
 
 function controlsHint() {
-  if (input.touch || matchMedia('(pointer: coarse)').matches) {
-    setTimeout(() => {
-      if (!anyOverlay() && !dlg.open) hud.toast('Tap to walk · tap things to use them · tap your rat to hop', '', 5200);
-    }, 2600);
+  if (matchMedia('(pointer: coarse)').matches) {
+    setTimeout(() => { if (!anyOverlay() && !talk.open) hud.toast('Tap things to use them · swipe or tap the door to change cars · tap yourself for your closet', '', 5200); }, 2600);
     return;
   }
-  hud.showHint('<b>A/D</b> or <b>←/→</b> walk · <b>SHIFT</b> run · <b>SPACE</b> hop · <b>E</b> talk / use · <b>M</b> map · <b>B</b> bag · or just click things', 10000);
+  const h = $('#hint');
+  h.innerHTML = 'Click anything · <b>→</b> next car · <b>←</b> back · <b>E</b> talk · <b>C</b> closet · <b>M</b> train map';
+  h.hidden = false;
+  h.style.opacity = '1';
+  setTimeout(() => { h.style.opacity = '0'; }, 9000);
+  setTimeout(() => { h.hidden = true; }, 10100);
 }
 
 function qaOpen() {
-  const o = Q.get('open') || '';
-  const [what, arg] = o.split(':');
-  if (what === 'shop') openShop(arg || 'threads');
-  if (what === 'bag') openBag();
-  if (what === 'map') openMap();
-  if (what === 'stash') openStash(arg || 'me');
-  if (what === 'catalog') openCatalog();
-  if (what === 'creator') editLook();
-  if (what === 'talk') {
-    const e = G.stage.entities.find((x) => x.kind === arg || x.id === arg || x.shop === arg);
-    if (e) interact(e);
-  }
-  if (Q.get('game')) openGame(Q.get('game'), gameCtx(Q.get('game'))).then((r) => console.log('[game result]', JSON.stringify(r)));
+  const [what, arg] = (Q.get('open') || '').split(':');
+  if (what === 'shop') openShop(arg || 'threads', { onBought });
+  if (what === 'closet') openCloset();
+  if (what === 'capsules') openCapsules(arg || 'basic');
+  if (what === 'train') openTrainMap();
+  if (what === 'me') openMe(arg || 'me');
+  if (what === 'creator') openCreator((p) => E.setProfile(p));
+  if (what === 'talk') interact(arg || 'npc');
+  if (Q.get('game')) openGame(Q.get('game'), gameCtx()).then((r) => console.log('[game result]', JSON.stringify(r)));
 }
 
 // ---------------------------------------------------------------- HUD + events
 
 function setupHud() {
   hud.initHud({
-    map: () => { audio.click(); openMap(); },
-    shop: () => { audio.click(); openCatalog(); },
-    bag: () => { audio.click(); openBag(); },
-    me: () => { audio.click(); hud.setMeDot(false); openStash(); },
+    train: () => { audio.click(); openTrainMap(); },
+    closet: () => { audio.click(); openCloset(); },
+    me: () => { audio.click(); openMe(); },
     sound: () => {
       const on = !(E.S.settings.music && E.S.settings.sfx);
       E.S.settings.music = on;
@@ -197,13 +184,14 @@ function setupHud() {
       audio.init();
       applySound();
     },
-    prompt: () => { if (G.near) interact(G.near); },
+    back: () => { if (canAct()) goBack(); },
+    next: () => { if (canAct()) goNext(); },
   });
   hud.setTokens(E.S.tokens, true);
   hud.setStreak(E.S.streak.count, E.S.streak.freezes);
-  hud.setBag(E.bagCount());
   hud.setTicker(E.headlines());
   applySound();
+  dots();
 }
 
 function applySound() {
@@ -212,42 +200,47 @@ function applySound() {
   hud.setSoundIcon(E.S.settings.music || E.S.settings.sfx);
 }
 
+function refreshFace() {
+  if (E.S.profile) hud.setFace(E.S.profile.body, E.outfitOf());
+}
+
+function dots() {
+  hud.setDots({ closet: E.S.fresh.length > 0, me: E.allJobsDone() && !E.S.day.jobsClaimed });
+}
+
+const QUIET_TOKENS = ['job', 'jobs', 'claw', 'checkin', 'pickup', 'scrap', 'buy', 'capsule', 'spend', 'freeze', 'test'];
+
 function setupEvents() {
   E.on('tokens', ({ n, why }) => {
     hud.setTokens(E.S.tokens);
     if (n > 0) hud.bumpTokens();
-    if (n > 0 && !['mission', 'jobs', 'claw', 'crack', 'checkin', 'secret', 'pickup', 'cashback'].includes(why)) hud.tokenToast(n);
+    if (n > 0 && !QUIET_TOKENS.includes(why)) hud.tokenToast(n);
   });
-  E.on('sticker', ({ id, isNew }) => {
-    if (!isNew) return;
-    hud.stickerToast(stickerById[id]);
-    hud.setMeDot(true);
-    audio.fanfare();
+  E.on('item', (res) => {
+    if (res.isNew || res.upgraded) hud.itemToast(res.item, { prismatic: res.prismatic, upgraded: res.upgraded });
+    else if (res.scrap) hud.toast(`DUPLICATE ${res.item.name.toUpperCase()} · <span class="t-big">+${fmt(res.scrap)}</span> TOKENS`, 'cash', 2600);
+    dots();
   });
-  E.on('mission', ({ def }) => {
+  E.on('equip', () => { refreshFace(); dots(); });
+  E.on('job', ({ def }) => {
     hud.toast(`JOB DONE · ${def.text} <span class="t-big">+${def.reward}</span>`, 'cash', 3200);
     audio.fanfare();
+    dots();
   });
-  E.on('missionsAll', () => setTimeout(() => {
-    hud.toast('All 3 jobs done. The phone in Token Sq is ringing…', 'sun', 4200);
-    audio.ring();
+  E.on('jobsAll', () => setTimeout(() => {
+    hud.toast('All 3 jobs done! Signal has a bonus for you in the front car.', 'sun', 4200);
+    dots();
   }, 1600));
-  E.on('page', (page) => hud.toast(`PAGE COMPLETE · ${page.name} → ${page.reward.label}`, 'sun', 4200));
-  E.on('bag', () => hud.setBag(E.bagCount()));
   E.on('streak', () => hud.setStreak(E.S.streak.count, E.S.streak.freezes));
   E.on('freeze', () => hud.setStreak(E.S.streak.count, E.S.streak.freezes));
-  E.on('secret', (w) => hud.toast(`SECRET FOUND · ${({ ghost: 'OLD HALL', sewer: 'THE SEWERS', backroom: 'THE BACK ROOM', crack: 'A HIDDEN STASH' })[w]}`, 'hot', 4000));
+  E.on('secret', (w) => hud.toast(`SECRET FOUND · ${({ ghost: 'THE GHOST CAR', vault: 'THE VAULT', cab: 'THE CAB', change: 'A GOLDEN TOKEN' })[w]}`, 'hot', 4000));
   E.on('day', () => {
     hud.setTicker(E.headlines());
-    if (G.stage) G.pickups = E.pickups(G.scene);
     hud.setStreak(E.S.streak.count, E.S.streak.freezes);
-    if (G.mode === 'play') hud.toast('NEW DAY · fresh deals, fresh jobs, fresh tokens on the floor', 'sun', 4200);
+    ride.refreshTags();
+    if (G.mode === 'play') hud.toast('NEW DAY · fresh stock in every car, new jobs, a free capsule', 'sun', 4200);
   });
-  E.on('profile', (p) => { hud.setFace(p); dlg.setPlayer(p.name, p); G.player.look = p; });
-}
-
-function editLook() {
-  openCreator(E.S.profile, (look) => E.setProfile(look));
+  E.on('profile', (p) => { talk.setPlayerName(p.name); refreshFace(); });
 }
 
 function loadTagImage(url) {
@@ -256,42 +249,522 @@ function loadTagImage(url) {
   img.src = url;
 }
 
-// ---------------------------------------------------------------- scenes
+// ---------------------------------------------------------------- car state for the renderer
 
-const env = {
-  dealOfDay: () => E.deals().dotd.product,
-  dealPct: () => E.deals().dotd.pct,
-  clawPrizes: () => E.clawPrizes(),
-  phoneRinging: () => E.phoneRinging(),
-  boothReady: () => E.canCheckIn(),
-  legalTag: () => G.tagImg,
-  crackBroken: () => E.S.secrets.crack,
-  maintUnlocked: () => E.S.keys.maint,
-  peeking: () => G.peeking,
-  onSpark: (x) => { if (Math.abs(x - G.player.x) < 500) audio.spark(); },
-};
+function carState(car) {
+  const d = CAR_DEFS[car];
+  const st = { number: d.num || null, label: d.label, glow: {}, locked: {}, display: [] };
+  if (d.shop) {
+    const rows = SHOPS[d.shop].secret ? E.secretStock(d.shop) : E.stock(d.shop);
+    st.display = rows.map((r) => r.item.art);
+  }
+  if (car === 'front') {
+    if (E.canCheckIn()) st.glow.reader = 1;
+    if (E.allJobsDone() && !E.S.day.jobsClaimed) st.glow.board = 1;
+  }
+  if (car === 'capsules') {
+    st.free = E.freePullReady();
+    if (st.free) st.glow.basic = 1;
+    st.locked.next = !E.ghostOpen();
+  }
+  if (car === 'arcade' && G.tagImg) st.tagImage = G.tagImg;
+  return st;
+}
 
-function loadScene(id, x) {
-  G.scene = id;
-  G.stage = new Stage(id, env);
-  const def = SCENES[id];
-  view.worldW = def.width;
-  G.player.minX = def.minX;
-  G.player.maxX = def.maxX;
-  G.player.x = Math.max(def.minX, Math.min(def.maxX, x));
-  G.player.h = 0;
-  G.player.vh = 0;
-  G.player.stop();
-  Eng.snapCamera(G.player.x);
-  G.stage.warm();
-  G.pickups = E.pickups(id);
-  G.crackHits = 0;
-  G.ghostDue = false;
-  audio.setMood(id === 'sewer' ? 'sewer' : id === 'ghost' ? 'ghost' : 'main');
-  if (LINE.includes(id)) {
-    E.S.scene = id;
+function carTags(car) {
+  const d = CAR_DEFS[car];
+  const T = {};
+  const npcName = (id) => (id ? id.toUpperCase() : '');
+  if (d.npc) T.npc = { text: npcName(d.npc), aria: `Talk to ${npcName(d.npc)}` };
+  if (d.npc2) T.npc2 = { text: npcName(d.npc2), aria: `Talk to ${npcName(d.npc2)}` };
+  const next = nextOf(car);
+  T['door-next'] = next ? { aria: `Walk to ${CAR_INFO[next] ? CAR_INFO[next].name : 'the next car'}` } : car === 'capsules' ? { text: 'LOCKED', aria: 'A chained door' } : null;
+  if (car === 'front') {
+    T.reader = E.canCheckIn() ? { text: 'PUNCH IN', cls: 'go', aria: 'Punch in for today' } : { aria: 'Card reader (already punched in today)' };
+    T.board = E.allJobsDone() && !E.S.day.jobsClaimed ? { text: 'JOBS DONE!', cls: 'gold', aria: 'Job board' } : { text: 'JOBS', aria: 'Job board' };
+    T.lockers = { text: 'CLOSET', aria: 'Your closet' };
+    T.calendar = { aria: 'Streak calendar' };
+  }
+  if (d.shop) T.display = { text: SHOPS[d.shop].secret ? 'BROWSE' : 'TODAY’S STOCK', cls: 'gold', aria: `Browse ${SHOPS[d.shop].name}` };
+  if (car === 'arcade') {
+    T.runner = { text: 'TUNNEL RUN', aria: 'Play Tunnel Run' };
+    T.tagwall = { text: 'TAG WALL', aria: 'Paint the Tag Wall' };
+    T.claw = { text: 'THE GRABBER', aria: 'Play The Grabber claw machine' };
+    T.shell = { aria: 'Shell game table' };
+  }
+  if (car === 'capsules') {
+    T.basic = E.freePullReady() ? { text: 'FREE PULL!', cls: 'go', aria: 'Basic capsule machine, free pull ready' } : { text: 'BASIC', aria: 'Basic capsule machine' };
+    T.deluxe = { text: 'DELUXE', cls: 'hot2', aria: 'Deluxe capsule machine' };
+    T.vault = { aria: 'A graffiti-covered panel' };
+  }
+  if (car === 'cab') {
+    T.lockbox = E.S.day.lockbox ? { aria: 'Lockbox (empty until tomorrow)' } : { text: 'LOCKBOX', cls: 'gold', aria: 'Open the lockbox' };
+    T.console = { aria: 'Driver’s console' };
+    T.window = { aria: 'Front window' };
+  }
+  return T;
+}
+
+// ---------------------------------------------------------------- navigation
+
+function reachable() {
+  const out = [];
+  if (E.S.keys.cab) out.push('cab');
+  out.push(...E.CARS);
+  if (E.ghostOpen()) out.push('ghost');
+  return out;
+}
+
+function nextOf(car) {
+  if (car === 'vault') return null;
+  if (car === 'cab') return 'front';
+  if (car === 'ghost') return null;
+  const i = E.CARS.indexOf(car);
+  if (i >= 0 && i < E.CARS.length - 1) return E.CARS[i + 1];
+  if (car === 'capsules' && E.ghostOpen()) return 'ghost';
+  return null;
+}
+
+function backOf(car) {
+  if (car === 'vault') return 'capsules';
+  if (car === 'ghost') return 'capsules';
+  if (car === 'cab') return null;
+  const i = E.CARS.indexOf(car);
+  if (i > 0) return E.CARS[i - 1];
+  if (car === 'front' && E.S.keys.cab) return 'cab';
+  return null;
+}
+
+function updateNav() {
+  const b = backOf(ride.car), n = nextOf(ride.car);
+  const name = (id) => (id === 'cab' ? 'CAB' : id === 'ghost' ? '???' : id === 'capsules' && ride.car === 'vault' ? 'OUT' : CAR_INFO[id] ? CAR_INFO[id].name.split(' ')[0] : 'BACK');
+  hud.setNav(b ? name(b) : null, n ? (ride.car === 'cab' ? 'FRONT CAR' : `CAR ${E.CARS.indexOf(n) + 1 || '?'}`) : null);
+}
+
+const canAct = () => G.mode === 'play' && !G.busy && !talk.open && !anyOverlay() && !ride.tr;
+
+async function goNext() {
+  const n = nextOf(ride.car);
+  if (n) return walk(n, 'next');
+  if (ride.car === 'capsules') return capsuleDoor();
+  return null;
+}
+
+async function goBack() {
+  const b = backOf(ride.car);
+  if (b) return walk(b, 'back');
+  if (ride.car === 'front') {
+    G.busy = true;
+    try {
+      await talk.say('signal', E.S.keys.cab ? 'Go ahead, the cab’s open.' : 'Behind me? That’s the driver’s cab. Locked since before I was a lamp. Word is a *7-day streak* gets you the key.');
+    } finally { endTalk(); }
+  }
+}
+
+async function walk(id, dir) {
+  if (G.busy) return;
+  G.busy = true;
+  closeAll();
+  talk.end();
+  audio.whoosh();
+  try {
+    await ride.travel(id, dir);
+  } finally {
+    G.busy = false;
+  }
+}
+
+async function travelTo(id) {
+  if (id === ride.car) return;
+  await walk(id, E.CARS.indexOf(id) < E.CARS.indexOf(ride.car) || id === 'cab' ? 'back' : 'next');
+}
+
+function arrived(id, silent = false) {
+  if (E.CARS.includes(id)) {
+    E.S.car = id;
+    E.commit();
+    E.track('car', id);
+  }
+  const d = CAR_DEFS[id];
+  if (!d.num) hud.carBanner(null, d.label);
+  updateNav();
+  audio.setMood(id === 'ghost' ? 'ghost' : id === 'vault' || id === 'cab' ? 'sewer' : 'main');
+  if (!silent) audio.chime();
+  if (id === 'ghost') {
+    E.discover('ghost');
+  }
+  if (id === 'cab') E.discover('cab');
+}
+
+// ---------------------------------------------------------------- loose change
+
+function collectCoin(p, sx, sy) {
+  E.collect(p);
+  audio.coin(!!p.big);
+  hud.flyTokens(sx, sy, p.big ? 8 : 3);
+}
+
+// ---------------------------------------------------------------- interactions
+
+function endTalk() {
+  talk.end();
+  G.busy = false;
+  clearPressed();
+  ride.refreshTags();
+  updateNav();
+  if (G.after) {
+    const fn = G.after;
+    G.after = null;
+    fn();
+  }
+}
+
+async function interact(id) {
+  if (G.mode !== 'play' || G.busy || anyOverlay() || ride.tr) return;
+  if (id === 'me') { openCloset(); return; }
+  if (id === 'door-next') {
+    if (nextOf(ride.car)) goNext();
+    else capsuleDoor();
+    return;
+  }
+  G.busy = true;
+  const car = ride.car;
+  try {
+    switch (car) {
+      case 'front':
+        if (id === 'npc') await talkSignal();
+        else if (id === 'reader') await punchIn();
+        else if (id === 'board') openMe('jobs');
+        else if (id === 'lockers') openCloset();
+        else if (id === 'calendar') openMe('me');
+        break;
+      case 'threads': case 'kicks': case 'lids': case 'ice':
+        if (id === 'npc') await talkKeeper(CAR_DEFS[car].shop);
+        else if (id === 'display') openShop(CAR_DEFS[car].shop, { onBought });
+        break;
+      case 'arcade':
+        if (id === 'npc') await talkJoy();
+        else if (id === 'npc2' || id === 'shell') await talkEight();
+        else if (id === 'runner') await playGame('runner');
+        else if (id === 'tagwall') await playGame('tag');
+        else if (id === 'claw') await useClaw();
+        break;
+      case 'capsules':
+        if (id === 'npc') await talkPlug();
+        else if (id === 'basic') openCapsules('basic');
+        else if (id === 'deluxe') openCapsules('deluxe');
+        else if (id === 'vault') await knockVault();
+        break;
+      case 'ghost':
+        if (id === 'npc') await talkStatic();
+        else if (id === 'display') openShop('ghost', { onBought });
+        break;
+      case 'vault':
+        if (id === 'npc') await talk.say('plug', pick(['Don’t touch the glass. Okay, touch it a little.', 'One of everything, nothing for cheap. Save up.', 'You found the vault. That makes you family. Family pays full price.']));
+        else if (id === 'display') openShop('vault', { onBought });
+        break;
+      case 'cab':
+        if (id === 'lockbox') await lockbox();
+        else if (id === 'console') { audio.train('pass', 1.2); await talk.say('narrator', 'You pull the horn cord. Somewhere far down the train, Signal yells “WHO DID THAT.”'); }
+        else if (id === 'window') await talk.say('narrator', 'The tunnel rushes at you forever. Nobody is driving. The train seems fine with it.');
+        break;
+      default: break;
+    }
+  } catch (err) {
+    console.error(err);
+  } finally {
+    endTalk();
+  }
+}
+
+function onBought(item) {
+  ride.pose('cheer', 1.6);
+  refreshFace();
+}
+
+// ---------------------------------------------------------------- Signal (front car)
+
+async function talkSignal() {
+  if (!E.S.seen.intro) {
+    await talk.say('signal', 'Welcome aboard the *Drip Line*! This train never stops, so neither does the shopping.');
+    await talk.say('signal', 'Everything on board costs *tokens*. You earn tokens by punching in *every day*, doing my *three jobs*, playing the *arcade* and grabbing loose change off the floor.');
+    await talk.say('signal', 'Every car sells different fits and the stock changes at *midnight*. Some items are *insanely rare*. The capsule machines in Car 7 can drop anything.');
+    await talk.say('signal', 'Oh, and tap *yourself* anytime to open your closet. Now go on, punch in!');
+    E.S.seen.intro = true;
     E.commit();
   }
+  for (;;) {
+    const can = E.canCheckIn();
+    const pv = E.streakPreview();
+    const jobsReady = E.allJobsDone() && !E.S.day.jobsClaimed;
+    const line = jobsReady ? 'You did all three jobs! I’ve got something for you.'
+      : can ? (pv.broken ? 'You missed a day, so your streak starts over. Unless you had freezes! Punch in?' : `Day *${pv.next}* of your streak is ready. Punch in?`)
+        : pick(['Doors closing! Just kidding. What do you need?', 'Green means go. I’m on green. What’s up?', 'Need something, rider?']);
+    const choices = [
+      jobsReady ? { label: 'Claim my job bonus', value: 'jobs' } : { label: 'Today’s jobs', value: 'jobs' },
+      can ? { label: 'Punch in for today', value: 'punch' } : { label: 'Already punched in today', value: 'punch', disabled: true },
+      { label: `Buy a streak freeze (${FREEZE_COST})`, value: 'freeze', disabled: E.S.streak.freezes >= 2 || E.S.tokens < FREEZE_COST },
+      { label: 'How does this train work?', value: 'help' },
+      { label: 'See you', value: 'bye' },
+    ];
+    if (can) [choices[0], choices[1]] = [choices[1], choices[0]];
+    const c = await talk.ask('signal', line, choices, { cancel: 'bye' });
+    if (c === 'punch') { talk.end(); await punchIn(); return; }
+    if (c === 'jobs') { await jobsTalk(); continue; }
+    if (c === 'freeze') {
+      const r = E.buyFreeze();
+      if (r.err) { audio.beepBad(); await talk.say('signal', r.err); } else { audio.register(); await talk.say('signal', `A *streak freeze*. If you miss a day it covers you. You’ve got ${E.S.streak.freezes}.`); }
+      continue;
+    }
+    if (c === 'help') {
+      await talk.say('signal', 'Walk car to car with the door at the end, or the arrows. Every shopkeeper restocks at midnight. The *featured* slot can roll *legendary*.');
+      await talk.say('signal', 'Rarities go *common*, uncommon, rare, epic, *legendary*, and *mythic*. Mythics are the real deal. Some only come from long streaks. Some from places that aren’t on the map.');
+      await talk.say('signal', 'And any capsule can come out *prismatic*. Shimmery. One in two hundred. People cry.');
+      continue;
+    }
+    if (c != null) await talk.say('signal', pick(['Mind the gap!', 'Stand clear of the closing doors!', 'Next stop: everywhere.']));
+    return;
+  }
+}
+
+async function jobsTalk() {
+  if (E.allJobsDone() && !E.S.day.jobsClaimed) {
+    const b = E.claimJobsBonus();
+    audio.fanfare();
+    await talk.say('signal', `All three! Here’s *${b.tokens} tokens* and a *capsule ticket*.`);
+    await talk.say('signal', `And a secret: this week, the word is _${b.password.word}_. Plug in the last car might want to hear it. You didn’t hear it from me.`);
+    dots();
+    return;
+  }
+  const lines = E.jobs().map((j, i) => `${i + 1}) ${j.def.text}${j.done ? ' ✓' : j.def.goal > 1 ? ` (${j.progress}/${j.def.goal})` : ''}`);
+  await talk.say('signal', `Today’s jobs: ${lines.join('  ')}`);
+  if (E.allJobsDone()) await talk.say('signal', 'You already got paid today. New jobs at midnight!');
+  else if (!E.S.week.heard) await talk.say('signal', `Finish all three and I’ll tell you a secret word. Hint: ${E.weekPassword().riddle}`);
+}
+
+async function punchIn() {
+  if (!E.canCheckIn()) {
+    await talk.say('signal', 'Already punched in! Come back tomorrow, same train.');
+    return;
+  }
+  talk.end();
+  const res = await openGame('swipe', gameCtx());
+  if (res && res.checkin) await checkinReport(res.checkin);
+}
+
+async function checkinReport(r) {
+  ride.pose('cheer', 1.6);
+  await talk.say('signal', `Day *${r.count}*${r.count > 1 ? ' in a row' : ''}! Here’s *${r.tokens} tokens*${r.perfect ? '. Perfect swipe, show-off' : ''}.`);
+  if (r.usedFreezes) await talk.say('signal', `You missed ${r.usedFreezes === 1 ? 'a day' : `${r.usedFreezes} days`}, but a *streak freeze* covered you.`);
+  if (r.broke) await talk.say('signal', 'Your old streak broke. It happens. Start again!');
+  for (const k of r.tickets) await talk.say('signal', `Plus an *${TICKETS[k].name.toLowerCase()}*. Use it at Plug’s machines in Car 7.`);
+  for (const id of r.items) {
+    const it = itemById[id];
+    audio.fanfare();
+    await talk.say('signal', `*${r.count} DAYS.* That earns you the *${it.name}*. ${RARITIES[it.rarity].name}. You can’t get it any other way.`);
+  }
+  if (r.key) {
+    audio.fanfare();
+    await talk.say('signal', 'Seven days straight! Here, the *cab key*. The driver’s cab is right behind me. Nobody’s been in there for years.');
+    updateNav();
+  }
+  const nm = E.nextMilestone();
+  await talk.say('signal', nm && nm.left <= 7 ? `Come back tomorrow! *${nm.left} more day${nm.left === 1 ? '' : 's'}* until the day-${nm.day} reward.` : 'Come back tomorrow! Day 7 of every week pays big.');
+  if (E.freePullReady()) await talk.say('signal', 'And don’t forget your *free capsule* in Car 7.');
+}
+
+// ---------------------------------------------------------------- shopkeepers
+
+async function talkKeeper(shopId) {
+  const sh = SHOPS[shopId];
+  E.track('talk', sh.keeper);
+  const rows = E.stock(shopId);
+  const feat = rows.find((r) => r.featured);
+  const c = await talk.ask(sh.keeper, pick(sh.hello), [
+    { label: 'Show me today’s stock', value: 'shop' },
+    feat ? { label: `What’s featured? (${RARITIES[feat.item.rarity].name.toLowerCase()})`, value: 'feat' } : null,
+    { label: 'See you', value: 'bye' },
+  ].filter(Boolean), { cancel: 'bye' });
+  if (c === 'shop') { talk.end(); openShop(shopId, { onBought }); return; }
+  if (c === 'feat') {
+    await talk.say(sh.keeper, `Today’s featured piece is the *${feat.item.name}*. ${feat.drop ? `It’s the *drop of the day*, ${feat.pct}% off!` : `${RARITIES[feat.item.rarity].name}. Gone at midnight.`}`);
+    talk.end();
+    openShop(shopId, { item: feat.item.id, onBought });
+    return;
+  }
+  if (c != null) await talk.say(sh.keeper, pick(sh.bye));
+}
+
+async function talkJoy() {
+  E.track('talk', 'joy');
+  const c = await talk.ask('joy', pick(['PLAYER ONE! Insert tokens! Or don’t, most games are free!', 'High scores, low lighting. Pick a game!', 'Beep boop. That means hello.']), [
+    { label: 'Tunnel Run', value: 'runner' },
+    { label: 'Tag Wall', value: 'tag' },
+    { label: 'The Grabber (15 tokens)', value: 'claw' },
+    { label: 'Eight’s shell game', value: 'shell' },
+    { label: 'Later', value: 'bye' },
+  ], { cancel: 'bye' });
+  if (c === 'runner' || c === 'tag') { talk.end(); await playGame(c); return; }
+  if (c === 'claw') { await useClaw(); return; }
+  if (c === 'shell') { await talkEight(); return; }
+  if (c != null) await talk.say('joy', 'GAME OVER. Kidding. See you!');
+}
+
+async function talkEight() {
+  E.track('talk', 'eight');
+  if (E.S.day.cupsWins >= 5) {
+    await talk.say('eight', 'Nope. You cleaned me out today, pal. Signs point to: come back tomorrow.');
+    return;
+  }
+  const bets = [10, 25, 50, 100];
+  const choices = bets.map((b) => ({ label: `Bet ${b} tokens`, value: b, disabled: E.S.tokens < b }));
+  choices.push({ label: 'How does it work?', value: 'how' }, { label: 'No thanks', value: 'bye' });
+  const c = await talk.ask('eight', pick(['Follow the token, double your tokens! Outlook good!', 'Ask again later. Kidding. Wanna play?', 'Easy money, friend. Keep your eye on the token.']), choices, { cancel: 'bye' });
+  if (c === 'how') {
+    await talk.say('eight', 'I put a token under a cup. I shuffle. You pick. Find it and you double your bet. Bigger bets, faster hands. It’s fair. My sources say yes.');
+    return;
+  }
+  if (typeof c === 'number') {
+    talk.end();
+    await openGame('cups', { ...gameCtx(), bet: c });
+    return;
+  }
+  if (c != null) await talk.say('eight', 'Reply hazy. Suit yourself.');
+}
+
+async function useClaw() {
+  const cost = 15;
+  if (!E.clawPrizes().length) {
+    await talk.say('grabber', 'MACHINE EMPTY. RESTOCKING AT MIDNIGHT. BEEP.');
+    return;
+  }
+  const c = await talk.ask('grabber', `INSERT *${cost} TOKENS*. GRAB A CAPSULE. PRIZES: tokens, capsule tickets, clothes, streak freezes${E.S.keys.cab ? '' : ', *one rare key*'}. BEEP BOOP.`, [
+    { label: `Play (${cost} tokens)`, value: 'play', disabled: E.S.tokens < cost },
+    { label: 'Walk away', value: 'bye' },
+  ], { cancel: 'bye' });
+  if (c !== 'play' || !E.spend(cost, 'claw')) return;
+  talk.end();
+  await openGame('claw', gameCtx());
+  updateNav();
+}
+
+async function playGame(name) {
+  talk.end();
+  await openGame(name, gameCtx());
+}
+
+// ---------------------------------------------------------------- Plug (capsules) + the vault
+
+async function talkPlug() {
+  E.track('talk', 'plug');
+  const free = E.freePullReady();
+  const c = await talk.ask('plug', free ? 'Your *free pull* is ready. Could be a mythic. Probably a sock. We don’t sell socks.' : pick(['I’m the plug. Capsules, rare stuff, questions you shouldn’t ask.', 'Every capsule could be the one.', 'You want rare? I got rare.']), [
+    { label: free ? 'Use my free pull' : `Basic capsule (${fmt(250)})`, value: 'basic' },
+    { label: `Deluxe capsule (${fmt(1200)})`, value: 'deluxe' },
+    { label: 'What are the odds?', value: 'odds' },
+    { label: 'What’s with that panel?', value: 'panel' },
+    { label: 'Later', value: 'bye' },
+  ], { cancel: 'bye' });
+  if (c === 'basic' || c === 'deluxe') { talk.end(); openCapsules(c); return; }
+  if (c === 'odds') {
+    await talk.say('plug', 'Basic: mostly commons, *0.1%* mythic. Deluxe: never a common, *1.5%* mythic, and a *legendary is guaranteed* within 25 pulls. Every pull: *1 in 200* comes out prismatic.');
+    await talk.say('plug', 'Doubles turn into tokens. Prismatic doubles upgrade the one you’ve got. I’m generous like that.');
+    return;
+  }
+  if (c === 'panel') {
+    await talk.say('plug', 'What panel? That’s just graffiti. Very solid graffiti. That opens for people who know *the word*.');
+    await talk.say('plug', 'Signal hears things. Do Signal’s jobs. All three.');
+    return;
+  }
+  if (c != null) await talk.say('plug', 'You were never here.');
+}
+
+async function knockVault() {
+  audio.knock();
+  await wait(400);
+  if (S_vaultOpen()) {
+    await talk.say('plug', 'Back again? Get in, get in.');
+    talk.end();
+    G.after = () => walk('vault', 'next');
+    return;
+  }
+  const answer = await talk.input('plug', 'Plug leans in. “...What’s the word?”', 'TYPE THE WORD');
+  if (answer == null || !answer.trim()) {
+    await talk.say('plug', 'Then it’s just graffiti.');
+    return;
+  }
+  if (!E.checkPassword(answer)) {
+    audio.beepBad();
+    await talk.say('plug', pick(['Wrong word. Signal knows the right one.', 'Nope. Finish Signal’s three jobs and listen close.', 'Ha. No.']));
+    return;
+  }
+  audio.fanfare();
+  const first = E.openVault();
+  await talk.say('plug', first ? 'That’s the word. Welcome to *the vault*. First visit, I’ll throw in *200 tokens*. Don’t get used to it.' : 'That’s the word. Come on in.');
+  talk.end();
+  G.after = () => walk('vault', 'next');
+}
+
+const S_vaultOpen = () => E.S.week.vault;
+
+async function capsuleDoor() {
+  if (ride.car !== 'capsules') return;
+  G.busy = true;
+  try {
+    if (E.ghostOpen()) { talk.end(); G.after = () => walk('ghost', 'next'); return; }
+    if (E.S.ghostTicket) {
+      const c = await talk.ask('narrator', 'The chain on the last door hums when your *ghost ticket* gets close. Use it? The ghost car stays coupled for the rest of today.', [
+        { label: 'Use the ghost ticket', value: 'yes' }, { label: 'Not now', value: 'no' },
+      ], { cancel: 'no' });
+      if (c === 'yes' && E.useGhostTicket()) {
+        audio.ghostWail();
+        updateNav();
+        G.after = () => walk('ghost', 'next');
+      }
+      return;
+    }
+    await talk.say('narrator', '*NO PASSENGERS BEYOND THIS POINT.* The chain is ice cold. On some nights, people say, there’s another car back there.');
+    await talk.say('plug', 'The ghost car? Comes and goes. Midnight’s your best bet. Or a ghost ticket. The Grabber has one sometimes.');
+  } finally {
+    endTalk();
+  }
+}
+
+async function talkStatic() {
+  const c = await talk.ask('static', pick(['...kzzt... tickets, please... ah, a living passenger...', 'This car was retired in 1931. I was not.', 'Mind the gap. It is rather wider for me.']), [
+    { label: 'Browse the lost & found', value: 'shop' },
+    { label: 'Who are you?', value: 'who' },
+    { label: 'Goodbye', value: 'bye' },
+  ], { cancel: 'bye' });
+  if (c === 'shop') { talk.end(); openShop('ghost', { onBought }); return; }
+  if (c === 'who') {
+    await talk.say('static', 'I ran the last car on the old line. One night the line closed and the car... kept going. So did I.');
+    await talk.say('static', 'I sell what passengers left behind. Spectral goods. You can see right through them. Very fashionable.');
+    return;
+  }
+  if (c != null) await talk.say('static', '...kzzt... all aboard who’s going aboard...');
+}
+
+async function lockbox() {
+  const r = E.openLockbox();
+  if (!r) {
+    await talk.say('narrator', 'The lockbox is empty. Something refills it every night.');
+    return;
+  }
+  audio.coin(true);
+  await talk.say('narrator', `The lockbox clicks open: *${r.tokens} tokens*${r.item ? ` and the *${r.item.item.name}*` : ''}. Something refills it every night.`);
+}
+
+// ---------------------------------------------------------------- minigames
+
+function gameCtx() {
+  return {
+    econ: E, audio, hud,
+    body: E.S.profile ? E.S.profile.body : null,
+    outfit: E.outfitOf(),
+    name: E.S.profile?.name || 'YOU',
+    onTagImage: (url) => { E.S.tagImage = url; E.commit(); loadTagImage(url); },
+  };
 }
 
 // ---------------------------------------------------------------- loop
@@ -301,683 +774,27 @@ function frame(dt, t) {
   Eng.beginFrame(dt);
   Eng.pollGamepad();
   E.ensureDay();
-  const blocked = dlg.open || anyOverlay() || G.mode !== 'play' || G.busy;
-  G.player.noKeys = blocked;
-  G.player.frozen = blocked && G.mode !== 'travel';
-  if (!blocked) handleInput();
-  else {
-    // tapping the station during a conversation advances it, like clicking the box
-    if (input.taps.length && dlg.open && !anyOverlay()) dlg.advance();
-    input.taps.length = 0;
-    if (pressed('back') && anyOverlay()) closeOverlay();
-  }
-  G.player.update(dt);
-  if (G.stage) G.stage.update(dt, t, G.player.x);
-  collectPickups();
-  // ambient express (main line only)
-  if (G.mode === 'play' && !G.express.active && !G.train.active && LINE.includes(G.scene)) {
-    G.expressT -= dt;
-    if (G.expressT < 0) {
-      G.expressT = 60 + Math.random() * 60;
-      if (!anyOverlay()) {
-        G.express.passThrough(view.camX);
-        audio.train('pass', 2.2);
-      }
-    }
-  }
-  if (G.express.active && G.express.x + 2000 > view.camX && G.express.x < view.camX + view.vw) view.shake = Math.max(view.shake, 3);
-  // ghost station timer (waits for any conversation to finish)
-  if (G.scene === 'ghost' && G.mode === 'play' && G.ghostLeft > 0) {
-    G.ghostLeft -= dt;
-    if (G.ghostLeft <= 0) G.ghostDue = true;
-  }
-  if (G.ghostDue && G.mode === 'play' && !G.busy && !dlg.open) {
-    G.ghostDue = false;
-    ghostDeparture(true);
-  }
-  // camera
-  if (G.mode === 'play' || G.mode === 'travel') Eng.follow(G.player.x, dt, G.player.moving ? G.player.facing * 60 : 0);
-  G.train.update(dt, view.camX + view.vw);
-  G.express.update(dt, view.camX + view.vw);
-  // render
-  if (G.mode === 'tunnel') {
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    drawTunnel(ctx, ctx.canvas.width, ctx.canvas.height, t, G.tunnel?.name || '', G.tunnel?.ghost);
-    drawScreenFx(ctx, t);
-  } else if (G.stage) {
-    G.stage.render(ctx, t, (g) => {
-      drawPickups(g, t);
-      G.player.draw(g, t, FEET);
-    });
-    Eng.worldTransform(ctx);
-    G.train.draw(ctx, t, view.camX, view.camX + view.vw);
-    G.express.draw(ctx, t, view.camX, view.camX + view.vw);
-    if (G.scene === 'ghost') drawGhostClock(ctx);
-    drawScreenFx(ctx, t, G.scene === 'ghost' ? { tint: 'rgba(4,30,26,0.7)' } : G.scene === 'sewer' ? { tint: 'rgba(4,20,8,0.75)' } : {});
-  }
-  updatePrompt(blocked);
+  if (canAct()) {
+    if (pressed('act')) interact(ride.def.npc ? 'npc' : (ride.L.hotspots[0] || {}).id);
+    if (pressed('right') || pressed('up')) goNext();
+    if (pressed('left') || pressed('down')) goBack();
+    if (pressed('map')) openTrainMap();
+    if (pressed('bag')) openCloset();
+    if (pressed('stash')) openMe();
+  } else if (pressed('back') && anyOverlay()) closeOverlay();
+  ride.render(dt, t);
+  drawScreenFx(ctx, t, ride.car === 'ghost' ? { tint: 'rgba(4,30,26,0.6)' } : {});
   hud.updateHud(dt);
-  dlg.update(dt, t);
-}
-
-function handleInput() {
-  if (pressed('jump') || pressed('up')) {
-    if (G.player.jump()) audio.jump();
-  }
-  if (pressed('act') && G.near) interact(G.near);
-  if (pressed('map')) openMap();
-  if (pressed('bag')) openBag();
-  if (pressed('stash')) openStash();
-  pressed('back');
-  for (const tap of input.taps.splice(0)) {
-    const [wx, wy] = Eng.toWorld(tap.x, tap.y);
-    // tap your rat to hop
-    if (Math.abs(wx - G.player.x) < 34 && wy > FEET - 120 - G.player.h && wy < FEET + 10) {
-      if (G.player.jump()) audio.jump();
-      continue;
-    }
-    // tap a floating token: walk under it, then hop
-    const high = G.pickups.find((p) => p.h > 0 && Math.abs(p.x - wx) < 40 && Math.abs(FEET - 26 - p.h - wy) < 50);
-    if (high) {
-      G.player.walkTo(high.x, () => { if (G.player.jump()) audio.jump(); });
-      continue;
-    }
-    const e = G.stage.entityAt(wx, wy);
-    if (e) {
-      const p = G.stage.actPoint(e);
-      const stand = Math.abs(G.player.x - p.x) <= e.act.range ? G.player.x : p.x + (G.player.x < p.x ? -20 : 20);
-      G.player.walkTo(stand, () => interact(e));
-    } else {
-      G.player.walkTo(wx);
-    }
-  }
-}
-
-function updatePrompt(blocked) {
-  if (blocked || !G.stage || hud.bannerUp()) {
-    hud.hidePrompt();
-    G.near = null;
-    return;
-  }
-  const e = G.stage.nearest(G.player.x);
-  G.near = e;
-  if (!e) { hud.hidePrompt(); return; }
-  const p = G.stage.actPoint(e);
-  const [sx, sy] = Eng.toScreen(p.x, p.y - 10);
-  const badge = e.badge ? e.badge() : null;
-  hud.showPrompt(sx, Math.max(sy, 120), e.act.label, { touch: input.touch, badge });
-}
-
-// ---------------------------------------------------------------- floor tokens
-
-function drawPickups(g, t) {
-  for (const p of G.pickups) {
-    const y = FEET - 26 - p.h + Math.sin(t * 3 + p.x) * 3;
-    const s = p.big ? 1.6 : 1;
-    const spin = Math.cos(t * 4 + p.x * 0.01);
-    g.save();
-    g.globalCompositeOperation = 'lighter';
-    const gl = g.createRadialGradient(p.x, y, 2, p.x, y, 26 * s);
-    gl.addColorStop(0, 'rgba(255,220,120,0.45)');
-    gl.addColorStop(1, 'rgba(255,220,120,0)');
-    g.fillStyle = gl;
-    g.fillRect(p.x - 30 * s, y - 30 * s, 60 * s, 60 * s);
-    g.restore();
-    g.save();
-    g.translate(p.x, y);
-    g.scale(Math.max(0.15, Math.abs(spin)) * s, s);
-    ellipse(g, 0, 0, 11, 11, { fill: spin > 0 ? '#f0c24a' : '#d4a030', lw: 3, amp: 0.3, seed: 3 });
-    ellipse(g, 0, 0, 6.5, 6.5, { fill: '#ffe08a', lw: 0, amp: 0, seed: 4 });
-    g.fillStyle = INK;
-    g.beginPath();
-    g.moveTo(1.5, -5); g.lineTo(-3.5, 1); g.lineTo(0, 1); g.lineTo(-1.5, 5); g.lineTo(3.5, -1); g.lineTo(0, -1); g.lineTo(2, -5);
-    g.fill();
-    g.restore();
-    if (p.h > 0) {
-      g.fillStyle = 'rgba(10,6,24,0.25)';
-      g.beginPath();
-      g.ellipse(p.x, FEET, 9 * s, 2.5, 0, 0, Math.PI * 2);
-      g.fill();
-    }
-  }
-}
-
-function collectPickups() {
-  if (G.mode !== 'play') return;
-  const pl = G.player;
-  for (const p of [...G.pickups]) {
-    if (Math.abs(pl.x - p.x) > (p.big ? 30 : 24)) continue;
-    const need = p.h;
-    if (need > 0 ? pl.h < need - 36 || pl.h > need + 40 : pl.h > 40) continue;
-    G.pickups.splice(G.pickups.indexOf(p), 1);
-    E.collect(p);
-    audio.coin(p.big);
-    G.stage.fx.burst(p.x, FEET - 26 - p.h, p.big ? 24 : 12, { color: ['#ffd23f', '#fff6c8', '#ff9a3c'], speed: 200, g: 500, life: 0.6, add: true });
-    G.stage.fx.add({ kind: 'text', text: `+${p.value}`, x: p.x, y: FEET - 60 - p.h, vx: 0, vy: -60, g: 0, life: 1, size: 20, color: '#6dff9a' });
-    const [sx, sy] = Eng.toScreen(p.x, FEET - 26 - p.h);
-    hud.flyTokens(sx, sy, p.big ? 8 : 3);
-  }
-}
-
-// ---------------------------------------------------------------- interactions
-
-async function interact(e) {
-  if (G.busy || G.mode !== 'play' || anyOverlay()) return;
-  G.busy = true;
-  G.player.stop();
-  const p = G.stage.actPoint(e);
-  if (Math.abs(p.x - G.player.x) > 4) G.player.facing = p.x > G.player.x ? 1 : -1;
-  try {
-    switch (e.kind) {
-      case 'shop': await talkShop(e.shop); break;
-      case 'stall': await talkShop('sewer'); break;
-      case 'ticket': await talkShop('ghost'); break;
-      case 'booth': await talkShelly(); break;
-      case 'phone': await callOperator(); break;
-      case 'wanted': wanted(); break;
-      case 'cups': await talkCharlie(); break;
-      case 'claw': await useClaw(); break;
-      case 'legal': await useLegal(); break;
-      case 'arcade': await useArcade(); break;
-      case 'crack': await crack(); break;
-      case 'door': if (e.door === 'maint') await maintDoor(); else await backDoor(); break;
-      case 'mural': await readMural(); break;
-      case 'ladder': await climbUp(); break;
-      case 'bell': await ringBell(); break;
-      case 'exit': await dlg.say('me', pick(["It's raining up there. Everything good is down here anyway.", 'The street can wait. The deals reset at midnight.', 'Nah. Too bright.'])); break;
-      case 'npc': await talkNpc(e); break;
-      default: break;
-    }
-  } catch (err) {
-    console.error(err);
-  } finally {
-    G.stage.talking = null;
-    G.peeking = false;
-    if (dlg.open) dlg.end();
-    G.busy = false;
-    clearPressed();
-  }
-  // actions that need the world unlocked (e.g. leaving on a train)
-  if (G.after) {
-    const fn = G.after;
-    G.after = null;
-    fn();
-  }
-}
-
-async function talkShop(shopId) {
-  const sh = SHOPS[shopId];
-  G.stage.talking = shopId;
-  const d = E.deals();
-  const deal = d.dotd.product.shop === shopId ? d.dotd : d.list.find((x) => x.product.shop === shopId);
-  const first = shopId === 'sewer' ? !E.S.seen.tips.sewerHello : shopId === 'ghost' ? !E.S.seen.tips.ghostHello : false;
-  if (first) {
-    E.S.seen.tips[`${shopId}Hello`] = true;
-    E.commit();
-    await dlg.say(sh.keeper, sh.hello[0]);
-  }
-  const choices = ['Show me the goods', deal ? 'What’s on sale today?' : 'What’s good here?', 'Just passing through'];
-  if (shopId === 'bodega') choices.splice(2, 0, 'Pet the cat');
-  const c = await dlg.ask(sh.keeper, first ? sh.hello[1] : pick(sh.hello), choices, { cancel: choices.length - 1 });
-  const label = choices[c];
-  if (label === 'Show me the goods') {
-    dlg.end();
-    openShop(shopId);
-  } else if (label && label.startsWith('What')) {
-    if (deal) {
-      await dlg.say(sh.keeper, sh.deal(deal.product.name));
-      dlg.end();
-      openShop(shopId, { product: deal.product.id, line: `${deal.pct}% off. Today only.` });
-    } else {
-      const items = Object.values(productById).filter((p) => p.shop === shopId);
-      const p = items.find((x) => x.tags.includes('new')) || pick(items);
-      await dlg.say(sh.keeper, `The *${p.name}*. ${p.desc.split('. ')[0]}.`);
-      dlg.end();
-      openShop(shopId, { product: p.id });
-    }
-  } else if (label === 'Pet the cat') {
-    E.track('pet');
-    if (!E.S.stickers.whiskers) E.addSticker('whiskers');
-    await dlg.say('cat', pick(['...Fine. One pet. ...Okay two.', 'Purrrr. Don\'t tell anybody I purred.', 'You have permission to continue. Briefly.']));
-  } else if (c != null) {
-    await dlg.say(sh.keeper, pick(sh.bye));
-  }
-}
-
-async function talkShelly() {
-  G.stage.talking = 'booth';
-  if (!E.S.seen.intro) {
-    await dlg.say('shelly', 'Mm... a new face... Welcome... to the *3rd Rail*... the shop... under the city.');
-    await dlg.say('shelly', 'Every shop down here... takes real money... but they all love... *tokens*.');
-    await dlg.say('shelly', 'You get tokens... for swiping in here... *every day*... for doing jobs... for games... and for picking them up... off the floor.');
-    await dlg.say('shelly', 'Trade tokens... for coupons... right here. Keep a streak... and things... get interesting. Keys. Secrets. Who knows.');
-    await dlg.say('shelly', 'Swipe in now... I\'ll be here... I\'m always here... since 1971.');
-    E.S.seen.intro = true;
-    E.commit();
-  }
-  for (;;) {
-    const can = E.canCheckIn();
-    const pv = E.streakPreview();
-    const line = can
-      ? (pv.broken ? 'Mm... you missed a day... your streak... starts over... unless... you had freezes. Swipe in?' : `Mm... day *${pv.next}* of your streak... is waiting. Swipe in?`)
-      : 'Mm... you already swiped today... come back... tomorrow... same booth.';
-    const c = await dlg.ask('shelly', line, [
-      can ? 'Swipe in (daily)' : { label: 'Already swiped today', disabled: true },
-      'Trade tokens for coupons',
-      'How does this place work?',
-      'Bye, Shelly',
-    ], { cancel: 3 });
-    if (c === 0 && can) {
-      dlg.end();
-      const res = await openGame('swipe', gameCtx('swipe'));
-      if (res && res.checkin) await checkinReport(res.checkin);
-      return;
-    }
-    if (c === 1) {
-      const items = EXCHANGE.map((it) => ({ label: `${it.label} · ${it.cost}`, disabled: E.S.tokens < it.cost }));
-      items.push('Never mind');
-      const k = await dlg.ask('shelly', `You have *${E.S.tokens}* tokens... What do you want...`, items, { cancel: items.length - 1 });
-      if (k != null && k < EXCHANGE.length) {
-        const r = E.exchange(EXCHANGE[k].id);
-        if (r.err) { audio.beepBad(); await dlg.say('shelly', r.err); }
-        else { audio.register(); await dlg.say('shelly', `Here... one *${EXCHANGE[k].label.toLowerCase()}*. It's in your stash. Use it... in your bag... at checkout.`); }
-      }
-      continue;
-    }
-    if (c === 2) {
-      await dlg.say('shelly', 'Walk around... talk to the shopkeepers... they sell... the goods. Tap *BAG* to check out.');
-      await dlg.say('shelly', 'That phone booth... somebody calls it... every day... with *three jobs*. Do them... get paid.');
-      await dlg.say('shelly', 'The *Grabber*... *Charlie\'s cups*... the *legal wall*... the *arcade* at Drip St... all pay tokens. Three paid plays... per game... per day.');
-      await dlg.say('shelly', 'And there are... doors... and trains... that aren\'t on the map. I didn\'t... say that.');
-      continue;
-    }
-    if (c === 3 || c == null) {
-      if (c === 3) await dlg.say('shelly', pick(['Mm... bye...', 'Mind... the gap...', 'Zzz... oh. Bye.']));
-      return;
-    }
-  }
-}
-
-async function checkinReport(r) {
-  G.stage.talking = 'booth';
-  await dlg.say('shelly', `Day *${r.count}*${r.count > 1 ? ' in a row' : ''}... here's *${r.tokens} tokens*${r.perfect ? '... perfect swipe... show-off' : ''}.`);
-  if (r.usedFreezes) await dlg.say('shelly', `You missed... ${r.usedFreezes === 1 ? 'a day' : `${r.usedFreezes} days`}... a *streak freeze* covered you. Lucky.`);
-  if (r.broke) await dlg.say('shelly', 'Your old streak... broke... it happens... start again...');
-  if (r.key) {
-    audio.fanfare();
-    await dlg.say('shelly', 'Seven days... straight... Here. A *maintenance key*. I found it... in 1983. There\'s a door... at *Bodega Blvd*.');
-  }
-  for (const sid of r.stickers) if (sid !== 'shelly') await dlg.say('shelly', `And a sticker... *${stickerById[sid].name}*... for your book.`);
-  if (r.stickers.includes('shelly')) await dlg.say('shelly', 'Oh... and a sticker... of me. For your book. Don\'t... make it weird.');
-  await dlg.say('shelly', 'Come back... tomorrow... the streak... grows. Day 7... is the big one.');
-}
-
-async function callOperator() {
-  audio.ring();
-  await wait(600);
-  const firstEver = !E.S.seen.tips.operator;
-  E.S.day.opHeard = true;
-  E.S.seen.tips.operator = true;
-  E.commit();
-  if (firstEver) {
-    await dlg.say('operator', '...You picked up. Good. You don\'t know me. But I know you, kid.');
-    await dlg.say('operator', 'Every day I got *three jobs*. You do \'em, I pay. Simple. The jobs change at midnight.');
-  }
-  if (E.allMissionsDone() && !E.S.day.opClaimed) {
-    const b = E.claimOperatorBonus();
-    audio.fanfare();
-    await dlg.say('operator', `All three. Nice work. Here's *${b.tokens} tokens* extra${b.sticker ? `, and a sticker: *${stickerById[b.sticker].name}*` : ''}.`);
-    const pw = E.weekPassword();
-    E.S.week.knows = true;
-    E.commit();
-    await dlg.say('operator', `And since you're reliable... the door marked *EMPLOYEES ONLY* at *Bodega Blvd*? This week the word is _${pw.word}_. You didn't hear it from me.`);
-    await dlg.say('operator', '*Click.*');
-    return;
-  }
-  const ms = E.missions();
-  const lines = ms.map((m, i) => `${i + 1}) ${m.def.text}${m.done ? ' ✓' : m.def.goal > 1 ? ` (${m.progress}/${m.def.goal})` : ''}`);
-  await dlg.say('operator', `Today's jobs. ${lines.join('  ')}`);
-  if (E.allMissionsDone()) {
-    await dlg.say('operator', 'You already got paid today. Come back tomorrow. *Click.*');
-    return;
-  }
-  if (!E.S.week.backroom) {
-    await dlg.say('operator', `One more thing. There's a door at Bodega Blvd that opens for whoever knows the word. Hint: ${E.weekPassword().riddle}`);
-  }
-  await dlg.say('operator', pick(['Don\'t call me. I call you. *Click.*', 'Mind the third rail. *Click.*', 'Tick tock, kid. *Click.*']));
-}
-
-function wanted() {
-  E.track('wanted');
-  const p = E.deals().dotd.product;
-  openShop(p.shop, { product: p.id, line: `WANTED: ${p.name}. ${E.deals().dotd.pct}% off, today only.` });
-}
-
-async function talkCharlie() {
-  G.stage.talking = 'cups';
-  if (E.S.day.cupsWins >= 5) {
-    await dlg.say('weasel', 'Nope. Nuh-uh. You cleaned me out today, pal. Come back tomorrow when I got more tokens.');
-    return;
-  }
-  const bets = [10, 25, 50, 100];
-  const choices = bets.map((b) => ({ label: `Bet ${b} tokens`, disabled: E.S.tokens < b }));
-  choices.push('How does it work?', 'No thanks');
-  const c = await dlg.ask('weasel', pick(['Step right up! Follow the token, double your tokens!', 'Easy money, friend. Keep your eye on the token. That\'s all.', 'Ya look like a sharp one. Wanna test those eyes?']), choices, { cancel: choices.length - 1 });
-  if (c == null || c === choices.length - 1) {
-    if (c != null) await dlg.say('weasel', 'Suit yourself. The cups ain\'t goin\' nowhere.');
-    return;
-  }
-  if (c === bets.length) {
-    await dlg.say('weasel', 'I put a token under a cup. I shuffle. You pick. Find it, you double your bet. Bigger bets, faster hands. It\'s fair. Mostly. Totally. It\'s fair.');
-    return;
-  }
-  dlg.end();
-  await openGame('cups', { ...gameCtx('cups'), bet: bets[c] });
-}
-
-async function useClaw() {
-  const cost = 15;
-  const prizes = E.clawPrizes();
-  if (!prizes.length) {
-    await dlg.say('grabber', 'MACHINE EMPTY. RESTOCKING AT MIDNIGHT. BEEP.');
-    return;
-  }
-  const c = await dlg.ask('grabber', `INSERT *${cost} TOKENS*. GRAB A CAPSULE. PRIZES: tokens, stickers, coupons, streak freezes${E.S.keys.maint ? '' : ', *one rare key*'}. BEEP BOOP.`, [
-    { label: `Play (${cost} tokens)`, disabled: E.S.tokens < cost }, 'Walk away',
-  ], { cancel: 1 });
-  if (c !== 0) return;
-  if (!E.spend(cost)) return;
-  dlg.end();
-  await openGame('claw', gameCtx('claw'));
-}
-
-async function useLegal() {
-  dlg.end();
-  await openGame('tag', gameCtx('tag'));
-}
-
-async function useArcade() {
-  dlg.end();
-  await openGame('runner', gameCtx('runner'));
-}
-
-async function crack() {
-  if (!E.S.secrets.crack) {
-    G.crackHits++;
-    audio.knock();
-    view.shake = 4;
-    if (G.crackHits < 3) {
-      await dlg.say('narrator', pick(['The tiles here are cracked. They sound... hollow.', 'Something rattles behind the tile. One more good knock…']));
-      return;
-    }
-    G.stage.fx.burst(1782, 386, 20, { color: ['#5a4a8a', '#8a7ab8', '#2a2252'], speed: 220, g: 600, life: 0.8 });
-    audio.clunk();
-  }
-  const loot = E.crackLoot();
-  if (!loot) {
-    await dlg.say('narrator', 'The hole behind the tile is empty. Somebody refills it every day.');
-    return;
-  }
-  audio.coin(true);
-  if (loot.first) hud.toast('SECRET FOUND · A HIDDEN STASH', 'hot', 4000);
-  const [sx, sy] = Eng.toScreen(1782, 380);
-  hud.flyTokens(sx, sy, 10);
-  await dlg.say('narrator', loot.first ? `The tile crumbles. Behind it: a stash of *${loot.tokens} tokens* and a note: “take some, leave some.”` : `Somebody refilled the hole. *${loot.tokens} tokens*.`);
-}
-
-async function backDoor() {
-  audio.knock();
-  await wait(500);
-  G.peeking = true;
-  if (E.S.week.backroom) {
-    await dlg.say('moth', 'Ah. You again. Come in, come in.');
-    return enterBackRoom();
-  }
-  const answer = await dlg.input('moth', 'A slot slides open. Two glowing eyes. “...Password?”', 'TYPE THE WORD');
-  if (answer == null || !answer.trim()) {
-    await dlg.say('moth', 'Then shoo.');
-    return;
-  }
-  if (!E.checkPassword(answer)) {
-    audio.beepBad();
-    await dlg.say('moth', pick(['Wrong. The slot slams shut.', 'No. The phone booth knows the word. Ask it nicely.', 'Ha. No.']));
-    return;
-  }
-  audio.fanfare();
-  E.S.week.backroom = true;
-  E.commit();
-  const first = E.discover('backroom');
-  if (first) {
-    E.addSticker('eye');
-    E.addTokens(100, 'secret');
-  }
-  await dlg.say('moth', first ? 'Correct. Welcome to *the Back Room*. First visit is on the house: *100 tokens* and a little something for your book.' : 'Correct. Come in. Quickly.');
-  return enterBackRoom();
-}
-
-async function enterBackRoom() {
-  dlg.end();
-  await fade(true);
-  await wait(250);
-  await fade(false);
-  openShop('backroom', { line: pick(SHOPS.backroom.hello) });
-}
-
-async function maintDoor() {
-  if (!E.S.keys.maint) {
-    await dlg.say('narrator', 'Locked. A heavy padlock, and a sign: *AUTHORIZED PERSONNEL ONLY*.');
-    await dlg.say('me', 'There\'s gotta be a key somewhere. Maybe that claw machine in Token Sq… or Shelly’s 7-day streak prize.');
-    return;
-  }
-  const c = await dlg.ask('narrator', 'The maintenance key fits. Behind the door, a ladder goes down into the dark. It smells… green.', ['Climb down', 'Not today'], { cancel: 1 });
-  if (c !== 0) return;
-  dlg.end();
-  await fade(true);
-  loadScene('sewer', SCENES.sewer.spawn);
-  await wait(250);
-  await fade(false);
-  hud.stationBanner('THE SEWERS');
-  await wait(1800);
-  if (E.discover('sewer')) {
-    E.addSticker('gator');
-    E.addTokens(100, 'secret');
-    hud.toast('First time in the sewers: +100 tokens', 'cash', 3000);
-  }
-}
-
-async function climbUp() {
-  const c = await dlg.ask('narrator', 'The ladder goes back up to Bodega Blvd.', ['Climb up', 'Stay down here'], { cancel: 1 });
-  if (c !== 0) return;
-  dlg.end();
-  await fade(true);
-  loadScene('bodega', 1456);
-  await wait(250);
-  await fade(false);
-  hud.stationBanner('BODEGA BLVD');
-}
-
-async function readMural() {
-  await dlg.say('narrator', 'Scrawled in white paint: *“the last train runs at midnight.”* Under it, a tiny ghost.');
-  await dlg.say('me', 'Sometimes the train that shows up isn\'t the 3. Especially around midnight.');
-}
-
-async function ringBell() {
-  const c = await dlg.ask('ghost', 'Ring the bell and the last train comes for you. Ready to return to the living?', ['Ring it', 'Not yet'], { cancel: 1 });
-  if (c !== 0) return;
-  audio.chime();
-  G.after = () => ghostDeparture(false);
-}
-
-const TALKED = new Set();
-async function talkNpc(e) {
-  const n = e.npc;
-  E.track('talk', e.id);
-  const who = n.who === 'pizza' ? 'stranger' : n.who === 'ghostrat' ? 'stranger' : 'stranger';
-  if (n.who === 'busker') {
-    const c = await dlg.ask('stranger', pick(n.lines), [{ label: 'Tip 5 tokens', disabled: E.S.tokens < 5 }, 'Just listen', 'Walk on'], { cancel: 2 });
-    if (c === 0 && E.spend(5)) {
-      E.track('tip');
-      audio.sax();
-      await dlg.say('stranger', pick(['Ayy! This one\'s for you.', 'Generous! Here\'s my one song again!', 'Respect. Rent\'s paid. Partially.']));
-    } else if (c === 1) {
-      audio.sax();
-      await dlg.say('narrator', 'He plays the one song he knows. It\'s a really good song.');
-    }
-    return;
-  }
-  if (n.who === 'sleeper') {
-    await dlg.say('narrator', 'He\'s fast asleep. He\'s been asleep since the late nineties.');
-    await dlg.say('stranger', pick(n.lines));
-    return;
-  }
-  const lines = n.lines;
-  const idx = TALKED.has(e.id) ? Math.floor(Math.random() * lines.length) : 0;
-  TALKED.add(e.id);
-  await dlg.say(who, lines[idx]);
-}
-
-// ---------------------------------------------------------------- minigame context
-
-function gameCtx(name) {
-  return {
-    econ: E,
-    audio,
-    hud,
-    look: G.player.look,
-    name: E.S.profile?.name || 'YOU',
-    onTagImage: (url) => { E.S.tagImage = url; E.commit(); loadTagImage(url); },
-  };
-}
-
-// ---------------------------------------------------------------- travel
-
-async function fade(on) {
-  $('#fade').classList.toggle('on', on);
-  await wait(360);
-}
-
-function trainArrive(ghost) {
-  return new Promise((res) => {
-    G.train.passengerLook = G.player.look;
-    G.train.showPassenger = false;
-    G.train.arrive(G.player.x, view.camX, { ghost, onStop: res });
-  });
-}
-
-function trainDepart() {
-  return new Promise((res) => G.train.depart(res));
-}
-
-async function travel(dest, opts = {}) {
-  if (G.mode !== 'play' || G.busy) return;
-  if (dest === G.scene) return;
-  G.busy = true;
-  G.mode = 'travel';
-  closeAll();
-  dlg.end();
-  G.player.stop();
-  const fromGhost = G.scene === 'ghost';
-  try {
-    let ghost = opts.ghost ?? (dest !== 'ghost' && E.rollGhost());
-    audio.train('arrive', 2.8);
-    await trainArrive(ghost);
-    audio.chime();
-    if (ghost && dest !== 'ghost' && !fromGhost) {
-      audio.ghostWail();
-      const c = await dlg.ask('narrator', 'That\'s… not the 3. The car glows green. A conductor\'s cap tips at you through the glass.', ['Get on', 'Wait for the next train'], { cancel: 1 });
-      dlg.end();
-      if (c === 0) dest = 'ghost';
-      else {
-        await wait(300);
-        await trainDepart();
-        ghost = false;
-        audio.train('arrive', 2.8);
-        await trainArrive(false);
-        audio.chime();
-      }
-    }
-    // board
-    G.player.walkTo(G.train.doorX());
-    await wait(500);
-    G.player.hidden = true;
-    G.train.showPassenger = true;
-    await wait(500);
-    audio.chime();
-    audio.train('depart', 2);
-    await trainDepart();
-    // tunnel
-    G.tunnel = { name: dest === 'ghost' && !E.S.secrets.ghost ? '???' : SCENES[dest].name, ghost: dest === 'ghost' || fromGhost };
-    G.mode = 'tunnel';
-    await wait(1700);
-    // arrive
-    loadScene(dest, SCENES[dest].arrive);
-    G.mode = 'travel';
-    G.player.hidden = true;
-    audio.train('arrive', 2.4);
-    await trainArrive(dest === 'ghost' || fromGhost);
-    G.train.showPassenger = true;
-    audio.chime();
-    await wait(400);
-    G.train.showPassenger = false;
-    G.player.hidden = false;
-    G.player.x = G.train.doorX();
-    G.player.walkTo(G.player.x + 40);
-    await wait(500);
-    audio.train('depart', 2);
-    await trainDepart();
-    E.track('ride');
-    hud.stationBanner(SCENES[dest].name);
-    if (dest === 'ghost') arriveGhost();
-  } finally {
-    G.mode = 'play';
-    G.busy = false;
-    G.player.hidden = false;
-  }
-}
-
-function arriveGhost() {
-  G.ghostLeft = 180;
-  setTimeout(() => {
-    const first = E.discover('ghost');
-    E.addSticker('ghosttrain');
-    if (first) {
-      E.addSticker('ghost');
-      E.addTokens(100, 'secret');
-      hud.toast('First ride on the last train: +100 tokens', 'cash', 3000);
-    }
-    hud.toast('The ghost train comes back in 3 minutes. Shop fast.', 'sun', 4200);
-  }, 1900);
-}
-
-async function ghostDeparture(forced) {
-  if (G.mode !== 'play' || G.scene !== 'ghost') return;
-  G.ghostLeft = 0;
-  if (forced) {
-    closeAll();
-    dlg.end();
-    G.busy = true;
-    await dlg.say('ghost', 'All aboard who\'s going aboard! The last train waits for no one. Except me.');
-    dlg.end();
-    G.busy = false;
-  }
-  G.mode = 'play';
-  await travel('token', { ghost: true });
-}
-
-function drawGhostClock(g) {
-  if (G.ghostLeft <= 0) return;
-  const s = Math.ceil(G.ghostLeft);
-  const txt = `LAST TRAIN IN ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-  Eng.screenTransform(g);
-  text(g, txt, view.w / 2, view.h - (view.w < 720 ? 104 : 30), { size: view.w < 720 ? 18 : 24, font: FONTS.sign, fill: G.ghostLeft < 30 ? '#ff4f9a' : '#9ad8c8', lw: 5 });
+  talk.update(dt);
 }
 
 // keyboard: Escape closes the top panel even while the world is blocked
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && anyOverlay() && !dlg.open) {
+  if (e.key === 'Escape' && anyOverlay() && !talk.open) {
     const top = topOverlay();
     if (top && top.opts.dismissable !== false) closeOverlay();
   }
+  if (e.code === 'KeyC' && canAct()) openCloset();
 });
 
 boot();

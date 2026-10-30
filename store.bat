@@ -1,5 +1,5 @@
 @echo off
-title 3RD RAIL Market
+title DRIP LINE
 cd /d "%~dp0"
 
 rem ---- find a Python that actually runs (test by executing, not by PATH lookup)
@@ -21,7 +21,7 @@ if not defined PY (
 )
 
 echo.
-echo  Starting 3RD RAIL with "%PY%"...
+echo  Starting DRIP LINE with "%PY%"...
 echo  Your browser will open by itself in a moment.
 echo.
 %PY% serve.py --open store/

@@ -3,65 +3,61 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#140f26" />
-<meta name="description" content="3RD RAIL — the shop under the city. Swipe in daily, play the minigames, find the secret stores." />
-<title>3rd Rail Market</title>
+<meta name="theme-color" content="#1a1430" />
+<meta name="description" content="DRIP LINE — a graffiti train that never stops. Ride daily, earn tokens, collect insanely rare fits and wear them." />
+<title>Drip Line</title>
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 <div id="app">
-  <canvas id="world" aria-label="The 3rd Rail subway station. Walk with A and D or arrow keys, interact with E, or tap where you want to go."></canvas>
+  <canvas id="world" aria-label="Inside a car of the Drip Line train. Tap the shopkeeper, the displays, or the door at the end of the car."></canvas>
+  <div id="hotspots" aria-label="Things in this car"></div>
 
   <!-- HUD -->
   <header id="hud" hidden>
-    <div id="wallet">
+    <button type="button" id="wallet" aria-label="Your stats">
       <canvas id="wallet-face" width="128" height="128" aria-hidden="true"></canvas>
-      <div class="wallet-body">
-        <div id="wallet-tokens" aria-live="polite"><span class="tok-ico" aria-hidden="true"></span><b>0</b></div>
-        <div id="wallet-sub"><span id="wallet-streak" title="Daily streak"></span><span id="wallet-reset" title="Daily deals reset at midnight"></span></div>
-      </div>
-    </div>
-    <div id="ticker" aria-label="News"><div class="ticker-tag">BREAKING NEWS</div><div class="ticker-track"><div class="ticker-text"></div></div></div>
-    <nav id="nav" aria-label="Store">
-      <button type="button" class="nav-btn" id="nav-map" aria-label="Subway map"><span class="nav-ico">🗺</span><span class="nav-lbl">MAP</span></button>
-      <button type="button" class="nav-btn" id="nav-shop" aria-label="Shop everything"><span class="nav-ico">🛍</span><span class="nav-lbl">SHOP</span></button>
-      <button type="button" class="nav-btn" id="nav-bag" aria-label="Your bag"><span class="nav-ico">👜</span><span class="nav-lbl">BAG</span><span class="nav-badge" id="bag-badge" hidden>0</span></button>
-      <button type="button" class="nav-btn" id="nav-me" aria-label="Your stash"><span class="nav-ico">⭐</span><span class="nav-lbl">ME</span><span class="nav-dot" id="me-dot" hidden></span></button>
-      <button type="button" class="nav-btn small" id="nav-sound" aria-label="Sound on" aria-pressed="true"><span class="nav-ico">🔊</span></button>
+      <span class="wallet-body">
+        <span id="wallet-tokens" aria-live="polite"><span class="tok-ico" aria-hidden="true"></span><b>0</b></span>
+        <span id="wallet-sub"><span id="wallet-streak"></span><span id="wallet-reset"></span></span>
+      </span>
+    </button>
+    <div id="ticker" aria-label="News"><div class="ticker-tag">LINE NEWS</div><div class="ticker-track"><div class="ticker-text"></div></div></div>
+    <nav id="nav" aria-label="Menu">
+      <button type="button" class="nav-btn" id="nav-train" aria-label="Train map"><span class="nav-ico"></span><span class="nav-lbl">TRAIN</span></button>
+      <button type="button" class="nav-btn" id="nav-closet" aria-label="Your closet"><span class="nav-ico"></span><span class="nav-lbl">CLOSET</span><span class="nav-dot" id="closet-dot" hidden></span></button>
+      <button type="button" class="nav-btn" id="nav-me" aria-label="Your stats, jobs and collection"><span class="nav-ico"></span><span class="nav-lbl">ME</span><span class="nav-dot" id="me-dot" hidden></span></button>
+      <button type="button" class="nav-btn small" id="nav-sound" aria-label="Sound on" aria-pressed="true"><span class="nav-ico"></span></button>
     </nav>
+    <div id="travel">
+      <button type="button" id="go-back" class="travel-btn" hidden><span class="arr" aria-hidden="true">◀</span><span class="lbl">BACK</span></button>
+      <button type="button" id="go-next" class="travel-btn" hidden><span class="lbl">NEXT CAR</span><span class="arr" aria-hidden="true">▶</span></button>
+    </div>
   </header>
 
-  <div id="station-name" aria-hidden="true"></div>
-  <button type="button" id="prompt" hidden></button>
+  <div id="car-name" aria-hidden="true"></div>
   <div id="hint" hidden></div>
   <div id="toasts" aria-live="polite"></div>
   <div id="flyers" aria-hidden="true"></div>
 
-  <!-- dialogue -->
-  <section id="dialogue" hidden aria-live="polite">
-    <canvas class="dlg-bg" aria-hidden="true"></canvas>
-    <div class="dlg-call" hidden><canvas class="dlg-caller" width="320" height="420" aria-hidden="true"></canvas></div>
-    <canvas class="dlg-portrait" width="300" height="300" aria-hidden="true"></canvas>
-    <div class="dlg-phone" hidden aria-hidden="true"></div>
-    <div class="dlg-main">
-      <div class="dlg-name"></div>
-      <div class="dlg-text"></div>
-      <div class="dlg-choices"></div>
-      <input class="dlg-input" type="text" id="dlg-input" autocomplete="off" spellcheck="false" hidden />
-    </div>
-    <div class="dlg-next" aria-hidden="true">▼ <span class="key">E</span></div>
+  <!-- speech bubble + choices -->
+  <section id="bubble" hidden aria-live="polite">
+    <span class="bub-name"></span>
+    <div class="bub-text"></div>
+    <input class="bub-input" id="bub-input" type="text" autocomplete="off" spellcheck="false" hidden />
+    <span class="bub-tail" aria-hidden="true"></span>
   </section>
+  <div id="choices" hidden></div>
 
-  <!-- overlays are built by the UI modules -->
   <div id="overlays"></div>
 
-  <!-- boot / title -->
+  <!-- title -->
   <section id="boot">
-    <canvas id="boot-logo" aria-label="3RD RAIL"></canvas>
-    <div class="boot-tag">THE SHOP UNDER THE CITY</div>
-    <button type="button" id="boot-go" class="btn btn-go">TAP TO ENTER</button>
-    <div class="boot-sub">Swipe in daily · play for tokens · find the secret stores</div>
-    <div class="boot-load" id="boot-load">LOADING THE 3 TRAIN…</div>
+    <canvas id="boot-logo" aria-label="DRIP LINE"></canvas>
+    <div class="boot-tag">THE TRAIN THAT NEVER STOPS</div>
+    <button type="button" id="boot-go" class="btn btn-go">TAP TO RIDE</button>
+    <div class="boot-sub">Ride daily · earn tokens · collect insanely rare fits</div>
+    <div class="boot-load" id="boot-load">COUPLING THE CARS…</div>
   </section>
 
   <div id="fade"></div>

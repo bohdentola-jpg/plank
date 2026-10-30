@@ -1,14 +1,13 @@
-// The rules of the underground: tokens, streaks, the Operator's jobs, daily
-// deals, floor tokens, stickers, coupons, the claw pit, the bag and orders.
-// UI listens with on('tokens' | 'bag' | 'sticker' | ...).
+// The rules of the Drip Line. Tokens are the only currency: you earn them by
+// showing up and playing, and spend them on wearable items, capsules and
+// streak freezes. UI listens with on('tokens' | 'item' | 'equip' | ...).
 import { load, save } from './save.js';
 import * as D from './daily.js';
-import { PRODUCTS, productById, SHOPS } from '../data/catalog.js';
+import { ITEMS, itemById, RARITIES, RARITY_ORDER, SLOTS, SHOPS, STARTERS } from '../data/items.js';
 import {
-  STICKERS, stickerById, STICKER_PAGES, MISSIONS, STREAK_REWARDS, EXCHANGE, PASSWORDS, HEADLINES,
+  CAPSULES, TICKETS, PRISMATIC_CHANCE, SHOP_PRISMATIC_CHANCE, FREEZE_COST, DROP_DISCOUNT,
+  STREAK, MILESTONES, JOBS, JOBS_BONUS, PASSWORDS, HEADLINES,
 } from '../data/content.js';
-import { CONFIG } from '../config.js';
-import { SCENES } from '../world/scenes.js';
 
 const listeners = {};
 export function on(evt, fn) { (listeners[evt] ||= []).push(fn); }
@@ -19,9 +18,9 @@ export function emit(evt, data) {
 
 export const S = load();
 export const commit = (now) => save(S, now);
-const round2 = (n) => Math.round(n * 100) / 100;
 
-// ---------------------------------------------------------------- days
+export const CARS = ['front', 'threads', 'kicks', 'lids', 'ice', 'arcade', 'capsules'];
+export const SHOP_CARS = ['threads', 'kicks', 'lids', 'ice'];
 
 function shuffle(arr, r) {
   const a = arr.slice();
@@ -32,26 +31,38 @@ function shuffle(arr, r) {
   return a;
 }
 
-function rollMissions(key) {
-  const r = D.dayRng('missions', key);
-  return shuffle(MISSIONS, r).slice(0, 3).map((m) => ({ id: m.id, progress: 0, done: false, uniq: [] }));
+function weighted(table, r) {
+  const entries = Object.entries(table).filter(([, w]) => w > 0);
+  const total = entries.reduce((a, [, w]) => a + w, 0);
+  let x = r() * total;
+  for (const [k, w] of entries) {
+    x -= w;
+    if (x <= 0) return k;
+  }
+  return entries[entries.length - 1][0];
 }
 
+// ---------------------------------------------------------------- days
+
 export function freshDay(key) {
+  const r = D.dayRng('jobs', key);
   return {
-    key, missions: rollMissions(key), clawWon: [], pickups: [], rewarded: {}, cupsWins: 0,
-    opHeard: false, opClaimed: false, crack: false, petted: false, tipped: false, ghostRolls: 0,
+    key,
+    jobs: shuffle(JOBS, r).slice(0, 3).map((j) => ({ id: j.id, progress: 0, done: false, uniq: [] })),
+    jobsHeard: false, jobsClaimed: false,
+    pickups: [], rewarded: {}, cupsWins: 0, clawWon: [],
+    freePull: true, lockbox: false, ghostTicketUsed: false,
+    ghostDay: D.dayRng('ghostday', key)() < 0.15,
   };
 }
 
-// Call often: rolls the day over at midnight.
 export function ensureDay() {
   const key = D.dayKey();
   if (S.day && S.day.key === key) return false;
   S.day = freshDay(key);
   const w = D.weekIndex();
-  if (S.week.idx !== w) S.week = { idx: w, backroom: false };
-  dealCache = null;
+  if (S.week.idx !== w) S.week = { idx: w, vault: false, heard: false };
+  stockCache = {};
   commit();
   emit('day', key);
   return true;
@@ -67,12 +78,254 @@ export function addTokens(n, why = '') {
   emit('tokens', { n, why });
 }
 
-export function spend(n) {
+export function spend(n, why = 'spend') {
   if (S.tokens < n) return false;
   S.tokens -= n;
   commit();
-  emit('tokens', { n: -n, why: 'spend' });
+  emit('tokens', { n: -n, why });
   return true;
+}
+
+// ---------------------------------------------------------------- inventory
+
+export const owns = (id) => !!S.owned[id];
+export const isPrismatic = (id) => !!(S.owned[id] && S.owned[id].prismatic);
+
+// Give the player an item. Duplicates become tokens, unless the copy is
+// prismatic and the owned one isn't — then it upgrades.
+export function grant(id, o = {}) {
+  const item = itemById[id];
+  if (!item) return null;
+  const have = S.owned[id];
+  const res = { item, prismatic: !!o.prismatic, isNew: false, upgraded: false, scrap: 0 };
+  if (!have) {
+    S.owned[id] = { n: 1, prismatic: !!o.prismatic, at: Date.now() };
+    res.isNew = true;
+    if (!S.fresh.includes(id)) S.fresh.push(id);
+  } else if (o.prismatic && !have.prismatic) {
+    have.prismatic = true;
+    have.n += 1;
+    res.upgraded = true;
+    if (!S.fresh.includes(id)) S.fresh.push(id);
+  } else {
+    have.n += 1;
+    res.scrap = RARITIES[item.rarity].scrap * (o.prismatic ? 2 : 1);
+    S.tokens += res.scrap;
+    S.lifetime += res.scrap;
+    emit('tokens', { n: res.scrap, why: 'scrap' });
+  }
+  commit();
+  emit('item', res);
+  return res;
+}
+
+export function equip(slot, id) {
+  if (!SLOTS.includes(slot)) return false;
+  if (id && (!owns(id) || itemById[id].slot !== slot)) return false;
+  if (S.equipped[slot] === id) return true;
+  S.equipped[slot] = id || null;
+  if (id) track('equip', id);
+  commit();
+  emit('equip', { slot, id });
+  return true;
+}
+
+export function markSeen(ids) {
+  S.fresh = S.fresh.filter((x) => !ids.includes(x));
+  commit();
+}
+
+// art specs for drawFigure, with the prismatic flag folded in
+export function outfitOf(equipped = S.equipped, extra = null) {
+  const out = {};
+  for (const slot of SLOTS) {
+    let id = equipped[slot];
+    if (extra && extra.slot === slot) id = extra.id;
+    if (!id || !itemById[id]) continue;
+    const prism = extra && extra.slot === slot ? !!extra.prismatic : isPrismatic(id);
+    out[slot] = prism ? { ...itemById[id].art, prismatic: true } : itemById[id].art;
+  }
+  return out;
+}
+
+export function dripScore(equipped = S.equipped) {
+  let n = 0;
+  for (const slot of SLOTS) {
+    const id = equipped[slot];
+    if (!id || !itemById[id]) continue;
+    n += RARITIES[itemById[id].rarity].points * (isPrismatic(id) ? 2 : 1);
+  }
+  return n * 10;
+}
+
+export function collection() {
+  const by = Object.fromEntries(RARITY_ORDER.map((r) => [r, [0, 0]]));
+  let owned = 0, prismatic = 0;
+  for (const it of ITEMS) {
+    by[it.rarity][1]++;
+    if (S.owned[it.id]) {
+      owned++;
+      by[it.rarity][0]++;
+      if (S.owned[it.id].prismatic) prismatic++;
+    }
+  }
+  return { total: ITEMS.length, owned, prismatic, by };
+}
+
+export function rarest(equipped = S.equipped) {
+  let best = null;
+  for (const slot of SLOTS) {
+    const id = equipped[slot];
+    if (!id) continue;
+    const it = itemById[id];
+    if (!best || RARITIES[it.rarity].rank > RARITIES[best.rarity].rank) best = it;
+  }
+  return best;
+}
+
+export function setProfile(p) {
+  const first = !S.profile;
+  S.profile = { name: p.name, body: { ...p.body } };
+  if (first) {
+    for (const id of STARTERS) {
+      if (!S.owned[id]) S.owned[id] = { n: 1, prismatic: false, at: Date.now() };
+      const slot = itemById[id].slot;
+      if (!S.equipped[slot]) S.equipped[slot] = id;
+    }
+  }
+  commit(true);
+  emit('profile', S.profile);
+}
+
+// ---------------------------------------------------------------- daily shop stock
+
+let stockCache = {};
+
+// The day's rotation for one shop car: four everyday pieces, one rare, and a
+// featured slot that can roll epic or legendary. Seeded by the date.
+function rollStock(shopId) {
+  const r = D.dayRng(`stock:${shopId}`, S.day.key);
+  const pool = ITEMS.filter((i) => i.shop === shopId && i.price != null);
+  const by = (rar) => pool.filter((i) => i.rarity === rar);
+  const chosen = [];
+  const take = (list) => {
+    const left = list.filter((i) => !chosen.includes(i));
+    if (!left.length) return null;
+    const it = left[Math.floor(r() * left.length)];
+    chosen.push(it);
+    return it;
+  };
+  for (let k = 0; k < 4; k++) take(r() < 0.6 ? by('common') : by('uncommon')) || take(by('common')) || take(by('uncommon'));
+  take(by('rare')) || take(by('uncommon'));
+  const fr = r();
+  const featured = take(by(fr < 0.12 ? 'legendary' : fr < 0.5 ? 'epic' : 'rare')) || take(by('epic')) || take(by('rare'));
+  return { chosen, featured };
+}
+
+export function stock(shopId) {
+  ensureDay();
+  if (stockCache[shopId]) return stockCache[shopId];
+  const { chosen, featured } = rollStock(shopId);
+  const drop = dropOfDay();
+  const out = chosen.map((item) => {
+    const isDrop = !!drop.item && drop.item.id === item.id;
+    const price = isDrop ? Math.round((item.price * (100 - DROP_DISCOUNT)) / 100) : item.price;
+    return { item, price, was: isDrop ? item.price : null, pct: isDrop ? DROP_DISCOUNT : 0, featured: item === featured, drop: isDrop };
+  });
+  stockCache[shopId] = out;
+  return out;
+}
+
+// One shop's featured item is the drop of the day, 25% off.
+let dropCache = null;
+export function dropOfDay() {
+  ensureDay();
+  if (dropCache && dropCache.key === S.day.key) return dropCache;
+  const r = D.dayRng('drop', S.day.key);
+  const shopId = SHOP_CARS[Math.floor(r() * SHOP_CARS.length)];
+  dropCache = { key: S.day.key, shop: shopId, item: rollStock(shopId).featured };
+  return dropCache;
+}
+
+export function secretStock(kind) {
+  ensureDay();
+  return ITEMS.filter((i) => (kind === 'vault' ? i.vault : i.ghost)).map((item) => ({ item, price: item.price, was: null, pct: 0, featured: item.rarity === 'mythic' }));
+}
+
+export function buy(id, price) {
+  const item = itemById[id];
+  if (!item || price == null) return { err: 'That isn’t for sale.' };
+  if (owns(id)) return { err: 'You already own this one.' };
+  if (S.tokens < price) return { err: `You need ${(price - S.tokens).toLocaleString('en-US')} more tokens.` };
+  spend(price, 'buy');
+  const prismatic = Math.random() < SHOP_PRISMATIC_CHANCE;
+  const res = grant(id, { prismatic, src: 'shop' });
+  track('buy');
+  return { ok: true, ...res };
+}
+
+// ---------------------------------------------------------------- capsules
+
+export const freePullReady = () => { ensureDay(); return !!S.day.freePull; };
+
+function rollRarity(odds, r) {
+  return weighted(odds, r);
+}
+
+function poolFor(rarity) {
+  return ITEMS.filter((i) => i.capsule && i.rarity === rarity);
+}
+
+// how = 'basic' | 'deluxe' | 'free' | 'ticket:basic' | 'ticket:epic' | 'ticket:legendary'
+export function pull(how) {
+  ensureDay();
+  let machine = 'basic', odds;
+  if (how === 'free') {
+    if (!S.day.freePull) return { err: 'Your free pull is used. Come back tomorrow.' };
+    S.day.freePull = false;
+    odds = CAPSULES.basic.odds;
+  } else if (how.startsWith('ticket:')) {
+    const kind = how.slice(7);
+    if (!S.tickets[kind]) return { err: 'You don’t have that ticket.' };
+    S.tickets[kind] -= 1;
+    odds = TICKETS[kind].odds;
+    machine = kind === 'basic' ? 'basic' : 'ticket';
+  } else {
+    const cap = CAPSULES[how];
+    if (!cap) return { err: 'No such machine.' };
+    if (!spend(cap.cost, 'capsule')) return { err: `You need ${(cap.cost - S.tokens).toLocaleString('en-US')} more tokens.` };
+    machine = how;
+    odds = cap.odds;
+  }
+  const r = Math.random;
+  let rarity = rollRarity(odds, r);
+  // pity: count pulls without a hit and force one at the threshold
+  if (machine === 'basic' || machine === 'deluxe') {
+    const p = CAPSULES[machine].pity;
+    const hit = RARITIES[rarity].rank >= RARITIES[p.min].rank;
+    if (hit) S.pity[machine] = 0;
+    else {
+      S.pity[machine] += 1;
+      if (S.pity[machine] >= p.at) {
+        S.pity[machine] = 0;
+        rarity = p.min;
+      }
+    }
+  }
+  let pool = poolFor(rarity);
+  if (!pool.length) pool = poolFor('rare');
+  const item = pool[Math.floor(r() * pool.length)];
+  const prismatic = r() < PRISMATIC_CHANCE;
+  S.pulls += 1;
+  const res = grant(item.id, { prismatic, src: 'capsule' });
+  track('capsule');
+  commit();
+  return { ok: true, machine, rarity, ...res };
+}
+
+export function pityLeft(machine) {
+  const p = CAPSULES[machine].pity;
+  return p.at - (S.pity[machine] || 0);
 }
 
 // ---------------------------------------------------------------- streak
@@ -82,7 +335,6 @@ export function canCheckIn() {
   return S.streak.last !== S.day.key;
 }
 
-// What happens to the streak if you swipe today (for the booth UI).
 export function streakPreview() {
   ensureDay();
   const st = S.streak, key = S.day.key;
@@ -100,293 +352,134 @@ export function checkIn(perfect = false) {
   const key = S.day.key, st = S.streak;
   if (st.last === key) return null;
   const pv = streakPreview();
-  st.freezes -= pv.freezesNeeded > 0 && !pv.broken ? pv.freezesNeeded : 0;
+  if (!pv.broken && pv.freezesNeeded) st.freezes -= pv.freezesNeeded;
   st.count = pv.next;
   st.last = key;
   st.best = Math.max(st.best, st.count);
   S.checkins.push(key);
   if (S.checkins.length > 60) S.checkins.splice(0, S.checkins.length - 60);
   const dayIdx = (st.count - 1) % 7;
-  const R = STREAK_REWARDS[dayIdx];
+  const R = STREAK[dayIdx];
   const out = {
-    day: dayIdx + 1, count: st.count, tokens: R.tokens + (perfect ? 5 : 0), perfect,
-    stickers: [], key: false, usedFreezes: pv.broken ? 0 : pv.freezesNeeded, broke: pv.broken,
+    day: dayIdx + 1, count: st.count, tokens: R.tokens + (perfect ? 10 : 0), perfect,
+    tickets: [], items: [], key: false, usedFreezes: pv.broken ? 0 : pv.freezesNeeded, broke: pv.broken,
   };
   addTokens(out.tokens, 'checkin');
-  if (!S.stickers.shelly && addSticker('shelly')) out.stickers.push('shelly');
-  if (R.sticker) {
-    const sid = randomUnowned([R.sticker]);
-    if (sid && addSticker(sid)) out.stickers.push(sid);
+  if (R.ticket) {
+    S.tickets[R.ticket] += 1;
+    out.tickets.push(R.ticket);
   }
-  if (R.key && !S.keys.maint) {
-    S.keys.maint = true;
+  const M = MILESTONES[st.count];
+  if (M && !S.milestones[st.count]) {
+    S.milestones[st.count] = true;
+    if (M.ticket) {
+      S.tickets[M.ticket] += 1;
+      out.tickets.push(M.ticket);
+    }
+    if (M.item) {
+      grant(M.item, { src: 'milestone' });
+      out.items.push(M.item);
+    }
+  }
+  if (st.count >= 7 && !S.keys.cab) {
+    S.keys.cab = true;
     out.key = true;
-  }
-  if (dayIdx === 6) {
-    st.cycles += 1;
-    if (addSticker('goldtoken')) out.stickers.push('goldtoken');
   }
   commit();
   emit('streak', out);
   return out;
 }
 
-// ---------------------------------------------------------------- missions
+export function buyFreeze() {
+  if (S.streak.freezes >= 2) return { err: 'You can hold 2 streak freezes at most.' };
+  if (!spend(FREEZE_COST, 'freeze')) return { err: `A freeze costs ${FREEZE_COST} tokens.` };
+  S.streak.freezes += 1;
+  commit();
+  emit('freeze');
+  return { ok: true };
+}
 
-export const missionDef = (id) => MISSIONS.find((m) => m.id === id);
+export function nextMilestone() {
+  const n = S.streak.count;
+  const days = Object.keys(MILESTONES).map(Number).sort((a, b) => a - b);
+  const next = days.find((d) => d > n);
+  return next ? { day: next, left: next - n, reward: MILESTONES[next] } : null;
+}
+
+// ---------------------------------------------------------------- jobs
+
+export const jobDef = (id) => JOBS.find((j) => j.id === id);
 const GRADES = ['D', 'C', 'B', 'A', 'S'];
 
-export function missions() {
+export function jobs() {
   ensureDay();
-  return S.day.missions.map((m) => ({ ...m, def: missionDef(m.id) }));
+  return S.day.jobs.map((j) => ({ ...j, def: jobDef(j.id) }));
 }
 
 export function track(event, value = 1, meta = null) {
   ensureDay();
   let changed = false;
-  for (const m of S.day.missions) {
-    const def = missionDef(m.id);
-    if (!def || m.done || def.event !== event) continue;
+  for (const j of S.day.jobs) {
+    const def = jobDef(j.id);
+    if (!def || j.done || def.event !== event) continue;
     if (def.min && GRADES.indexOf(meta) < GRADES.indexOf(def.min)) continue;
     if (def.unique) {
-      if (m.uniq.includes(value)) continue;
-      m.uniq.push(value);
-      m.progress = m.uniq.length;
-    } else if (def.mode === 'max') m.progress = Math.max(m.progress, value);
-    else m.progress += value;
-    if (m.progress >= def.goal) {
-      m.progress = def.goal;
-      m.done = true;
-      addTokens(def.reward, 'mission');
-      emit('mission', { m, def });
+      if (j.uniq.includes(value)) continue;
+      j.uniq.push(value);
+      j.progress = j.uniq.length;
+    } else if (def.mode === 'max') j.progress = Math.max(j.progress, value);
+    else j.progress += value;
+    if (j.progress >= def.goal) {
+      j.progress = def.goal;
+      j.done = true;
+      addTokens(def.reward, 'job');
+      emit('job', { j, def });
     }
     changed = true;
   }
   if (changed) {
     commit();
-    emit('missions');
-    if (allMissionsDone()) emit('missionsAll');
+    emit('jobs');
+    if (allJobsDone()) emit('jobsAll');
   }
 }
 
-export const allMissionsDone = () => S.day && S.day.missions.every((m) => m.done);
+export const allJobsDone = () => !!S.day && S.day.jobs.every((j) => j.done);
 
-// The phone rings when there's news: first call of the day, or all jobs done.
-export function phoneRinging() {
-  if (!S.day) return false;
-  return !S.day.opHeard || (allMissionsDone() && !S.day.opClaimed);
-}
-
-export function claimOperatorBonus() {
-  if (!allMissionsDone() || S.day.opClaimed) return null;
-  S.day.opClaimed = true;
-  addTokens(50, 'jobs');
-  const sid = randomUnowned(['street', 'under']);
-  if (sid) addSticker(sid);
+export function claimJobsBonus() {
+  if (!allJobsDone() || S.day.jobsClaimed) return null;
+  S.day.jobsClaimed = true;
+  S.tickets.basic += 1;
+  S.week.heard = true;
+  addTokens(JOBS_BONUS, 'jobs');
   commit();
-  return { tokens: 50, sticker: sid };
+  return { tokens: JOBS_BONUS, ticket: 'basic', password: weekPassword() };
 }
 
-// ---------------------------------------------------------------- deals
+// ---------------------------------------------------------------- loose change
 
-let dealCache = null;
-export function deals() {
+export function pickups(car, spotCount = 8) {
   ensureDay();
-  if (dealCache && dealCache.key === S.day.key) return dealCache;
-  const r = D.dayRng('deals', S.day.key);
-  const pool = shuffle(PRODUCTS.filter((p) => !SHOPS[p.shop].secret), r);
-  const pcts = shuffle([15, 20, 25], r);
-  const map = {};
-  const dotd = { product: pool[0], pct: 40 };
-  map[pool[0].id] = 40;
-  const list = [1, 2, 3].map((i, k) => {
-    map[pool[i].id] = pcts[k];
-    return { product: pool[i], pct: pcts[k] };
-  });
-  for (const shop of Object.keys(SHOPS).filter((s) => SHOPS[s].secret)) {
-    const items = PRODUCTS.filter((p) => p.shop === shop);
-    const pick = items[Math.floor(r() * items.length)];
-    map[pick.id] = 20;
-    list.push({ product: pick, pct: 20, secret: true });
-  }
-  dealCache = { key: S.day.key, dotd, list, map };
-  return dealCache;
-}
-
-export function priceOf(p) {
-  const pct = deals().map[p.id] || 0;
-  if (!pct) return { price: p.price, was: null, pct: 0 };
-  return { price: round2(p.price * (1 - pct / 100)), was: p.price, pct };
-}
-
-export function stockLeft(p) {
-  if (p.stock == null) return null;
-  return Math.max(0, p.stock - (S.sold[p.id] || 0));
-}
-
-export function shopUnlocked(shopId) {
-  const sh = SHOPS[shopId];
-  if (!sh.secret) return true;
-  return { backroom: S.secrets.backroom, sewer: S.secrets.sewer, ghost: S.secrets.ghost }[shopId];
-}
-
-export function headlines() {
-  ensureDay();
-  const d = deals();
-  const r = D.dayRng('news', S.day.key);
-  const dealLines = d.list.filter((x) => !x.secret).map((x) => `${x.product.name} is ${x.pct}% off today at ${SHOPS[x.product.shop].name}`);
-  const fun = shuffle(HEADLINES, r).slice(0, 5);
-  const out = [`DEAL OF THE DAY: ${d.dotd.product.name}, ${d.dotd.pct}% off at ${SHOPS[d.dotd.product.shop].name}`];
-  for (let i = 0; i < Math.max(dealLines.length, fun.length); i++) {
-    if (fun[i]) out.push(fun[i]);
-    if (dealLines[i]) out.push(dealLines[i]);
-  }
-  return out;
-}
-
-// ---------------------------------------------------------------- floor tokens
-
-export function pickups(sceneId) {
-  ensureDay();
-  const def = SCENES[sceneId];
-  const r = D.dayRng(`pick:${sceneId}`, S.day.key);
-  const n = def.secret ? 3 : 5;
+  if (!CARS.includes(car)) return [];
+  const r = D.dayRng(`change:${car}`, S.day.key);
+  const spots = shuffle([...Array(spotCount).keys()], r);
+  const n = 1 + (r() < 0.5 ? 1 : 0);
   const out = [];
-  for (let i = 0; i < n; i++) {
-    const x = def.minX + 120 + r() * (def.maxX - def.minX - 240);
-    out.push({ id: `${sceneId}:${i}`, x, h: r() < 0.4 ? 66 : 0, value: 5 });
-  }
-  const main = ['token', 'drip', 'bodega'];
-  const bigIn = main[Math.floor(D.dayRng('bigtoken', S.day.key)() * 3)];
-  if (bigIn === sceneId) {
-    out.push({ id: `${sceneId}:big`, x: def.minX + 200 + r() * (def.maxX - def.minX - 400), h: 78, value: 25, big: true });
-  }
+  for (let i = 0; i < n; i++) out.push({ id: `${car}:${i}`, spot: spots[i], value: 10 });
+  const goldCar = CARS[Math.floor(D.dayRng('goldcoin', S.day.key)() * CARS.length)];
+  if (goldCar === car) out.push({ id: `${car}:gold`, spot: spots[n], value: 50, big: true });
   return out.filter((p) => !S.day.pickups.includes(p.id));
 }
 
 export function collect(p) {
   if (S.day.pickups.includes(p.id)) return;
   S.day.pickups.push(p.id);
+  if (p.big && !S.secrets.change) S.secrets.change = true;
   addTokens(p.value, 'pickup');
   track('pickup', 1);
 }
 
-// ---------------------------------------------------------------- stickers
-
-export function addSticker(id) {
-  if (!stickerById[id]) return false;
-  const isNew = !S.stickers[id];
-  S.stickers[id] = (S.stickers[id] || 0) + 1;
-  commit();
-  emit('sticker', { id, isNew });
-  checkPages();
-  return isNew;
-}
-
-export function randomUnowned(pages) {
-  const pool = STICKERS.filter((s) => pages.includes(s.page) && !S.stickers[s.id]);
-  if (!pool.length) return null;
-  return pool[Math.floor(Math.random() * pool.length)].id;
-}
-
-export function stickerCount() { return STICKERS.filter((s) => S.stickers[s.id]).length; }
-
-function checkPages() {
-  for (const page of STICKER_PAGES) {
-    if (S.pagesClaimed[page.id]) continue;
-    const all = STICKERS.filter((s) => s.page === page.id).every((s) => S.stickers[s.id]);
-    if (!all) continue;
-    S.pagesClaimed[page.id] = true;
-    if (page.reward.kind === 'golden') S.golden = true;
-    else addCoupon(page.reward, `${page.name} page`);
-    commit();
-    emit('page', page);
-  }
-}
-
-// ---------------------------------------------------------------- coupons + exchange
-
-export function addCoupon(c, src = '') {
-  const coupon = { id: `c${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`, kind: c.kind, value: c.value, label: c.label, src };
-  S.coupons.push(coupon);
-  commit();
-  emit('coupon', coupon);
-  return coupon;
-}
-
-export function exchange(id) {
-  const item = EXCHANGE.find((e) => e.id === id);
-  if (!item) return { err: 'That deal is gone.' };
-  if (item.freeze && S.streak.freezes >= 2) return { err: 'You can only hold 2 streak freezes.' };
-  if (S.tokens < item.cost) return { err: `You need ${item.cost - S.tokens} more tokens.` };
-  spend(item.cost);
-  if (item.freeze) {
-    S.streak.freezes += 1;
-    commit();
-    emit('freeze');
-  } else addCoupon(item.coupon, 'Token Booth');
-  return { ok: true, item };
-}
-
-// ---------------------------------------------------------------- claw machine
-
-const CLAW_KINDS = ['tokens', 'tokens', 'tokens', 'tokens', 'sticker', 'sticker', 'sticker', 'coupon', 'coupon', 'freeze'];
-
-export function clawPrizes() {
-  ensureDay();
-  const r = D.dayRng('claw', S.day.key);
-  const prizes = [];
-  for (let i = 0; i < 11; i++) {
-    const kind = CLAW_KINDS[Math.floor(r() * CLAW_KINDS.length)];
-    const layer = i < 7 ? 0 : 1;
-    const x = layer === 0 ? 0.07 + i * 0.143 + (r() - 0.5) * 0.03 : 0.16 + (i - 7) * 0.22 + (r() - 0.5) * 0.05;
-    prizes.push({ i, kind, x, y: layer * 0.55 + r() * 0.08, layer });
-  }
-  if (!S.keys.maint) prizes[8 + Math.floor(r() * 3)].kind = 'key';
-  if (!S.ghostTicket && r() < 0.5) prizes[Math.floor(r() * 7)].kind = 'rare';
-  return prizes.filter((p) => !S.day.clawWon.includes(p.i));
-}
-
-export function clawWin(i) {
-  const prize = clawPrizes().find((p) => p.i === i);
-  if (!prize) return null;
-  S.day.clawWon.push(i);
-  let out = { kind: prize.kind };
-  switch (prize.kind) {
-    case 'tokens': out.tokens = 30; addTokens(30, 'claw'); out.label = '+30 TOKENS'; break;
-    case 'sticker': {
-      const sid = randomUnowned(['street', 'under']);
-      if (sid) { addSticker(sid); out.sticker = sid; out.label = `STICKER: ${stickerById[sid].name.toUpperCase()}`; }
-      else { addTokens(40, 'claw'); out.tokens = 40; out.label = '+40 TOKENS'; }
-      break;
-    }
-    case 'coupon': {
-      const c = Math.random() < 0.5 ? { kind: 'off', value: 5, label: '$5 OFF' } : { kind: 'ship', value: 0, label: 'FREE SHIPPING' };
-      addCoupon(c, 'The Grabber');
-      out.label = `COUPON: ${c.label}`;
-      break;
-    }
-    case 'freeze':
-      if (S.streak.freezes < 2) { S.streak.freezes += 1; out.label = 'STREAK FREEZE'; }
-      else { addTokens(40, 'claw'); out.tokens = 40; out.label = '+40 TOKENS'; }
-      break;
-    case 'key':
-      S.keys.maint = true;
-      out.label = 'MAINTENANCE KEY';
-      break;
-    case 'rare':
-      S.ghostTicket = true;
-      out.label = 'GHOST TICKET';
-      break;
-    default: break;
-  }
-  commit();
-  track('win:claw');
-  emit('claw', out);
-  return out;
-}
-
-// ---------------------------------------------------------------- minigame rewards
+// ---------------------------------------------------------------- minigames
 
 export const GAME_CAP = 3;
 export function rewardsLeft(game) {
@@ -401,27 +494,99 @@ export function gameReward(game, tokens) {
   return tokens;
 }
 
+export function achieve(id) {
+  if (S.achievements[id]) return null;
+  S.achievements[id] = true;
+  const item = ITEMS.find((i) => i.secret === id);
+  commit();
+  return item ? grant(item.id, { src: 'achievement' }) : null;
+}
+
+// ---------------------------------------------------------------- the claw
+
+const CLAW_KINDS = ['tokens', 'tokens', 'tokens', 'tokens', 'ticket', 'ticket', 'item', 'item', 'item', 'freeze'];
+
+export function clawPrizes() {
+  ensureDay();
+  const r = D.dayRng('claw', S.day.key);
+  const prizes = [];
+  for (let i = 0; i < 11; i++) {
+    const kind = CLAW_KINDS[Math.floor(r() * CLAW_KINDS.length)];
+    const layer = i < 7 ? 0 : 1;
+    const x = layer === 0 ? 0.07 + i * 0.143 + (r() - 0.5) * 0.03 : 0.16 + (i - 7) * 0.22 + (r() - 0.5) * 0.05;
+    prizes.push({ i, kind, x, y: layer * 0.55 + r() * 0.08, layer });
+  }
+  if (!S.keys.cab) prizes[8 + Math.floor(r() * 3)].kind = 'key';
+  if (!S.ghostTicket && r() < 0.5) prizes[Math.floor(r() * 7)].kind = 'rare';
+  return prizes.filter((p) => !S.day.clawWon.includes(p.i));
+}
+
+export function clawWin(i) {
+  const prize = clawPrizes().find((p) => p.i === i);
+  if (!prize) return null;
+  S.day.clawWon.push(i);
+  const out = { kind: prize.kind };
+  switch (prize.kind) {
+    case 'tokens': out.tokens = 40; addTokens(40, 'claw'); out.label = '+40 TOKENS'; break;
+    case 'ticket': S.tickets.basic += 1; out.label = 'CAPSULE TICKET'; emit('ticket'); break;
+    case 'item': {
+      const pool = ITEMS.filter((it) => it.capsule && (it.rarity === 'common' || it.rarity === 'uncommon') && !owns(it.id));
+      if (pool.length) {
+        const it = pool[Math.floor(Math.random() * pool.length)];
+        grant(it.id, { src: 'claw' });
+        out.item = it.id;
+        out.label = it.name.toUpperCase();
+      } else {
+        addTokens(60, 'claw');
+        out.tokens = 60;
+        out.label = '+60 TOKENS';
+      }
+      break;
+    }
+    case 'freeze':
+      if (S.streak.freezes < 2) { S.streak.freezes += 1; out.label = 'STREAK FREEZE'; emit('freeze'); }
+      else { addTokens(60, 'claw'); out.tokens = 60; out.label = '+60 TOKENS'; }
+      break;
+    case 'key': S.keys.cab = true; out.label = 'CAB KEY'; break;
+    case 'rare': S.ghostTicket = true; out.label = 'GHOST TICKET'; break;
+    default: break;
+  }
+  commit();
+  track('win:claw');
+  emit('claw', out);
+  return out;
+}
+
 // ---------------------------------------------------------------- secrets
 
 export function weekPassword() {
   const n = PASSWORDS.length;
   return PASSWORDS[((D.weekIndex() % n) + n) % n];
 }
-
 const norm = (s) => String(s || '').toUpperCase().replace(/[^A-Z]/g, '');
 export const checkPassword = (s) => norm(s) === norm(weekPassword().word);
 
-export function rollGhost() {
-  ensureDay();
-  if (S.ghostTicket) {
-    S.ghostTicket = false;
-    commit();
-    return true;
-  }
-  if (D.isMidnightHour()) return true;
-  const r = D.dayRng(`ghost${S.day.ghostRolls++}`, S.day.key);
+export function openVault() {
+  S.week.vault = true;
+  const first = discover('vault');
+  if (first) addTokens(200, 'secret');
   commit();
-  return r() < 0.12;
+  return first;
+}
+
+// The ghost car is coupled on: some days at random, all through the midnight
+// hour, or for the rest of the day after you use a ghost ticket.
+export function ghostOpen() {
+  ensureDay();
+  return D.isMidnightHour() || S.day.ghostDay || S.day.ghostTicketUsed;
+}
+
+export function useGhostTicket() {
+  if (!S.ghostTicket) return false;
+  S.ghostTicket = false;
+  S.day.ghostTicketUsed = true;
+  commit();
+  return true;
 }
 
 export function discover(which) {
@@ -432,100 +597,39 @@ export function discover(which) {
   return true;
 }
 
-export function crackLoot() {
+export function openLockbox() {
   ensureDay();
-  if (!S.secrets.crack) {
-    S.secrets.crack = true;
-    S.day.crack = true;
-    addTokens(100, 'crack');
-    commit();
-    return { first: true, tokens: 100 };
+  if (S.day.lockbox) return null;
+  S.day.lockbox = true;
+  const out = { tokens: 60 + Math.floor(Math.random() * 61), item: null };
+  addTokens(out.tokens, 'lockbox');
+  if (!S.achievements.cab) out.item = achieve('cab');
+  else if (Math.random() < 0.05) {
+    const pool = ITEMS.filter((i) => i.capsule && (i.rarity === 'rare' || i.rarity === 'epic'));
+    out.item = grant(pool[Math.floor(Math.random() * pool.length)].id, { src: 'lockbox' });
   }
-  if (!S.day.crack) {
-    S.day.crack = true;
-    addTokens(15, 'crack');
-    commit();
-    return { first: false, tokens: 15 };
-  }
-  return null;
-}
-
-// ---------------------------------------------------------------- bag + orders
-
-export function addToBag(pid, size, qty = 1) {
-  const line = S.bag.find((l) => l.pid === pid && l.size === size);
-  if (line) line.qty = Math.min(9, line.qty + qty);
-  else S.bag.push({ pid, size, qty });
   commit();
-  emit('bag');
-  track('bag');
+  return out;
 }
 
-export function setQty(i, q) {
-  if (!S.bag[i]) return;
-  if (q <= 0) S.bag.splice(i, 1);
-  else S.bag[i].qty = Math.min(9, q);
-  commit();
-  emit('bag');
-}
+// ---------------------------------------------------------------- news
 
-export const bagCount = () => S.bag.reduce((a, l) => a + l.qty, 0);
-
-export function totals(couponId = null) {
-  let subtotal = 0, saved = 0;
-  const lines = S.bag.map((l, i) => {
-    const p = productById[l.pid];
-    if (!p) return null;
-    const pr = priceOf(p);
-    subtotal += pr.price * l.qty;
-    if (pr.was) saved += (pr.was - pr.price) * l.qty;
-    return { i, p, size: l.size, qty: l.qty, price: pr.price, was: pr.was, pct: pr.pct, line: round2(pr.price * l.qty) };
-  }).filter(Boolean);
-  subtotal = round2(subtotal);
-  const coupon = S.coupons.find((c) => c.id === couponId) || null;
-  let discount = 0;
-  let ship = subtotal === 0 || subtotal >= CONFIG.shipping.freeOver ? 0 : CONFIG.shipping.flat;
-  if (S.golden) discount += subtotal * 0.1;
-  if (coupon) {
-    if (coupon.kind === 'pct') discount += (subtotal - discount) * (coupon.value / 100);
-    else if (coupon.kind === 'off') discount += Math.min(coupon.value, subtotal - discount);
-    else if (coupon.kind === 'ship') ship = 0;
+export function headlines() {
+  ensureDay();
+  const r = D.dayRng('news', S.day.key);
+  const drop = dropOfDay();
+  const out = [];
+  if (drop.item) out.push(`DROP OF THE DAY: ${drop.item.name}, ${DROP_DISCOUNT}% off in ${SHOPS[drop.shop].name}`);
+  for (const sid of SHOP_CARS) {
+    const big = stock(sid).find((s) => s.featured && (s.item.rarity === 'legendary' || s.item.rarity === 'epic'));
+    if (big && (!drop.item || big.item.id !== drop.item.id)) out.push(`${RARITIES[big.item.rarity].name} IN STOCK: ${big.item.name} at ${SHOPS[sid].name}, today only`);
   }
-  discount = round2(discount);
-  const total = round2(Math.max(0, subtotal - discount + ship));
-  return { lines, subtotal, saved: round2(saved), discount, ship, total, coupon, golden: S.golden };
-}
-
-function orderNumber() {
-  const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-  let s = '3R-';
-  for (let i = 0; i < 4; i++) s += a[Math.floor(Math.random() * a.length)];
-  return `${s}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
-}
-
-export function placeOrder(couponId = null) {
-  const t = totals(couponId);
-  if (!t.lines.length) return null;
-  const order = {
-    id: orderNumber(), date: Date.now(),
-    items: t.lines.map((l) => ({ pid: l.p.id, name: l.p.name, size: l.size, qty: l.qty, price: l.price })),
-    subtotal: t.subtotal, discount: t.discount, ship: t.ship, total: t.total, coupon: t.coupon ? t.coupon.label : null,
-  };
-  for (const l of t.lines) S.sold[l.p.id] = (S.sold[l.p.id] || 0) + l.qty;
-  if (t.coupon) S.coupons = S.coupons.filter((c) => c.id !== t.coupon.id);
-  S.orders.unshift(order);
-  if (S.orders.length > 30) S.orders.length = 30;
-  S.bag = [];
-  const tokens = Math.round(t.total * CONFIG.tokensPerDollar);
-  addTokens(tokens, 'cashback');
-  commit(true);
-  emit('bag');
-  emit('order', order);
-  return { order, tokens };
-}
-
-export function setProfile(p) {
-  S.profile = { ...p };
-  commit(true);
-  emit('profile', S.profile);
+  if (ghostOpen()) out.push('Riders report the ghost car is coupled to the back of the train tonight');
+  const fun = shuffle(HEADLINES, r).slice(0, 5);
+  const mixed = [];
+  for (let i = 0; i < Math.max(out.length, fun.length); i++) {
+    if (out[i]) mixed.push(out[i]);
+    if (fun[i]) mixed.push(fun[i]);
+  }
+  return mixed;
 }

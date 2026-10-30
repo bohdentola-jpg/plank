@@ -1,35 +1,32 @@
-// HUD: wallet (portrait + tokens + streak + reset timer), news ticker, nav,
-// the in-world interaction prompt, toasts and flying-token juice.
+// HUD: wallet (your figure + tokens + streak + reset timer), news ticker, nav,
+// car banner, toasts and flying-token juice.
 import { $, el, ICONS } from './dom.js';
-import { drawPortrait } from '../art/critters.js';
-import { stickerImage } from '../art/stickers.js';
+import { drawFigurePortrait } from '../art/figure.js';
+import { productImage } from '../art/products.js';
+import { RARITIES } from '../data/items.js';
 import * as D from '../systems/daily.js';
 
 let tokensShown = 0, tokensTarget = 0;
-let tickerX = 0, tickerW = 0, tickerLines = [];
-let face, faceLook = null;
+let tickerX = 0, tickerW = 0;
 
-export function initHud(handlers) {
-  face = $('#wallet-face');
-  $('#nav-map .nav-ico').innerHTML = ICONS.map;
-  $('#nav-shop .nav-ico').innerHTML = ICONS.shop;
-  $('#nav-bag .nav-ico').innerHTML = ICONS.bag;
+export function initHud(h) {
+  $('#nav-train .nav-ico').innerHTML = ICONS.train;
+  $('#nav-closet .nav-ico').innerHTML = ICONS.closet;
   $('#nav-me .nav-ico').innerHTML = ICONS.me;
-  // a mouse/touch click drops focus first, so SPACE (hop) can't re-press the button;
+  // a mouse/touch click drops focus first, so keys can't re-press the button;
   // keyboard activation (detail 0) keeps focus for keyboard users
   const bind = (sel, fn) => $(sel).addEventListener('click', (e) => {
     e.stopPropagation();
     if (e.detail > 0) e.currentTarget.blur();
     fn();
   });
-  bind('#nav-map', handlers.map);
-  bind('#nav-shop', handlers.shop);
-  bind('#nav-bag', handlers.bag);
-  bind('#nav-me', handlers.me);
-  bind('#nav-sound', handlers.sound);
-  bind('#wallet', handlers.me);
-  bind('#prompt', handlers.prompt);
-  $('#wallet').style.cursor = 'pointer';
+  bind('#nav-train', h.train);
+  bind('#nav-closet', h.closet);
+  bind('#nav-me', h.me);
+  bind('#nav-sound', h.sound);
+  bind('#wallet', h.me);
+  bind('#go-back', h.back);
+  bind('#go-next', h.next);
 }
 
 export function showHud(on) { $('#hud').hidden = !on; }
@@ -41,9 +38,8 @@ export function setSoundIcon(on) {
   b.setAttribute('aria-label', on ? 'Sound on' : 'Sound off');
 }
 
-export function setFace(look) {
-  faceLook = look;
-  drawPortrait(face, 'rat', { look, t: 0.3 });
+export function setFace(body, outfit) {
+  drawFigurePortrait($('#wallet-face'), body, outfit, { t: 0.3 });
 }
 
 export function setTokens(n, instant = false) {
@@ -59,72 +55,52 @@ export function bumpTokens() {
   w.classList.remove('bump');
   void w.offsetWidth;
   w.classList.add('bump');
-  setTimeout(() => w.classList.remove('bump'), 160);
 }
 
 export function setStreak(count, freezes) {
-  $('#wallet-streak').textContent = count > 0 ? `🔥${count} DAY${count === 1 ? '' : 'S'}${freezes ? ` · ❄${freezes}` : ''}` : 'NO STREAK';
+  $('#wallet-streak').textContent = count > 0 ? `🔥 ${count} DAY${count === 1 ? '' : 'S'}${freezes ? ` · ❄${freezes}` : ''}` : 'NO STREAK YET';
 }
 
-export function setBag(n) {
-  const b = $('#bag-badge');
-  b.hidden = n <= 0;
-  b.textContent = String(n);
+export function setDots({ closet = false, me = false } = {}) {
+  $('#closet-dot').hidden = !closet;
+  $('#me-dot').hidden = !me;
 }
 
-export function setMeDot(on) { $('#me-dot').hidden = !on; }
+export function setNav(back, next) {
+  const b = $('#go-back'), n = $('#go-next');
+  b.hidden = !back;
+  n.hidden = !next;
+  if (back) b.querySelector('.lbl').textContent = back;
+  if (next) n.querySelector('.lbl').textContent = next;
+}
 
 export function setTicker(lines) {
-  tickerLines = lines;
   const t = $('#ticker .ticker-text');
-  t.textContent = lines.join('   ·   BREAKING NEWS — ') + '   ·   ';
-  // duplicate for a seamless loop
-  t.textContent = t.textContent + t.textContent;
+  const one = lines.join('   ✦   ') + '   ✦   ';
+  t.textContent = one + one;
   tickerW = t.scrollWidth / 2;
   tickerX = 0;
 }
 
 let lastReset = '';
 export function updateHud(dt) {
-  // count-up tokens
   if (tokensShown !== tokensTarget) {
     const d = tokensTarget - tokensShown;
-    const stepAmt = Math.sign(d) * Math.max(1, Math.ceil(Math.abs(d) * Math.min(1, dt * 8)));
-    tokensShown = Math.abs(stepAmt) >= Math.abs(d) ? tokensTarget : tokensShown + stepAmt;
+    const step = Math.sign(d) * Math.max(1, Math.ceil(Math.abs(d) * Math.min(1, dt * 8)));
+    tokensShown = Math.abs(step) >= Math.abs(d) ? tokensTarget : tokensShown + step;
     $('#wallet-tokens b').textContent = tokensShown.toLocaleString('en-US');
   }
-  // reset countdown
-  const txt = `⟳ ${D.fmtCountdown(D.msToMidnight())}`;
+  const txt = `NEW DROPS IN ${D.fmtCountdown(D.msToMidnight())}`;
   if (txt !== lastReset) {
     lastReset = txt;
     $('#wallet-reset').textContent = txt;
   }
-  // ticker
   if (tickerW > 0) {
     tickerX -= dt * 70;
     if (-tickerX > tickerW) tickerX += tickerW;
     $('#ticker .ticker-text').style.transform = `translate(${tickerX.toFixed(1)}px, -50%)`;
   }
 }
-
-// ---------------------------------------------------------------- prompt
-
-export function showPrompt(x, y, label, opts = {}) {
-  const p = $('#prompt');
-  const key = opts.touch ? 'TAP' : 'E';
-  const html = `<span class="key">${key}</span><span></span>${opts.badge ? `<span class="badge">${opts.badge}</span>` : ''}`;
-  if (p.dataset.html !== html + label) {
-    p.innerHTML = html;
-    p.children[1].textContent = label;
-    p.dataset.html = html + label;
-    p.setAttribute('aria-label', `${label} (${key})`);
-  }
-  p.hidden = false;
-  p.style.left = `${Math.round(x)}px`;
-  p.style.top = `${Math.round(y)}px`;
-}
-
-export function hidePrompt() { $('#prompt').hidden = true; }
 
 // ---------------------------------------------------------------- toasts
 
@@ -141,11 +117,14 @@ export function toast(html, cls = '', ms = 2600) {
 }
 
 export function tokenToast(n, why) {
-  toast(`<span class="tok-ico"></span><span class="t-big">${n > 0 ? '+' : ''}${n}</span> TOKENS${why ? ` <small style="color:var(--muted)">${why}</small>` : ''}`, 'cash', 2000);
+  toast(`<span class="tok-ico"></span><span class="t-big">${n > 0 ? '+' : ''}${n.toLocaleString('en-US')}</span> TOKENS${why ? ` <small>${why}</small>` : ''}`, 'cash', 2000);
 }
 
-export function stickerToast(st) {
-  toast(`<img alt="" src="${stickerImage(st, 68)}"/> NEW STICKER: ${st.name.toUpperCase()}`, 'hot', 3200);
+export function itemToast(item, o = {}) {
+  const r = RARITIES[item.rarity];
+  const img = productImage({ ...item, art: o.prismatic ? { ...item.art, prismatic: true } : item.art }, 72);
+  const what = o.upgraded ? 'PRISMATIC UPGRADE' : o.prismatic ? `PRISMATIC ${r.name}` : r.name;
+  toast(`<img alt="" src="${img}"/><span><span class="rar" style="color:${r.color}">${what}</span><br/>${item.name.toUpperCase()}</span>`, `item r-${item.rarity}${o.prismatic ? ' prism' : ''}`, 3200);
 }
 
 // coins fly from a screen point into the wallet
@@ -159,33 +138,23 @@ export function flyTokens(fromX, fromY, n = 6) {
     c.style.top = `${fromY}px`;
     box.append(c);
     const dx = (Math.random() - 0.5) * 80, dy = -40 - Math.random() * 60;
-    const delay = i * 45;
     c.animate([
       { transform: 'translate(0,0) scale(0.6)', opacity: 1 },
       { transform: `translate(${dx}px, ${dy}px) scale(1.1)`, opacity: 1, offset: 0.35 },
       { transform: `translate(${tx - fromX}px, ${ty - fromY}px) scale(0.7)`, opacity: 0.9 },
-    ], { duration: 750, delay, easing: 'cubic-bezier(.5,0,.6,1)', fill: 'forwards' }).onfinish = () => c.remove();
+    ], { duration: 750, delay: i * 45, easing: 'cubic-bezier(.5,0,.6,1)', fill: 'forwards' }).onfinish = () => c.remove();
   }
 }
 
-// ---------------------------------------------------------------- banners + hint
+// ---------------------------------------------------------------- car banner
 
-let nameTimer = null, bannerUntil = 0;
-export function stationBanner(name) {
-  const s = $('#station-name');
-  s.textContent = name;
+let bannerTimer = null;
+export function carBanner(num, name) {
+  const s = $('#car-name');
+  s.innerHTML = '';
+  if (num) s.append(el('span', { class: 'car-num' }, `CAR ${num}`));
+  s.append(el('span', { class: 'car-title' }, name));
   s.classList.add('show');
-  bannerUntil = performance.now() + 2200;
-  clearTimeout(nameTimer);
-  nameTimer = setTimeout(() => s.classList.remove('show'), 2200);
-}
-export const bannerUp = () => performance.now() < bannerUntil;
-
-export function showHint(html, ms = 9000) {
-  const h = $('#hint');
-  h.innerHTML = html;
-  h.hidden = false;
-  h.style.opacity = '1';
-  setTimeout(() => { h.style.opacity = '0'; }, ms);
-  setTimeout(() => { h.hidden = true; }, ms + 1100);
+  clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(() => s.classList.remove('show'), 1900);
 }

@@ -2,9 +2,8 @@
 // survive the wobbly lift, carry it to the chute. Prizes come from the daily
 // pit (econ.clawPrizes) and are paid by econ.clawWin.
 import { openArcade } from './frame.js';
-import { PRIZE_COLORS } from '../art/props.js';
 import { emblem } from '../art/products.js';
-import { shape, rect, rrect, ellipse, blob, stroke, tube, dot, text, FONTS, INK, rgba, shade, tint, mulberry32 } from '../ink.js';
+import { shape, rect, rrect, ellipse, stroke, tube, dot, text, FONTS, INK, rgba, shade, mulberry32 } from '../ink.js';
 
 const COST = 15;
 const R = 27;                      // capsule radius
@@ -20,14 +19,15 @@ const CHUTE = { x0: 64, x1: 194, y: 300 };
 // with big labels fills the extra height.
 const isNarrow = () => typeof window !== 'undefined' && window.innerWidth < 640;
 
-const LABEL = { tokens: '+30 TOKENS', sticker: 'STICKER', coupon: 'COUPON', freeze: 'STREAK FREEZE', key: 'RARE KEY', rare: 'GHOST TICKET' };
+export const PRIZE_COLORS = { tokens: '#ffd23f', ticket: '#ff4f9a', item: '#3ec7b0', freeze: '#5aa0ff', key: '#ff8a3d', rare: '#b48cff' };
+const LABEL = { tokens: '+40 TOKENS', ticket: 'CAPSULE TICKET', item: 'CLOTHES', freeze: 'STREAK FREEZE', key: 'CAB KEY', rare: 'GHOST TICKET' };
 const EXPLAIN = {
   tokens: 'Tokens added to your wallet.',
-  sticker: 'Added to your sticker book.',
-  coupon: 'It\'s in your stash. Use it in your bag at checkout.',
+  ticket: 'A free pull at Plug\'s machines in Car 7.',
+  item: 'It\'s in your closet. Go try it on.',
   freeze: 'Covers one missed day of your streak.',
-  key: 'There\'s a locked maintenance door at Bodega Blvd…',
-  rare: 'Your next train will be… different.',
+  key: 'It opens the driver\'s cab, right behind the front car.',
+  rare: 'Show it to the chained door at the back of Car 7…',
 };
 
 export function playClaw(ctx) {
@@ -353,7 +353,7 @@ function drawTopper(g, t, oy, hint, under, any) {
   const col = hint ? '#ffd23f' : under ? PRIZE_COLORS[under.kind] : '#fffaf0';
   text(g, line, 400, 160 + (hint ? Math.sin(t * 5) * 3 : 0), { size: 31, font: FONTS.sign, fill: col, lw: 7 });
   // legend: two columns of capsule kinds
-  const kinds = ['tokens', 'sticker', 'coupon', 'freeze', 'key', 'rare'];
+  const kinds = ['tokens', 'ticket', 'item', 'freeze', 'key', 'rare'];
   kinds.forEach((k, i) => {
     const x = 104 + (i % 2) * 330, y = 208 + Math.floor(i / 2) * 36;
     g.save();
@@ -463,14 +463,15 @@ function drawIcon(g, kind) {
   switch (kind) {
     case 'tokens':
       ellipse(g, 0, 2, 11, 11, { fill: '#f0c24a', lw: 2.4, seed: 3 });
-      shape(g, [[1.5, -5], [-4, 3], [-0.5, 3], [-2, 9], [4.5, 0.5], [0.5, 0.5], [2.5, -5]], { fill: INK, lw: 0, smooth: false });
+      shape(g, [[0, -5], [3.5, 1], [3.5, 4], [0, 7.5], [-3.5, 4], [-3.5, 1]], { fill: INK, lw: 0, smooth: true });
       break;
-    case 'sticker':
-      emblem(g, 'star', 0, 2, 0.75, '#fffaf0', 5);
+    case 'ticket':
+      rrect(g, -14, -8, 28, 20, 3, { fill: '#fffaf0', lw: 2.2, seed: 4 });
+      stroke(g, [[-6, -8], [-6, 12]], { lw: 1.6, color: '#140f26', amp: 0 });
+      emblem(g, 'star', 4, 2, 0.4, '#ff4f9a', 5);
       break;
-    case 'coupon':
-      rrect(g, -13, -7, 26, 18, 3, { fill: '#fffaf0', lw: 2.2, seed: 4 });
-      text(g, '%', 0, 8, { size: 14, font: FONTS.sign, fill: '#d4473f', lw: 0 });
+    case 'item':
+      shape(g, [[-12, -6], [-5, -11], [5, -11], [12, -6], [9, 0], [7, -1], [7, 12], [-7, 12], [-7, -1], [-9, 0]], { fill: '#fffaf0', lw: 2.2, smooth: false, seed: 4 });
       break;
     case 'freeze':
       for (let k = 0; k < 3; k++) {

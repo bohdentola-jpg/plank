@@ -27,9 +27,8 @@ export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', 
 
 const S = (body) => `<svg viewBox="0 0 32 32" aria-hidden="true" stroke-linejoin="round" stroke-linecap="round">${body}</svg>`;
 export const ICONS = {
-  map: S('<path d="M4 8l7-3 10 3 7-3v19l-7 3-10-3-7 3z" fill="#3ec7b0" stroke="#140f26" stroke-width="3"/><path d="M11 5v19M21 8v19" stroke="#140f26" stroke-width="2.4" fill="none"/><circle cx="16" cy="14" r="2.6" fill="#e8456b" stroke="#140f26" stroke-width="1.6"/>'),
-  shop: S('<path d="M5 12l11-8 11 8v14H5z" fill="#ffd23f" stroke="#140f26" stroke-width="3"/><path d="M5 12h22" stroke="#140f26" stroke-width="3"/><rect x="12" y="17" width="8" height="9" fill="#e8456b" stroke="#140f26" stroke-width="2.4"/>'),
-  bag: S('<path d="M11 11V9a5 5 0 0110 0v2" fill="none" stroke="#140f26" stroke-width="3"/><path d="M5 11h22l-2 16H7z" fill="#ff4f9a" stroke="#140f26" stroke-width="3"/><path d="M13 18l2 2 4-5" fill="none" stroke="#fffaf0" stroke-width="2.6"/>'),
+  train: S('<rect x="5" y="5" width="22" height="18" rx="5" fill="#3ec7b0" stroke="#140f26" stroke-width="3"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="#fff4dc" stroke="#140f26" stroke-width="2"/><rect x="17" y="9" width="6" height="6" rx="1.5" fill="#fff4dc" stroke="#140f26" stroke-width="2"/><circle cx="11" cy="26" r="2.6" fill="#140f26"/><circle cx="21" cy="26" r="2.6" fill="#140f26"/><path d="M8 19h16" stroke="#ff4f9a" stroke-width="2.6"/>'),
+  closet: S('<path d="M16 7a3 3 0 113 3c-2 0-3 1.4-3 3v1" fill="none" stroke="#140f26" stroke-width="2.6"/><path d="M16 14L4 22h24z" fill="#ffd23f" stroke="#140f26" stroke-width="3"/><path d="M9 22h14v5H9z" fill="#ff4f9a" stroke="#140f26" stroke-width="2.6"/>'),
   me: S('<path d="M16 3l3.6 8 8.4.7-6.4 5.6 2 8.4L16 21.3 8.4 25.7l2-8.4L4 11.7l8.4-.7z" fill="#7b5cff" stroke="#140f26" stroke-width="3"/>'),
   soundOn: S('<path d="M5 12h5l7-6v20l-7-6H5z" fill="#3ec7b0" stroke="#140f26" stroke-width="3"/><path d="M21 11a6 6 0 010 10M24 7a11 11 0 010 18" fill="none" stroke="#140f26" stroke-width="3"/>'),
   soundOff: S('<path d="M5 12h5l7-6v20l-7-6H5z" fill="#b3a9e0" stroke="#140f26" stroke-width="3"/><path d="M21 12l7 8M28 12l-7 8" stroke="#140f26" stroke-width="3"/>'),

@@ -1,0 +1,161 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>DRIP LINE — figure sheet</title>
+<style>
+@font-face{font-family:"Bungee";src:url(../fonts/bungee.woff2) format("woff2")}
+@font-face{font-family:"Gochi Hand";src:url(../fonts/gochi-hand.woff2) format("woff2")}
+@font-face{font-family:"Permanent Marker";src:url(../fonts/permanent-marker.woff2) format("woff2")}
+@font-face{font-family:"Sedgwick Ave Display";src:url(../fonts/sedgwick-ave-display.woff2) format("woff2")}
+@font-face{font-family:"Rubik Wet Paint";src:url(../fonts/rubik-wet-paint.woff2) format("woff2")}
+html,body{margin:0;background:#1d1830}
+canvas{display:block}
+</style></head><body>
+<canvas id="c"></canvas>
+<script type="module">
+import { drawFigure, drawNpc, drawFigurePortrait, drawNpcPortrait, HEADS, FACES, SKINS, NPC_IDS } from '../src/art/figure.js';
+import { drawProduct, ART_TYPES } from '../src/art/products.js';
+import { text, FONTS } from '../src/ink.js';
+await Promise.all(['Bungee','Gochi Hand','Permanent Marker','Sedgwick Ave Display','Rubik Wet Paint'].map(f => document.fonts.load(`20px "${f}"`)));
+const q = new URLSearchParams(location.search);
+const T = +(q.get('t') || 1.25);
+const only = q.get('only'); // figures | outfits | npcs | icons
+if (q.has('perf')) {
+  // ?perf=1: the in-game load — one big figure + two NPCs every frame
+  const pc = document.getElementById('c');
+  pc.width = 900; pc.height = 900;
+  const pg = pc.getContext('2d');
+  const outfit = { head: { type: 'crown', c: '#ffd23f', a: '#ff4f9a' }, face: { type: 'shades', c: '#140f26', a: '#ff8a3d', style: 'shield' }, top: { type: 'puffer', c: '#1d1830', a: '#ff4f9a', p: 'flames', p2: '#ff6a2a', prismatic: true }, bottom: { type: 'cargos', c: '#2a2252', p: 'galaxy', p2: '#3ec7ff' }, feet: { type: 'high', c: '#7b5cff', a: '#3ef0d8', s: '#1d1830' }, neck: { type: 'rope', c: '#ffd23f', g: 'crown' }, hand: { type: 'boombox', c: '#1d1830', a: '#ffd23f' }, aura: { type: 'flame' } };
+  let frames = 0, t0 = 0; const draws = [];
+  const loop = (ms) => {
+    if (!t0) t0 = ms;
+    const t = ms / 1000;
+    const f0 = performance.now();
+    pg.setTransform(1, 0, 0, 1, 0, 0);
+    pg.fillStyle = '#2b2350'; pg.fillRect(0, 0, 900, 900);
+    pg.save(); pg.translate(560, 420); pg.scale(1.5, 1.5); drawNpc(pg, 'mira', 0, 0, { t, talk: true, boil: 300 + (Math.floor(t * 7) % 3) * 101 }); pg.restore();
+    pg.save(); pg.translate(760, 420); pg.scale(1.5, 1.5); drawNpc(pg, 'plug', 0, 0, { t, boil: 400 + (Math.floor(t * 7) % 3) * 101 }); pg.restore();
+    pg.save(); pg.translate(300, 860); pg.scale(4.2, 4.2); drawFigure(pg, 0, 0, { body: { skin: 'grape', head: 'drop', face: 'happy' }, outfit, t, pose: 'idle', boil: 11 + (Math.floor(t * 7) % 3) * 101 }); pg.restore();
+    pg.getImageData(0, 0, 1, 1); // force the draw to actually rasterize
+    const dt = performance.now() - f0;
+    frames++;
+    if (frames > 10) draws.push(dt);
+    if (ms - t0 < 3000) requestAnimationFrame(loop);
+    else {
+      draws.sort((a, b) => a - b);
+      const avg = draws.reduce((a, b) => a + b, 0) / draws.length;
+      console.log(`[perf] frames ${frames} avg frame ${((ms - t0) / frames).toFixed(1)}ms · draw avg ${avg.toFixed(2)}ms p95 ${draws[Math.floor(draws.length * 0.95)].toFixed(2)}ms max ${draws[draws.length - 1].toFixed(2)}ms`);
+      document.title = 'ready';
+    }
+  };
+  requestAnimationFrame(loop);
+  throw new Error('perf-mode');
+}
+const cv = document.getElementById('c');
+const W = 1400;
+const H = only ? 900 : 3150;
+cv.width = W; cv.height = H;
+const g = cv.getContext('2d');
+g.fillStyle = '#2b2350'; g.fillRect(0, 0, W, H);
+const label = (s, x, y, size = 13) => text(g, s, x, y, { size, font: FONTS.sign, fill: '#f6ecd2', lw: 3 });
+const heading = (s, y) => { g.fillStyle = '#3a2f66'; g.fillRect(0, y - 30, W, 40); text(g, s, 20, y, { size: 22, font: FONTS.sign, fill: '#ffd23f', lw: 4, align: 'left' }); };
+const fig = (x, y, s, o) => { g.save(); g.translate(x, y); g.scale(s, s); drawFigure(g, 0, 0, o); g.restore(); };
+
+const BASIC = { top: { type: 'tee', c: '#f4efe6', g: 'drop', a: '#ff4f9a' }, bottom: { type: 'jeans', c: '#3e6fd8' }, feet: { type: 'low', c: '#f4efe6', a: '#ff4f9a', s: '#f4efe6' } };
+const OUTFITS = [
+  { name: 'STARTER', body: { skin: 'cream', head: 'round', face: 'dots' }, outfit: BASIC },
+  { name: 'CAMO + CAP', body: { skin: 'tangerine', head: 'square', face: 'cool' }, outfit: { head: { type: 'cap', c: '#2a2238', a: '#ffd23f', g: 'bolt' }, top: { type: 'hoodie', c: '#6b7a4a', a: '#fffaf0', p: 'camo', p2: '#3a4a2a' }, bottom: { type: 'cargos', c: '#4a5a3a' }, feet: { type: 'boots', c: '#8a5a2e', a: '#ffd23f' }, neck: { type: 'chain', c: '#ffd23f', g: 'token' }, aura: { type: 'sparkle', c: '#ffd23f' } } },
+  { name: 'FLAME FIT', body: { skin: 'charcoal', head: 'bean', face: 'wide' }, outfit: { head: { type: 'beanie', c: '#e8456b', a: '#2a2238' }, face: { type: 'shades', c: '#140f26', a: '#ff8a3d', style: 'shield' }, top: { type: 'puffer', c: '#1d1830', a: '#ff4f9a', p: 'flames', p2: '#ff6a2a' }, bottom: { type: 'trackpants', c: '#1d1830', a: '#ff6a2a' }, feet: { type: 'high', c: '#ff6a2a', a: '#1d1830', s: '#f4efe6' }, aura: { type: 'flame' } } },
+  { name: 'GOLD DROP', body: { skin: 'grape', head: 'drop', face: 'happy' }, outfit: { head: { type: 'crown', c: '#ffd23f', a: '#ff4f9a' }, face: { type: 'grill', c: '#ffd23f', a: '#7ef7ff' }, top: { type: 'jacket', c: '#ffd23f', a: '#1d1830', finish: 'gold' }, bottom: { type: 'shorts', c: '#1d1830', a: '#ffd23f' }, feet: { type: 'slides', c: '#ffd23f', s: '#1d1830' }, neck: { type: 'rope', c: '#ffd23f', g: 'crown' }, hand: { type: 'boombox', c: '#1d1830', a: '#ffd23f' }, aura: { type: 'moneyrain' } } },
+  { name: 'GALAXY', body: { skin: 'sky', head: 'round', face: 'cyclops' }, outfit: { head: { type: 'halo', c: '#fff2a8' }, face: { type: 'visor', c: '#2a2238', a: '#3ef0d8' }, top: { type: 'windbreaker', c: '#2a2252', c2: '#7b5cff', p: 'galaxy', p2: '#3ec7ff' }, bottom: { type: 'cargos', c: '#2a2252', p: 'galaxy', p2: '#ff6fd0' }, feet: { type: 'high', c: '#7b5cff', a: '#3ef0d8', s: '#1d1830' }, hand: { type: 'deck', c: '#2a2252', a: '#3ef0d8', g: 'star' }, aura: { type: 'rainbow' } } },
+  { name: 'GHOST', body: { skin: 'mint', head: 'bean', face: 'x' }, outfit: { head: { type: 'bucket', c: '#bff8ec', a: '#24506a' }, top: { type: 'tee', c: '#bff8ec', finish: 'ghost', g: 'ghost', a: '#24506a' }, bottom: { type: 'jeans', c: '#9ad8c8', finish: 'ghost' }, feet: { type: 'low', c: '#bff8ec', a: '#9ad8c8', finish: 'ghost' }, hand: { type: 'lantern', c: '#9affe0' }, aura: { type: 'ghostglow' } } },
+  { name: 'PRISMATIC', body: { skin: 'snow', head: 'square', face: 'happy' }, outfit: { head: { type: 'headphones', c: '#ff4f9a', a: '#2a2238' }, face: { type: 'goggles', c: '#ff8a3d', a: '#7b5cff' }, top: { type: 'hoodie', c: '#f4efe6', a: '#7b5cff', g: 'star', prismatic: true }, bottom: { type: 'trackpants', c: '#7b5cff', a: '#fffaf0' }, feet: { type: 'high', c: '#f4efe6', a: '#7b5cff', s: '#ffd23f', prismatic: true }, neck: { type: 'pendant', c: '#c8c8e0', g: 'star' }, aura: { type: 'lightning', c: '#7ef7ff' } } },
+  { name: 'CHROME', body: { skin: 'chrome', head: 'drop', face: 'cool' }, outfit: { head: { type: 'durag', c: '#7b5cff', a: '#d8c8ff' }, face: { type: 'bandana', c: '#1d1830', a: '#fffaf0' }, top: { type: 'jersey', c: '#e8456b', a: '#fffaf0', num: '23' }, bottom: { type: 'shorts', c: '#e8456b', a: '#fffaf0' }, feet: { type: 'high', c: '#fffaf0', a: '#e8456b', s: '#1d1830', finish: 'chrome' }, neck: { type: 'scarf', c: '#ffd23f', a: '#1d1830', p: 'check', p2: '#1d1830' }, hand: { type: 'spraycan', c: '#7ed957' } } },
+  { name: 'FEDORA', body: { skin: 'coral', head: 'round', face: 'cool' }, outfit: { head: { type: 'fedora', c: '#3a3456', a: '#ff4f9a' }, face: { type: 'shades', c: '#ffd23f', a: '#ff4f9a', style: 'heart' }, top: { type: 'tee', c: '#ffc93d', p: 'tiedye', p2: '#ff4f9a', g: 'heart', a: '#ff4f9a' }, bottom: { type: 'cargos', c: '#2a2238', p: 'splatter', p2: '#ffd23f' }, feet: { type: 'boots', c: '#1d1830', a: '#ff4f9a', finish: 'holo' }, hand: { type: 'bag', c: '#ff4f9a', a: '#ffd23f', g: 'heart' } } },
+];
+
+let y = 50;
+if (!only || only === 'figures') {
+  heading('PLAYER POSES (front + side)', y); y += 210;
+  const body = { skin: 'cream', head: 'round', face: 'dots' };
+  ['idle', 'wave', 'cheer', 'pose'].forEach((p, i) => { fig(100 + i * 150, y, 1.55, { body, outfit: OUTFITS[1].outfit, pose: p, t: T }); label(p.toUpperCase(), 100 + i * 150, y + 24); });
+  for (let i = 0; i < 6; i++) { fig(700 + i * 105, y, 1.45, { body, outfit: OUTFITS[2].outfit, view: 'side', pose: 'run', phase: i / 6, t: T }); }
+  label('RUN CYCLE (side)', 960, y + 24);
+  y += 230;
+  fig(100, y, 1.45, { body, outfit: OUTFITS[1].outfit, view: 'side', pose: 'jump', t: T }); label('JUMP', 100, y + 24);
+  fig(250, y, 1.45, { body, outfit: OUTFITS[1].outfit, view: 'side', pose: 'fall', t: T }); label('FALL', 250, y + 24);
+  fig(400, y, 1.45, { body, outfit: OUTFITS[3].outfit, view: 'side', pose: 'run', phase: 0.25, t: T, facing: -1 }); label('FACING LEFT', 400, y + 24);
+  fig(550, y, 1.45, { body: OUTFITS[7].body, outfit: OUTFITS[7].outfit, view: 'side', pose: 'run', phase: 0.6, t: T });
+  fig(700, y, 1.45, { body: OUTFITS[4].body, outfit: OUTFITS[4].outfit, view: 'side', pose: 'run', phase: 0.1, t: T });
+  fig(850, y, 1.45, { body: OUTFITS[5].body, outfit: OUTFITS[5].outfit, view: 'side', pose: 'run', phase: 0.4, t: T });
+  fig(1000, y, 1.45, { body: OUTFITS[8].body, outfit: OUTFITS[8].outfit, view: 'side', pose: 'run', phase: 0.75, t: T });
+  // portraits
+  const pc = document.createElement('canvas'); pc.width = 120; pc.height = 120;
+  drawFigurePortrait(pc, OUTFITS[3].body, OUTFITS[3].outfit, { t: T });
+  g.drawImage(pc, 1150, y - 130); label('PORTRAIT', 1210, y + 4);
+  const pc2 = document.createElement('canvas'); pc2.width = 120; pc2.height = 120;
+  drawFigurePortrait(pc2, OUTFITS[1].body, OUTFITS[1].outfit, { t: T });
+  g.drawImage(pc2, 1270, y - 130);
+  y += 70;
+  heading('HEADS x FACES', y); y += 140;
+  HEADS.forEach((h, r) => {
+    FACES.forEach((f, c) => {
+      const sk = SKINS[(r * 6 + c) % SKINS.length].id;
+      fig(80 + c * 108 + (r % 2) * 0, y + r * 0, 1.05, { body: { skin: sk, head: h, face: f }, outfit: {}, t: T + c, blink: 0 });
+    });
+    label(h.toUpperCase(), 720, y - 40);
+    if (r < HEADS.length - 1) y += 128;
+  });
+  FACES.forEach((f, c) => label(f.toUpperCase(), 80 + c * 108, y + 22, 11));
+  y += 70;
+}
+if (!only || only === 'outfits') {
+  heading('OUTFITS · patterns · finishes · prismatic · auras', y); y += 230;
+  OUTFITS.forEach((o, i) => { fig(80 + i * 150, y, 1.6, { body: o.body, outfit: o.outfit, t: T + i * 0.37, pose: i === 3 ? 'pose' : 'idle' }); label(o.name, 80 + i * 150, y + 26, 11); });
+  y += 80;
+}
+if (!only || only === 'npcs') {
+  heading('SHOPKEEPERS', y); y += 230;
+  NPC_IDS.forEach((id, i) => { g.save(); g.translate(80 + i * 150, y); g.scale(1.6, 1.6); drawNpc(g, id, 0, 0, { t: T + i * 0.5, talk: i % 3 === 1 }); g.restore(); label(id.toUpperCase(), 80 + i * 150, y + 26); });
+  y += 70;
+  NPC_IDS.forEach((id, i) => { const c = document.createElement('canvas'); c.width = 110; c.height = 110; drawNpcPortrait(c, id, { t: T }); g.drawImage(c, 25 + i * 150, y); });
+  y += 160;
+}
+if (!only || only === 'icons') {
+  heading('ITEM ICONS', y); y += 30;
+  const SAMPLE = {
+    hoodie: { c: '#7b5cff', a: '#fffaf0', g: 'drop' }, tee: { c: '#f4efe6', a: '#ff4f9a', g: 'heart' }, jacket: { c: '#d4473f', a: '#f4efe6' }, windbreaker: { c: '#3ec7b0', c2: '#7b5cff' },
+    puffer: { c: '#ff8a3d', a: '#1d1830' }, jersey: { c: '#3e6fd8', a: '#ffd23f', num: '07' }, cargos: { c: '#6b7a4a' }, pants: { c: '#5a5872' }, trackpants: { c: '#1d1830', a: '#3ec7b0' }, shorts: { c: '#e8456b', a: '#fffaf0' },
+    jeans: { c: '#3e6fd8', a: '#ff9a3c' }, low: { c: '#f4efe6', a: '#d4473f', s: '#f4efe6' }, high: { c: '#1d1830', a: '#7b5cff', s: '#f4efe6' }, slides: { c: '#7ed957' }, boots: { c: '#8a5a2e', a: '#ffd23f' },
+    cap: { c: '#ffd23f', a: '#2a2238', g: 'bolt' }, beanie: { c: '#ff8a3d', a: '#d4473f' }, bucket: { c: '#2a2238', a: '#f4efe6' }, fedora: { c: '#3a3456', a: '#ff4f9a' }, crown: { c: '#ffd23f', a: '#ff4f9a' },
+    headphones: { c: '#3ec7b0', a: '#2a2238' }, durag: { c: '#7b5cff' }, halo: { c: '#fff2a8' }, shades: { c: '#140f26', a: '#3ec7b0' }, bandana: { c: '#d4473f', a: '#fffaf0' },
+    visor: { c: '#2a2238', a: '#3ef0d8' }, goggles: { c: '#ff8a3d', a: '#7b5cff' }, grill: { c: '#ffd23f', a: '#7ef7ff' }, chain: { c: '#ffd23f' }, rope: { c: '#ffd23f', g: 'crown' },
+    pendant: { c: '#c8c8e0', g: 'star' }, scarf: { c: '#e8456b', a: '#fffaf0' }, deck: { c: '#ff4f9a', a: '#ffd23f', g: 'skull' }, boombox: { c: '#d4473f', a: '#3ec7b0' }, spraycan: { c: '#7ed957' },
+    bag: { c: '#1d1830', a: '#d4473f' }, lantern: { c: '#9affe0' }, sparkle: { c: '#ffd23f' }, flame: {}, ghostglow: {}, moneyrain: {}, rainbow: {}, lightning: { c: '#7ef7ff' },
+  };
+  const cols = 10, cell = 136;
+  const all = ART_TYPES.map((t) => ({ name: t, art: { type: t, ...(SAMPLE[t] || {}) } }));
+  all.push({ name: 'shades star', art: { type: 'shades', c: '#ffd23f', a: '#ff4f9a', style: 'star' } });
+  all.push({ name: 'shades heart', art: { type: 'shades', c: '#ff4f9a', a: '#1d1830', style: 'heart' } });
+  all.push({ name: 'shades shield', art: { type: 'shades', c: '#1d1830', a: '#ff8a3d', style: 'shield' } });
+  all.push({ name: 'hoodie camo', art: { type: 'hoodie', c: '#6b7a4a', a: '#fffaf0', p: 'camo', p2: '#3a4a2a' } });
+  all.push({ name: 'tee tiedye', art: { type: 'tee', c: '#ffc93d', p: 'tiedye', p2: '#ff4f9a' } });
+  all.push({ name: 'puffer flames', art: { type: 'puffer', c: '#1d1830', a: '#ff4f9a', p: 'flames', p2: '#ff6a2a' } });
+  all.push({ name: 'cargos galaxy', art: { type: 'cargos', c: '#2a2252', p: 'galaxy', p2: '#3ec7ff' } });
+  all.push({ name: 'jacket gold', art: { type: 'jacket', c: '#ffd23f', a: '#1d1830', finish: 'gold' } });
+  all.push({ name: 'high chrome', art: { type: 'high', c: '#fffaf0', a: '#e8456b', s: '#1d1830', finish: 'chrome' } });
+  all.push({ name: 'tee ghost', art: { type: 'tee', c: '#bff8ec', g: 'ghost', finish: 'ghost' } });
+  all.push({ name: 'hoodie holo', art: { type: 'hoodie', c: '#f4efe6', a: '#7b5cff', finish: 'holo' } });
+  all.push({ name: 'low glow', art: { type: 'low', c: '#b6ff3d', a: '#1d1830', finish: 'glow' } });
+  all.push({ name: 'hoodie PRISMATIC', art: { type: 'hoodie', c: '#f4efe6', a: '#7b5cff', g: 'star', prismatic: true } });
+  all.push({ name: 'high PRISMATIC', art: { type: 'high', c: '#1d1830', a: '#7b5cff', s: '#f4efe6', prismatic: true } });
+  all.push({ name: 'bucket drip', art: { type: 'bucket', c: '#1d1830', p: 'drip', p2: '#ff4f9a' } });
+  all.push({ name: 'shorts stripes', art: { type: 'shorts', c: '#3e6fd8', p: 'stripes', p2: '#fffaf0' } });
+  all.push({ name: 'scarf splatter', art: { type: 'scarf', c: '#1d1830', a: '#fffaf0', p: 'splatter', p2: '#7ed957' } });
+  all.forEach((it, i) => {
+    const x = (i % cols) * cell + cell / 2 + 20, yy = y + Math.floor(i / cols) * cell + cell / 2;
+    g.fillStyle = '#5a4f9e'; g.fillRect(x - cell / 2 + 4, yy - cell / 2 + 4, cell - 8, cell - 8);
+    drawProduct(g, it.art, x, yy - 8, 0.95, 7);
+    text(g, it.name, x, yy + cell / 2 - 10, { size: 10, font: FONTS.sign, fill: '#f6ecd2', lw: 2.4 });
+  });
+}
+document.title = 'ready';
+</script></body></html>

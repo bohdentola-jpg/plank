@@ -1,10 +1,10 @@
-// TAG IT — the Drip St legal wall. A chalk outline goes up; you have twelve
+// TAG WALL — the blank wall in Car 6. A chalk outline goes up; you have twelve
 // seconds of spray paint to fill it. Coverage counts, overspray costs half.
 // Mouse/touch: hold to spray. Keyboard: arrows/WASD aim, SPACE sprays, 1-5 cans.
 import { openArcade } from './frame.js';
 import { el } from '../ui/dom.js';
 import { rrect, rect, text, FONTS, INK, rgba, shade, mulberry32, makeCanvas } from '../ink.js';
-import { tag } from '../art/station.js';
+import { tag } from '../art/graffiti.js';
 
 const W = 800, H = 450;
 const GW = 160, GH = 90, CELL = W / GW; // coverage grid, 5 logical units per cell
@@ -95,10 +95,12 @@ const SHAPES = [
     }, 'evenodd'),
   },
   {
-    id: 'rat', name: 'RAT FACE', paint: pathShape((p) => {
-      circle(p, 0, 34, 100);
-      circle(p, -94, -78, 58);
-      circle(p, 94, -78, 58);
+    id: 'cloud', name: 'CLOUD', paint: pathShape((p) => {
+      circle(p, -100, 34, 62);
+      circle(p, -28, -22, 88);
+      circle(p, 62, -6, 78);
+      circle(p, 118, 50, 52);
+      polyPath([[-150, 40], [160, 40], [160, 100], [-150, 100]])(p);
     }),
   },
   {
@@ -241,12 +243,12 @@ export function playTag(ctx) {
   const paidLeft = () => econ.rewardsLeft('tag');
   return openArcade({
     id: 'tag',
-    title: 'TAG IT',
+    title: 'TAG WALL',
     color: '#7ed957',
-    blurb: 'The Drip St legal wall. Fill the outline before the paint runs out.',
+    blurb: 'The blank wall in Car 6. Fill the outline before the paint runs out.',
     logical: [W, H],
     intro: {
-      title: 'TAG IT',
+      title: 'TAG WALL',
       text: 'Hold down to spray. Fill the chalk outline in 12 seconds. Paint outside the lines costs you half.',
       note: `Keyboard: arrows or WASD aim · SPACE sprays · 1-5 swap cans. ${paidLeft() > 0 ? `Paid plays left today: ${paidLeft()}.` : 'No paid plays left today, so this one is for fun.'}`,
       button: 'SHAKE THE CAN',
@@ -427,11 +429,7 @@ export function playTag(ctx) {
         econ.track('game:tag');
         econ.track('grade:tag', 1, grade);
         const tokens = econ.gameReward('tag', pay);
-        let sticker = null;
-        if (grade === 'S') {
-          const sid = econ.randomUnowned(['street']);
-          if (sid && econ.addSticker(sid)) sticker = sid;
-        }
+        const sticker = grade === 'S' ? econ.achieve('tagS') : null;
         const prevBest = econ.S.bests.tag || 0;
         const newBest = pct > prevBest;
         result = { grade, pct, tokens, newBest, prevBest, sticker };
@@ -450,9 +448,9 @@ export function playTag(ctx) {
         state = 'done';
         const r = result;
         const lines = [`Coverage ${Math.round(score.coverage * 100)}% · overspray ${Math.round(score.over * 100)}%`];
-        if (r.newBest) lines.push(r.prevBest ? `New best (was ${r.prevBest}%). Your piece is up on the legal wall.` : 'First piece! It’s up on the legal wall now.');
+        if (r.newBest) lines.push(r.prevBest ? `New best (was ${r.prevBest}%). Your piece is up on the wall in Car 6.` : 'First piece! It’s up on the wall in Car 6 now.');
         else lines.push(`Your best: ${econ.S.bests.tag}% (${econ.S.bests.tagGrade || '—'})`);
-        if (r.sticker) lines.push('S grade bonus: a new sticker for your book.');
+        if (r.sticker) lines.push(`S grade! You earned the ${r.sticker.item.name}. It’s in your closet.`);
         const left = paidLeft();
         lines.push(r.tokens ? `Paid plays left today: ${left}` : 'Playing for fun · the 3 paid plays are used up today');
         api.finish({
