@@ -1145,14 +1145,15 @@ function planFor(L, kind) {
     } else {
       // portrait: everything lives right of the player, farthest nearest the center:
       // Joy at the back, Eight behind his table mid-aisle, the claw in the near corner
-      plan.npc = [0.33, 7.4];
-      plan.npc2 = [0.72, 4.6];
-      plan.props.push({ type: 'shell', id: 'shell', layer: 'front', x0: 0.4, x1: 1.05, z: 4.15, anchorY: 0.5 });
+      plan.npc = [0.3, 7.4];
+      plan.npc2 = [0.85, 4.6];
+      plan.props.push({ type: 'shell', id: 'shell', layer: 'front', x0: 0.5, x1: 1.15, z: 4.15, anchorY: 0.5 });
       plan.props.push({ type: 'claw', id: 'claw', layer: 'front', x0: 0.88, x1: 1.34, z: 2.8 });
       plan.props.push({ type: 'hang', id: 'tagwall', layer: 'back', ...hangL, y0: HANG_Y0 - 0.05, y1: HANG_Y1, faceKind: 'tagwall' });
       plan.skipRight.push([2.6, 3.4], [4.1, 4.7]);
     }
-    plan.props.push({ type: 'crt', id: 'runner', layer: 'back', ...hangR, y0: HANG_Y0, y1: HANG_Y1 });
+    // in landscape the screen hangs a little higher so Eight's tag fits under it
+    plan.props.push({ type: 'crt', id: 'runner', layer: 'back', ...hangR, y0: HANG_Y0 + (w ? 0.1 : 0), y1: HANG_Y1 + (w ? 0.1 : 0) });
   } else if (kind === 'capsules') {
     if (w) {
       plan.props.push({ type: 'capsule', id: 'basic', layer: 'front', x0: 0.98, x1: 1.42, z: 2.4, deluxe: false });
@@ -1221,7 +1222,7 @@ export function carLayout(W, H, kind) {
     // the anchor is where the name tag goes: top-center unless the plan says otherwise,
     // kept inside the rect and far enough from the screen edges for a tag to fit
     let ax = at ? at[0] : rr[0] + rr[2] / 2, ay = at ? at[1] : rr[1];
-    const m = 56 * L.u;
+    const m = 70 * Math.max(1, L.u);
     ax = clamp(clamp(ax, rr[0] + 4, rr[0] + rr[2] - 4), Math.min(m, W / 2), Math.max(W - m, W / 2));
     ay = clamp(ay, rr[1], rr[1] + rr[3]);
     hs.push({ id, rect: rr, label, anchor: [ax, ay] });
@@ -1232,7 +1233,7 @@ export function carLayout(W, H, kind) {
   };
   for (const [id, a] of [['npc', L.npc], ['npc2', L.npc2]]) {
     if (!a) continue;
-    push(id, [a.x - 0.35 * a.s, a.y - 1.78 * a.s, 0.7 * a.s, 1.82 * a.s], id === 'npc2' ? 'EIGHT' : LABELS.npc);
+    push(id, [a.x - 0.35 * a.s, a.y - 1.78 * a.s, 0.7 * a.s, 1.82 * a.s], id === 'npc2' ? 'EIGHT' : LABELS.npc, [a.x, a.y - 1.52 * a.s]);
   }
   const PROP_LABEL = { calendar: 'STREAK', board: 'JOBS', lockers: 'WARDROBE', reader: 'PUNCH IN', display: kd.label, tagwall: 'TAG WALL', runner: 'TUNNEL RUN', claw: 'THE GRABBER', shell: 'SHELL GAME', basic: 'BASIC CAPSULE', deluxe: 'DELUXE CAPSULE', vault: '???' };
   for (const p of plan.props) {
@@ -1350,10 +1351,20 @@ function propRect(L, p) {
 
 function computeSpots(L, plan) {
   if (plan.geom === 'cab') {
-    return [[-0.6, 1.0, 1.25], [-0.2, 1.0, 1.4], [0.75, 1.0, 1.32]].map(([X, Y, Z]) => {
-      const [x, y, s] = L.P(X, Y, Z);
-      return { x, y, s };
-    }).filter((p) => p.x > 8 && p.x < L.W - 8 && p.y > 120 * L.u && p.y < L.H - 100 * L.u);
+    // on the console desk, clear of the lockbox
+    const lb = propRect(L, cabLockbox(L));
+    const out = [];
+    for (const Z of [1.45, 1.65]) {
+      for (const X of [-0.85, -0.6, -0.35, -0.12, 0.1, 0.3, 0.75, 0.95]) {
+        const Y = 0.95 + ((Z - 1.2) / 0.6) * 0.1 + 0.01;
+        const [x, y, sc] = L.P(X, Y, Z);
+        if (x < 14 || x > L.W - 14 || y < 120 * L.u || y > L.H - 100 * L.u) continue;
+        if (x > lb[0] - 10 && x < lb[0] + lb[2] + 10 && y > lb[1] - 10 && y < lb[1] + lb[3] + 10) continue;
+        if (out.some((q) => Math.hypot(q.x - x, q.y - y) < 34 * L.u)) continue;
+        out.push({ x, y, s: sc });
+      }
+    }
+    return out.slice(0, 8);
   }
   const cands = [];
   for (const Z of [2.3, 2.7, 3.3, 4.0, 4.6, 5.8, 7.0, 8.2, 9.6, 10.4]) {
@@ -1407,10 +1418,15 @@ function getBake(L, kind, state, K0) {
   const K = Math.max(0.5, Math.min(4, K0));
   const key = `${kind}:${L.W}x${L.H}@${K.toFixed(2)}:${stateKey(kind, state)}`;
   let b = bakes.get(key);
-  if (!b) {
+  if (b) {
+    // most recently used goes last, so eviction drops the stalest car
+    bakes.delete(key);
+    bakes.set(key, b);
+  } else {
     b = { back: bakeBack(L, kind, state || {}, K), front: bakeFront(L, kind, state || {}, K) };
     bakes.set(key, b);
-    while (bakes.size > 6) bakes.delete(bakes.keys().next().value);
+    // each bake is two full-screen canvases; four cars is plenty on a phone
+    while (bakes.size > 4) bakes.delete(bakes.keys().next().value);
   }
   return b;
 }
@@ -2169,14 +2185,30 @@ function drawGlows(g, L, t, state) {
 
 // ---------------------------------------------------------------- public draw
 
+// The car's gentle rock on the rails, as a transform to apply around ALL three
+// layers (drawCar, your characters, drawCarFront) so everything moves together:
+//   const w = carSway(t, L); g.translate(L.W / 2 + w.dx, L.H + w.dy); g.rotate(w.rot); g.translate(-L.W / 2, -L.H);
+// Straps, hanging stock and the tunnel already move on their own.
+export function carSway(t, L) {
+  const u = L ? L.u : 1;
+  return {
+    dx: (Math.sin(t * 0.9) * 1.2 + Math.sin(t * 2.3) * 0.4) * u,
+    dy: (Math.sin(t * 1.7) * 0.9 + Math.max(0, Math.sin(t * 6.1)) * 0.5) * u,
+    rot: Math.sin(t * 0.6) * 0.0028 + Math.sin(t * 1.9) * 0.0009,
+  };
+}
+
 // Optional: bake a car ahead of time (behind a fade, or while idle) so the
 // first drawCar() of that car is cheap. Same arguments as drawCar.
+// `state.scale` (device pixels per CSS pixel) pins the bake density; pass it
+// whenever the context also carries an animated zoom, or every zoomed frame
+// would bake a fresh copy.
 export function prewarmCar(g, L, kind, state = {}) {
-  getBake(L, kind, state, scaleOf(g));
+  getBake(L, kind, state, state.scale || scaleOf(g));
 }
 
 export function drawCar(g, L, kind, t, state = {}) {
-  const K = scaleOf(g);
+  const K = state.scale || scaleOf(g);
   const b = getBake(L, kind, state, K);
   if (L.hasGlass) {
     g.save();
@@ -2197,7 +2229,7 @@ export function drawCar(g, L, kind, t, state = {}) {
 }
 
 export function drawCarFront(g, L, kind, t, state = {}) {
-  const K = scaleOf(g);
+  const K = state.scale || scaleOf(g);
   const b = getBake(L, kind, state, K);
   g.drawImage(b.front, 0, 0, L.W, L.H);
   if (L.plan.geom === 'car') drawStraps(g, L, t, true, kind);

@@ -1,7 +1,7 @@
 // The ride: renders the current car of the Drip Line with its shopkeeper(s)
 // and your figure, lays real buttons over everything you can tap, draws the
 // day's loose tokens, and animates walking from car to car.
-import { carLayout, drawCar, drawCarFront } from '../art/car.js';
+import { carLayout, drawCar, drawCarFront, carSway } from '../art/car.js';
 import { drawFigure, drawNpc } from '../art/figure.js';
 import { ellipse, dot, rgba, INK } from '../ink.js';
 import { el } from '../ui/dom.js';
@@ -213,7 +213,8 @@ export class Ride {
     let zoom = 1, fade = 0, cx = W / 2, cy = H * 0.45;
     if (this.tr) {
       const tr = this.tr;
-      tr.k += dt / 0.42;
+      // a slow frame (a car being drawn for the first time) must not skip the fade
+      tr.k += Math.min(dt, 1 / 30) / 0.42;
       const door = (this.L.hotspots || []).find((h) => h.id === 'door-next');
       if (door) { cx = door.rect[0] + door.rect[2] / 2; cy = door.rect[1] + door.rect[3] / 2; }
       if (!tr.swapped) {
@@ -242,7 +243,7 @@ export class Ride {
     const L = this.L;
     const kind = this.def.kind;
     const state = this.env.state(this.car);
-    state.sway = Math.sin(t * 0.9) * 0.6;
+    state.scale = dpr; // keep car bakes at screen density while the walk zooms
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.fillStyle = '#0a0618';
     g.fillRect(0, 0, W, H);
@@ -252,6 +253,11 @@ export class Ride {
       g.scale(zoom, zoom);
       g.translate(-cx, -cy);
     }
+    // the car rocks on the rails; everyone inside rocks with it
+    const sw = carSway(t, L);
+    g.translate(L.W / 2 + sw.dx, L.H + sw.dy);
+    g.rotate(sw.rot);
+    g.translate(-L.W / 2, -L.H);
     drawCar(g, L, kind, t, state);
     // loose tokens
     for (const c of this.coins) this.drawCoin(g, c, t);
