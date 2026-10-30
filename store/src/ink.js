@@ -1,4 +1,4 @@
-// Hand-drawn ink renderer. Everything in 3RD RAIL is drawn with these:
+// Hand-drawn ink renderer. Everything in DRIP LINE is drawn with these:
 // shapes are point lists that get a seeded wobble, a flat fill, an optional
 // cel-shade crescent, and a thick dark outline. Seeds keep a shape's wobble
 // stable between frames; "boil" (changing the seed a few times a second) is

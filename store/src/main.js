@@ -779,8 +779,8 @@ function frame(dt, t) {
     if (pressed('right') || pressed('up')) goNext();
     if (pressed('left') || pressed('down')) goBack();
     if (pressed('map')) openTrainMap();
-    if (pressed('bag')) openCloset();
-    if (pressed('stash')) openMe();
+    if (pressed('closet')) openCloset();
+    if (pressed('stats')) openMe();
   } else if (pressed('back') && anyOverlay()) closeOverlay();
   ride.render(dt, t);
   drawScreenFx(ctx, t, ride.car === 'ghost' ? { tint: 'rgba(4,30,26,0.6)' } : {});
@@ -794,7 +794,6 @@ window.addEventListener('keydown', (e) => {
     const top = topOverlay();
     if (top && top.opts.dismissable !== false) closeOverlay();
   }
-  if (e.code === 'KeyC' && canAct()) openCloset();
 });
 
 boot();

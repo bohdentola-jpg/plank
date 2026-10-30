@@ -133,7 +133,9 @@ button { font: inherit; color: inherit; }
 .car-title { font: 32px/1 var(--f-drip); letter-spacing: 1px; }
 
 /* in-world tap targets */
-#hotspots { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+#hotspots { position: absolute; inset: 0; pointer-events: none; z-index: 4; transition: opacity 0.15s; }
+#hotspots.busy { opacity: 0; }
+#hotspots.busy * { pointer-events: none !important; }
 .hot { position: absolute; pointer-events: auto; background: transparent; border: 0; padding: 0; cursor: pointer; border-radius: 14px; }
 .hot:focus-visible, .hot:hover { outline: 3px dashed rgba(255,250,240,0.9); outline-offset: 2px; }
 .hot-tag { position: absolute; transform: translate(-50%, -100%); padding: 4px 9px 5px; background: var(--paper); border: 3px solid var(--ink); border-radius: 10px; font: 12px/1 var(--f-sign); white-space: nowrap; pointer-events: none; box-shadow: 3px 3px 0 var(--ink); animation: tagBob 2.4s ease-in-out infinite; }

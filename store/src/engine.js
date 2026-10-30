@@ -83,13 +83,15 @@ const KEYMAP = {
   KeyE: 'act', Enter: 'act',
   ShiftLeft: 'run', ShiftRight: 'run',
   Escape: 'back',
-  KeyM: 'map', KeyB: 'bag', KeyP: 'stash', KeyI: 'stash',
+  KeyM: 'map', KeyC: 'closet', KeyP: 'stats', KeyI: 'stats',
 };
 
 export function initInput() {
   window.addEventListener('keydown', (e) => {
     const tag = (e.target && e.target.tagName) || '';
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    // Enter/Space on a focused button presses that button, nothing else
+    if ((tag === 'BUTTON' || tag === 'A' || tag === 'SUMMARY') && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) return;
     const k = KEYMAP[e.code];
     if (k) {
       if (!keys.has(k)) pressedOnce.add(k);

@@ -129,6 +129,7 @@ export class Ride {
         root.append(el('span', { class: `hot-tag ${tag.cls || ''}`, style: { left: `${a[0]}px`, top: `${Math.max(a[1], 8)}px` } }, tag.text));
       }
     }
+    this.spreadTags();
     // you: tap yourself to open the closet
     const P = this.L.player;
     if (P) {
@@ -154,6 +155,33 @@ export class Ride {
       });
       root.append(b);
       this.coins.push(c);
+    }
+  }
+
+  // Labels on a narrow phone can land on top of each other. Nudge each one
+  // up (then down, then sideways) until it clears the ones already placed.
+  spreadTags() {
+    const tagEls = [...this.hotRoot.querySelectorAll('.hot-tag')];
+    if (tagEls.length < 2) return;
+    const W = this.W, topMin = 6;
+    const placed = [];
+    const hit = (r) => placed.some((p) => r.left < p.right + 4 && r.right > p.left - 4 && r.top < p.bottom + 3 && r.bottom > p.top - 3);
+    // place the larger (nearer) targets first so they keep their spot
+    tagEls.sort((a, b) => parseFloat(b.style.top) - parseFloat(a.style.top));
+    for (const t of tagEls) {
+      const y0 = parseFloat(t.style.top), x0 = parseFloat(t.style.left);
+      let r = t.getBoundingClientRect();
+      const tries = [[0, 0], [0, -1], [0, 1], [0, -2], [-1, 0], [1, 0], [0, 2], [-1, -1], [1, -1], [0, -3]];
+      for (const [dxk, dyk] of tries) {
+        const dy = dyk * (r.height + 4), dx = dxk * (r.width / 2 + 6);
+        const top = Math.max(topMin + r.height, y0 + dy);
+        const left = Math.min(W - r.width / 2 - 4, Math.max(r.width / 2 + 4, x0 + dx));
+        t.style.top = `${top}px`;
+        t.style.left = `${left}px`;
+        r = t.getBoundingClientRect();
+        if (!hit(r)) break;
+      }
+      placed.push(r);
     }
   }
 

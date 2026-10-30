@@ -1,5 +1,5 @@
 // All sound is synthesized with WebAudio — no files. A lo-fi boom-bap loop
-// (with moods per station), tunnel reverb, and a bag of short effects.
+// (with moods per car), tunnel reverb, and a set of short effects.
 
 let ac = null, master, musicBus, sfxBus, verb, verbSend, comp, noiseBuf = null;
 let musicOn = true, sfxOn = true;
