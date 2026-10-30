@@ -1,0 +1,57 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>3RD RAIL — cast sheet</title>
+<style>
+@font-face{font-family:"Bungee";src:url(../fonts/bungee.woff2) format("woff2")}
+@font-face{font-family:"Gochi Hand";src:url(../fonts/gochi-hand.woff2) format("woff2")}
+@font-face{font-family:"Permanent Marker";src:url(../fonts/permanent-marker.woff2) format("woff2")}
+@font-face{font-family:"Sedgwick Ave Display";src:url(../fonts/sedgwick-ave-display.woff2) format("woff2")}
+@font-face{font-family:"Rubik Wet Paint";src:url(../fonts/rubik-wet-paint.woff2) format("woff2")}
+html,body{margin:0;background:#241c44}
+canvas{display:block}
+</style></head><body>
+<canvas id="c"></canvas>
+<script type="module">
+import * as C from '../src/art/critters.js';
+import { text, FONTS } from '../src/ink.js';
+await document.fonts.load('20px "Bungee"');
+const cv = document.getElementById('c');
+const W = 1400, H = 900, dpr = 1;
+cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px';
+const g = cv.getContext('2d');
+g.scale(dpr, dpr);
+g.fillStyle = '#2b2350'; g.fillRect(0, 0, W, H);
+const S = 2;
+const row = (y) => { g.fillStyle = '#3a2f66'; g.fillRect(0, y, W, 4); };
+const list = [
+  ['rat', (g, x, y) => C.drawRat(g, x, y, { t: 0.3 })],
+  ['rat walk', (g, x, y) => C.drawRat(g, x, y, { t: 0.3, walk: 0.25, look: { fur: 'cocoa', hoodie: '#3ec7b0', hat: 'cap', hatColor: '#ffc93d', shoe: '#f4efe6' } })],
+  ['rat fedora', (g, x, y) => C.drawRat(g, x, y, { t: 0.3, look: { fur: 'slate', hoodie: '#2a2238', hat: 'fedora', hatColor: '#4a7a4a', shoe: '#f4efe6' } })],
+  ['rat bucket', (g, x, y) => C.drawRat(g, x, y, { t: 0.3, walk: 0.7, look: { fur: 'snow', hoodie: '#7b5cff', hat: 'bucket', hatColor: '#ff8a3d', shoe: '#ffc93d' } })],
+  ['pigeon', (g, x, y) => C.drawPigeon(g, x, y, { t: 0.3 })],
+  ['big cheese', (g, x, y) => C.drawBigCheese(g, x, y, { t: 0.3 })],
+  ['roach', (g, x, y) => C.drawRoach(g, x, y, { t: 0.3 })],
+];
+const list2 = [
+  ['raccoon', (g, x, y) => C.drawRaccoon(g, x, y, { t: 0.3 })],
+  ['bat', (g, x, y) => C.drawBat(g, x, y, { t: 0.3 })],
+  ['cat', (g, x, y) => C.drawCat(g, x, y, { t: 0.3 })],
+  ['weasel', (g, x, y) => C.drawWeasel(g, x, y, { t: 0.3 })],
+  ['tortoise', (g, x, y) => C.drawTortoise(g, x, y, { t: 0.3 })],
+  ['moth', (g, x, y) => C.drawMoth(g, x, y, { t: 0.3 })],
+  ['gator', (g, x, y) => C.drawGator(g, x, y, { t: 0.3 })],
+  ['ghost', (g, x, y) => C.drawGhost(g, x, y, { t: 0.3 })],
+];
+const draw = (arr, y0) => {
+  arr.forEach(([name, fn], i) => {
+    const x = 100 + i * 180;
+    g.save(); g.translate(x, y0); g.scale(S, S); fn(g, 0, 0); g.restore();
+    text(g, name, x, y0 + 30, { size: 14, font: FONTS.sign, fill: '#f6ecd2', lw: 3 });
+  });
+};
+row(330); draw(list, 330);
+row(650); draw(list2.slice(0, 7), 650);
+g.save(); g.translate(1320, 880); g.scale(1.6, 1.6); C.drawGhost(g, 0, 0, { t: 0.3 }); g.restore();
+// walk cycle strip
+for (let i = 0; i < 8; i++) { g.save(); g.translate(80 + i * 90, 860); g.scale(0.9, 0.9); C.drawRat(g, 0, 0, { t: i * 0.1, walk: i / 8 }); g.restore(); }
+document.title = 'ready';
+</script></body></html>

@@ -1,0 +1,44 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>3RD RAIL — world test</title>
+<style>
+@font-face{font-family:"Bungee";src:url(../fonts/bungee.woff2) format("woff2")}
+@font-face{font-family:"Gochi Hand";src:url(../fonts/gochi-hand.woff2) format("woff2")}
+@font-face{font-family:"Permanent Marker";src:url(../fonts/permanent-marker.woff2) format("woff2")}
+@font-face{font-family:"Sedgwick Ave Display";src:url(../fonts/sedgwick-ave-display.woff2) format("woff2")}
+@font-face{font-family:"Rubik Wet Paint";src:url(../fonts/rubik-wet-paint.woff2) format("woff2")}
+html,body{margin:0;height:100%;background:#000;overflow:hidden}
+canvas{display:block;width:100%;height:100%}
+</style></head><body>
+<canvas id="c"></canvas>
+<script type="module">
+import { initCanvas, view, follow, snapCamera, startLoop, beginFrame, initInput } from '../src/engine.js';
+import { Stage, FEET } from '../src/world/stage.js';
+import { Player } from '../src/world/player.js';
+import { drawScreenFx } from '../src/world/fx.js';
+import { productById, PRODUCTS } from '../src/data/catalog.js';
+await Promise.all(['Bungee','Gochi Hand','Permanent Marker','Sedgwick Ave Display','Rubik Wet Paint'].map(f => document.fonts.load(`20px "${f}"`)));
+const q = new URLSearchParams(location.search);
+const ctx = initCanvas(document.getElementById('c'));
+initInput(document.getElementById('c'));
+const stage = new Stage(q.get('scene') || 'token', {
+  dealOfDay: () => productById['t-hoodie-rat'], dealPct: () => 40,
+  clawPrizes: () => [{x:0.1,y:0,kind:'tokens'},{x:0.25,y:0.1,kind:'sticker'},{x:0.4,y:0,kind:'coupon'},{x:0.55,y:0.2,kind:'key'},{x:0.7,y:0,kind:'tokens'},{x:0.85,y:0.1,kind:'freeze'},{x:0.33,y:0.5,kind:'sticker'},{x:0.62,y:0.6,kind:'tokens'}],
+  phoneRinging: () => true, boothReady: () => true,
+});
+view.worldW = stage.width;
+const player = new Player();
+player.x = +(q.get('x') || stage.def.spawn);
+player.minX = stage.def.minX; player.maxX = stage.def.maxX;
+snapCamera(player.x);
+stage.warm();
+window.__stage = stage; window.__player = player;
+startLoop((dt, t) => {
+  beginFrame(dt);
+  player.update(dt);
+  stage.update(dt, t, player.x);
+  follow(player.x, dt, player.facing * 40);
+  stage.render(ctx, t, (g) => player.draw(g, t, FEET));
+  drawScreenFx(ctx, t);
+});
+document.title = 'ready';
+</script></body></html>

@@ -6,7 +6,10 @@
   "scripts": {
     "start": "python3 serve.py",
     "shot": "node tools/shot.mjs",
-    "smoke": "node tools/smoke.mjs"
+    "smoke": "node tools/smoke.mjs",
+    "store": "python3 serve.py --open store/",
+    "store:smoke": "node store/tools/smoke.mjs",
+    "store:build": "node store/tools/build-single.mjs"
   },
   "dependencies": {
     "three": "^0.160.0"

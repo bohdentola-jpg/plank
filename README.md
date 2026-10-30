@@ -1,3 +1,7 @@
+> **New in this repo: [3RD RAIL MARKET](store/README.md)**, a walkable underground subway store
+> with daily streaks, minigames and secret shops. Run it with `store.bat` (Windows) or
+> `python3 serve.py --open store/`, then open `/store/`.
+
 # VARSITY 27 🏈
 
 *Sunday has Madden. Saturday has NCAA. Friday is yours.*
