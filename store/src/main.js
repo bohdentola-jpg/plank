@@ -376,7 +376,9 @@ async function walk(id, dir) {
 
 async function travelTo(id) {
   if (id === ride.car) return;
-  await walk(id, E.CARS.indexOf(id) < E.CARS.indexOf(ride.car) || id === 'cab' ? 'back' : 'next');
+  // the cab is in front of car 1; the ghost car and vault are behind car 7
+  const pos = (c) => (c === 'cab' ? -1 : c === 'ghost' || c === 'vault' ? E.CARS.length : E.CARS.indexOf(c));
+  await walk(id, pos(id) < pos(ride.car) ? 'back' : 'next');
 }
 
 function arrived(id, silent = false) {
@@ -498,7 +500,9 @@ async function talkSignal() {
     const pv = E.streakPreview();
     const jobsReady = E.allJobsDone() && !E.S.day.jobsClaimed;
     const line = jobsReady ? 'You did all three jobs! I’ve got something for you.'
-      : can ? (pv.broken ? 'You missed a day, so your streak starts over. Unless you had freezes! Punch in?' : `Day *${pv.next}* of your streak is ready. Punch in?`)
+      : can ? (pv.broken ? 'You missed a day, so your streak starts over at day 1. Punch in?'
+        : pv.freezesNeeded ? `You missed ${pv.freezesNeeded === 1 ? 'a day' : `${pv.freezesNeeded} days`}, but a *streak freeze* covers it. Day *${pv.next}* is ready. Punch in?`
+          : `Day *${pv.next}* of your streak is ready. Punch in?`)
         : pick(['Doors closing! Just kidding. What do you need?', 'Green means go. I’m on green. What’s up?', 'Need something, rider?']);
     const choices = [
       jobsReady ? { label: 'Claim my job bonus', value: 'jobs' } : { label: 'Today’s jobs', value: 'jobs' },
