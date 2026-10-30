@@ -464,6 +464,10 @@ button { font: inherit; color: inherit; }
   .closet-left { position: static; }
   .closet-left .figure-view { width: min(100%, 300px); margin: 0 auto; }
   .cap-stage { width: min(100%, 360px); justify-self: center; }
+  .cap-reveal { padding: 8px 8px 10px; gap: 4px; }
+  .cap-reveal h3 { font-size: 22px; }
+  .cap-reveal .row { gap: 6px; flex-wrap: nowrap; }
+  .cap-reveal .btn { min-height: 38px; padding: 6px 10px; font-size: 12px; }
   .card-name { font-size: 17px; }
   .train-row { flex-direction: column; min-width: 0; align-items: stretch; }
   .train-car { width: 100%; min-height: 0; }

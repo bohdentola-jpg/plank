@@ -168,6 +168,8 @@ export function openCapsules(machine = 'basic') {
       g.translate(x, y);
       g.rotate(rot);
       g.scale(s, s);
+      // the halves fly apart and fade so the prize takes the stage
+      g.globalAlpha *= Math.max(0, 1 - open * 1.1);
       if (glowCol) {
         g.save();
         g.globalCompositeOperation = 'lighter';
@@ -178,7 +180,7 @@ export function openCapsules(machine = 'basic') {
         g.fillRect(-80, -80, 160, 160);
         g.restore();
       }
-      const off = open * 60;
+      const off = open * 90;
       g.save();
       g.translate(0, -off);
       g.rotate(-open * 0.8);
@@ -258,14 +260,31 @@ export function openCapsules(machine = 'basic') {
           }
           g.restore();
           drawCapsule(200, 110, 2.6, 0, capCol, o, null, t);
-          // the item
-          const s = 1.15 * (0.4 + 0.6 * Math.min(1, o * 1.3));
-          drawProduct(g, anim.res.prismatic ? { ...anim.res.item.art, prismatic: true } : anim.res.item.art, 200, 120, s * 1.3, anim.res.item.seed);
+          // the item, on a spotlight disc so it stands out from the gumballs
+          const pop = Math.min(1, o * 1.3);
+          const s = 1.8 * (0.4 + 0.6 * pop);
+          g.save();
+          g.globalAlpha *= pop;
+          const disc = g.createRadialGradient(200, 128, 10, 200, 128, 104);
+          disc.addColorStop(0, 'rgba(255,250,240,1)');
+          disc.addColorStop(0.75, 'rgba(255,250,240,0.95)');
+          disc.addColorStop(1, 'rgba(255,250,240,0)');
+          g.fillStyle = disc;
+          g.beginPath();
+          g.arc(200, 128, 104, 0, Math.PI * 2);
+          g.fill();
+          g.lineWidth = 6;
+          g.strokeStyle = rc.rank >= 5 ? `hsl(${(t * 120) % 360},90%,60%)` : rc.color;
+          g.beginPath();
+          g.arc(200, 128, 86, 0, Math.PI * 2);
+          g.stroke();
+          g.restore();
+          drawProduct(g, anim.res.prismatic ? { ...anim.res.item.art, prismatic: true } : anim.res.item.art, 200, 128, s, anim.res.item.seed);
           if (anim.res.prismatic || rc.rank >= 5) {
             for (let i = 0; i < 10; i++) {
               const ang = t * 1.5 + i * 0.63;
-              const rr = 90 + Math.sin(t * 3 + i) * 12;
-              dot(g, 200 + Math.cos(ang) * rr, 120 + Math.sin(ang) * rr * 0.7, 3 + (i % 3), `hsl(${(i * 40 + t * 200) % 360},95%,70%)`);
+              const rr = 104 + Math.sin(t * 3 + i) * 12;
+              dot(g, 200 + Math.cos(ang) * rr, 128 + Math.sin(ang) * rr * 0.8, 3 + (i % 3), `hsl(${(i * 40 + t * 200) % 360},95%,70%)`);
             }
           }
           if (o >= 1 && reveal.hidden) showReveal();
