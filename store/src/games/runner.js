@@ -215,6 +215,9 @@ export function playRunner(ctx) {
       // QA: ?qa=god turns every hit into a smash (and serves pizza early) for testing
       const god = typeof location !== 'undefined' && /[?&]qa=god\b/.test(location.search);
       if (god) nextPizzaM = 60;
+      // QA: ?qa=auto plays with good timing, to prove every spawn pattern is clearable
+      const auto = typeof location !== 'undefined' && /[?&]qa=auto\b/.test(location.search);
+      let autoHold = 0;
 
       const meters = () => Math.floor(dist * UNIT_M);
       const runSpeed = () => (crashed ? speed : speed * (pizzaT > 0 ? 1.35 : 1));
@@ -283,10 +286,12 @@ export function playRunner(ctx) {
           coinLine(x - 40, 5, 30);
           width = 100;
         } else if (r < 0.88 && m >= 420) {
-          // bag then pigeon: jump the bag early, then stay down
+          // bag then pigeon: hop the bag, land, then stay down. The gap scales with
+          // speed so a quick hop always lands before the bird arrives.
+          const gap = 170 + runSpeed() * (0.62 + rnd() * 0.12);
           add(rnd() < 0.5 ? 'bag' : 'cone', x);
-          add('pigeon', x + 250 + rnd() * 60, { alt: 120, phase: rnd() * 6 });
-          width = 330;
+          add('pigeon', x + gap, { alt: 120, phase: rnd() * 6 });
+          width = gap + 80;
         } else if (m >= 320) {
           // two low ones in a row: one long jump or two hops
           add('bag', x);
@@ -300,7 +305,7 @@ export function playRunner(ctx) {
         // pizza, somewhere clear
         if (m >= nextPizzaM) {
           nextPizzaM = m + 450 + rnd() * 320;
-          pick.push({ kind: 'pizza', x: x + width + 160, alt: 126, taken: false });
+          pick.push({ kind: 'pizza', x: x + width + 160, alt: god ? 40 : 126, taken: false });
           width += 280;
         }
         const sp = runSpeed();
@@ -371,6 +376,26 @@ export function playRunner(ctx) {
         api.finish({ title: beatOld ? 'NEW RECORD!' : CRASH_TITLES[crashKind] || 'WIPEOUT', grade, score: `${m}m`, scoreLabel: 'DISTANCE', tokens, lines, againLabel: 'RUN IT BACK' });
       };
 
+      const autopilot = (dt, sp) => {
+        if (autoHold > 0) {
+          autoHold -= dt;
+          if (autoHold <= 0) release();
+          return;
+        }
+        if (h > 0) return;
+        const next = obs.filter((o) => !o.smashed && o.type !== 'pigeon' && o.x + o.w > RAT_X - 10).sort((a, b) => a.x - b.x)[0];
+        if (!next) return;
+        const tall = next.type === 'turnstile';
+        const lead = tall ? 0.2 : 0.17;
+        const d = next.x - (RAT_X + 20);
+        if (d > sp * lead) return;
+        const air = tall ? 0.78 : 0.48;
+        const bird = obs.find((o) => o.type === 'pigeon' && !o.smashed && o.x > RAT_X - 40 && (o.x - RAT_X) / (sp + 70) < air + 0.05);
+        if (bird) return; // a jump now would meet the pigeon
+        press();
+        autoHold = tall ? 0.32 : 0.06;
+      };
+
       const hud = () => {
         const left = paidLeft();
         api.setHud(`${left > 0 ? `Paid plays left today: ${left}` : 'Playing for fun'} · best ${Math.max(best0, econ.S.bests.runner || 0)}m`, `${meters()}m · ${coins} coins`);
@@ -427,6 +452,7 @@ export function playRunner(ctx) {
             trail.push({ x: RAT_X, y: GROUND - h, a: 1, phase });
             if (trail.length > 10) trail.shift();
           } else if (trail.length) trail.shift();
+          if (auto && !crashed) autopilot(dt, sp);
           // world objects
           gapLeft -= sp * dt;
           if (gapLeft <= 0 && !crashed && time > 1.1) spawn();
@@ -649,8 +675,15 @@ export function playRunner(ctx) {
           for (let k = 0; k < 2; k++) {
             const fx0 = k * fstep - (fgOff % fstep) + 700;
             if (fx0 < -80 || fx0 > W + 40) continue;
-            g.fillStyle = 'rgba(6,4,14,0.55)';
-            g.fillRect(fx0, 0, 34, H);
+            g.save();
+            g.globalAlpha = 0.62;
+            g.fillStyle = '#05030c';
+            g.fillRect(fx0, 0, 30, H);
+            g.fillStyle = '#1c1830';
+            g.fillRect(fx0 + 4, 0, 4, H);
+            g.fillRect(fx0 - 8, 0, 46, 16);
+            g.fillRect(fx0 - 8, H - 26, 46, 26);
+            g.restore();
           }
           g.restore();
           // arcade HUD
