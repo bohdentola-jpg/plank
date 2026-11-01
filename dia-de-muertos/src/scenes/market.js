@@ -1,5 +1,5 @@
 // El mercado: flowers, candles and copal, fruit, sugar skulls, tissue paper and
-// clay — everything on Abuela's list, with a vendor to explain each one.
+// clay. Everything on Abuela's list, with a vendor to explain each one.
 import * as THREE from 'three';
 import { Scene } from './base.js';
 import { toon, box, mesh, cyl, sphere, rng, PAL } from '../toon.js';
@@ -49,13 +49,13 @@ export class MarketScene extends Scene {
     }
     this.buildStalls();
     this.buildPeople();
-    this.defineView('main', [0, 2.15, 7.6], [0, 1.0, -5.5], 46);
-    this.defineView('flores', [0.6, 1.65, 2.6], [-2.6, 1.0, 0.2], 44);
-    this.defineView('velas', [-0.6, 1.65, 2.6], [2.6, 1.05, 0.2], 44);
-    this.defineView('fruta', [0.6, 1.6, -2.0], [-2.6, 1.0, -4.4], 44);
-    this.defineView('dulces', [-0.6, 1.6, -2.0], [2.6, 1.05, -4.4], 44);
-    this.defineView('papel', [0.6, 1.6, -6.6], [-2.6, 1.1, -9.0], 44);
-    this.defineView('barro', [-0.6, 1.6, -6.6], [2.6, 1.0, -9.0], 44);
+    this.defineView('main', [0, 2.15, 7.6], [0, 1.0, -5.5], 34.0);
+    this.defineView('flores', [0.6, 1.65, 2.6], [-2.6, 1.0, 0.2], 32.4);
+    this.defineView('velas', [-0.6, 1.65, 2.6], [2.6, 1.05, 0.2], 32.4);
+    this.defineView('fruta', [0.6, 1.6, -2.0], [-2.6, 1.0, -4.4], 32.4);
+    this.defineView('dulces', [-0.6, 1.6, -2.0], [2.6, 1.05, -4.4], 32.4);
+    this.defineView('papel', [0.6, 1.6, -6.6], [-2.6, 1.1, -9.0], 32.4);
+    this.defineView('barro', [-0.6, 1.6, -6.6], [2.6, 1.0, -9.0], 32.4);
     this.hideMonarch('awning', 2.6, 2.75, -9.2);
     this.hideMonarch('crate', -3.3, 0.5, -2.6);
   }
@@ -78,7 +78,7 @@ export class MarketScene extends Scene {
   }
 
   buildStalls() {
-    // 1. Doña Chela — flowers
+    // 1. Doña Chela: flowers
     const flores = this.placeStall(-1, 0.2, { tarp: PAL.rosa });
     const r = rng(3);
     for (let i = 0; i < 5; i++) {
@@ -107,7 +107,7 @@ export class MarketScene extends Scene {
       flores.add(stems);
     }
     this.flores = flores;
-    // 2. Don Tomás — candles & copal
+    // 2. Don Tomás: candles & copal
     const velas = this.placeStall(1, 0.2, { tarp: PAL.cobalt, stripes: '#5f8ff0' });
     for (let i = 0; i < 9; i++) {
       const c = veladora({ glass: [PAL.red, PAL.purple, '#f7e4c8', PAL.marigold, PAL.turquoise][i % 5] });
@@ -161,7 +161,7 @@ export class MarketScene extends Scene {
       fruta.add(c2);
     }
     this.fruta = fruta;
-    // 4. Doña Mago — sugar skulls & sweets
+    // 4. Doña Mago: sugar skulls & sweets
     const dulces = this.placeStall(1, -4.4, { tarp: PAL.rosa, stripes: '#ff7ac0' });
     const shelf = box(2.3, 0.05, 0.4, toon('#ffffff', { rim: 0 }));
     shelf.position.set(0, 1.35, -0.35);
@@ -238,9 +238,15 @@ export class MarketScene extends Scene {
     vendor('chela', this.flores, 0.3);
     vendor('tomas', this.velas, -0.2);
     vendor('mago', this.dulces, 0.2);
+    // Lupita and Chispa wait near the entrance (and step aside when you look
+    // at the flower stall, so they aren't in the way)
     this.addChar('lupita', -1.75, 2.6, 0.55);
     const ch = this.addChar('chispa', -1.0, 3.1, 0.2);
     ch.play('sit');
+    this.helpers = [
+      { c: this.chars.lupita, home: [-1.75, 2.6, 0.55], aside: [1.6, 3.9, -0.4] },
+      { c: ch, home: [-1.0, 3.1, 0.2], aside: [2.2, 4.3, -0.5] },
+    ];
     // shoppers strolling up and down the lane
     this.shoppers = [];
     for (let i = 0; i < 5; i++) {
@@ -250,7 +256,8 @@ export class MarketScene extends Scene {
       this.shoppers.push(c);
       const loop = async () => {
         while (!this.gone && c.root.parent) {
-          await c.walkTo((Math.random() - 0.5) * 2.2, -1.5 - Math.random() * 10, 0.6 + Math.random() * 0.3);
+          const d = this.freeSpot(c.root.position);
+          if (d) await c.walkTo(d.x, d.z, 0.6 + Math.random() * 0.3);
           c.play('idle');
           c.faceTo(c.root.position.x > 0 ? 6 : -6, c.root.position.z);
           await this.engine.wait(2 + Math.random() * 4);
@@ -258,6 +265,80 @@ export class MarketScene extends Scene {
       };
       loop();
     }
+  }
+
+  // ---------------------------------------------------------------- shoppers
+  // When you look at a stall, shoppers keep out of the space between you and
+  // it, so nobody walks in front of the camera.
+  keepOut(name) {
+    const v = this.views[name];
+    if (!v || name === 'main') return null;
+    const dx = v.target[0] - v.pos[0], dz = v.target[2] - v.pos[2];
+    const d = Math.hypot(dx, dz);
+    return { x: v.pos[0], z: v.pos[2], fx: dx / d, fz: dz / d, far: d + 2.2 };
+  }
+
+  // is (x, z) inside what the camera sees, up to just behind the stall?
+  blockedAt(x, z, cone = this.blocked) {
+    if (!cone) return false;
+    const vx = x - cone.x, vz = z - cone.z;
+    if (Math.hypot(vx, vz) < 1.2) return true;
+    const along = vx * cone.fx + vz * cone.fz;
+    if (along < 0 || along > cone.far) return false;
+    const side = Math.abs(vx * cone.fz - vz * cone.fx);
+    return side < along * 1.9 + 0.6;
+  }
+
+  // a random spot in the lane you can walk to in a straight line without
+  // crossing the space in front of the camera
+  freeSpot(from = null) {
+    for (let i = 0; i < 24; i++) {
+      const x = (Math.random() - 0.5) * 2.2, z = -1.5 - Math.random() * 10;
+      if (this.blockedAt(x, z)) continue;
+      if (from && this.blocked) {
+        let crosses = false;
+        for (let k = 1; k < 10 && !crosses; k++) crosses = this.blockedAt(from.x + (x - from.x) * k / 10, from.z + (z - from.z) * k / 10);
+        if (crosses) continue;
+      }
+      return { x, z };
+    }
+    return null;
+  }
+
+  // anyone standing where the camera is about to look steps out of the way
+  clearLane() {
+    for (const c of this.shoppers || []) {
+      const p = c.root.position;
+      const goingThrough = c.walk && [1, 2, 3, 4, 5, 6, 7, 8, 9].some((k) => this.blockedAt(p.x + (c.walk.x - p.x) * k / 10, p.z + (c.walk.z - p.z) * k / 10));
+      if (!this.blockedAt(p.x, p.z) && !goingThrough) continue;
+      let spot = null;
+      for (let i = 0; i < 24 && !spot; i++) {
+        const z = -1.5 - Math.random() * 10;
+        if (!this.blockedAt(0, z) && !this.blockedAt(-1, z) && !this.blockedAt(1, z)) spot = { x: (Math.random() - 0.5) * 2.2, z };
+      }
+      if (!spot) spot = { x: 0, z: -12.5 };
+      const w = c.walk;
+      c.walk = null;
+      p.set(spot.x, 0, spot.z);
+      c.play('idle');
+      w?.resolve();
+    }
+  }
+
+  async view(name, opts) {
+    this.blocked = this.keepOut(name);
+    this.clearLane();
+    for (const h of this.helpers || []) {
+      const [x, z, ry] = this.blockedAt(h.home[0], h.home[1]) ? h.aside : h.home;
+      h.c.root.position.set(x, 0, z);
+      h.c.root.rotation.y = ry;
+    }
+    return super.view(name, opts);
+  }
+
+  update(dt, time) {
+    super.update(dt, time);
+    if (this.blocked) this.clearLane();
   }
 
   async enter() {
@@ -332,14 +413,14 @@ export class MarketScene extends Scene {
     if (!g.hasItem('velas')) {
       await this.say([
         { who: 'tomas', text: { en: '¡Buen día! [[veladoras|veladora]] for the ofrenda? Their light guides the souls home.', es: '¡Buen día! ¿[[veladoras|veladora]] para la ofrenda? Su luz guía a las almas a casa.' } },
-        { who: 'tomas', text: { en: 'In some families, each candle is for one person they remember. Four candles is a good number — some put them in a cross, for the four directions.', es: 'En algunas familias cada vela es por una persona que recuerdan. Cuatro es buen número: algunos las ponen en cruz, por los cuatro rumbos.' } },
+        { who: 'tomas', text: { en: 'In some families, each candle is for one person they remember. Four is a good number. Some people set them in a cross, for the four directions.', es: 'En algunas familias cada vela es por una persona que recuerdan. Cuatro es buen número: algunos las ponen en cruz, por los cuatro rumbos.' } },
       ]);
       await g.give('velas');
       await g.learn('velas');
     }
     if (!g.hasItem('copal')) {
       await this.say([
-        { who: 'tomas', text: { en: 'And this is [[copal]], tree resin. You burn it in a clay [[sahumador]]. Smell it — like pine and lemon!', es: 'Y esto es [[copal]], resina de árbol. Se quema en un [[sahumador]] de barro. Huélelo: ¡como a pino y limón!' } },
+        { who: 'tomas', text: { en: 'And this is [[copal]], tree resin. You burn it in a clay [[sahumador]]. Smell it. Like pine and lemon!', es: 'Y esto es [[copal]], resina de árbol. Se quema en un [[sahumador]] de barro. Huélelo: ¡como a pino y limón!' } },
       ]);
       await g.give('copal');
       await g.learn('copal');
@@ -371,12 +452,12 @@ export class MarketScene extends Scene {
     if (!g.hasItem('calavera-blanca') && !g.hasItem('calavera')) {
       await this.say([
         { who: 'mago', emote: 'happy', text: { en: '¡Calaveritas de azúcar! These are made with [[alfeñique]], a sugar paste. My family brings them from [[Toluca]], where there\'s a whole fair of them.', es: '¡Calaveritas de azúcar! Se hacen con [[alfeñique]], una pasta de azúcar. Mi familia las trae de [[Toluca]], donde hay toda una feria.' } },
-        { who: 'mago', text: { en: 'Take a plain one — you can decorate it at Tía Lucía\'s and write your Abuelo\'s name on the forehead.', es: 'Llévate una sin decorar: la puedes adornar con Tía Lucía y escribir el nombre de tu abuelo en la frente.' } },
+        { who: 'mago', text: { en: 'Take a plain one. You can decorate it at Tía Lucía\'s and write your Abuelo\'s name on the forehead.', es: 'Llévate una sin decorar: la puedes adornar con Tía Lucía y escribir el nombre de tu abuelo en la frente.' } },
       ]);
       await g.give('calavera-blanca');
       await g.learn('calavera');
       const c = await this.say([{
-        who: 'mago', text: { en: 'I also have Mexican chocolate, for hot chocolate, and candied pumpkin — [[calabaza en tacha]].', es: 'También tengo chocolate de mesa, para el chocolate caliente, y [[calabaza en tacha]].' },
+        who: 'mago', text: { en: 'I also have Mexican chocolate, for hot chocolate, and candied pumpkin: [[calabaza en tacha]].', es: 'También tengo chocolate de mesa, para el chocolate caliente, y [[calabaza en tacha]].' },
         choices: [{ label: { en: 'Chocolate for Abuelo!', es: '¡Chocolate para el Abuelo!' }, value: 'choc' }, { label: { en: 'What\'s calabaza en tacha?', es: '¿Qué es la calabaza en tacha?' }, value: 'cal' }, { label: { en: 'That\'s all, gracias', es: 'Es todo, gracias' }, value: 'no' }],
       }]);
       if (c === 'choc') { await g.give('chocolate'); await g.learn('bebidas'); }
@@ -393,11 +474,11 @@ export class MarketScene extends Scene {
     await this.view('papel');
     if (!g.hasItem('papel-china') && !g.hasItem('papel')) {
       await this.say([
-        { who: 'lupita', text: { en: 'Stacks of [[papel de China]] — tissue paper in every color! Tía Lucía is going to teach us to make [[papel picado]] the way they do in her hometown.', es: '¡Pilas de [[papel de China]] de todos los colores! Tía Lucía nos va a enseñar a hacer [[papel picado]] como en su pueblo.' } },
+        { who: 'lupita', text: { en: 'Look at all the [[papel de China]], tissue paper in every color! Tía Lucía is going to teach us to make [[papel picado]] the way they do in her hometown.', es: '¡Pilas de [[papel de China]] de todos los colores! Tía Lucía nos va a enseñar a hacer [[papel picado]] como en su pueblo.' } },
       ]);
       await g.give('papel-china');
     } else {
-      await this.say([{ who: 'lupita', text: { en: 'Papel picado flutters in the wind — some people say it stands for the air.', es: 'El papel picado se mueve con el viento; hay quien dice que representa el aire.' } }]);
+      await this.say([{ who: 'lupita', text: { en: 'Papel picado flutters in the wind. Some people say it stands for the air.', es: 'El papel picado se mueve con el viento; hay quien dice que representa el aire.' } }]);
     }
     await this.done('papel');
   }

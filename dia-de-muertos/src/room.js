@@ -172,7 +172,7 @@ export function armchair({ color = PAL.rosa } = {}) {
     arm.position.set(sx * 0.48, 0.5, 0);
     g.add(arm);
   }
-  // crocheted doily on the back — every abuela's chair has one
+  // crocheted doily on the back: every abuela's chair has one
   const d = cyl(0.22, 0.22, 0.01, toon('#ffffff'), 18);
   d.rotation.x = Math.PI / 2 - 0.2;
   d.position.set(0, 0.95, -0.2);

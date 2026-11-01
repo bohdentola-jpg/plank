@@ -87,6 +87,33 @@ export class PlazaScene extends Scene {
     const banner = mesh(new THREE.PlaneGeometry(1.2, 2.4), toon('#ffffff', { map: tex(bcv), rim: 0 }), { cast: false });
     banner.position.set(-2.6, 2.6, 2.03);
     casa.add(banner);
+    // windows with shutters, a cornice and a plinth so it reads as a building
+    const trimM = toon('#7a3b2e', { rim: 0 });
+    for (const x of [2.6]) {
+      const win = box(1.1, 1.4, 0.08, toon('#3b2f4a', { rim: 0 }));
+      win.position.set(x, 2.7, 2.02);
+      casa.add(win);
+      for (const sx of [-1, 1]) {
+        const sh = box(0.55, 1.45, 0.06, toon('#2e8b57', { rim: 0 }));
+        sh.position.set(x + sx * 0.84, 2.7, 2.06);
+        casa.add(sh);
+      }
+      const sill = box(1.3, 0.1, 0.22, trimM);
+      sill.position.set(x, 1.95, 2.1);
+      casa.add(sill);
+      const pot = cyl(0.13, 0.1, 0.2, toon(PAL.terracotta), 10);
+      pot.position.set(x, 2.1, 2.1);
+      casa.add(pot);
+      const flowers = sphere(0.16, toon(PAL.rosa), 10);
+      flowers.position.set(x, 2.32, 2.1);
+      casa.add(flowers);
+    }
+    const cornice = box(8.3, 0.28, 4.3, trimM);
+    cornice.position.set(0, 5.0, 0);
+    casa.add(cornice);
+    const plinth = box(8.06, 0.5, 4.06, toon('#c9a27a', { rim: 0 }));
+    plinth.position.set(0, 0.25, 0);
+    casa.add(plinth);
     casa.position.set(11.5, 0, -4);
     casa.rotation.y = -Math.PI / 2;
     this.scene.add(casa);
@@ -120,22 +147,23 @@ export class PlazaScene extends Scene {
     }
     // papel picado and string lights from the kiosco to the trees
     const top = new THREE.Vector3(0, 5.2, -6);
-    for (const [x, z] of [[-9, 3], [8, 4], [-9, -10], [9, -11], [-11, -5], [10, -4]]) {
-      const s = papelString([top.x, top.y, top.z], [x, 3.4, z], { seed: Math.round(x * 7 + z), sheetW: 0.36, sag: 0.6 });
+    // (the last one is tied to the front of the Casa de la Cultura, not inside it)
+    for (const [x, z, y] of [[-9, 3, 3.4], [8, 4, 3.4], [-9, -10, 3.4], [9, -11, 3.4], [-11, -5, 3.4], [9.45, -4.6, 3.9]]) {
+      const s = papelString([top.x, top.y, top.z], [x, y, z], { seed: Math.round(x * 7 + z), sheetW: 0.36, sag: 0.6 });
       s.userData.dynamic = true;
       this.animateTree(s);
       this.scene.add(s);
-      this.scene.add(stringLights([top.x, top.y - 0.3, top.z], [x, 3.2, z], { n: 12, sag: 0.8 }));
+      this.scene.add(stringLights([top.x, top.y - 0.3, top.z], [x, y - 0.2, z], { n: 12, sag: 0.8 }));
     }
     this.buildOfrenda();
     this.buildBoard();
     this.buildStand();
     this.buildPeople();
-    this.defineView('main', [0, 2.6, 11], [0, 1.6, -4], 48);
-    this.defineView('casa', [5.5, 1.9, 1.5], [11, 1.6, -3.6], 46);
-    this.defineView('board', [-1.5, 1.7, 4.2], [-5.2, 1.4, 2.0], 44);
-    this.defineView('ofrenda', [2.0, 1.9, 7.9], [4.5, 1.2, 3.9], 46);
-    this.defineView('kiosco', [0, 2.6, 2.5], [0, 2.0, -6], 48);
+    this.defineView('main', [0, 2.6, 11], [0, 1.6, -4], 35.5);
+    this.defineView('casa', [4.6, 2.2, 0.8], [9.4, 2.5, -4.0], 40.0);
+    this.defineView('board', [-1.5, 1.7, 4.2], [-5.2, 1.4, 2.0], 32.4);
+    this.defineView('ofrenda', [2.0, 1.9, 7.9], [4.5, 1.2, 3.9], 34.0);
+    this.defineView('kiosco', [0, 2.6, 2.5], [0, 2.0, -6], 35.5);
     this.hideMonarch('tree', -8.6, 2.8, 2.6);
     this.hideMonarch('kiosco', 1.8, 1.25, -3.6);
   }
@@ -225,6 +253,7 @@ export class PlazaScene extends Scene {
     p.position.set(-0.55 + (i % 3) * 0.55, 1.55, 0.09 + i * 0.002);
     p.rotation.z = (i % 2 ? 1 : -1) * 0.04;
     this.board.add(p);
+    (this.pinned ||= []).push(p);
   }
 
   buildStand() {
@@ -254,9 +283,9 @@ export class PlazaScene extends Scene {
   buildPeople() {
     this.addChar('lupita', -1.2, 6.2, 0.2);
     this.addChar('chispa', -0.4, 6.7, -0.2).play('sit');
-    this.addChar('mateo', 1.4, 5.6, -0.6);
+    this.addChar('mateo', 0.4, 5.0, -0.4);
     this.addChar('erendira', 8.9, -2.6, -1.4);
-    this.addChar('pancho', -4.4, 2.6, 0.9);
+    this.addChar('pancho', -4.0, 1.2, 1.1); // beside the board, not in front of the poems
     this.addChar('nico', 2.8, 3.4, -0.5);
     const cat = this.addChar('catrina', 3.3, 0.6, -0.4);
     this.addChar('catrin', 4.0, 0.9, -0.7);
@@ -273,21 +302,82 @@ export class PlazaScene extends Scene {
       gu.rotation.z = -1.0;
       m.body.add(gu);
     }
-    // townsfolk
+    // townsfolk strolling around the square, on a loop that goes around the
+    // kiosco, the lamps and the benches instead of through them
+    const loop = [[-6.5, -0.3], [6.5, -0.3], [6.5, -9], [-6.5, -9]];
+    const at = (u) => {
+      const k = Math.floor(u) % 4, f = u - Math.floor(u);
+      const [x0, z0] = loop[k], [x1, z1] = loop[(k + 1) % 4];
+      return [x0 + (x1 - x0) * f, z0 + (z1 - z0) * f];
+    };
+    this.loopAt = at;
+    this.walkers = [];
     for (let i = 0; i < 7; i++) {
-      const c = this.addChar(200 + i * 13, (i % 2 ? 1 : -1) * (2 + i * 0.6), -1 - (i % 3) * 3.2, Math.random() * 6);
+      const w = { u: (i * 0.57) % 4, dir: i % 2 ? 1 : -1 };
+      const [x, z] = at(w.u);
+      const c = this.addChar(200 + i * 13, x, z, Math.random() * 6);
+      w.c = c;
+      this.walkers.push(w);
       this.chars[`vecino${i}`] = c;
       delete this.chars[200 + i * 13];
-      const loop = async () => {
+      const walk = async () => {
         while (!this.gone) {
-          const a = Math.random() * Math.PI * 2;
-          await c.walkTo(Math.cos(a) * 5.5, -6 + Math.sin(a) * 5.5, 0.55);
+          // walk to the next corner at most, so the path stays on the loop
+          const step = 0.25 + Math.random() * 0.5;
+          const corner = w.dir > 0 ? Math.floor(w.u) + 1 : Math.ceil(w.u) - 1;
+          let u = w.dir > 0 ? Math.min(w.u + step, corner) : Math.max(w.u - step, corner);
+          u = (u + 4) % 4;
+          const [tx, tz] = at(u);
+          // don't walk into the shot while you're looking at something
+          if (this.inCone(tx, tz)) { await this.engine.wait(1.5); continue; }
+          w.u = u;
+          await c.walkTo(tx, tz, 0.55);
           c.play('idle');
-          await this.engine.wait(3 + Math.random() * 5);
+          await this.engine.wait(2 + Math.random() * 4);
         }
       };
-      if (i < 4) loop();
+      if (i < 4) walk();
     }
+  }
+
+  // ---------------------------------------------------------------- staying out of shot
+  // when the camera looks at something up close, nobody strolls in front of it
+  inCone(x, z) {
+    const v = this.views[this.currentView];
+    if (!v || this.currentView === 'main') return false;
+    const dx = v.target[0] - v.pos[0], dz = v.target[2] - v.pos[2];
+    const d = Math.hypot(dx, dz), fx = dx / d, fz = dz / d;
+    const vx = x - v.pos[0], vz = z - v.pos[2];
+    if (Math.hypot(vx, vz) < 1.2) return true;
+    const along = vx * fx + vz * fz;
+    if (along < 0 || along > d + 1.5) return false;
+    return Math.abs(vx * fz - vz * fx) < along * 1.9 + 0.6;
+  }
+
+  clearShot() {
+    for (const w of this.walkers || []) {
+      const p = w.c.root.position;
+      if (!this.inCone(p.x, p.z) && !(w.c.walk && this.inCone(w.c.walk.x, w.c.walk.z))) continue;
+      // hop to the other side of the square
+      w.u = (w.u + 2) % 4;
+      const [x, z] = this.loopAt(w.u);
+      const wk = w.c.walk;
+      w.c.walk = null;
+      p.set(x, 0, z);
+      w.c.play('idle');
+      wk?.resolve();
+    }
+  }
+
+  async view(name, opts) {
+    this.currentView = name;
+    this.clearShot();
+    return super.view(name, opts);
+  }
+
+  update(dt, time) {
+    super.update(dt, time);
+    if (this.currentView && this.currentView !== 'main') this.clearShot();
   }
 
   async enter() {
@@ -316,7 +406,7 @@ export class PlazaScene extends Scene {
     if (!g.has('plazaHello')) {
       g.flag('plazaHello');
       await this.say([
-        { who: 'lupita', emote: 'happy', text: { en: 'It\'s November 1st — [[Todos Santos]]! The whole town is in the [[plaza]].', es: '¡Es 1 de noviembre, [[Todos Santos]]! Todo el pueblo está en la [[plaza]].' } },
+        { who: 'lupita', emote: 'happy', text: { en: 'It\'s November 1st, [[Todos Santos]]! The whole town is in the [[plaza]].', es: '¡Es 1 de noviembre, [[Todos Santos]]! Todo el pueblo está en la [[plaza]].' } },
         { who: 'mateo', text: { en: '¡Lupita! You made it!', es: '¡Lupita! ¡Viniste!' }, emote: 'happy' },
         { who: 'lupita', text: { en: 'This is my friend Mateo. Let\'s find Maestra Eréndira at the Casa de la Cultura, and Don Pancho\'s calaverita contest!', es: 'Él es mi amigo Mateo. ¡Busquemos a la Maestra Eréndira en la Casa de la Cultura y el concurso de calaveritas de Don Pancho!' } },
       ]);
@@ -345,7 +435,7 @@ export class PlazaScene extends Scene {
     if (!g.has('erendiraHello')) {
       g.flag('erendiraHello');
       await this.say([
-        { who: 'erendira', emote: 'happy', text: { en: '¡Bienvenidos a la Casa de la Cultura! I\'m Maestra Eréndira. My family is [[Purépecha]] — our people have lived around this lake for centuries.', es: '¡Bienvenidos a la Casa de la Cultura! Soy la Maestra Eréndira. Mi familia es [[Purépecha]]: nuestro pueblo ha vivido alrededor de este lago por siglos.' } },
+        { who: 'erendira', emote: 'happy', text: { en: '¡Bienvenidos a la Casa de la Cultura! I\'m Maestra Eréndira. My family is [[Purépecha]]. Our people have lived around this lake for centuries.', es: '¡Bienvenidos a la Casa de la Cultura! Soy la Maestra Eréndira. Mi familia es [[Purépecha]]: nuestro pueblo ha vivido alrededor de este lago por siglos.' } },
       ]);
     }
     let again = true;
@@ -362,7 +452,7 @@ export class PlazaScene extends Scene {
       }]);
       if (topic === 'catrina') {
         await this.say([
-          { who: 'erendira', text: { en: 'More than a hundred years ago, the printmaker José Guadalupe Posada made funny pictures of skeletons — dancing, cooking, riding bicycles.', es: 'Hace más de cien años, el grabador José Guadalupe Posada hacía imágenes chistosas de calaveras que bailaban, cocinaban y andaban en bicicleta.' } },
+          { who: 'erendira', text: { en: 'More than a hundred years ago, the printmaker José Guadalupe Posada made funny pictures of skeletons dancing, cooking and riding bicycles.', es: 'Hace más de cien años, el grabador José Guadalupe Posada hacía imágenes chistosas de calaveras que bailaban, cocinaban y andaban en bicicleta.' } },
           { who: 'erendira', text: { en: 'One was a skeleton lady in a fancy French hat. It made fun of people who pretended to be rich Europeans and hid where they came from. Later, the painter Diego Rivera named her **La Catrina**.', es: 'Una era una calavera de mujer con un sombrero francés muy elegante. Se burlaba de quienes fingían ser europeos ricos y escondían de dónde venían. Después, el pintor Diego Rivera la llamó **La Catrina**.' } },
           { who: 'erendira', text: { en: 'The joke is: under our fancy clothes, we are all the same.', es: 'La broma es que, bajo la ropa elegante, todos somos iguales.' } },
         ]);
@@ -370,8 +460,8 @@ export class PlazaScene extends Scene {
         await g.learn('catrina');
       } else if (topic === 'origen') {
         await this.say([
-          { who: 'erendira', text: { en: 'Long before the Spanish came, many Indigenous peoples here honored their dead with offerings. The [[mexicas]] even had feasts for the dead in their calendar — around July and August!', es: 'Mucho antes de que llegaran los españoles, muchos pueblos indígenas honraban a sus muertos con ofrendas. ¡Los [[mexicas]] tenían fiestas de muertos en su calendario, cerca de julio y agosto!' } },
-          { who: 'erendira', text: { en: 'After the Spanish conquest, those ways mixed with the Catholic days of All Saints and All Souls. Historians still debate which parts came from where — and the tradition keeps changing today.', es: 'Después de la conquista, esas costumbres se mezclaron con los días católicos de Todos los Santos y Fieles Difuntos. Los historiadores todavía discuten qué parte viene de dónde, y la tradición sigue cambiando hoy.' } },
+          { who: 'erendira', text: { en: 'Long before the Spanish came, many Indigenous peoples here honored their dead with offerings. The [[mexicas]] even had feasts for the dead in their calendar, around July and August!', es: 'Mucho antes de que llegaran los españoles, muchos pueblos indígenas honraban a sus muertos con ofrendas. ¡Los [[mexicas]] tenían fiestas de muertos en su calendario, cerca de julio y agosto!' } },
+          { who: 'erendira', text: { en: 'After the Spanish conquest, those ways mixed with the Catholic days of All Saints and All Souls. Historians still argue about which parts came from where. And the tradition is still changing today.', es: 'Después de la conquista, esas costumbres se mezclaron con los días católicos de Todos los Santos y Fieles Difuntos. Los historiadores todavía discuten qué parte viene de dónde, y la tradición sigue cambiando hoy.' } },
         ]);
         await g.learn('origen');
         if (!g.knows('mictlan')) await g.learn('mictlan');
@@ -379,8 +469,8 @@ export class PlazaScene extends Scene {
         await g.learn('unesco');
       } else if (topic === 'velacion') {
         await this.say([
-          { who: 'erendira', text: { en: 'Around Lake [[Pátzcuaro]], we call it [[Animecha Kejtzitakua]] — the offering for the souls. Families build arches hung with bread and fruit.', es: 'Alrededor del lago de [[Pátzcuaro]] le decimos [[Animecha Kejtzitakua]]: la ofrenda para las ánimas. Las familias hacen arcos con pan y fruta.' } },
-          { who: 'erendira', text: { en: 'Tonight, families keep vigil at the cemetery — on the island of [[Janitzio]], people used to arrive by canoe with candles. You\'ll see a velación at our panteón too.', es: 'Esta noche las familias velan en el panteón; a la isla de [[Janitzio]] llegaban en canoa con velas. Ustedes verán una velación en nuestro panteón.' } },
+          { who: 'erendira', text: { en: 'Around Lake [[Pátzcuaro]], we call it [[Animecha Kejtzitakua]], the offering for the souls. Families build arches hung with bread and fruit.', es: 'Alrededor del lago de [[Pátzcuaro]] le decimos [[Animecha Kejtzitakua]]: la ofrenda para las ánimas. Las familias hacen arcos con pan y fruta.' } },
+          { who: 'erendira', text: { en: 'Tonight, families keep vigil at the cemetery. On the island of [[Janitzio]], people used to arrive by canoe with candles. You\'ll see a velación at our panteón too.', es: 'Esta noche las familias velan en el panteón; a la isla de [[Janitzio]] llegaban en canoa con velas. Ustedes verán una velación en nuestro panteón.' } },
           { who: 'erendira', text: { en: 'And the monarch butterflies that arrive now? Many Purépecha and Mazahua families say they carry the souls of our ancestors.', es: '¿Y las monarcas que llegan en estos días? Muchas familias purépechas y mazahuas dicen que traen las almas de los antepasados.' } },
         ]);
         await g.learn('velacion');
@@ -401,25 +491,45 @@ export class PlazaScene extends Scene {
       g.flag('panchoHello');
       await this.say([
         { who: 'pancho', emote: 'happy', text: { en: '¡Buenas noches, jóvenes! I\'m the judge of the [[calaveras literarias]] contest!', es: '¡Buenas noches, jóvenes! ¡Soy el juez del concurso de [[calaveras literarias]]!' } },
-        { who: 'pancho', text: { en: 'A calaverita is a funny poem. We imagine La Flaca — Death — comes for someone who is very much **alive**… and we tease their habits. With love, ¡eh! Never to hurt.', es: 'Una calaverita es un poema chistoso. Imaginamos que la Flaca viene por alguien que está muy **vivo**… y bromeamos sobre sus costumbres. ¡Con cariño, eh! Nunca para lastimar.' } },
+        { who: 'pancho', text: { en: 'A calaverita is a funny poem. We imagine La Flaca (that\'s Death) comes for someone who is very much **alive**… and we tease their habits. With love, ¡eh! Never to hurt.', es: 'Una calaverita es un poema chistoso. Imaginamos que la Flaca viene por alguien que está muy **vivo**… y bromeamos sobre sus costumbres. ¡Con cariño, eh! Nunca para lastimar.' } },
       ]);
       await g.learn('calaveritas');
     }
+    const mine = (g.state.poems || []).length;
     const write = await this.say([{
-      who: 'pancho', text: { en: 'Will you write one for the contest?', es: '¿Escribes una para el concurso?' },
-      choices: [{ label: { en: 'Yes!', es: '¡Sí!' }, value: 1 }, { label: { en: 'Maybe later', es: 'Al rato' }, value: 0 }],
+      who: 'pancho', text: mine ? { en: 'Another one? Or should I take yours down so you can write it again?', es: '¿Otra? ¿O quito la tuya para que la vuelvas a escribir?' } : { en: 'Will you write one for the contest?', es: '¿Escribes una para el concurso?' },
+      choices: [
+        { label: mine ? { en: 'Write another!', es: '¡Escribir otra!' } : { en: 'Yes!', es: '¡Sí!' }, value: 1 },
+        ...(mine ? [{ label: { en: 'Take mine down', es: 'Quitar la mía' }, value: 2 }] : []),
+        { label: { en: 'Maybe later', es: 'Al rato' }, value: 0 },
+      ],
     }]);
-    if (write) {
-      const poem = await openPoem(g);
-      g.state.poems = [...(g.state.poems || []), poem];
+    if (write === 2) {
+      this.unpinPoem();
+      g.state.poems = (g.state.poems || []).slice(0, -1);
       g.save();
-      this.pinPoem(poem);
-      g.sfx('success');
-      const first = poemLines(poem)[0];
-      await this.say([{ who: 'pancho', emote: 'laugh', text: { en: `"${first}…" ¡Ja, ja, ja! Very good! That one goes right on the board.`, es: `"${first}…" ¡Ja, ja, ja! ¡Muy buena! Va directo al tablero.` } }]);
-      g.addPetals(2);
+      g.sfx('page');
+      await this.say([{ who: 'pancho', text: { en: 'There. The board is waiting for your next one!', es: 'Listo. ¡El tablero espera la siguiente!' } }]);
+    } else if (write) {
+      const poem = await openPoem(g);
+      if (poem) {
+        g.state.poems = [...(g.state.poems || []), poem];
+        g.save();
+        this.pinPoem(poem);
+        g.sfx('success');
+        const first = poemLines(poem)[0];
+        await this.say([{ who: 'pancho', emote: 'laugh', text: { en: `"${first}…" ¡Ja, ja, ja! Very good! That one goes right on the board.`, es: `"${first}…" ¡Ja, ja, ja! ¡Muy buena! Va directo al tablero.` } }]);
+        if (!mine) g.addPetals(2);
+      }
     }
     await this.checkDone();
+  }
+
+  unpinPoem() {
+    const p = this.pinned?.pop();
+    if (!p) return;
+    this.board.remove(p);
+    this.boardSlots = Math.max(0, this.boardSlots - 1);
   }
 
   async mateo() {
@@ -435,13 +545,13 @@ export class PlazaScene extends Scene {
     }]);
     if (topic === 'family') {
       await this.say([
-        { who: 'mateo', text: { en: 'My mom\'s family is from the Costa Chica in Guerrero — we\'re Afro-Mexican. My grandma\'s town celebrates too, with its own music and customs. Every place is different!', es: 'La familia de mi mamá es de la Costa Chica de Guerrero; somos afromexicanos. El pueblo de mi abuela también lo celebra, con su propia música y costumbres. ¡Cada lugar es distinto!' } },
+        { who: 'mateo', text: { en: 'My mom\'s family is from the Costa Chica in Guerrero. We\'re Afro-Mexican. My grandma\'s town celebrates too, with its own music and customs. Every place does it differently!', es: 'La familia de mi mamá es de la Costa Chica de Guerrero; somos afromexicanos. El pueblo de mi abuela también lo celebra, con su propia música y costumbres. ¡Cada lugar es distinto!' } },
         { who: 'mateo', text: { en: 'And my cousins live in Chicago. They go to a huge Day of the Dead exhibit at a museum there.', es: 'Y mis primos viven en Chicago. Van a una exposición enorme de Día de Muertos en un museo de allá.' } },
       ]);
       await g.learn('usa');
     } else if (topic === 'coco') {
       await this.say([
-        { who: 'mateo', text: { en: 'Like ten times! But some things in it are movie magic — like the bridge of marigold petals and the alebrijes being spirit guides.', es: '¡Como diez veces! Pero hay cosas que son magia de película, como el puente de pétalos y los alebrijes como guías.' } },
+        { who: 'mateo', text: { en: 'Like ten times! But some things in it are just movie magic, like the bridge of marigold petals and the alebrijes being spirit guides.', es: '¡Como diez veces! Pero hay cosas que son magia de película, como el puente de pétalos y los alebrijes como guías.' } },
       ]);
       await g.learn('coco');
     } else {
@@ -456,8 +566,8 @@ export class PlazaScene extends Scene {
   async catrinas() {
     const g = this.game;
     await this.say([
-      { who: 'catrina', emote: 'happy', text: { en: '¡Buenas noches! We\'re in the Catrina contest. We dress up like Posada\'s elegant skeletons — fancy hats and all!', es: '¡Buenas noches! Estamos en el concurso de Catrinas. Nos vestimos como las calaveras elegantes de Posada, ¡con todo y sombrero!' } },
-      { who: 'catrin', text: { en: 'It\'s a modern festival custom, a way to joke with death. But it\'s not a scary costume — it\'s about honoring the tradition.', es: 'Es una costumbre moderna de los festivales, una forma de bromear con la muerte. Pero no es un disfraz de miedo: es para honrar la tradición.' } },
+      { who: 'catrina', emote: 'happy', text: { en: '¡Buenas noches! We\'re in the Catrina contest. We dress up like Posada\'s elegant skeletons, fancy hats and all!', es: '¡Buenas noches! Estamos en el concurso de Catrinas. Nos vestimos como las calaveras elegantes de Posada, ¡con todo y sombrero!' } },
+      { who: 'catrin', text: { en: 'It\'s a newer custom at festivals, a way to joke with death. We don\'t dress up to be scary, though. We do it out of respect for the tradition.', es: 'Es una costumbre más reciente de los festivales, una forma de bromear con la muerte. Pero no nos disfrazamos para dar miedo. Lo hacemos por respeto a la tradición.' } },
     ]);
     await g.learn('catrinas');
   }
@@ -466,7 +576,7 @@ export class PlazaScene extends Scene {
     const g = this.game;
     this.chars.nico.play('cheer', { restart: true });
     await this.say([
-      { who: 'nico', emote: 'laugh', text: { en: '"[[¿Me da mi calaverita?]]" — Look! I got three candies, a mandarin and a coin!', es: '"[[¿Me da mi calaverita?]]" ¡Mira! ¡Me dieron tres dulces, una mandarina y una moneda!' } },
+      { who: 'nico', emote: 'laugh', text: { en: '"[[¿Me da mi calaverita?]]" Look! I got three candies, a mandarin and a coin!', es: '"[[¿Me da mi calaverita?]]" ¡Mira! ¡Me dieron tres dulces, una mandarina y una moneda!' } },
     ]);
     if (!g.knows('pedir')) await g.learn('pedir');
   }
@@ -475,7 +585,7 @@ export class PlazaScene extends Scene {
     const g = this.game;
     await this.view('ofrenda');
     await this.say([
-      { who: 'lupita', text: { en: 'This ofrenda is for the whole town. It has photos of people everyone remembers — the old music teacher, the town doctor, the lady who sold the best tamales.', es: 'Esta ofrenda es de todo el pueblo. Tiene fotos de personas que todos recuerdan: el maestro de música, el doctor del pueblo, la señora que vendía los mejores tamales.' } },
+      { who: 'lupita', text: { en: 'This ofrenda is for the whole town. It has photos of people everyone remembers: the old music teacher, the town doctor, the lady who sold the best tamales.', es: 'Esta ofrenda es de todo el pueblo. Tiene fotos de personas que todos recuerdan: el maestro de música, el doctor del pueblo, la señora que vendía los mejores tamales.' } },
     ]);
     await g.learn('comunitaria');
   }

@@ -15,6 +15,11 @@ const ease = {
 };
 export { ease };
 
+// Views are composed for a strip at least this wide (width / height) between
+// the top bar and the dialogue box; narrower screens get a wider field of view.
+const FRAME_ASPECT = 2.2;
+const MAX_TAN = Math.tan(THREE.MathUtils.degToRad(55));
+
 let sparkleTex = null;
 function sparkleTexture() {
   if (sparkleTex) return sparkleTex;
@@ -56,8 +61,13 @@ export class Engine {
     this.camera = new THREE.PerspectiveCamera(40, 4 / 3, 0.05, 400);
     this.rig = {
       pos: new THREE.Vector3(0, 2, 8), target: new THREE.Vector3(0, 1, 0), fov: 40,
-      parallax: 0.3, // world units of sway at the screen edge
+      parallax: 0.18, // world units of sway at the screen edge
     };
+    // The part of the screen the view is framed for: everything minus the top
+    // bar, the dialogue box and side panels (set by the UI, in CSS pixels).
+    this.inset = { top: 0, bottom: 0, left: 0, right: 0 };
+    this.insetGoal = { ...this.inset };
+    this.size = { w: 800, h: 600 };
     this.par = { x: 0, y: 0, tx: 0, ty: 0 };
     this.stage = null;
     this.hotspots = [];
@@ -108,8 +118,43 @@ export class Engine {
     if (!stage.scene) await stage.build();
     const rig = stage.cameraRig?.();
     if (rig) this.setRig(rig.pos, rig.target, rig.fov ?? 40, 0, rig.parallax);
+    this.snapInsets();
     this.renderer.shadowMap.needsUpdate = true;
     await stage.enter?.(opts);
+  }
+
+  // ---------------------------------------------------------------- framing
+  setInsets(goal) { Object.assign(this.insetGoal, goal); }
+
+  snapInsets() {
+    Object.assign(this.inset, this.insetGoal);
+    this.applyProjection();
+  }
+
+  // Views are composed for a FRAME_ASPECT frame with a vertical field of view
+  // of rig.fov. That frame is fitted inside the free part of the screen: on a
+  // wide screen you see a little more at the sides, on a narrow one the view
+  // widens so nothing at the sides is cut off, and nothing important ever sits
+  // under the top bar or the dialogue box.
+  applyProjection() {
+    const cam = this.camera;
+    const { w: W, h: H } = this.size;
+    const ins = this.inset;
+    const x0 = Math.min(ins.left, W * 0.4), x1 = W - Math.min(ins.right, W * 0.4);
+    const y0 = Math.min(ins.top, H * 0.35), y1 = H - Math.min(ins.bottom, H * 0.4);
+    const sw = Math.max(40, x1 - x0), sh = Math.max(40, y1 - y0);
+    let tv = Math.tan(THREE.MathUtils.degToRad(this.rig.fov) / 2);
+    const fa = this.stage?.frameAspect || FRAME_ASPECT;
+    if (sw / sh < fa) tv *= fa / (sw / sh);
+    tv = Math.min(tv, MAX_TAN);
+    const s = tv / (sh / 2); // tangent per pixel
+    const cx = x0 + sw / 2, cy = y0 + sh / 2;
+    const n = cam.near;
+    cam.aspect = W / H;
+    cam.fov = this.rig.fov;
+    cam.projectionMatrix.makePerspective(-cx * s * n, (W - cx) * s * n, cy * s * n, -(H - cy) * s * n, n, cam.far);
+    cam.projectionMatrixInverse.copy(cam.projectionMatrix).invert();
+    this._proj = [W, H, this.rig.fov, ins.left, ins.right, ins.top, ins.bottom];
   }
 
   setRig(pos, target, fov = this.rig.fov, dur = 0, parallax = this.rig.parallax) {
@@ -367,8 +412,9 @@ export class Engine {
     const w = this.container.clientWidth, h = this.container.clientHeight;
     if (!w || !h) return;
     this.renderer.setSize(w, h);
-    this.camera.aspect = w / h;
-    this.camera.updateProjectionMatrix();
+    this.size = { w, h };
+    for (const fn of this.listeners.resize || []) fn(w, h);
+    this.applyProjection();
   }
 
   loop() {
@@ -403,13 +449,15 @@ export class Engine {
     const cam = this.camera;
     const fwd = new THREE.Vector3().subVectors(this.rig.target, this.rig.pos).normalize();
     const right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0, 1, 0)).normalize();
-    const amp = this.locked ? this.rig.parallax * 0.4 : this.rig.parallax;
+    const amp = this.calm ? 0 : this.locked ? this.rig.parallax * 0.4 : this.rig.parallax;
     cam.position.copy(this.rig.pos).addScaledVector(right, p.x * amp).add(new THREE.Vector3(0, p.y * amp * 0.45, 0));
     cam.lookAt(this.rig.target);
-    if (cam.fov !== this.rig.fov) {
-      cam.fov = this.rig.fov;
-      cam.updateProjectionMatrix();
-    }
+    // ease the framing when the free part of the screen changes
+    const ins = this.inset, goal = this.insetGoal;
+    const ke = Math.min(1, dt * 5);
+    for (const k in goal) ins[k] = Math.abs(goal[k] - ins[k]) < 0.5 ? goal[k] : ins[k] + (goal[k] - ins[k]) * ke;
+    const P = this._proj;
+    if (!P || P[0] !== this.size.w || P[1] !== this.size.h || P[2] !== this.rig.fov || P[3] !== ins.left || P[4] !== ins.right || P[5] !== ins.top || P[6] !== ins.bottom) this.applyProjection();
 
     if (this.stage?.scene) {
       this.stage.update?.(dt, this.time);

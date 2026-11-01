@@ -1,12 +1,12 @@
 // La panadería de Don Ramón: bake pan de muerto step by step. Every loaf
-// comes out "right" — Don Ramón shares what people say the shapes mean.
+// comes out "right". Don Ramón shares what people say the shapes mean.
 import * as THREE from 'three';
 import { Scene } from './base.js';
 import { toon, box, mesh, cyl, sphere, rbox, rng, PAL, glowSprite, outline } from '../toon.js';
 import { wall, floor, beams } from '../room.js';
 import { woodTex, plasterTex } from '../world.js';
 import { panDeMuerto } from '../props.js';
-import { t } from '../i18n.js';
+import { t, UI as S } from '../i18n.js';
 import { icon } from '../icons.js';
 
 const TABLE = new THREE.Vector3(0, 0, -0.6);
@@ -58,9 +58,9 @@ export class BakeryScene extends Scene {
     this.addChar('ramon', 0.2, -1.65, 0);
     this.addChar('lupita', -1.7, 0.4, 0.6);
     this.addChar('chispa', -2.3, 0.9, 0.5).play('sit');
-    this.defineView('main', [0, 2.05, 5.2], [0, 1.1, -1.4], 46);
-    this.defineView('table', [0, 2.15, 1.1], [0, TOP, -0.65], 46);
-    this.defineView('oven', [-1.2, 1.7, 1.2], [-3.4, 1.0, -2.6], 46);
+    this.defineView('main', [0, 2.05, 5.2], [0, 1.1, -1.4], 34.0);
+    this.defineView('table', [0, 2.15, 1.1], [0, TOP, -0.65], 34.0);
+    this.defineView('oven', [-1.0, 1.65, -0.5], [-3.3, 1.0, -2.4], 32.0);
     this.hideMonarch('shelf', 3.6, 2.45, -3.6);
     this.hideMonarch('sacks', -4.2, 0.75, 1.2);
   }
@@ -159,11 +159,11 @@ export class BakeryScene extends Scene {
     g.position.set(2.6, 0, -3.6);
     s.add(g);
     this.merge(g);
-    // flour sacks
+    // flour sacks, tied at the top and stamped HARINA
     for (let i = 0; i < 3; i++) {
-      const sack = sphere(0.35, toon('#efe3c8'), 14);
-      sack.scale.set(1, 1.3, 0.85);
-      sack.position.set(-4.2 + i * 0.25, 0.42, 1.6 - i * 0.6);
+      const sack = flourSack();
+      sack.position.set(-4.25 + i * 0.22, 0, 1.6 - i * 0.62);
+      sack.rotation.y = 0.9 + i * 0.35;
       s.add(sack);
     }
     // the shop counter near the door
@@ -185,7 +185,7 @@ export class BakeryScene extends Scene {
       await this.view('oven');
       await this.say([{ who: 'ramon', text: { en: 'My oven burns wood, like my father\'s did. Bread baked this way smells like smoke and orange blossom.', es: 'Mi horno es de leña, como el de mi papá. El pan que sale de aquí huele a humo y a azahar.' } }]);
     }, { sparkle: false });
-    this.talkable('lupita', { en: 'Lupita', es: 'Lupita' }, () => this.say([{ who: 'lupita', text: g.has('pan') ? { en: 'Our pan de muerto smells SO good. On to the next place — open the Map!', es: '¡Nuestro pan huele riquísimo! A lo que sigue: abre el Mapa.' } : { en: 'Let\'s ask Don Ramón to teach us!', es: '¡Pidámosle a Don Ramón que nos enseñe!' } }]));
+    this.talkable('lupita', { en: 'Lupita', es: 'Lupita' }, () => this.say([{ who: 'lupita', text: g.has('pan') ? { en: 'Our pan de muerto smells SO good. On to the next place. Open the Map!', es: '¡Nuestro pan huele riquísimo! A lo que sigue: abre el Mapa.' } : { en: 'Let\'s ask Don Ramón to teach us!', es: '¡Pidámosle a Don Ramón que nos enseñe!' } }]));
   }
 
   async afterEnter() {
@@ -201,7 +201,7 @@ export class BakeryScene extends Scene {
   async ramon() {
     const g = this.game;
     if (g.has('pan')) {
-      await this.say([{ who: 'ramon', text: { en: 'Your Abuelo always bought two loaves — one for the ofrenda and one "for the road". ¡Ja!', es: 'Tu abuelo siempre compraba dos panes: uno para la ofrenda y otro "para el camino". ¡Ja!' }, emote: 'laugh' }]);
+      await this.say([{ who: 'ramon', text: { en: 'Your Abuelo always bought two loaves: one for the ofrenda and one "for the road". ¡Ja!', es: 'Tu abuelo siempre compraba dos panes: uno para la ofrenda y otro "para el camino". ¡Ja!' }, emote: 'laugh' }]);
       return;
     }
     await this.bake();
@@ -280,26 +280,33 @@ export class BakeryScene extends Scene {
     await this.engine.tween(0.6, (k) => { dough.scale.set(1 + k * 0.2, 0.6 - k * 0.05, 1 + k * 0.2); });
     g.ui.showTray({ label: { en: 'Pan de muerto', es: 'Pan de muerto' }, items: [], side: this.steps(2), onPick: () => {} });
     await this.say([
-      { who: 'ramon', text: { en: 'Beautiful and round. Now the **huesitos** — the little dough bones. Click on the loaf to lay a bone across it. Most bakers use four, in a cross… but it\'s your bread!', es: 'Bien redondita. Ahora los **huesitos** de masa. Haz clic en el pan para ponerle un hueso encima. Casi todos ponemos cuatro, en cruz… ¡pero es tu pan!' } },
+      { who: 'ramon', text: { en: 'Nice and round. Now the **huesitos**, the little dough bones. Click on the loaf to lay a bone across it. Most bakers use four, in a cross… but it\'s your bread!', es: 'Bien redondita. Ahora los **huesitos** de masa. Haz clic en el pan para ponerle un hueso encima. Casi todos ponemos cuatro, en cruz… ¡pero es tu pan!' } },
     ]);
     this.bones = [];
+    const popUndo = g.ui.pushUndo(() => this.removeBone());
     await new Promise((resolve) => {
       this.boneMode = { resolve };
       const side = document.createElement('div');
-      side.innerHTML = `${this.steps(2)}<button type="button" class="btn rosa small" data-a="ok">${icon('check')} ${t({ en: 'Done with the bones', es: 'Listos los huesitos' })}</button>`;
+      side.innerHTML = `${this.steps(2)}<div style="display:flex;gap:6px">
+        <button type="button" class="btn cream small" data-a="undo" title="Ctrl+Z" disabled>${icon('undo')} ${t(S.undo)}</button>
+        <button type="button" class="btn rosa small" data-a="ok">${icon('check')} ${t({ en: 'Done with the bones', es: 'Listos los huesitos' })}</button></div>`;
       g.ui.showTray({ label: { en: 'Pan de muerto', es: 'Pan de muerto' }, items: [], side, onPick: () => {} });
+      this.boneUndoBtn = side.querySelector('[data-a=undo]');
+      this.boneUndoBtn.onclick = () => this.removeBone();
       side.querySelector('[data-a=ok]').onclick = () => {
         if (!this.bones.length) { g.ui.toast(t({ en: 'Add at least one bone!', es: '¡Ponle al menos un huesito!' }), { ico: 'info' }); return; }
         resolve();
       };
     });
+    popUndo();
     this.boneMode = null;
+    this.boneUndoBtn = null;
     const ball = sphere(0.05, toon('#e9c48f'), 14);
     ball.position.set(0, TOP + 0.31, 0);
     ball.scale.setScalar(0.01);
     this.mg.add(ball);
     this.ball = ball;
-    await this.say([{ who: 'ramon', text: { en: 'And on top, a little ball. Many people say it\'s a skull, or a heart. Some say the bones are tears. I call it **la nariz** — the nose! ¡Ja, ja!', es: 'Y arriba, una bolita. Mucha gente dice que es el cráneo, o el corazón. Hay quien dice que los huesitos son lágrimas. Yo le digo **la nariz**. ¡Ja, ja!' }, emote: 'laugh' }]);
+    await this.say([{ who: 'ramon', text: { en: 'And on top, a little ball. Many people say it\'s a skull, or a heart. Some say the bones are tears. I call it **la nariz**, the nose! ¡Ja, ja!', es: 'Y arriba, una bolita. Mucha gente dice que es el cráneo, o el corazón. Hay quien dice que los huesitos son lágrimas. Yo le digo **la nariz**. ¡Ja, ja!' }, emote: 'laugh' }]);
     g.sfx('bean');
     await this.engine.tween(0.4, (k) => ball.scale.setScalar(Math.max(0.01, k)), 'back');
     // 4. bake
@@ -328,26 +335,39 @@ export class BakeryScene extends Scene {
     await this.view('table', { back: false });
     // 5. topping
     g.ui.showTray({ label: { en: 'Pan de muerto', es: 'Pan de muerto' }, items: [], side: this.steps(4), onPick: () => {} });
-    const top = await this.say([{
-      who: 'ramon',
-      text: { en: 'Last step. Here in Michoacán I sprinkle sugar, but bread changes from town to town. How do you want it?', es: 'Último paso. Aquí en Michoacán le pongo azúcar, pero el pan cambia de pueblo en pueblo. ¿Cómo lo quieres?' },
-      choices: [
-        { label: { en: 'Sugar!', es: '¡Azúcar!' }, value: 'sugar' },
-        { label: { en: 'Sesame seeds', es: 'Ajonjolí' }, value: 'sesame' },
-        { label: { en: 'Plain and shiny', es: 'Sencillo y brillante' }, value: 'plain' },
-      ],
-    }]);
-    g.sfx('petal');
-    const finished = panDeMuerto({ topping: top, size: 2.2 });
-    finished.position.set(0, TOP, 0);
-    outline(finished, 0.004);
+    // pick a topping; you can try them all before you keep one
+    const plain = [...this.mg.children];
+    let top = null, finished = null;
+    for (let tries = 0; ; tries++) {
+      top = await this.say([{
+        who: 'ramon',
+        text: tries ? { en: 'Which one, then?', es: '¿Entonces cuál?' } : { en: 'Last step. Here in Michoacán I sprinkle sugar, but bread changes from town to town. How do you want it?', es: 'Último paso. Aquí en Michoacán le pongo azúcar, pero el pan cambia de pueblo en pueblo. ¿Cómo lo quieres?' },
+        choices: [
+          { label: { en: 'Sugar!', es: '¡Azúcar!' }, value: 'sugar' },
+          { label: { en: 'Sesame seeds', es: 'Ajonjolí' }, value: 'sesame' },
+          { label: { en: 'Plain and shiny', es: 'Sencillo y brillante' }, value: 'plain' },
+        ],
+      }]);
+      g.sfx('petal');
+      if (finished) this.mg.remove(finished);
+      finished = panDeMuerto({ topping: top, size: 2.2 });
+      finished.position.set(0, TOP, 0);
+      outline(finished, 0.004);
+      for (const o of plain) o.visible = false;
+      this.mg.add(finished);
+      const keep = await this.say([{
+        who: 'ramon', text: { en: '¿Qué tal? Do you like it like this?', es: '¿Qué tal? ¿Así te gusta?' },
+        choices: [{ label: { en: 'Yes, it\'s perfect!', es: '¡Sí, quedó perfecto!' }, value: true }, { label: { en: 'Try another topping', es: 'Probar otro' }, value: false }],
+      }]);
+      if (keep) break;
+    }
     this.mg.clear();
     this.mg.add(finished);
     g.state.pan = { topping: top, bones: this.bones.length };
     g.flag('pan');
     g.ui.hideTray();
     await this.say([
-      { who: 'ramon', text: { en: 'In Oaxaca they make pan de yema with a little painted face. Every region has its own bread — and every family has its favorite.', es: 'En Oaxaca hacen pan de yema con una carita pintada. Cada región tiene su pan, y cada familia su favorito.' } },
+      { who: 'ramon', text: { en: 'In Oaxaca they make pan de yema with a little painted face. Every region has its own bread, and every family has a favorite.', es: 'En Oaxaca hacen pan de yema con una carita pintada. Cada región tiene su pan, y cada familia su favorito.' } },
     ]);
     await g.give('pan');
     await g.learn('pan');
@@ -373,6 +393,15 @@ export class BakeryScene extends Scene {
     return gg;
   }
 
+  // Undo for the bones: take the last one off
+  removeBone() {
+    const b = this.bones?.pop();
+    if (!b) { this.game.sfx('oops'); return; }
+    this.mg.remove(b);
+    this.game.sfx('tap');
+    if (this.boneUndoBtn) this.boneUndoBtn.disabled = !this.bones.length;
+  }
+
   addBone(angle) {
     const g = this.game;
     if (this.bones.length >= 8) { g.sfx('oops'); return; }
@@ -393,6 +422,7 @@ export class BakeryScene extends Scene {
     outline(bone, 0.004);
     this.mg.add(bone);
     this.bones.push(bone);
+    if (this.boneUndoBtn) this.boneUndoBtn.disabled = false;
     g.sfx('bean');
   }
 
@@ -427,4 +457,33 @@ export class BakeryScene extends Scene {
     this.addBone(Math.atan2(local.z, local.x));
     return true;
   }
+}
+
+// a cloth sack of flour, gathered and tied at the top
+function flourSack() {
+  const g = new THREE.Group();
+  const cloth = toon('#efe6d2');
+  const body = mesh(new THREE.LatheGeometry([[0, 0], [0.2, 0.01], [0.27, 0.12], [0.28, 0.32], [0.24, 0.5], [0.12, 0.6], [0.06, 0.63], [0, 0.63]].map(([x, y]) => new THREE.Vector2(x, y)), 18), cloth);
+  body.scale.z = 0.72;
+  g.add(body);
+  const tie = cyl(0.055, 0.05, 0.05, toon('#b08a5a'), 10);
+  tie.position.y = 0.63;
+  g.add(tie);
+  const tuft = mesh(new THREE.ConeGeometry(0.09, 0.12, 9), cloth);
+  tuft.rotation.x = Math.PI;
+  tuft.position.y = 0.71;
+  g.add(tuft);
+  const cv = document.createElement('canvas');
+  cv.width = 128; cv.height = 64;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#1d5fa8'; ctx.font = "30px 'Lilita One', sans-serif"; ctx.textAlign = 'center';
+  ctx.fillText('HARINA', 64, 42);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  const label = mesh(new THREE.PlaneGeometry(0.3, 0.15), new THREE.MeshBasicMaterial({ map: t, transparent: true }), { cast: false });
+  label.position.set(0, 0.3, 0.205);
+  label.userData.noOutline = true;
+  g.add(label);
+  outline(g, 0.006);
+  return g;
 }

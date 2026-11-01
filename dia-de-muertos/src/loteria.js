@@ -1,5 +1,5 @@
 // Lotería: the caller reads a riddle, you put a bean on the matching card.
-// Four in a row (or a full board) wins — then print your certificate.
+// Four in a row (or the four corners) wins, then you can print a certificate.
 import { t, UI as S, getLang } from './i18n.js';
 import { icon, hydrateIcons } from './icons.js';
 import { CARD_BY_ID } from './content/cards.js';
@@ -33,7 +33,7 @@ export async function openLoteria(game) {
       <div class="loteria"></div>
       <div style="flex:1;min-width:260px;display:flex;flex-direction:column;gap:12px">
         <div class="caller"><div class="cc"></div><div class="riddle"></div></div>
-        <div style="font-weight:700">${t({ en: 'Listen to the cantor\'s riddle and put a bean on the matching card. Get 4 in a row — or the 4 corners — and shout ¡Lotería!', es: 'Escucha el verso del cantor y pon un frijolito en la carta que le toca. Haz 4 en línea —o las 4 esquinas— y grita ¡Lotería!' })}</div>
+        <div style="font-weight:700">${t({ en: 'Listen to the caller\'s riddle and put a bean on the card it describes. Get 4 in a row, or all 4 corners, and shout ¡Lotería!', es: 'Escucha el verso del cantor y pon un frijolito en la carta que le toca. Haz 4 en línea o llena las 4 esquinas y grita ¡Lotería!' })}</div>
         <div class="row"><button type="button" class="btn cream small" data-a="skip">${icon('next')} ${t({ en: 'Next card', es: 'Siguiente carta' })}</button>
         <button type="button" class="btn purple" data-a="win" disabled>${icon('star')} ¡Lotería!</button></div>
         <div class="status" style="font-weight:800;color:var(--purple-d)"></div>
@@ -91,7 +91,7 @@ export async function openLoteria(game) {
         game.sfx('oops');
         status.textContent = misses % 3 === 0
           ? t({ en: `Hint: look for "${CARD_BY_ID[want].term}".`, es: `Pista: busca "${CARD_BY_ID[want].term}".` })
-          : t({ en: 'Not that one — try again!', es: 'Esa no… ¡intenta otra vez!' });
+          : t({ en: 'Not that one. Try again!', es: 'Esa no. ¡Intenta otra vez!' });
       }
     };
   });
@@ -123,7 +123,7 @@ export function certificate(game) {
       <h1>${t({ en: 'Certificate', es: 'Certificado' })}</h1>
       <p>${t({ en: 'This certifies that', es: 'Se otorga a' })}</p>
       <div class="nm">${name || '&nbsp;'}</div>
-      <p>${t({ en: 'learned about Día de Muertos with respect and won the Lotería — ¡Felicidades!', es: 'por aprender sobre el Día de Muertos con respeto y ganar la Lotería. ¡Felicidades!' })}</p>
+      <p>${t({ en: 'learned about Día de Muertos with respect and won the Lotería. ¡Felicidades!', es: 'por aprender sobre el Día de Muertos con respeto y ganar la Lotería. ¡Felicidades!' })}</p>
       <p>${t({ en: 'Cards found', es: 'Tarjetas encontradas' })}: ${game.state.cards.length} · ${t({ en: 'Marigolds', es: 'Flores' })}: ${game.state.petals}</p>
       <p style="font-size:16px">${new Date().toLocaleDateString(getLang() === 'es' ? 'es-MX' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
     </div>`;

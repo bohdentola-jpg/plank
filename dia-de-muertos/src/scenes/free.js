@@ -8,6 +8,7 @@ import { PROP_INFO } from '../props.js';
 import { OfrendaBuilder, wishesHtml, LEVEL_INFO } from '../games/ofrenda.js';
 import { t, UI as S } from '../i18n.js';
 import { icon } from '../icons.js';
+import { drawPortrait } from '../free.js';
 
 const FREE_ITEMS = ['foto', 'cempasuchil', 'terciopelo', 'nube', 'vela', 'cirio', 'copal', 'agua', 'jarrito', 'sal', 'pan', 'calavera', 'fruta', 'cana',
   'mole', 'tamales', 'chocolate', 'cafe', 'atole', 'calabaza', 'pizza', 'refresco', 'galletas', 'plato', 'balon', 'radio', 'guitarra', 'gorra', 'domino',
@@ -80,7 +81,7 @@ export class FreeScene extends Scene {
       s.add(st);
     }
     this.addChar('chispa', 1.4, 0.8, -0.5).play('lie');
-    this.defineView('main', [0, 1.6, 1.6], [0, 0.95, -3.0], 52);
+    this.defineView('main', [0, 1.65, 1.5], [0, 1.2, -3.0], 30.0);
   }
 
   async enter(opts) {
@@ -92,6 +93,7 @@ export class FreeScene extends Scene {
     this.builder = new OfrendaBuilder(this, { base: this.ofrendaTable, baseY: 0.78, mode: 'free', portrait: this.portraitCv, wishes: [] });
     this.builder.multi = { vela: 6, cirio: 3, cempasuchil: 4, fruta: 2 };
     this.builder.onChange = () => this.tray();
+    this.popUndo = g.ui.pushUndo(() => this.undo());
     const levels = await this.say([{
       who: null, text: { en: 'How many levels would you like? (There\'s no wrong answer.)', es: '¿Cuántos niveles quieres? (No hay respuesta equivocada.)' },
       choices: [1, 2, 3, 7].map((n) => ({ label: { en: `${n}`, es: `${n}` }, value: n })),
@@ -114,35 +116,109 @@ export class FreeScene extends Scene {
       items.push({ id, label: { en: PROP_INFO[id].en, es: PROP_INFO[id].es }, img, used: left <= 0, count: left });
     }
     const side = document.createElement('div');
-    side.innerHTML = `<button type="button" class="btn rosa small" data-a="light">${icon('candle')} ${t({ en: 'Light it', es: 'Encender' })}</button>
-      <button type="button" class="btn turq small" data-a="photo">${icon('camera')} ${t(S.photo)}</button>
-      <button type="button" class="btn cream small" data-a="exit">${icon('home')} ${t(S.quitTitle)}</button>`;
-    side.querySelector('[data-a=light]').onclick = () => this.lightAll();
+    side.innerHTML = `<div class="grid2">
+      <button type="button" class="btn cream small" data-a="undo" title="Ctrl+Z">${icon('undo')} ${t(S.undo)}</button>
+      <button type="button" class="btn cream small" data-a="levels">${t(S.levels)}: ${b.levels}</button>
+      <button type="button" class="btn cream small" data-a="clear">${icon('trash')} ${t(S.clearAll)}</button>
+      <button type="button" class="btn cream small" data-a="draw">${icon('pencil')} ${t({ en: 'Portrait', es: 'Retrato' })}</button>
+      <button type="button" class="btn rosa small" data-a="light">${icon('candle')} ${this.lit ? t({ en: 'Candles out', es: 'Apagar' }) : t({ en: 'Light it', es: 'Encender' })}</button>
+      <button type="button" class="btn turq small" data-a="photo">${icon('camera')} ${t({ en: 'Picture', es: 'Foto' })}</button></div>`;
+    const undo = side.querySelector('[data-a=undo]');
+    undo.disabled = !b.canUndo();
+    undo.onclick = () => this.undo();
+    side.querySelector('[data-a=levels]').onclick = () => this.askLevels();
+    const clear = side.querySelector('[data-a=clear]');
+    clear.disabled = b.isEmpty();
+    clear.onclick = () => { b.clearAll(); g.ui.setTrayActive(null); };
+    side.querySelector('[data-a=draw]').onclick = () => this.redraw();
+    side.querySelector('[data-a=light]').onclick = () => this.lightAll(!this.lit);
     side.querySelector('[data-a=photo]').onclick = () => this.photo();
-    side.querySelector('[data-a=exit]').onclick = () => g.go('title');
-    g.ui.showTray({ label: { en: 'Your ofrenda', es: 'Tu ofrenda' }, items, side, active: b.holding?.id, onPick: (id) => {
+    const active = b.holding && !b.holding.fromMove ? b.holding.id : null;
+    g.ui.showTray({ label: { en: 'Your ofrenda', es: 'Tu ofrenda' }, items, side, active, onPick: (id) => {
       if (b.pick(id)) g.ui.setTrayActive(b.holding ? id : null);
+      else g.ui.setTrayActive(null);
+      this.tray();
     } });
     g.ui.sidePanel(wishesHtml(b, 'free'));
   }
 
-  lightAll() {
+  undo() {
+    const b = this.builder;
+    if (!b) return;
+    b.undo();
+    if (this.lit) this.lightAll(true, true);
+  }
+
+  async askLevels() {
+    const b = this.builder;
+    if (this.asking) return;
+    this.asking = true;
+    const n = await this.say([{
+      who: null, text: { en: 'How many levels? Everything on it stays on.', es: '¿Cuántos niveles? Todo lo que ya pusiste se queda.' },
+      choices: [1, 2, 3, 7].map((k) => ({ label: { en: `${k}${k === b.levels ? ' ✓' : ''}`, es: `${k}${k === b.levels ? ' ✓' : ''}` }, value: k })),
+    }]);
+    this.asking = false;
+    if (n !== b.levels) {
+      b.changeLevels(n);
+      if (this.lit) this.lightAll(true, true);
+      this.game.ui.toast(t(LEVEL_INFO[n]), { ico: 'info', ms: 4200 });
+    }
+  }
+
+  // draw the portrait again (starts from the last drawing)
+  async redraw() {
+    const g = this.game;
+    const hon = this.honoree;
+    if (!hon || this.asking) return;
+    this.asking = true;
+    const res = await drawPortrait(g, hon, hon.drawing || null);
+    this.asking = false;
+    if (!res || res.back) return;
+    hon.portrait = res.url;
+    hon.drawing = res.raw;
+    this.portraitCv = await canvasFrom(res.url);
+    const b = this.builder;
+    b.portrait = this.portraitCv;
+    b.remember();
+    b.restore(b.serialize());
+    if (this.lit) this.lightAll(true, true);
+    this.tray();
+  }
+
+  onEscape() {
+    const b = this.builder;
+    if (b?.holding) { b.drop(); this.game.ui.setTrayActive(null); this.tray(); }
+  }
+
+  // light every candle (or put them all out again)
+  lightAll(on = true, quiet = false) {
     const g = this.game;
     let n = 0;
     for (const r of this.builder.placed) {
-      if (r.obj.userData.light && !r.obj.userData.lit) { r.obj.userData.light(true); n++; }
+      if (r.obj.userData.light && !!r.obj.userData.lit !== on) { r.obj.userData.light(on); n++; }
     }
-    if (!this.lit) {
-      this.animateTree(this.builder.root);
+    if (on && !this.lit) {
       this.lit = true;
-      const cl = new THREE.PointLight('#ffb35c', 0, 5, 1.4);
-      cl.position.set(0, 1.5, -2.3);
-      this.scene.add(cl);
-      this.engine.tween(1.5, (k) => { cl.intensity = 6 * k; this.lamp.intensity = 6 * (1 - k * 0.6); });
-      const path = petalPath([[3.5, 2.5], [2.2, 1.0], [1.0, -0.6], [0.2, -2.3]], { width: 0.4, density: 70, seed: 8 });
-      this.scene.add(path);
+      if (!this.candleLight) {
+        this.candleLight = new THREE.PointLight('#ffb35c', 0, 5, 1.4);
+        this.candleLight.position.set(0, 1.5, -2.3);
+        this.scene.add(this.candleLight);
+        this.path = petalPath([[3.5, 2.5], [2.2, 1.0], [1.0, -0.6], [0.2, -2.3]], { width: 0.4, density: 70, seed: 8 });
+        this.scene.add(this.path);
+      }
+      this.path.visible = true;
+      this.engine.tween(1.5, (k) => { this.candleLight.intensity = 6 * k; this.lamp.intensity = 6 * (1 - k * 0.6); });
+    } else if (!on && this.lit) {
+      this.lit = false;
+      this.path.visible = false;
+      this.engine.tween(0.8, (k) => { this.candleLight.intensity = 6 * (1 - k); this.lamp.intensity = 6 * (0.4 + k * 0.6); });
     }
-    g.sfx(n ? 'strike' : 'chime');
+    if (!quiet) { g.sfx(on ? (n ? 'strike' : 'chime') : 'whoosh'); this.tray(); }
+  }
+
+  exit() {
+    this.popUndo?.();
+    super.exit();
   }
 
   photo() {
@@ -166,12 +242,16 @@ export class FreeScene extends Scene {
     const b = this.builder;
     if (b && b.holding) {
       b.hover();
-      if (b.place()) { this.game.ui.setTrayActive(null); return true; }
+      if (b.place()) {
+        this.game.ui.setTrayActive(null);
+        if (this.lit) this.lightAll(true, true);
+        return true;
+      }
     }
     return false;
   }
 
-  goalOverride() { return { en: 'Build it your way — click a thing, then click the ofrenda', es: 'Ponla a tu manera: elige algo y haz clic en la ofrenda' }; }
+  goalOverride() { return { en: 'Build it your way: pick a thing, then click the ofrenda', es: 'Ponla a tu manera: elige algo y haz clic en la ofrenda' }; }
 
   onLang() { this.tray(); }
 }

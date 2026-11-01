@@ -1,6 +1,6 @@
 // The art kit: cel-shaded materials with a soft cartoon rim light, ink outlines,
 // glow sprites and canvas-texture helpers. Every model in the game is built
-// from these — no art files.
+// from these. There are no art files.
 import * as THREE from 'three';
 
 // Día de Muertos palette: papel picado brights + marigold + adobe + night.

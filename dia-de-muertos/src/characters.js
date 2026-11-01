@@ -1039,6 +1039,13 @@ export class Person {
       set('shL', -0.3, 0, 0.2); set('shR', -0.3, 0, -0.2);
       set('elL', -0.9); set('elR', -0.9);
       bob = -(this.spec.age === 'kid' ? 0.2 : 0.3);
+    } else if (a === 'floor') {
+      // sitting on the ground (on a petate), legs stretched out in front
+      set('hipL', -1.45); set('hipR', -1.45);
+      set('kneeL', 0.12); set('kneeR', 0.12);
+      set('shL', -0.35, 0, 0.3); set('shR', -0.35, 0, -0.3);
+      set('elL', -0.55); set('elR', -0.55);
+      bob = -(this.hipY - 0.075);
     } else if (a === 'kneel') {
       set('hipL', -1.3); set('hipR', 0.3);
       set('kneeL', 1.3); set('kneeR', 1.6);

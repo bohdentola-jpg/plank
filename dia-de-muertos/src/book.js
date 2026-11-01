@@ -77,7 +77,7 @@ async function renderCards(game, page) {
 function renderGlossary(game, page) {
   const list = [...GLOSSARY].sort((a, b) => a.w.localeCompare(b.w, 'es'));
   page.innerHTML = `<h3>${t({ en: 'Glossary', es: 'Glosario' })}</h3>
-    <p>${t({ en: 'Tap the speaker to hear each word. Capital letters show which part to stress.', es: 'Toca la bocina para escuchar cada palabra. Las mayúsculas indican la sílaba que se acentúa.' })}${game.speech.ok && !game.speech.hasSpanish() ? ` <i>${t({ en: '(Your computer doesn\'t seem to have a Spanish voice installed, so the pronunciation may sound off — follow the spelling guide!)', es: '(Tu computadora no parece tener una voz en español instalada; sigue la guía de pronunciación.)' })}</i>` : ''}</p>`;
+    <p>${t({ en: 'Tap the speaker to hear each word. Capital letters show which part to stress.', es: 'Toca la bocina para escuchar cada palabra. Las mayúsculas indican la sílaba que se acentúa.' })}${game.speech.ok && !game.speech.hasSpanish() ? ` <i>${t({ en: '(Your computer doesn\'t seem to have a Spanish voice, so the words may sound a bit off. Go by the spelling guide.)', es: '(Tu computadora no parece tener una voz en español, así que las palabras pueden sonar raro. Guíate por la pronunciación escrita.)' })}</i>` : ''}</p>`;
   const grid = document.createElement('div');
   grid.className = 'gloss';
   for (const e of list) {
@@ -97,7 +97,7 @@ function renderSources(page) {
   for (const [k, label] of Object.entries(kinds)) {
     const list = Object.values(SOURCES).filter((s) => s.kind === k);
     if (!list.length) continue;
-    html += `<h4>${t(label)}</h4><ul class="srcs">${list.map((s) => `<li>${s.check ? '⚑ ' : ''}<b>${s.t}</b> — ${s.by}${s.url ? `. <a href="${s.url}" target="_blank" rel="noopener noreferrer">${s.url}</a>` : ''}</li>`).join('')}</ul>`;
+    html += `<h4>${t(label)}</h4><ul class="srcs">${list.map((s) => `<li>${s.check ? '⚑ ' : ''}<b>${s.t}</b>. ${s.by}${s.url ? `. <a href="${s.url}" target="_blank" rel="noopener noreferrer">${s.url}</a>` : ''}</li>`).join('')}</ul>`;
   }
   page.innerHTML = html;
 }
@@ -123,7 +123,7 @@ function mapSvg() {
 
 function renderMexico(game, page) {
   page.innerHTML = `<h3>${t({ en: 'Around Mexico', es: 'Por México' })}</h3>
-    <p>${t({ en: 'Every region celebrates in its own way. Tap a pin to learn about it — some pins unlock new cards!', es: 'Cada región lo celebra a su manera. Toca un punto para aprender; ¡algunos desbloquean tarjetas nuevas!' })}</p>
+    <p>${t({ en: 'Every region celebrates in its own way. Tap a pin to learn about one. Some pins unlock new cards!', es: 'Cada región lo celebra a su manera. Toca un punto para aprender; ¡algunos desbloquean tarjetas nuevas!' })}</p>
     <div class="mapfig">${mapSvg()}</div><div class="mapinfo"><i>${t({ en: 'Tap a pin on the map.', es: 'Toca un punto del mapa.' })}</i></div>`;
   wireMap(game, page);
 }

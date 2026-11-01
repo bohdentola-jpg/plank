@@ -17,10 +17,51 @@ export class UI {
     };
     hydrateIcons();
     this.modalStack = [];
+    this.undoStack = [];
     this.dialogBusy = false;
     this.wireHud();
     this.wireSpanishWords();
     document.addEventListener('keydown', (e) => this.onKey(e));
+    game.engine.on('resize', () => { this._band = null; this.relayout(); });
+    document.fonts?.ready?.then(() => { this._band = null; this.relayout(); });
+  }
+
+  // ---------------------------------------------------------------- framing
+  // Tell the camera which part of the screen is free: below the top bar and
+  // the goal, above the place where the dialogue box opens, and left of the
+  // side panel. The camera keeps the important part of each view in there.
+  relayout() {
+    const eng = this.game.engine;
+    const H = window.innerHeight, W = window.innerWidth;
+    const shown = (el) => el && !el.classList.contains('hidden');
+    let top = 0, bottom = 0, right = 0;
+    if (shown(this.el.hud)) {
+      top = this.el.hud.offsetTop + this.el.hud.offsetHeight + 4;
+      if (shown(this.el.goal)) top = Math.max(top, this.el.goal.offsetTop + this.el.goal.offsetHeight + 4);
+      bottom = this.dialogBand();
+      if (shown(this.el.tray)) bottom = Math.max(bottom, H - this.el.tray.offsetTop + 4);
+      const sp = document.getElementById('sidepanel');
+      if (shown(sp)) right = W - sp.offsetLeft + 6;
+    }
+    eng.setInsets({ top, bottom, right });
+  }
+
+  // how much room the dialogue box takes at the bottom (two lines of text).
+  // Measured on an invisible copy, so it's the same whether or not someone
+  // is talking right now, and the camera never shifts mid-conversation.
+  dialogBand() {
+    if (this._band) return this._band;
+    const d = this.el.dialog;
+    const probe = d.cloneNode(true);
+    probe.classList.remove('hidden', 'choosing', 'nopic');
+    probe.style.visibility = 'hidden';
+    probe.style.animation = 'none';
+    probe.querySelector('.text').innerHTML = '';
+    probe.querySelector('.choices').innerHTML = '';
+    d.parentNode.appendChild(probe);
+    this._band = window.innerHeight - probe.offsetTop + 4;
+    probe.remove();
+    return this._band;
   }
 
   // ---------------------------------------------------------------- HUD
@@ -42,7 +83,7 @@ export class UI {
     this.el.petals.title = t(S.marigolds);
   }
 
-  showHud(on) { this.el.hud.classList.toggle('hidden', !on); }
+  showHud(on) { this.el.hud.classList.toggle('hidden', !on); this.relayout(); }
 
   setPlace(name, day) {
     this.el.placeName.textContent = t(name) || '';
@@ -68,7 +109,10 @@ export class UI {
   }
 
   setGoal(text) {
-    if (!text) { this.el.goal.classList.add('hidden'); this._goal = null; return; }
+    if (!text) {
+      if (this._goal !== null) { this.el.goal.classList.add('hidden'); this._goal = null; this.relayout(); }
+      return;
+    }
     const s = t(text);
     if (s === this._goal) return;
     this._goal = s;
@@ -76,6 +120,7 @@ export class UI {
     this.el.goal.classList.remove('hidden', 'flash');
     void this.el.goal.offsetWidth;
     this.el.goal.classList.add('flash');
+    this.relayout();
   }
 
   pulse(id, on) { $(id)?.classList.toggle('pulse', on); }
@@ -229,11 +274,38 @@ export class UI {
     });
   }
 
+  // ---------------------------------------------------------------- undo
+  // Whatever you're making (an ofrenda, papel picado, a drawing…) registers
+  // its Undo here, so Ctrl+Z / ⌘Z works everywhere. owner: the panel it lives
+  // in (null for things in the 3D scene). Returns a function that unregisters.
+  pushUndo(fn, owner = null) {
+    const entry = { fn, owner };
+    this.undoStack.push(entry);
+    return () => { this.undoStack = this.undoStack.filter((x) => x !== entry); };
+  }
+
+  runUndo() {
+    const top = this.undoStack[this.undoStack.length - 1];
+    if (!top) return false;
+    const panel = this.modalStack[this.modalStack.length - 1]?.el || null;
+    if (panel !== top.owner) return false;
+    if (!this.el.dialog.classList.contains('hidden') || !this.el.card.classList.contains('hidden')) return false;
+    top.fn();
+    return true;
+  }
+
   onKey(e) {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'z') {
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return; // text boxes undo their own typing
+      if (this.runUndo()) e.preventDefault();
+      return;
+    }
     if (e.key === 'Escape') {
       if (!this.el.esPop.classList.contains('hidden')) { this.hidePop(); return; }
       if (this.modalStack.length) { this.modalStack[this.modalStack.length - 1].close(); return; }
       if (!this.el.card.classList.contains('hidden')) { this._cardClose?.(); return; }
+      if (this.el.dialog.classList.contains('hidden')) this.game.engine.stage?.onEscape?.();
     }
     if ((e.key === ' ' || e.key === 'Enter') && !this.el.dialog.classList.contains('hidden') && !this.el.dialog.classList.contains('choosing')) {
       if (document.activeElement?.tagName === 'INPUT') return;
@@ -483,7 +555,9 @@ export class UI {
       tr.appendChild(s);
       hydrateIcons(s);
     }
+    tr.classList.toggle('compact', !items.length);
     tr.classList.remove('hidden');
+    this.relayout();
     return tr;
   }
 
@@ -491,15 +565,16 @@ export class UI {
     this.el.tray.querySelectorAll('.titem').forEach((b) => b.classList.toggle('on', b.dataset.id === id));
   }
 
-  hideTray() { this.el.tray.classList.add('hidden'); this.el.tray.innerHTML = ''; this.sidePanel(null); }
+  hideTray() { this.el.tray.classList.add('hidden'); this.el.tray.innerHTML = ''; this.sidePanel(null); this.relayout(); }
 
   // a small floating panel (the ofrenda's wishes & elements)
   sidePanel(html) {
     const el = document.getElementById('sidepanel');
     if (!el) return;
-    if (!html) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+    if (!html) { el.classList.add('hidden'); el.innerHTML = ''; this.relayout(); return; }
     el.innerHTML = html;
     el.classList.remove('hidden');
     hydrateIcons(el);
+    this.relayout();
   }
 }

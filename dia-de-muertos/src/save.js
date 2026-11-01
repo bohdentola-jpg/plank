@@ -46,6 +46,25 @@ export function saveState(state) {
   }
 }
 
+// Starting over keeps a copy of the old adventure, so it can be brought back.
 export function wipeState() {
-  try { localStorage.removeItem(KEY); } catch { /* nothing to wipe */ }
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) localStorage.setItem(`${KEY}-backup`, raw);
+    localStorage.removeItem(KEY);
+  } catch { /* nothing to wipe */ }
+}
+
+export function hasBackup() {
+  try { return !!localStorage.getItem(`${KEY}-backup`); } catch { return false; }
+}
+
+export function restoreBackup() {
+  try {
+    const raw = localStorage.getItem(`${KEY}-backup`);
+    if (!raw) return false;
+    localStorage.setItem(KEY, raw);
+    localStorage.removeItem(`${KEY}-backup`);
+    return true;
+  } catch { return false; }
 }

@@ -2,7 +2,7 @@
 // research (see docs/research-notes.md). Kinds: gov = Mexican government /
 // public institution, museum, academic, news, ref = reference work.
 // "check: true" marks facts taken from general knowledge that still need a
-// source check — shown honestly on the Sources page.
+// source check, shown honestly on the Sources page.
 export const SOURCES = {
   unesco: { t: 'Indigenous festivity dedicated to the dead (inscribed 2008)', by: 'UNESCO Intangible Cultural Heritage', url: 'https://ich.unesco.org/en/RL/indigenous-festivity-dedicated-to-the-dead-00054', kind: 'gov' },
   britannica: { t: 'Day of the Dead', by: 'Encyclopaedia Britannica', url: 'https://www.britannica.com/topic/Day-of-the-Dead', kind: 'ref' },
@@ -13,9 +13,9 @@ export const SOURCES = {
   'gob-inafed': { t: 'Día de Muertos, tradición mexicana que trasciende en el tiempo', by: 'INAFED, Gobierno de México', url: 'https://www.gob.mx/inafed/articulos/dia-de-muertos-tradicion-mexicana-que-trasciende-en-el-tiempo', kind: 'gov' },
   'cultura-cuaderno': { t: 'Así nació el Día de Muertos (Cuadernos de Turismo Cultural 16)', by: 'Secretaría de Cultura / CONACULTA', url: 'https://www.cultura.gob.mx/turismocultural/publi/Cuadernos_19_num/cuaderno16.pdf', kind: 'gov' },
   'inpi-elementos': { t: '¿Conoces el significado de los elementos de una ofrenda de Día de Muertos?', by: 'Instituto Nacional de los Pueblos Indígenas (INPI)', url: 'https://www.gob.mx/inpi/articulos/conoces-el-significado-de-los-elementos-de-una-ofrenda-de-dia-de-muertos', kind: 'gov' },
-  'cdi-ofrendas': { t: 'Ofrendas — Día de Muertos', by: 'CDI (now INPI)', url: 'http://www.cdi.gob.mx/difusion/diamuertos/ofrendas.html', kind: 'gov' },
+  'cdi-ofrendas': { t: 'Ofrendas: Día de Muertos', by: 'CDI (now INPI)', url: 'http://www.cdi.gob.mx/difusion/diamuertos/ofrendas.html', kind: 'gov' },
   'cdmx-ofrendas': { t: 'Day of the Dead ofrendas', by: 'Mexico City Government (tourism)', url: 'https://mexicocity.cdmx.gob.mx/day-of-the-dead-ofrendas/?lang=en', kind: 'gov' },
-  'sep-ofrenda': { t: 'Elementos básicos para la ofrenda de Día de Muertos', by: 'SEP — Nueva Escuela Mexicana', url: 'https://nuevaescuelamexicana.sep.gob.mx/contenido/recurso/elementos-basicos-para-la-ofrenda-de-dia-de-muertos/', kind: 'gov' },
+  'sep-ofrenda': { t: 'Elementos básicos para la ofrenda de Día de Muertos', by: 'SEP, Nueva Escuela Mexicana', url: 'https://nuevaescuelamexicana.sep.gob.mx/contenido/recurso/elementos-basicos-para-la-ofrenda-de-dia-de-muertos/', kind: 'gov' },
   'unam-cendi': { t: 'Día de muertos: elementos de la ofrenda', by: 'UNAM (material from INPI)', url: 'https://www.personal.unam.mx/Docs/Cendi/dia-de-muertos-elementos-de-la-ofrenda.pdf', kind: 'academic' },
   'smithsonian-press': { t: 'Smithsonian Celebrates Day of the Dead', by: 'Smithsonian Institution', url: 'https://www.si.edu/newsdesk/releases/smithsonian-celebrates-day-dead', kind: 'museum' },
   'smithsonian-objects': { t: 'The Meaning Behind Six Objects on Día de los Muertos Altars', by: 'Smithsonian Magazine', url: 'https://www.smithsonianmag.com/travel/meaning-behind-six-objects-dia-de-los-muertos-altars-180973442/', kind: 'museum' },
@@ -86,7 +86,7 @@ export const SOURCES = {
   'istmopress-xandu': { t: "Biyé' o Xandu' en Juchitán", by: 'Istmo Press (Víctor Terán)', url: 'https://www.istmopress.com.mx/artecultura/biye-o-xandu-en-juchitan-por-victor-teran/', kind: 'news' },
   'excelsior-huaquechula': { t: 'Huaquechula, el municipio de las ofrendas monumentales', by: 'Excélsior', url: 'https://www.excelsior.com.mx/nacional/huaquechula-el-municipio-de-las-ofrendas-monumentales/1275803', kind: 'news' },
   'natgeo-guatemala': { t: 'Photos: Day of the Dead in Mexico and Guatemala', by: 'National Geographic', url: 'https://www.nationalgeographic.com/travel/article/photos-day-of-the-dead-dia-de-los-muertos-mexico-guatemala', kind: 'news', check: true },
-  'bk-andes': { t: 'Andean and Ecuadorian All Souls customs (guaguas de pan, colada morada, t\'antawawas) and Undas in the Philippines', by: 'General knowledge — not yet checked against a published source', url: '', kind: 'ref', check: true },
+  'bk-andes': { t: 'Andean and Ecuadorian All Souls customs (guaguas de pan, colada morada, t\'antawawas) and Undas in the Philippines', by: 'General knowledge, not yet checked against a published source', url: '', kind: 'ref', check: true },
   selfhelpgraphics: { t: 'History', by: 'Self Help Graphics & Art (East Los Angeles)', url: 'https://selfhelpgraphics.com/history', kind: 'museum' },
   'latimes-ucla': { t: 'Día de los Muertos becomes big business (LA Times, 2017; PDF)', by: 'UCLA Chicano Studies Research Center', url: 'https://www.chicano.ucla.edu/files/news/LATimes_DiadeLosMuertos_103017.pdf', kind: 'news' },
   'cnn-disney': { t: 'Disney drops bid to trademark "Día de los Muertos"', by: 'CNN (2013)', url: 'https://edition.cnn.com/2013/05/10/us/disney-trademark-day-dead', kind: 'news' },

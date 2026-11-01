@@ -4,8 +4,8 @@ import { t, getLang } from '../i18n.js';
 import { icon } from '../icons.js';
 
 const OPENINGS = [
-  { en: ['La Flaca came to town one night', 'to take {name} out of sight —'], es: ['La Muerte, muy elegante,', 'buscaba a {name} al instante,'] },
-  { en: ['Death came strolling, dressed so fine,', 'looking for {name} in the line —'], es: ['Llegó la Flaca bailando,', 'a {name} venía buscando,'] },
+  { en: ['La Flaca came to town one night', 'to take {name} out of sight,'], es: ['La Muerte, muy elegante,', 'buscaba a {name} al instante,'] },
+  { en: ['Death came strolling, dressed so fine,', 'looking for {name} down the line,'], es: ['Llegó la Flaca bailando,', 'a {name} venía buscando,'] },
   { en: ['The Skinny Lady knocked: "Hello!', 'Is {name} home? It\'s time to go!"'], es: ['Con su sombrero de flores', 'buscó a {name} entre tambores,'] },
 ];
 
@@ -21,7 +21,7 @@ export const TARGETS = {
   chispa: {
     name: { en: 'Chispa the Xolo', es: 'Chispa, la Xolo' }, who: 'chispa',
     endings: [
-      { en: ['but Chispa stole her fancy hat,', 'and Death went home — and that was that!'], es: ['pero Chispa le ladró', 'y su sombrero se llevó.'] },
+      { en: ['but Chispa stole her fancy hat,', 'so Death went home, and that was that!'], es: ['pero Chispa le ladró', 'y su sombrero se llevó.'] },
       { en: ['but Chispa licked her bony face,', 'and Death ran giggling from the place!'], es: ['pero Chispa la lamió', 'y la Muerte se rió.'] },
       { en: ['but Chispa hid beneath the chair,', 'and Death just found a chew-toy there!'], es: ['pero la Xolo, ¡qué lista!,', 'se escondió y perdió la pista.'] },
     ],
@@ -29,7 +29,7 @@ export const TARGETS = {
   mateo: {
     name: { en: 'Mateo', es: 'Mateo' }, who: 'mateo',
     endings: [
-      { en: ['but Mateo kicked his soccer ball —', 'GOAL! And Death ran down the hall!'], es: ['pero Mateo, con su balón,', '¡le metió gol de campeón!'] },
+      { en: ['but Mateo kicked his soccer ball.', 'GOAL! And Death ran down the hall!'], es: ['pero Mateo, con su balón,', '¡le metió gol de campeón!'] },
       { en: ['but Mateo had a tamal to share,', 'so Death sat down and pulled a chair!'], es: ['pero estaba comiendo un tamal', 'y lo compartió, ¡qué tal!'] },
       { en: ['but Mateo started singing loud,', 'and Death danced off into the crowd!'], es: ['pero Mateo empezó a cantar', 'y la Flaca se puso a bailar.'] },
     ],
@@ -38,7 +38,7 @@ export const TARGETS = {
     name: { en: 'Maestra Eréndira', es: 'Maestra Eréndira' }, who: 'erendira',
     endings: [
       { en: ['but the Maestra gave her homework too,', 'and Death cried, "What am I to do?"'], es: ['pero le dejó de tarea', 'escribir una epopeya.'] },
-      { en: ['but she began a history class,', 'and Death is still there — she won\'t pass!'], es: ['pero le dio clase de historia', 'y se quedó sin memoria.'] },
+      { en: ['but she began a history class,', 'and Death still hasn\'t learned enough to pass!'], es: ['pero le dio clase de historia', 'y se quedó sin memoria.'] },
       { en: ['but she said, "Raise your hand to speak!"', 'and Death\'s been waiting since last week!'], es: ['pero dijo: "¡Alcen la mano!",', 'y la Flaca esperó en vano.'] },
     ],
   },
@@ -53,9 +53,9 @@ export const TARGETS = {
   me: {
     name: { en: 'Me!', es: '¡Yo!' }, who: null,
     endings: [
-      { en: ['but {name} was playing Lotería', 'and won Death\'s hat — ¡qué alegría!'], es: ['pero {name} jugaba Lotería', 'y le ganó, ¡qué alegría!'] },
+      { en: ['but {name} was playing Lotería', 'and won Death\'s hat. ¡Qué alegría!'], es: ['pero {name} jugaba Lotería', 'y le ganó, ¡qué alegría!'] },
       { en: ['but {name} was hiding under the bed', 'with a sugar skull and bread instead!'], es: ['pero {name} se escondió en la cama', 'con pan dulce y su piyama.'] },
-      { en: ['but {name} had a tamal to share,', 'and now they\'re friends — a funny pair!'], es: ['pero {name} le invitó un tamal', 'y se hicieron amigos, ¡qué tal!'] },
+      { en: ['but {name} had a tamal to share,', 'and now they\'re friends, a funny pair!'], es: ['pero {name} le invitó un tamal', 'y se hicieron amigos, ¡qué tal!'] },
     ],
   },
 };
@@ -80,18 +80,18 @@ export function openPoem(game) {
     const p = { target: 'ramon', opening: 0, ending: 0, myName: game.state.playerName || '', custom: null };
     const body = document.createElement('div');
     body.className = 'mg';
-    const m = game.ui.modal({ title: { en: 'Write a calaverita', es: 'Escribe una calaverita' }, ico: 'pencil', body, closable: false });
+    const m = game.ui.modal({ title: { en: 'Write a calaverita', es: 'Escribe una calaverita' }, ico: 'pencil', body, onClose: (v) => resolve(v || null) });
     const render = () => {
       const lines = poemLines(p);
       body.innerHTML = `
-        <p style="font-weight:700;margin:0">${t({ en: 'A calaverita imagines Death — "La Flaca" — coming for someone who is <b>alive</b>, and getting outwitted. Tease their habits, with love!', es: 'Una calaverita imagina que la Muerte —"la Flaca"— viene por alguien que está <b>vivo</b> y sale burlada. ¡Bromea sobre sus costumbres, con cariño!' })}</p>
+        <p style="font-weight:700;margin:0">${t({ en: 'In a calaverita, Death ("La Flaca") comes for someone who is <b>alive</b>, and they outsmart her. Tease their habits, but kindly.', es: 'En una calaverita, la Muerte (la Flaca) viene por alguien que está <b>vivo</b> y sale burlada. Bromea sobre sus costumbres, pero con cariño.' })}</p>
         <div><b>${t({ en: '1. Who is it about?', es: '1. ¿Para quién es?' })}</b>
           <div class="swatches" style="margin-top:6px">${Object.entries(TARGETS).map(([id, x]) => `<button type="button" class="tool${p.target === id ? ' on' : ''}" data-t="${id}" style="width:auto;padding:8px 12px">${t(x.name)}</button>`).join('')}</div>
           ${p.target === 'me' ? `<input class="inp" style="margin-top:8px;max-width:280px" maxlength="16" placeholder="${t({ en: 'Your name', es: 'Tu nombre' })}" value="${p.myName.replace(/"/g, '')}">` : ''}
         </div>
-        <div><b>${t({ en: '2. How does it start?', es: '2. ¿Cómo empieza?' })}</b> <button type="button" class="btn cream small" data-a="o">${icon('rotate')} ${t({ en: 'Try another', es: 'Otra' })}</button></div>
-        <div><b>${t({ en: '3. How do they escape?', es: '3. ¿Cómo se escapa?' })}</b> <button type="button" class="btn cream small" data-a="e">${icon('rotate')} ${t({ en: 'Try another', es: 'Otra' })}</button>
-          <button type="button" class="btn cream small" data-a="w">${icon('pencil')} ${t({ en: 'Write my own ending', es: 'Escribir mi final' })}</button></div>
+        <div><b>${t({ en: '2. How does it start?', es: '2. ¿Cómo empieza?' })}</b> <button type="button" class="btn cream small" data-a="o-" aria-label="${t({ en: 'Previous', es: 'Anterior' })}">${icon('back')}</button> <button type="button" class="btn cream small" data-a="o">${t({ en: 'Try another', es: 'Otra' })} ${icon('next')}</button></div>
+        <div><b>${t({ en: '3. How do they escape?', es: '3. ¿Cómo se escapa?' })}</b> <button type="button" class="btn cream small" data-a="e-" aria-label="${t({ en: 'Previous', es: 'Anterior' })}">${icon('back')}</button> <button type="button" class="btn cream small" data-a="e">${t({ en: 'Try another', es: 'Otra' })} ${icon('next')}</button>
+          <button type="button" class="btn cream small" data-a="w">${icon('pencil')} ${p.custom ? t({ en: 'Use a ready-made ending', es: 'Usar un final hecho' }) : t({ en: 'Write my own ending', es: 'Escribir mi final' })}</button></div>
         ${p.custom ? `<div class="row"><input class="inp" data-c="0" maxlength="48" value="${(p.custom[0] || '').replace(/"/g, '')}"><input class="inp" data-c="1" maxlength="48" value="${(p.custom[1] || '').replace(/"/g, '')}"></div>` : ''}
         <div class="poem">${lines.map((l) => `<div>${l.replace(/</g, '&lt;')}</div>`).join('')}</div>
         <div class="row" style="justify-content:flex-end"><button type="button" class="btn rosa" data-a="done">${icon('check')} ${t({ en: 'Pin it on the contest board!', es: '¡A pegarla en el concurso!' })}</button></div>`;
@@ -99,8 +99,11 @@ export function openPoem(game) {
       const inp = body.querySelector('input.inp:not([data-c])');
       if (inp) inp.oninput = () => { p.myName = inp.value.trim(); body.querySelector('.poem').innerHTML = poemLines(p).map((l) => `<div>${l.replace(/</g, '&lt;')}</div>`).join(''); };
       body.querySelectorAll('[data-c]').forEach((ci) => { ci.oninput = () => { p.custom[+ci.dataset.c] = ci.value; }; ci.onchange = render; });
-      body.querySelector('[data-a=o]').onclick = () => { p.opening = (p.opening + 1) % OPENINGS.length; game.sfx('page'); render(); };
-      body.querySelector('[data-a=e]').onclick = () => { p.custom = null; p.ending = (p.ending + 1) % TARGETS[p.target].endings.length; game.sfx('page'); render(); };
+      const cycle = (key, n, d) => { p[key] = (p[key] + d + n) % n; game.sfx('page'); render(); };
+      body.querySelector('[data-a=o]').onclick = () => cycle('opening', OPENINGS.length, 1);
+      body.querySelector('[data-a="o-"]').onclick = () => cycle('opening', OPENINGS.length, -1);
+      body.querySelector('[data-a=e]').onclick = () => { p.custom = null; cycle('ending', TARGETS[p.target].endings.length, 1); };
+      body.querySelector('[data-a="e-"]').onclick = () => { p.custom = null; cycle('ending', TARGETS[p.target].endings.length, -1); };
       body.querySelector('[data-a=w]').onclick = () => {
         const e = TARGETS[p.target].endings[p.ending][getLang()];
         p.custom = p.custom ? null : [e[0].replace(/\{name\}/g, p.myName || ''), e[1].replace(/\{name\}/g, p.myName || '')];
@@ -110,12 +113,11 @@ export function openPoem(game) {
         const all = poemLines(p).join(' ');
         if (!isKind(all) || (p.myName && !isKind(p.myName))) {
           game.sfx('oops');
-          game.ui.toast(t({ en: 'Calaveritas tease with love — let\'s keep it kind!', es: 'Las calaveritas bromean con cariño. ¡Que sea amable!' }), { ico: 'heart', ms: 3500 });
+          game.ui.toast(t({ en: 'Calaveritas tease with love. Let\'s keep it kind!', es: 'Las calaveritas bromean con cariño. ¡Que sea amable!' }), { ico: 'heart', ms: 3500 });
           return;
         }
         if (p.target === 'me' && p.myName) game.state.playerName = p.myName;
-        m.close();
-        resolve({ ...p, lines: poemLines(p), lang: getLang() });
+        m.close({ ...p, lines: poemLines(p), lang: getLang() });
       };
     };
     render();

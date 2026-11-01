@@ -1,7 +1,7 @@
 // Papel picado, the Huixcolotla way: a stack of tissue paper, a pattern on
-// top, and a chisel tapped with a mallet — every tap cuts through the stack.
+// top, and a chisel tapped with a mallet. Every tap cuts through the stack.
 import { mkCanvas, PAL } from '../toon.js';
-import { t } from '../i18n.js';
+import { t, UI as S } from '../i18n.js';
 import { icon } from '../icons.js';
 
 const W = 360, H = 450; // one sheet, in design units
@@ -141,8 +141,29 @@ export function openPapel(game) {
     const ui = game.ui;
     const body = document.createElement('div');
     body.className = 'mg';
-    const m = ui.modal({ title: { en: 'Papel picado', es: 'Papel picado' }, ico: 'sparkle', body, cls: 'wide', closable: false });
-    const st = { step: 0, pattern: 'calavera', colors: [PAL.rosa, PAL.marigold, PAL.purple], shapes: [], cut: [], stamp: 'circulo', mirror: true };
+    let popUndo = null;
+    const m = ui.modal({ title: { en: 'Papel picado', es: 'Papel picado' }, ico: 'sparkle', body, cls: 'wide', onClose: (v) => { popUndo?.(); resolve(v || null); } });
+    // actions: how many shapes each stamp added; taps: which shape each chisel tap hit
+    const st = { step: 0, pattern: 'calavera', colors: [PAL.rosa, PAL.marigold, PAL.purple], shapes: [], cut: [], stamp: 'circulo', mirror: true, actions: [], taps: [] };
+    // Undo takes back the last stamp or the last tap of the chisel
+    const undo = () => {
+      if (st.step === 1 && st.actions.length) {
+        const n = st.actions.pop();
+        st.shapes.splice(-n, n);
+        st.cut.splice(-n, n);
+      } else if ((st.step === 2 || st.step === 3) && st.taps.length) {
+        st.cut[st.taps.pop()]--;
+        if (st.step === 3) { step(2); return; }
+      } else { game.sfx('oops'); return; }
+      game.sfx('tap');
+      draw();
+      refreshUndo();
+    };
+    const refreshUndo = () => {
+      const b = body.querySelector('[data-a=undo]');
+      if (b) b.disabled = st.step === 1 ? !st.actions.length : !st.taps.length;
+    };
+    popUndo = game.ui.pushUndo(undo, m.el);
     const cv = document.createElement('canvas');
     cv.className = 'board';
     cv.width = W * 2; cv.height = H * 2;
@@ -210,22 +231,28 @@ export function openPapel(game) {
         // design your own: stamp shapes, mirrored like folded paper
         const s = STAMPS[st.stamp].make(p.x, p.y);
         st.shapes.push(s); st.cut.push(0);
+        let n = 1;
         if (st.mirror && Math.abs(p.x - W / 2) > 18) {
           const m2 = STAMPS[st.stamp].make(W - p.x, p.y);
           if (m2.rot) m2.rot = -m2.rot;
           st.shapes.push(m2); st.cut.push(0);
+          n = 2;
         }
+        st.actions.push(n);
         game.sfx('bean');
         draw();
+        refreshUndo();
         return;
       }
       if (st.step !== 2) return;
       const k = st.shapes.findIndex((s, i) => st.cut[i] < s.taps && inside(s, p.x, p.y));
       if (k < 0) { game.sfx('oops'); return; }
       st.cut[k]++;
+      st.taps.push(k);
       game.sfx('tok');
       draw();
-      if (st.cut.every((c, i) => c >= st.shapes[i].taps)) setTimeout(() => step(3), 350);
+      refreshUndo();
+      if (st.cut.every((c, i) => c >= st.shapes[i].taps)) setTimeout(() => { if (st.step === 2 && st.cut.every((c, i) => c >= st.shapes[i].taps)) step(3); }, 350);
     });
 
     const step = (n) => {
@@ -246,7 +273,7 @@ export function openPapel(game) {
             const prev = papelDesignCanvas(p, PAL.rosa, 90);
             prev.style.cssText = 'width:60px;display:block;margin:4px auto 0';
             b.appendChild(prev);
-          } else b.innerHTML += `<span>${t({ en: 'Stamp shapes — they mirror like folded paper', es: 'Pon figuras; se reflejan como papel doblado' })}</span>`;
+          } else b.innerHTML += `<span>${t({ en: 'Stamp your own shapes. They mirror, like folded paper.', es: 'Pon tus figuras. Se reflejan como en papel doblado.' })}</span>`;
           b.onclick = () => { st.pattern = id; game.sfx('tap'); step(0); };
           grid.appendChild(b);
         }
@@ -254,9 +281,15 @@ export function openPapel(game) {
         ctrl.appendChild(colorPicker());
         const go = btn({ en: 'Next', es: 'Siguiente' }, 'rosa', () => {
           if (!st.colors.length) return;
-          st.shapes = st.pattern === 'propio' ? [] : PATTERNS[st.pattern].shapes.map((s) => ({ ...s }));
-          st.cut = st.shapes.map(() => 0);
-          step(st.pattern === 'propio' ? 1 : 2);
+          // coming back to the same design keeps what you already did
+          if (st.made !== st.pattern) {
+            st.shapes = st.pattern === 'propio' ? [] : PATTERNS[st.pattern].shapes.map((s) => ({ ...s }));
+            st.cut = st.shapes.map(() => 0);
+            st.actions = [];
+            st.taps = [];
+            st.made = st.pattern;
+          }
+          step(st.pattern === 'propio' && !st.taps.length ? 1 : 2);
         });
         ctrl.appendChild(go);
       } else if (n === 1) {
@@ -277,26 +310,39 @@ export function openPapel(game) {
         mir.innerHTML = `<input type="checkbox" ${st.mirror ? 'checked' : ''}> ${t({ en: 'Mirror (symmetry)', es: 'Espejo (simetría)' })}`;
         mir.querySelector('input').onchange = (e) => { st.mirror = e.target.checked; };
         ctrl.appendChild(mir);
-        ctrl.appendChild(btn({ en: 'Undo', es: 'Deshacer' }, 'cream', () => { st.shapes.pop(); st.cut.pop(); draw(); }));
+        ctrl.appendChild(undoBtn());
+        ctrl.appendChild(btn(S.back, 'cream', () => step(0)));
         ctrl.appendChild(btn({ en: 'Ready to cut!', es: '¡A cortar!' }, 'rosa', () => { if (st.shapes.length) step(2); }));
       } else if (n === 2) {
         lead.innerHTML = t({ en: '<b>Tap each dashed shape</b> to strike the chisel (cincel) with the mallet. Big shapes need more taps!', es: '<b>Toca cada figura punteada</b> para golpear el cincel con el mazo. ¡Las grandes necesitan más golpes!' });
+        ctrl.appendChild(undoBtn());
+        ctrl.appendChild(btn(S.back, 'cream', () => step(st.pattern === 'propio' && !st.taps.length ? 1 : 0)));
       } else if (n === 3) {
         lead.innerHTML = t({ en: 'Now lift the stack… every sheet has the same design!', es: 'Ahora levanta la pila… ¡todas las hojas tienen el mismo diseño!' });
         game.sfx('success');
         const t0 = performance.now();
         const anim = () => {
+          if (st.step !== 3) return; // undone mid-lift
           const k = Math.min(1, (performance.now() - t0) / 1200);
           draw(k);
           if (k < 1) requestAnimationFrame(anim);
         };
         anim();
+        ctrl.appendChild(undoBtn());
         ctrl.appendChild(btn({ en: 'Hang them on a string!', es: '¡A colgarlos en un cordón!' }, 'rosa', () => {
-          m.close();
-          resolve({ shapes: st.shapes, colors: st.colors, pattern: st.pattern });
+          m.close({ shapes: st.shapes, colors: st.colors, pattern: st.pattern });
         }));
       }
-      draw(n === 3 ? 0 : 0);
+      draw(0);
+      refreshUndo();
+    };
+
+    const undoBtn = () => {
+      const b = btn(S.undo, 'cream', undo);
+      b.dataset.a = 'undo';
+      b.title = 'Ctrl+Z';
+      b.innerHTML = `${icon('undo')} ${t(S.undo)}`;
+      return b;
     };
 
     const colorPicker = () => {
@@ -335,6 +381,5 @@ export function openPapel(game) {
     body.innerHTML = `<div class="row"><div class="cvwrap"></div><div style="flex:1;min-width:240px"><p class="lead" style="font-weight:700;margin-top:0"></p><div class="ctrl"></div></div></div>`;
     body.querySelector('.cvwrap').appendChild(cv);
     step(0);
-    void icon;
   });
 }

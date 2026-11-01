@@ -145,9 +145,15 @@ export function nubeVase() {
   g.add(vase);
   const r = rng(8);
   const spots = [];
-  for (let i = 0; i < 70; i++) {
-    const a = r() * TAU, d = Math.sqrt(r()) * 0.12;
-    spots.push([Math.cos(a) * d, 0.24 + r() * 0.08, Math.sin(a) * d, 0.012]);
+  // thin green stems fan out of the vase and carry the little blossoms
+  const stemM = toon('#6f9a4a');
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * TAU + r() * 0.4, d = 0.05 + r() * 0.07;
+    const tip = new THREE.Vector3(Math.cos(a) * d, 0.24 + r() * 0.07, Math.sin(a) * d);
+    const stem = tube([new THREE.Vector3(0, 0.1, 0), new THREE.Vector3(tip.x * 0.4, 0.18, tip.z * 0.4), tip], 0.0035, stemM, 5);
+    stem.userData.noOutline = true;
+    g.add(stem);
+    for (let k = 0; k < 8; k++) spots.push([tip.x + (r() - 0.5) * 0.05, tip.y + (r() - 0.3) * 0.04, tip.z + (r() - 0.5) * 0.05, 0.012]);
   }
   g.add(marigolds(spots, { colors: ['#ffffff', '#f6f1ff', '#fff8f0'], seed: 8 }));
   return g;
@@ -582,11 +588,14 @@ export function hotChocolate() {
   band.rotation.x = Math.PI / 2;
   band.position.y = 0.06;
   g.add(band);
-  // tablet of Mexican chocolate leaning beside it
-  const tab = cyl(0.04, 0.04, 0.015, toon('#5a2d1a'), 8);
-  tab.rotation.x = Math.PI / 2 - 0.4;
-  tab.position.set(-0.07, 0.035, 0.01);
+  // a tablet of Mexican chocolate lying flat beside the cup
+  const tab = cyl(0.035, 0.035, 0.014, toon('#5a2d1a'), 8);
+  tab.position.set(-0.1, 0.007, 0.03);
   g.add(tab);
+  const piece = box(0.022, 0.014, 0.018, toon('#5a2d1a'));
+  piece.position.set(-0.075, 0.007, 0.075);
+  piece.rotation.y = 0.5;
+  g.add(piece);
   return g;
 }
 

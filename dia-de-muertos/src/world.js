@@ -1058,7 +1058,7 @@ export function mergeStatic(root) {
     mm.userData.merged = true;
     root.add(mm);
     for (const o of list) {
-      // keep outline hulls of merged meshes? (architecture has none) — drop the mesh
+      // keep outline hulls of merged meshes? (architecture has none) so drop the mesh
       o.parent?.remove(o);
       if (!o.geometry.userData.sharedGeo) o.geometry.dispose();
     }

@@ -1,5 +1,5 @@
-// Sound: everything is synthesized with WebAudio — no audio files.
-// Instruments: plucked guitar (Karplus–Strong), marimba, bass, pad, flute,
+// Sound: everything is synthesized with WebAudio. There are no audio files.
+// Instruments: plucked guitar (Karplus-Strong), marimba, bass, pad, flute,
 // bells, light percussion. Original pieces for each place in the story.
 const A4 = 440;
 const mtof = (m) => A4 * Math.pow(2, (m - 69) / 12);

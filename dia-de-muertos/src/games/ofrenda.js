@@ -30,10 +30,10 @@ export const WISHES = [
 ];
 
 export const LEVEL_INFO = {
-  1: { en: 'One table — very common! Many families simply use a table.', es: 'Una mesa: ¡muy común! Muchas familias usan solo una mesa.' },
-  2: { en: 'Two levels: some say they stand for heaven and earth.', es: 'Dos niveles: hay quien dice que son el cielo y la tierra.' },
-  3: { en: 'Three levels: some say heaven, earth and the underworld; others say the Holy Trinity.', es: 'Tres niveles: hay quien dice cielo, tierra e inframundo; otros, la Santísima Trinidad.' },
-  7: { en: 'Seven levels: some say they are the steps the soul passes on its journey.', es: 'Siete niveles: hay quien dice que son los pasos del alma en su viaje.' },
+  1: { en: 'One level. Lots of families just use a table.', es: 'Un nivel. Muchas familias usan solo una mesa.' },
+  2: { en: 'Two levels. Some people say they stand for heaven and earth.', es: 'Dos niveles. Hay quien dice que son el cielo y la tierra.' },
+  3: { en: 'Three levels. Some say heaven, earth and the underworld. Others say the Holy Trinity.', es: 'Tres niveles. Hay quien dice cielo, tierra e inframundo, y hay quien dice la Santísima Trinidad.' },
+  7: { en: 'Seven levels. Some say they are the steps a soul climbs on its way.', es: 'Siete niveles. Hay quien dice que son los escalones que sube el alma en su camino.' },
 };
 
 export class OfrendaBuilder {
@@ -51,14 +51,22 @@ export class OfrendaBuilder {
     this.wishes = wishes;
     this.root = new THREE.Group();
     base.add(this.root);
+    this.levelGroup = new THREE.Group();
+    this.root.add(this.levelGroup);
     this.tiers = [];
     this.placed = [];
     this.holding = null;
     this.levels = 0;
     this.extras = {};
     this.counts = {};
+    this.history = []; // snapshots for Undo
     this.cursor = this.makeCursor();
     this.root.add(this.cursor);
+    // flames, smoke and papel picado move every frame
+    scene.updaters.push((dt, time) => {
+      if (!this.root.parent) return;
+      this.root.traverse((o) => o.userData.update?.(time, dt));
+    });
   }
 
   makeCursor() {
@@ -71,8 +79,8 @@ export class OfrendaBuilder {
   }
 
   // ---------------------------------------------------------------- tiers
-  setLevels(n) {
-    for (const t0 of this.tiers) { this.root.remove(t0.mesh); this.root.remove(t0.pick); }
+  setLevels(n, { quiet = false } = {}) {
+    this.levelGroup.clear();
     this.tiers = [];
     this.levels = n;
     const back = -this.D / 2;
@@ -82,24 +90,24 @@ export class OfrendaBuilder {
     const cloth = box(this.W + 0.06, 0.03, this.D + 0.06, clothM);
     cloth.position.y = this.baseY + 0.015;
     cloth.castShadow = false;
-    this.root.add(cloth);
+    this.levelGroup.add(cloth);
     const skirt = box(this.W + 0.07, 0.34, 0.012, toon('#ffffff', { map: skirtTex(), rim: 0, transparent: true, alphaTest: 0.4 }));
     skirt.position.set(0, this.baseY - 0.15, this.D / 2 + 0.035);
     skirt.castShadow = false;
-    this.root.add(skirt);
-    this.tiers.push({ y: this.baseY + 0.03, x0: -this.W / 2 + 0.1, x1: this.W / 2 - 0.1, z0: back + (n > 1 ? this.D * (1 - 1 / n) * 0 : 0) + 0.06, z1: this.D / 2 - 0.08, mesh: cloth });
+    this.levelGroup.add(skirt);
+    this.tiers.push({ y: this.baseY + 0.03, x0: -this.W / 2 + 0.1, x1: this.W / 2 - 0.1, z0: back + 0.06, z1: this.D / 2 - 0.08, mesh: cloth });
     for (let i = 1; i < n; i++) {
       const depth = this.D * (1 - i / n);
       const w = this.W - i * (n <= 3 ? 0.22 : 0.1);
       const tier = box(w, h, depth, clothM);
       const yTop = this.baseY + 0.03 + i * h;
       tier.position.set(0, yTop - h / 2, back + depth / 2);
-      this.root.add(tier);
+      this.levelGroup.add(tier);
       const trim = box(w + 0.005, 0.03, 0.01, toon([PAL.rosa, PAL.marigold, PAL.turquoise, PAL.purple][i % 4], { rim: 0 }));
       trim.position.set(0, yTop - 0.02, back + depth + 0.003);
       trim.castShadow = false;
-      this.root.add(trim);
-      this.tiers.push({ y: yTop, x0: -w / 2 + 0.08, x1: w / 2 - 0.08, z0: back + 0.05, z1: back + depth - 0.06, mesh: tier, extra: [trim] });
+      this.levelGroup.add(trim);
+      this.tiers.push({ y: yTop, x0: -w / 2 + 0.08, x1: w / 2 - 0.08, z0: back + 0.05, z1: back + depth - 0.06, mesh: tier });
     }
     // the visible strip of each lower tier stops where the next tier begins
     for (let i = 0; i < this.tiers.length - 1; i++) {
@@ -112,10 +120,21 @@ export class OfrendaBuilder {
       pick.rotation.x = -Math.PI / 2;
       pick.position.set((tr.x0 + tr.x1) / 2, tr.y + 0.002, (tr.z0 + tr.z1) / 2);
       pick.userData.tier = tr;
-      this.root.add(pick);
+      this.levelGroup.add(pick);
       tr.pick = pick;
     }
+    if (!quiet) this.game.sfx('whoosh');
+  }
+
+  // switch to a different number of levels, keeping everything on it
+  changeLevels(n) {
+    if (n === this.levels || this.locked) return;
+    this.remember();
+    const snap = this.serialize();
+    snap.levels = n;
+    this.restore(snap);
     this.game.sfx('whoosh');
+    this.afterChange(null);
   }
 
   topY() { return this.tiers.length ? this.tiers[this.tiers.length - 1].y : this.baseY; }
@@ -145,15 +164,26 @@ export class OfrendaBuilder {
     return max - (this.counts[id] || 0);
   }
 
+  isSpecial(id) { return id === 'arco' || id === 'papel' || id === 'petate'; }
+
+  // a tray item was clicked: pick it up (or put it back if you're holding it)
   pick(id) {
+    if (this.locked) return false;
+    // the arch, the papel picado and the petate go up (or come down) in one click
+    if (this.isSpecial(id)) {
+      this.remember();
+      if (this.extras[id]) this.removeSpecial(id);
+      else this.placeSpecial(id);
+      return true;
+    }
+    if (this.holding && this.holding.id === id) {
+      this.drop();
+      this.game.sfx('tap');
+      return false;
+    }
     if (this.remaining(id) <= 0) {
       this.game.sfx('oops');
       return false;
-    }
-    // special items place themselves
-    if (id === 'arco' || id === 'papel' || id === 'petate') {
-      this.placeSpecial(id);
-      return true;
     }
     this.drop();
     this.holding = { id, obj: this.build(id) };
@@ -163,14 +193,17 @@ export class OfrendaBuilder {
     return true;
   }
 
+  // let go of what you're holding: it goes back to the tray
   drop() {
     if (!this.holding) return;
+    const moved = this.holding.fromMove;
     this.root.remove(this.holding.obj);
     this.holding = null;
     this.cursor.visible = false;
+    if (moved) this.afterChange(null);
   }
 
-  placeSpecial(id) {
+  placeSpecial(id, { quiet = false } = {}) {
     if (this.extras[id]) return;
     let obj;
     if (id === 'arco') {
@@ -179,7 +212,6 @@ export class OfrendaBuilder {
     } else if (id === 'papel') {
       obj = papelString([-this.W / 2 - 0.25, 0, 0], [this.W / 2 + 0.25, 0, 0], { sheetW: 0.26, sag: 0.08, customs: this.mode === 'story' ? papelCanvases(this.game.state.papel, 96) : null, seed: 7 });
       obj.position.set(0, this.topY() + 0.95, -this.D / 2 + 0.05);
-      this.sc.animateTree(obj);
     } else if (id === 'petate') {
       obj = makeProp('petate');
       obj.position.set(0, -this.baseY + 0.002, this.D / 2 + 0.55);
@@ -188,9 +220,20 @@ export class OfrendaBuilder {
     this.root.add(obj);
     this.extras[id] = obj;
     this.counts[id] = 1;
+    if (quiet) return;
     this.afterChange(id);
     this.game.sfx('success');
     popIn(this.engine, obj);
+  }
+
+  removeSpecial(id) {
+    const obj = this.extras[id];
+    if (!obj) return;
+    this.root.remove(obj);
+    delete this.extras[id];
+    this.counts[id] = 0;
+    this.game.sfx('whoosh');
+    this.afterChange(null);
   }
 
   // pointer helpers (called by the scene's pointer handlers)
@@ -219,6 +262,7 @@ export class OfrendaBuilder {
   place() {
     const h = this.holding;
     if (!h || !h.obj.visible || !h.tier) return null;
+    if (!h.fromMove) this.remember(); // a move was remembered when it was picked up
     h.obj.position.y = h.tier.y;
     const rec = { id: h.id, obj: h.obj, tier: this.tiers.indexOf(h.tier), x: h.obj.position.x, z: h.obj.position.z };
     this.placed.push(rec);
@@ -232,6 +276,23 @@ export class OfrendaBuilder {
     return rec;
   }
 
+  // put a saved item straight onto its level (loading, undo)
+  addItem(it, { lit = false } = {}) {
+    const tr = this.tiers[Math.min(it.tier, this.tiers.length - 1)];
+    const obj = this.build(it.id);
+    const x = THREE.MathUtils.clamp(it.x, tr.x0, tr.x1);
+    const z = THREE.MathUtils.clamp(it.z, tr.z0, Math.max(tr.z0, tr.z1));
+    obj.position.set(x, tr.y, z);
+    obj.rotation.y = -x * 0.25;
+    this.root.add(obj);
+    const rec = { id: it.id, obj, tier: this.tiers.indexOf(tr), x, z };
+    this.placed.push(rec);
+    this.counts[it.id] = (this.counts[it.id] || 0) + 1;
+    if (lit) obj.userData.light?.(true);
+    if (!this.locked) this.makeClickable(rec);
+    return rec;
+  }
+
   makeClickable(rec) {
     this.sc.hot(rec.obj, () => ({ en: `Move ${PROP_INFO[this.propFor(rec.id)]?.en || ''}`, es: `Mover ${PROP_INFO[this.propFor(rec.id)]?.es || ''}` }), async () => {
       if (this.holding || this.locked) return;
@@ -239,11 +300,13 @@ export class OfrendaBuilder {
     }, { sparkle: false, nested: true, enabled: () => !this.locked && !this.holding });
   }
 
+  // pick a placed thing back up (to move it, or to put it back in the tray)
   unplace(rec) {
+    this.remember();
     this.engine.removeHotspot(rec.obj);
     this.placed = this.placed.filter((r) => r !== rec);
     this.counts[rec.id] = Math.max(0, (this.counts[rec.id] || 1) - 1);
-    this.holding = { id: rec.id, obj: rec.obj };
+    this.holding = { id: rec.id, obj: rec.obj, fromMove: true };
     rec.obj.visible = false;
     this.afterChange(rec.id);
     this.game.sfx('tap');
@@ -273,6 +336,57 @@ export class OfrendaBuilder {
 
   copals() { return this.placed.filter((r) => r.id === 'copal'); }
 
+  isEmpty() { return !this.placed.length && !Object.keys(this.extras).length; }
+
+  // ---------------------------------------------------------------- undo
+  // every change saves a snapshot first; Undo goes back one step
+  remember() {
+    this.history.push(this.serialize());
+    if (this.history.length > 80) this.history.shift();
+  }
+
+  canUndo() { return !this.locked && (this.history.length > 0 || !!this.holding); }
+
+  undo() {
+    if (this.locked) return false;
+    // holding something you just took from the tray? Undo just puts it back
+    if (this.holding && !this.holding.fromMove) {
+      this.drop();
+      this.game.sfx('tap');
+      this.afterChange(null);
+      return true;
+    }
+    const snap = this.history.pop();
+    if (!snap) { this.game.sfx('oops'); return false; }
+    this.restore(snap);
+    this.game.sfx('whoosh');
+    this.afterChange(null);
+    return true;
+  }
+
+  // take everything off (Undo brings it back)
+  clearAll() {
+    if (this.locked || this.isEmpty()) return;
+    this.remember();
+    this.restore({ levels: this.levels, items: [], extras: [] });
+    this.game.sfx('whoosh');
+    this.afterChange(null);
+  }
+
+  // rebuild the ofrenda from a snapshot, without animations
+  restore(data) {
+    if (this.holding) { this.root.remove(this.holding.obj); this.holding = null; }
+    this.cursor.visible = false;
+    for (const r of this.placed) { this.engine.removeHotspot(r.obj); this.root.remove(r.obj); }
+    for (const o of Object.values(this.extras)) this.root.remove(o);
+    this.placed = [];
+    this.extras = {};
+    this.counts = {};
+    if (data.levels !== this.levels || !this.tiers.length) this.setLevels(data.levels || 1, { quiet: true });
+    for (const it of data.items || []) this.addItem(it);
+    for (const e of data.extras || []) this.placeSpecial(e, { quiet: true });
+  }
+
   // ---------------------------------------------------------------- save/load
   serialize() {
     return {
@@ -284,25 +398,15 @@ export class OfrendaBuilder {
 
   load(data, { lit = false } = {}) {
     if (!data) return;
-    this.setLevels(data.levels || 1);
-    for (const e of data.extras || []) this.placeSpecial(e);
-    for (const it of data.items || []) {
-      const tr = this.tiers[Math.min(it.tier, this.tiers.length - 1)];
-      const obj = this.build(it.id);
-      obj.position.set(it.x, tr.y, it.z);
-      obj.rotation.y = -it.x * 0.25;
-      this.root.add(obj);
-      const rec = { id: it.id, obj, tier: it.tier, x: it.x, z: it.z };
-      this.placed.push(rec);
-      this.counts[it.id] = (this.counts[it.id] || 0) + 1;
-      if (lit) obj.userData.light?.(true);
-    }
-    this.sc.animateTree(this.root);
+    this.setLevels(data.levels || 1, { quiet: true });
+    for (const it of data.items || []) this.addItem(it, { lit });
+    for (const e of data.extras || []) this.placeSpecial(e, { quiet: true });
   }
 
   lock() {
-    this.locked = true;
     this.drop();
+    this.locked = true;
+    for (const r of this.placed) this.engine.removeHotspot(r.obj);
   }
 }
 

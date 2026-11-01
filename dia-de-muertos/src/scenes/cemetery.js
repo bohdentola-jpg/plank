@@ -1,6 +1,6 @@
 // El panteón, the night of November 1: the velación. Families clean and
 // decorate their graves, light candles, share food and music, and keep their
-// loved ones company until dawn. Warm and social — never spooky.
+// loved ones company until dawn. Warm and social, never spooky.
 import * as THREE from 'three';
 import { Scene } from './base.js';
 import { toon, box, mesh, cyl, sphere, rbox, rng, PAL, glowSprite } from '../toon.js';
@@ -134,9 +134,9 @@ export class CemeteryScene extends Scene {
     this.buildGraves(r);
     this.buildAbueloGrave();
     this.buildPeople();
-    this.defineView('main', [2.2, 3.4, 7.2], [0, 0.6, -2.4], 50);
-    this.defineView('grave', [1.9, 2.5, 4.7], [0, 0.5, 0.4], 46);
-    this.defineView('sit', [3.2, 1.6, 4.4], [-0.8, 0.8, 0.8], 48);
+    this.defineView('main', [2.2, 3.4, 7.2], [0, 0.6, -2.4], 37.1);
+    this.defineView('grave', [1.9, 2.5, 4.7], [0, 0.5, 0.4], 34.0);
+    this.defineView('sit', [3.2, 1.6, 4.4], [-0.8, 0.8, 0.8], 35.5);
     this.hideMonarch('gate', 1.8, 3.4, -20.8);
     this.hideMonarch('tree', -11.6, 2.2, -15.4);
   }
@@ -222,7 +222,7 @@ export class CemeteryScene extends Scene {
     ctx.fillText('ALBERTO', 128, 80);
     ctx.fillText('"BETO"', 128, 122);
     ctx.font = "bold 24px 'Nunito', serif";
-    ctx.fillText('1948 – 2024', 128, 170);
+    ctx.fillText('1948 - 2024', 128, 170);
     ctx.font = "bold 18px 'Nunito', serif";
     ctx.fillText('Siempre con nosotros', 128, 210);
     const plaque = mesh(new THREE.PlaneGeometry(0.7, 0.7), toon('#ffffff', { map: new THREE.CanvasTexture(cv), rim: 0 }), { cast: false });
@@ -288,7 +288,8 @@ export class CemeteryScene extends Scene {
         const key = `fam${k}_${i}`;
         this.chars[key] = c;
         delete this.chars[300 + k * 11 + i];
-        c.play(i === 0 ? 'sit' : (k === 2 ? 'kneel' : 'idle'));
+        if (i === 0) this.sitOnStool(c);
+        else c.play(k === 2 ? 'kneel' : 'idle');
         c.look(new THREE.Vector3(x, 0.6, z));
         if (k === 2) this.quiet.push(c);
       }
@@ -329,7 +330,7 @@ export class CemeteryScene extends Scene {
       return;
     }
     await this.say([
-      { who: 'lupita', text: { en: 'This is our town\'s [[panteón]]. Tonight families stay here all night with their loved ones — it\'s called the [[velación]].', es: 'Este es el [[panteón]] del pueblo. Esta noche las familias se quedan aquí toda la noche con sus seres queridos: se llama la [[velación]].' } },
+      { who: 'lupita', text: { en: 'This is our town\'s [[panteón]]. Tonight families stay here all night with their loved ones. It\'s called the [[velación]].', es: 'Este es el [[panteón]] del pueblo. Esta noche las familias se quedan aquí toda la noche con sus seres queridos: se llama la [[velación]].' } },
       { who: 'abuela', text: { en: 'First we tidy up your Abuelo\'s grave, like we do every year. Will you help us?', es: 'Primero arreglamos la tumba de tu abuelo, como cada año. ¿Nos ayudas?' } },
     ]);
     await this.view('grave', { back: false });
@@ -343,7 +344,7 @@ export class CemeteryScene extends Scene {
 
   // ---------------------------------------------------------------- tasks
   cleanStep() {
-    this.task = { hint: { en: 'Pull the weeds and pick up the dry leaves — click each one!', es: 'Quita la hierba y las hojas secas: ¡haz clic en cada una!' } };
+    this.task = { hint: { en: 'Pull the weeds and pick up the dry leaves. Click each one!', es: 'Quita la hierba y las hojas secas: ¡haz clic en cada una!' } };
     this.game.ui.setGoal(this.task.hint);
     return new Promise((resolve) => {
       let left = this.weeds.length;
@@ -374,8 +375,8 @@ export class CemeteryScene extends Scene {
     const g = this.game;
     this.washing = null;
     g.sfx('success');
-    await this.say([{ who: 'abuela', text: { en: '¡Qué limpia quedó! Now the flowers. Put [[cempasúchil]] all around — click the spots.', es: '¡Qué limpia quedó! Ahora las flores. Pon [[cempasúchil]] alrededor: haz clic en los lugares.' } }]);
-    this.task = { hint: { en: 'Put marigolds around the grave — click the glowing spots.', es: 'Pon cempasúchil alrededor de la tumba: haz clic en los lugares que brillan.' } };
+    await this.say([{ who: 'abuela', text: { en: '¡Qué limpia quedó! Now the flowers. Put [[cempasúchil]] all around it. Click the glowing spots.', es: '¡Qué limpia quedó! Ahora las flores. Pon [[cempasúchil]] alrededor: haz clic en los lugares.' } }]);
+    this.task = { hint: { en: 'Put marigolds around the grave: click the glowing spots.', es: 'Pon cempasúchil alrededor de la tumba: haz clic en los lugares que brillan.' } };
     g.ui.setGoal(this.task.hint);
     const spots = [[-0.6, -0.5], [0.6, -0.5], [-0.6, 0.2], [0.6, 0.2], [-0.6, 0.85], [0.6, 0.85], [0, 1.15]];
     await new Promise((resolve) => {
@@ -441,14 +442,14 @@ export class CemeteryScene extends Scene {
     const g = this.game;
     g.ui.setGoal(null);
     this.task = null;
-    // a neighbor asks first — that's how it's done
+    // a neighbor asks first, which is how it's done
     const v = this.visitor;
     await v.walkTo(1.8, 2.8, 0.8);
     v.look(this.chars.abuela.root.position.clone().add(new THREE.Vector3(0, 1, 0)));
     await this.say([
-      { who: null, text: { en: 'A neighbor comes over: "Buenas noches. Your family\'s grave is so beautiful — may I take a photo?"', es: 'Se acerca una vecina: "Buenas noches. Qué bonita está la tumba de su familia. ¿Me permite tomar una foto?"' } },
+      { who: null, text: { en: 'A neighbor comes over: "Buenas noches. Your family\'s grave looks so pretty. May I take a photo?"', es: 'Se acerca una vecina: "Buenas noches. Qué bonita está la tumba de su familia. ¿Me permite tomar una foto?"' } },
       { who: 'abuela', text: { en: 'Thank you for asking, mija. Yes, go ahead.', es: 'Gracias por preguntar, mija. Sí, adelante.' }, emote: 'happy' },
-      { who: 'lupita', text: { en: 'Asking first is good manners at the panteón — some families are praying or remembering quietly.', es: 'Preguntar antes es de buena educación en el panteón: algunas familias están rezando o recordando en silencio.' } },
+      { who: 'lupita', text: { en: 'Asking first is good manners at the panteón. Some families are praying, or just remembering quietly.', es: 'Preguntar antes es de buena educación en el panteón: algunas familias están rezando o recordando en silencio.' } },
     ]);
     g.sfx('chime');
     await this.say([{ who: null, text: { en: 'She smiles and offers a basket: "¿Gustan unos tamales? We made too many!"', es: 'Ella sonríe y ofrece una canasta: "¿Gustan unos tamalitos? ¡Hicimos de más!"' } }]);
@@ -458,12 +459,20 @@ export class CemeteryScene extends Scene {
   async vigil() {
     const g = this.game;
     await this.view('sit', { back: false });
-    for (const id of ['lupita', 'mama', 'papa', 'nico']) this.chars[id]?.play('sit');
-    this.chars.abuela.play('sit');
+    // grown-ups on stools, the kids on the petate
+    const C = this.chars;
+    this.sitOnStool(C.abuela);
+    this.sitOnStool(C.papa);
+    this.sitOnStool(C.mama);
+    for (const [id, x, z, ry] of [['lupita', -1.0, 2.15, 1.1], ['nico', -0.95, 1.2, 1.3]]) {
+      C[id].root.position.set(x, 0, z);
+      C[id].root.rotation.y = ry;
+      C[id].play('floor');
+    }
     g.sound.music('ofrenda', true);
     await this.say([
-      { who: 'abuela', text: { en: 'The first time your Abuelo saw me, I was selling flowers at the market. He bought every marigold I had — just to talk to me!', es: 'La primera vez que tu abuelo me vio, yo vendía flores en el mercado. ¡Me compró todo el cempasúchil solo para platicar conmigo!' }, emote: 'happy' },
-      { who: 'papa', text: { en: 'He taught me to fix bicycles. He always whistled while he worked — always out of tune.', es: 'Él me enseñó a arreglar bicicletas. Siempre chiflaba mientras trabajaba… siempre desafinado.' }, emote: 'laugh' },
+      { who: 'abuela', text: { en: 'The first time your Abuelo saw me, I was selling flowers at the market. He bought every marigold I had, just so he could talk to me!', es: 'La primera vez que tu abuelo me vio, yo vendía flores en el mercado. ¡Me compró todo el cempasúchil solo para platicar conmigo!' }, emote: 'happy' },
+      { who: 'papa', text: { en: 'He taught me to fix bicycles. He whistled the whole time, always out of tune.', es: 'Él me enseñó a arreglar bicicletas. Siempre chiflaba mientras trabajaba… siempre desafinado.' }, emote: 'laugh' },
       { who: 'mama', text: { en: 'He called every one of us "mi rey" or "mi reina". Even the dog!', es: 'A todos nos decía "mi rey" o "mi reina". ¡Hasta al perro!' }, emote: 'laugh' },
       { who: 'nico', text: { en: 'I don\'t remember him much…', es: 'Yo no me acuerdo mucho de él…' }, emote: 'sad' },
       { who: 'abuela', text: { en: 'That\'s why we tell the stories, mijo. So you can know him too.', es: 'Por eso contamos las historias, mijo. Para que tú también lo conozcas.' } },
@@ -496,16 +505,41 @@ export class CemeteryScene extends Scene {
     g.sfx('petal');
     this.chars.chispa.play('happy', { dur: 6 });
     await this.say([
-      { who: 'lupita', text: { en: 'Look — a warm breeze… the candle flames are all leaning toward Abuelo\'s grave.', es: 'Mira… una brisa tibia. Las llamas de las velas se inclinan hacia la tumba del Abuelo.' }, emote: 'surprised' },
+      { who: 'lupita', text: { en: 'Look… a warm breeze. The candle flames are all leaning toward Abuelo\'s grave.', es: 'Mira… una brisa tibia. Las llamas de las velas se inclinan hacia la tumba del Abuelo.' }, emote: 'surprised' },
       { who: 'abuela', text: { en: 'Some people say that\'s how you know they came to visit. Whatever you believe, mija, he lives in our stories.', es: 'Hay quien dice que así se sabe que vinieron de visita. Creas lo que creas, mija, él vive en nuestras historias.' } },
       { who: 'lupita', text: { en: 'Te queremos, Abuelo. We love you.', es: 'Te queremos, Abuelo.' } },
     ]);
     await g.learn('velacion');
     // dawn
+    await this.sunrise();
     g.flag('panteon');
     g.addPetals(5);
     await this.say([{ who: 'lupita', text: { en: 'We stayed until the sky turned pink. Tomorrow is November 2. Let\'s go home.', es: 'Nos quedamos hasta que el cielo se puso rosa. Ya es 2 de noviembre. Vamos a casa.' } }]);
     g.go('home', { dayCard: { title: { en: 'November 2', es: '2 de noviembre' }, sub: { en: 'Día de los Fieles Difuntos', es: 'Día de los Fieles Difuntos' } } });
+  }
+
+  // the night sky slowly turns pink and gold
+  async sunrise() {
+    const g = this.game;
+    this.dawn = true;
+    g.ui.setPlace({ en: 'The panteón', es: 'El panteón' }, this.dayLabel());
+    const u = this.sky.children[0].material.uniforms;
+    const from = { top: u.top.value.clone(), horizon: u.horizon.value.clone(), bottom: u.bottom.value.clone() };
+    const to = { top: new THREE.Color('#5b74c9'), horizon: new THREE.Color('#ffb59a'), bottom: new THREE.Color('#7a5a7a') };
+    const stars = this.sky.userData.stars;
+    const fog0 = this.scene.fog?.color.clone();
+    const fog1 = new THREE.Color('#c99aa6');
+    const sun0 = this.sun.color.clone(), sunTo = new THREE.Color('#ffb98a');
+    const h0 = this.hemi.intensity, s0 = this.sun.intensity;
+    g.sfx('chime');
+    await this.engine.tween(4, (k) => {
+      for (const key of ['top', 'horizon', 'bottom']) u[key].value.copy(from[key]).lerp(to[key], k);
+      if (stars) stars.material.opacity = 0.85 * (1 - k);
+      if (fog0) this.scene.fog.color.copy(fog0).lerp(fog1, k);
+      this.sun.color.copy(sun0).lerp(sunTo, k);
+      this.hemi.intensity = h0 + k * 0.5;
+      this.sun.intensity = s0 + k * 0.9;
+    });
   }
 
   decorateDone() {

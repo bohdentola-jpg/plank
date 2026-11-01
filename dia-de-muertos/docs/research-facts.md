@@ -1,6 +1,6 @@
 > **About this file.** Research compiled while making *The Marigold Path* (October 2026). It was gathered through web searches; some pages could not be opened directly, so quotes come from search excerpts. Items tagged (BK) or [GK] are general knowledge that still needs checking against a published source. Use it as a starting point and verify anything you quote in a report.
 
-# Día de Muertos: Fact Research for an Educational Game (ages ~8–13)
+# Día de Muertos: Fact Research for an Educational Game (ages ~8-13)
 
 Compiled 2026-10-29 for the game team.
 
@@ -23,9 +23,9 @@ Compiled 2026-10-29 for the game team.
 
 1. **"It's Mexican Halloween."** It is not. The origins, meaning and tone are different. The main historical overlap is the Catholic calendar: Halloween is the eve of All Saints' Day, Nov 1. Today the two holidays mix in Mexico, for example kids in costumes asking for *calaverita* (see 1.6).
 2. **"It's a spooky, sad, or death-worshipping holiday."** It is a time to remember and welcome loved ones, with both grief and joy. The returning souls are honored guests, not scary ghosts (see 1.2).
-3. **"It's 100% Aztec" or "It's 100% Spanish/Catholic."** It is a blend, and scholars debate how much comes from each side. The flower cempasúchil, copal and the idea of feeding visiting ancestors have Indigenous roots. The Nov 1–2 dates, wheat bread, wax candles, sugar figures and La Catrina are European, colonial or modern (see 3.8–3.11).
+3. **"It's 100% Aztec" or "It's 100% Spanish/Catholic."** It is a blend, and scholars debate how much comes from each side. The flower cempasúchil, copal and the idea of feeding visiting ancestors have Indigenous roots. The Nov 1-2 dates, wheat bread, wax candles, sugar figures and La Catrina are European, colonial or modern (see 3.8-3.11).
 4. **"All Mexicans celebrate it the same way."** There is huge regional and Indigenous variety, and some families, for example many evangelical Protestants, don't celebrate at all (see 1.3 and Section 8).
-5. **"La Catrina is an Aztec goddess" or "she is Mictecacíhuatl."** La Catrina is a 20th-century satirical image. José Guadalupe Posada drew it around 1910–1913, and Diego Rivera named it "La Catrina" in his 1946–47 mural. A link to Mictecacíhuatl is a modern interpretation (see 6.2–6.3).
+5. **"La Catrina is an Aztec goddess" or "she is Mictecacíhuatl."** La Catrina is a 20th-century satirical image. José Guadalupe Posada drew it around 1910-1913, and Diego Rivera named it "La Catrina" in his 1946-47 mural. A link to Mictecacíhuatl is a modern interpretation (see 6.2-6.3).
 6. **"Alebrijes are ancient spirit guides."** Pedro Linares invented alebrijes in Mexico City in 1936. Pixar's *Coco* (2017) popularized the idea that they are spirit guides (see 6.8).
 7. **"An ofrenda must have 7 levels, and each level has a fixed meaning."** Many ofrendas are a single table. The meanings given for the levels are modern and inconsistent (see 4.19).
 8. **"Each papel picado color has a traditional meaning."** The color lists online contradict each other, and no traditional code is documented (see 6.7).
@@ -47,7 +47,7 @@ Compiled 2026-10-29 for the game team.
 
 ## 1. Basics
 
-**1.1 What the holiday is.** Día de Muertos is a Mexican tradition, with Indigenous and Catholic roots, in which families remember their deceased loved ones. They welcome back the souls, which are believed to return for a short visit around Nov 1–2. Families build *ofrendas* (offerings or home altars), clean and decorate graves, and share food.
+**1.1 What the holiday is.** Día de Muertos is a Mexican tradition, with Indigenous and Catholic roots, in which families remember their deceased loved ones. They welcome back the souls, which are believed to return for a short visit around Nov 1-2. Families build *ofrendas* (offerings or home altars), clean and decorate graves, and share food.
 *Sources:* https://www.britannica.com/topic/Day-of-the-Dead ; https://americanindian.si.edu/online-resources/topic-listing?topic=3 ; https://ich.unesco.org/en/RL/00054 . **[solid]**
 
 **1.2 Meaning and tone.** It celebrates the lives of the dead and the bond with them. Joy, memory, humor (see calaveras in Section 6) and real grief all mix together. A Mexican university essay contrasts it with the original Halloween: in Mexican tradition, death is seen as a passage, not as punishment and fear. For families who lost someone recently, the first Day of the Dead can be very emotional (see 2.6).
@@ -137,7 +137,7 @@ Compiled 2026-10-29 for the game team.
 
 *Sources:* https://www.infobae.com/mexico/2026/10/27/27-de-octubre-fecha-en-que-las-mascotas-que-fallecieron-regresan-a-casa-segun-la-tradicion-popular-mexicana/ ; https://www.informador.mx/amp/estilo/por-que-hoy-27-de-octubre-regresan-las-mascotas-conoce-la-tradicion-20261027-0120.html ; https://www.milenio.com/estilo/tu-mascota/ofrenda-para-mascotas-por-que-se-celebra-hoy-27-octubre-en-mexico . **[contested or myth: it is real now, but not traditional; dates from about 2019]**
 
-**2.5 New in 2025–26: a Xoloitzcuintle day.**
+**2.5 New in 2025-26: a Xoloitzcuintle day.**
 - On Apr 15, 2026, Mexico's Chamber of Deputies approved declaring **Oct 27 the "Día Nacional del Xoloitzcuintle"** (433 votes in favor). Senate ratification was not confirmed in the sources found.
 - Mexico City separately declared the knowledge and practices around the Xolo to be intangible cultural heritage, effective Oct 28, 2026.
 
@@ -164,7 +164,7 @@ Compiled 2026-10-29 for the game team.
 - The Mexica honored the dead in two consecutive 20-day "months" (*veintenas*) of their 365-day calendar (*xiuhpōhualli*):
   - **Tlaxochimaco**, also called **Miccailhuitontli**, "the little feast of the dead".
   - **Xócotl Huetzi** ("the fruit falls"), also called **Hueymiccailhuitl**, "the great feast of the dead".
-- By common calendar correlations they fell around **(July–)August**. The exact correlation is debated.
+- By common calendar correlations they fell around **(July-)August**. The exact correlation is debated.
 - The friar Diego Durán (16th century) read the "little" feast as one for dead children ("fiesta de los muertecitos") and the great feast as one for adults. Scholars note this may be Durán's own interpretation.
 - In both, food and objects were offered to the dead.
 - Spelling variants: Miccaílhuitontli; Huey Miccaílhuitl.
@@ -192,7 +192,7 @@ Compiled 2026-10-29 for the game team.
 
 **3.6 Mictlantecuhtli and Mictecacíhuatl.**
 - **Mictlantecuhtli** (*Mictlāntēcuhtli*), "Lord of Mictlán", is shown skeletal or half-fleshed.
-  - In 1994, archaeologists found two life-size ceramic statues of him in the House of the Eagles next to the Templo Mayor. They date to the time of Moctezuma I (1440–1469). One is about 1.76 m tall and is in the Museo del Templo Mayor.
+  - In 1994, archaeologists found two life-size ceramic statues of him in the House of the Eagles next to the Templo Mayor. They date to the time of Moctezuma I (1440-1469). One is about 1.76 m tall and is in the Museo del Templo Mayor.
 - **Mictecacíhuatl** (*Mictēcacihuātl*), "Lady of the place of the dead", is his consort.
 - Popular claims go further. They say she "presided over the ancient festivals of the dead", that she died at birth, or that La Catrina descends from her. These claims are weakly documented, and even popular sources admit there is no documented link between Posada and the goddess.
 - Game note: present both as deities of death in a cycle of life, not as "devils".
@@ -231,17 +231,17 @@ Compiled 2026-10-29 for the game team.
 
 *Sources:* https://anthropology.berkeley.edu/skulls-living-bread-dead ; https://scholarworks.iu.edu/journals/index.php/jfrr/article/view/40139/42320 ; https://cortamortaja.mx/2021/11/01/dia-de-muertos-no-tiene-origen-prehispanico-elsa-malvido/ ; https://www.excelsior.com.mx/nacional/tintes-catolicos-salpican-el-dia-de-muertos-fragmentos-de-cultura-europea/1480138 ; https://www.milenio.com/politica/comunidad/origen-dia-muertos-lazaro-cardenas-invento-festividad ; https://read.dukeupress.edu/hahr/article-abstract/87/2/403/27498/Death-and-the-Idea-of-Mexico ; https://academic.oup.com/ahr/article-abstract/112/1/254/41778 ; https://www.mexicodesconocido.com.mx/dia-de-muertos-prehispanico-o-espanol-catolico-o-pagano.html . **[contested: scholars debate the proportions]**
 
-**3.10 20th-century promotion.** The post-revolutionary state, especially under Lázaro Cárdenas (1934–40) and the SEP (Mexico's education ministry), promoted Día de Muertos as a national tradition with "pre-Hispanic" meaning. Saying Cárdenas "invented" the holiday is an overstatement.
+**3.10 20th-century promotion.** The post-revolutionary state, especially under Lázaro Cárdenas (1934-40) and the SEP (Mexico's education ministry), promoted Día de Muertos as a national tradition with "pre-Hispanic" meaning. Saying Cárdenas "invented" the holiday is an overstatement.
 *Sources:* https://heraldodemexico.com.mx/cultura/2020/10/30/dia-de-muertos-investigadora-del-inah-revela-origen-iniciado-por-lazaro-cardenas-220640.html ; https://www.milenio.com/politica/comunidad/origen-dia-muertos-lazaro-cardenas-invento-festividad . **[contested]**
 
 **3.11 Quick guide: where common elements likely come from.**
 
 | Likely Indigenous / pre-Hispanic roots | Likely European / Catholic (colonial) | Colonial or modern Mexican creations |
 |---|---|---|
-| cempasúchil (a native plant); copal; maize foods (tamales, atole); cacao drinks; amaranth figures (*tzoalli*); offering food to the dead; dogs guiding the dead; Mictlán imagery; the *petate* (palm mat) | the Nov 1–2 dates; wax candles; wheat bread; the sugar-paste technique (*alfeñique*); crosses, saints and prayers for souls; oranges and sugarcane | sugar skulls in their Mexican form (18th c.); calaveras literarias (19th c.); papel picado in tissue paper (19th–20th c.); La Catrina (1910s / 1947); alebrijes (1936); Mexico City alebrije parade (2007) and Day of the Dead parade (2016); the pet day (about 2019) |
+| cempasúchil (a native plant); copal; maize foods (tamales, atole); cacao drinks; amaranth figures (*tzoalli*); offering food to the dead; dogs guiding the dead; Mictlán imagery; the *petate* (palm mat) | the Nov 1-2 dates; wax candles; wheat bread; the sugar-paste technique (*alfeñique*); crosses, saints and prayers for souls; oranges and sugarcane | sugar skulls in their Mexican form (18th c.); calaveras literarias (19th c.); papel picado in tissue paper (19th-20th c.); La Catrina (1910s / 1947); alebrijes (1936); Mexico City alebrije parade (2007) and Day of the Dead parade (2016); the pet day (about 2019) |
 
 INPI states that Europeans contributed flowers, wax and candles, while Indigenous peoples contributed copal and cempasúchil.
-*Sources:* https://www.gob.mx/inpi/articulos/conoces-el-significado-de-los-elementos-de-una-ofrenda-de-dia-de-muertos ; plus the sources in Sections 4–6. **[solid]** for most items. **[contested]** for the exact origins of some.
+*Sources:* https://www.gob.mx/inpi/articulos/conoces-el-significado-de-los-elementos-de-una-ofrenda-de-dia-de-muertos ; plus the sources in Sections 4-6. **[solid]** for most items. **[contested]** for the exact origins of some.
 
 ---
 
@@ -302,13 +302,13 @@ INPI states that Europeans contributed flowers, wax and candles, while Indigenou
 **4.7 Salt.** It stands for purification, "so the soul is not corrupted" on its journey.
 *Sources:* https://www.gob.mx/inpi/articulos/conoces-el-significado-de-los-elementos-de-una-ofrenda-de-dia-de-muertos ; https://nuevaescuelamexicana.sep.gob.mx/contenido/recurso/elementos-basicos-para-la-ofrenda-de-dia-de-muertos/ . **[solid]** as a common explanation. **[varies]**
 
-**4.8 Pan de muerto.** It is offered as a welcome and as a sign of affection and fellowship. See 5.1–5.3.
+**4.8 Pan de muerto.** It is offered as a welcome and as a sign of affection and fellowship. See 5.1-5.3.
 *Sources:* https://www.gob.mx/inpi/articulos/conoces-el-significado-de-los-elementos-de-una-ofrenda-de-dia-de-muertos . **[solid]**
 
 **4.9 Sugar skulls (calaveritas de azúcar).** They are placed for the dead, often with names written on the forehead. (BK) Sugar skulls with friends' names are also given as gifts to the living, which is the meaning behind Brandes's book title *Skulls to the Living, Bread to the Dead*. See 5.4.
 *Sources:* https://www.gob.mx/agricultura/es/articulos/calaverita-de-azucar-dulce-sabor-de-la-muerte ; https://anthropology.berkeley.edu/skulls-living-bread-dead . **[solid]**
 
-**4.10 Papel picado.** Cut-paper banners add color and festivity and are commonly said to represent **wind or air**. One museum says their fluttering shows the souls' presence. See 6.6–6.7.
+**4.10 Papel picado.** Cut-paper banners add color and festivity and are commonly said to represent **wind or air**. One museum says their fluttering shows the souls' presence. See 6.6-6.7.
 *Sources:* https://www.gob.mx/inpi/articulos/conoces-el-significado-de-los-elementos-de-una-ofrenda-de-dia-de-muertos ; https://learn.ncartmuseum.org/resources/day-of-the-dead/ . **[solid]** as a common explanation.
 
 **4.11 Favorite foods and drinks.**
@@ -502,7 +502,7 @@ It is a useful teaching frame, but no source documents it as an old or universal
 
 **6.2 La Catrina, part 1: Posada's "Calavera Garbancera".**
 - **José Guadalupe Posada** was a printmaker. He was born in Aguascalientes on Feb 2, **1852**. (Britannica gives 1851; the Met, the Clark Art Institute and most other sources give 1852.) He died in Mexico City on Jan 20, **1913**.
-- Around **1910–1912** he made an etching of a skeleton woman wearing nothing but an extravagant French-style plumed hat.
+- Around **1910-1912** he made an etching of a skeleton woman wearing nothing but an extravagant French-style plumed hat.
 - It mocked ***garbanceras***. The word comes from chickpea (*garbanzo*) sellers and was slang for people, often of Indigenous descent, who pretended to be European and rich and denied their roots. It was satire about social pretension and class in the Porfirio Díaz era.
 - The first known publication is a **1913** Day of the Dead broadside from publisher Antonio **Vanegas Arroyo**, printed after Posada's death. Its title begins: "Remate de calaveras alegres y sandungueras…"
 - According to curator Rubén C. Córdova, **the texts on the four Catrina broadsides were not written by Posada**.
@@ -515,11 +515,11 @@ It is a useful teaching frame, but no source documents it as an old or universal
   - arm-in-arm with Posada,
   - holding the hand of Rivera himself as a boy,
   - with Frida Kahlo behind them.
-- Most sources date the mural to **1946–47**. Some say 1947, and a few 1947–48.
+- Most sources date the mural to **1946-47**. Some say 1947, and a few 1947-48.
 - From then on the figure was known as **"La Catrina"**, from *catrín*, "dandy". Rivera made the name famous.
 - The mural was painted for the Hotel del Prado. After the 1985 earthquake damaged the hotel, the mural was moved to the **Museo Mural Diego Rivera** in Mexico City.
 
-*Sources:* https://en.wikipedia.org/wiki/Sue%C3%B1o_de_una_Tarde_Dominical_en_la_Alameda_Central ; https://www.mexicodesconocido.com.mx/sueno-de-una-tarde-dominical-en-la-alameda-diego-rivera.html ; https://mexicocity.cdmx.gob.mx/venues/diego-rivera-mural-museum/?lang=en ; https://www.britannica.com/topic/Catrina ; https://unamglobal.unam.mx/sabes-como-nacio-la-catrina/ . **[solid]**. The year varies (1946–47 or 1947), and the Quetzalcóatl reading of the boa is an interpretation.
+*Sources:* https://en.wikipedia.org/wiki/Sue%C3%B1o_de_una_Tarde_Dominical_en_la_Alameda_Central ; https://www.mexicodesconocido.com.mx/sueno-de-una-tarde-dominical-en-la-alameda-diego-rivera.html ; https://mexicocity.cdmx.gob.mx/venues/diego-rivera-mural-museum/?lang=en ; https://www.britannica.com/topic/Catrina ; https://unamglobal.unam.mx/sabes-como-nacio-la-catrina/ . **[solid]**. The year varies (1946-47 or 1947), and the Quetzalcóatl reading of the boa is an interpretation.
 
 **6.4 "La muerte es democrática…"**
 - This saying is very widely attributed to Posada, roughly: "Death is democratic: in the end, rich or poor, everyone ends up a skull."
@@ -561,7 +561,7 @@ It is a useful teaching frame, but no source documents it as an old or universal
 *Sources:* https://www.informador.mx/cultura/Dia-de-Muertos-Este-es-el-significado-de-los-colores-del-papel-picado-20231025-0082.html ; https://elporvenir.mx/cultural/dia-de-muertos-el-significado-de-los-colores-del-papel-picado/916938 ; https://www.eluniverso.com/larevista/sociedad/que-significa-el-papel-picado-de-dia-de-muertos-nota/ . **[contested or myth: there is no fixed traditional color code; the meanings are modern and inconsistent]**
 
 **6.8 Alebrijes.**
-- Invented by **Pedro Linares López** (1906–1992), a *cartonero* (papier-mâché artisan) from Mexico City.
+- Invented by **Pedro Linares López** (1906-1992), a *cartonero* (papier-mâché artisan) from Mexico City.
   - In **1936**, during a high fever, he dreamed of strange creatures while voices shouted the made-up word "¡alebrijes!" Details of the story vary.
   - British filmmaker Judith Bronowski's **1975** documentary about him helped spread the craft, partly through workshops.
   - Oaxacan carver **Manuel Jiménez** of San Antonio Arrazola adapted it to **copal wood** carving. The carved version spread to **San Martín Tilcajete**, La Unión Tejalapan and other towns.
@@ -575,11 +575,11 @@ It is a useful teaching frame, but no source documents it as an old or universal
 **6.9 Monarch butterflies.**
 - Millions of monarchs migrate more than 4,000 km from Canada and the US to the oyamel fir forests of the **Monarch Butterfly Biosphere Reserve** in Michoacán and the State of Mexico. They arrive in **late October to early November**.
 - Mexican government sources record the belief that **they are, or carry, the souls of the dead**:
-  - **Purépecha**: the monarch was "the soul of the dead", and its arrival announced the visit of the dead on Nov 1–2 (SEMARNAT, CONANP).
+  - **Purépecha**: the monarch was "the soul of the dead", and its arrival announced the visit of the dead on Nov 1-2 (SEMARNAT, CONANP).
   - **Mazahua**: souls travel inside or on the butterflies. INPI's Mazahua chronicle is titled "Xepje: El alma de los muertos".
   - **Matlatzinca** (INPI).
 - INAH adds that the Mexica, Teotihuacanos, Mixtecs, Otomí and others wove the monarchs into their worldview.
-- Popular customs include not shooing away a butterfly that visits on Nov 1–2.
+- Popular customs include not shooing away a butterfly that visits on Nov 1-2.
 - (BK) The reserve has been a UNESCO World Heritage natural site since 2008.
 
 *Sources:* https://www.gob.mx/semarnat/articulos/las-monarcas-en-el-dia-de-muertos ; https://www.gob.mx/inpi/es/articulos/cronicas-mazahuas-xepje-el-alma-de-los-muertos ; https://www.gob.mx/cms/uploads/attachment/file/589719/antologia-dia-de-muertos-pueblos-indigenas-de-mexico-inpi.pdf ; https://www.inah.gob.mx/foto-del-dia/mariposa-monarca-simbolo-ancestral ; https://www.gob.mx/conanp/articulos/dia-de-muertos-180962 . **[solid]** as a belief of specific communities. **[varies]** as a general Mexican belief.
@@ -626,7 +626,7 @@ It is a useful teaching frame, but no source documents it as an old or universal
 
 **7.3 "La Alumbrada" in San Andrés Mixquic (Tláhuac, Mexico City).**
 - On the **night of Nov 2**, from about 7 p.m., the town switches off artificial lights. The cemetery around the **16th-century church of San Andrés Apóstol** glows with thousands of candles placed on the graves.
-- The 2026 activities run Oct 29 – Nov 2.
+- The 2026 activities run Oct 29 to Nov 2.
 - Mixquic's cemetery sits right by the church.
 - (A claim that Mixquic itself is UNESCO-listed is inaccurate; see 1.7.)
 
@@ -635,7 +635,7 @@ It is a useful teaching frame, but no source documents it as an old or universal
 **7.4 Janitzio and Lake Pátzcuaro (Michoacán): *Animecha Kejtzitakua*.**
 - The Purépecha ceremony for the souls. The name is translated by Michoacán's state culture ministry as **"ofrenda para las ánimas"** ("offering for the souls").
 - Spellings vary: *Animecha Kejtzitakua*, *ánimecha k'ejtsitakua*, *Ánimeecheri Kéjtsïtakua*.
-- Families row to the island cemetery of **Janitzio**, historically in canoes with candles, and keep vigil with cempasúchil, candles and the dead person's favorite food. The main vigil is the **night of Nov 1–2**.
+- Families row to the island cemetery of **Janitzio**, historically in canoes with candles, and keep vigil with cempasúchil, candles and the dead person's favorite food. The main vigil is the **night of Nov 1-2**.
 - ***Kejtzitakua Zapicheri*** is the part for children (*angelitos*).
 - The ceremonies also take place at other lakeside Purépecha cemeteries: **Tzintzuntzan**, Jarácuaro, Tzurumútaro, Santa Fe de la Laguna and others.
 - Purépecha altars use a wooden frame hung with bread, fruit and sugar figures.
@@ -667,9 +667,9 @@ It is a useful teaching frame, but no source documents it as an old or universal
 
 **8.2 Oaxaca.**
 - **Muerteadas** (Etla valley, especially **San Agustín Etla**):
-  - Costumed troupes (*comparsas*) parade with brass bands through the **night of Nov 1–2**, sometimes until midday Nov 2.
+  - Costumed troupes (*comparsas*) parade with brass bands through the **night of Nov 1-2**, sometimes until midday Nov 2.
   - At each stop they act out a comic verse play about a drunk who dies and comes back to life.
-  - Characters include devils in suits covered with hand-sewn bells (reportedly 30–50 kg), "widows", skeletons on stilts, doctors and more.
+  - Characters include devils in suits covered with hand-sewn bells (reportedly 30-50 kg), "widows", skeletons on stilts, doctors and more.
   - **Comparsas** also parade in Oaxaca City.
 - **Tapetes de arena** (sand carpets):
   - Pictures made of colored sand, sawdust, lime, seeds and flowers on the floor. They are originally a **funeral custom** of the Central Valleys, made for the *novenario* (nine days of prayers) and the "levantada de cruz" ceremony, and kept alive notably in **Santa Cruz Xoxocotlán**.
@@ -677,7 +677,7 @@ It is a useful teaching frame, but no source documents it as an old or universal
   - Their imagery is mostly Catholic, for example symbols of the Passion of Christ.
 - **Xandu'** (Isthmus Zapotec, e.g., **Juchitán**):
   - The word is usually explained as from Spanish *santo*, "saint" or All Saints.
-  - The main days are **Oct 30–31**, with prayers starting days earlier.
+  - The main days are **Oct 30-31**, with prayers starting days earlier.
   - Altars are set up in the home. The first celebration after a death is called *biyé'* or *xandu' yaa*.
 - **Breads:** see 5.3.
 
@@ -702,7 +702,7 @@ It is a useful teaching frame, but no source documents it as an old or universal
 
 **8.4 Pomuch, Campeche: cleaning the bones (*Choo Ba'ak*).**
 - At least about three years after burial, remains are moved to small wooden boxes in ossuaries.
-- Every year, roughly **Oct 26 – Nov 2**, families **gently clean the bones** with brushes and change the **embroidered white cloths**, described as the souls' "clothing".
+- Every year, roughly **Oct 26 to Nov 2**, families **gently clean the bones** with brushes and change the **embroidered white cloths**, described as the souls' "clothing".
 - The practice mixes Maya and Catholic belief.
 - Campeche declared it **state intangible heritage in Oct 2017**. Workshops now teach it to children because of concerns that young people are losing it.
 - Game note: it is respectful and loving in context, but needs careful, age-appropriate framing.
@@ -714,7 +714,7 @@ It is a useful teaching frame, but no source documents it as an old or universal
 - **The name** is usually explained as coming from Latin ***Sanctorum***, as in *Festum Omnium Sanctorum*, the feast of All Saints. In Nahuatl speech it became something like *Xantolo(n)*.
   - An alternative: Spanish *santo* + *todos* adapted into Nahuatl.
   - One specialist says the proper Nahuatl name is *Mijkailuitl*, "feast of the dead".
-- **Dates:** the core is about **Oct 30/31 – Nov 2**, followed by *octavas* and *veintenas*. Some communities start much earlier: in Acatitla, Chicontepec, preparations begin with the first sowing on Jun 24, and in San Luis Potosí the official start is Sep 29 (San Miguel).
+- **Dates:** the core is about **Oct 30/31 to Nov 2**, followed by *octavas* and *veintenas*. Some communities start much earlier: in Acatitla, Chicontepec, preparations begin with the first sowing on Jun 24, and in San Luis Potosí the official start is Sep 29 (San Miguel).
 - **Big arches** of palm, cempasúchil and mano de león (4.15).
 - **Huehues** ("old ones"): masked dance troupes who go from house to house.
 
@@ -735,16 +735,16 @@ It is a useful teaching frame, but no source documents it as an old or universal
 
 **8.7 Aguascalientes: Festival de Calaveras.**
 - The city is **Posada's birthplace** and home of the Museo José Guadalupe Posada.
-- The festival grew from a craft market of *calaveras* near the old Los Ángeles and La Cruz cemeteries in the **early 1990s** (1991–94; sources differ). 2024 was billed as its 30th anniversary.
+- The festival grew from a craft market of *calaveras* near the old Los Ángeles and La Cruz cemeteries in the **early 1990s** (1991-94; sources differ). 2024 was billed as its 30th anniversary.
 - It has a large **Desfile de Calaveras** and drew about 375,000 visitors in 2024.
 
 *Sources:* https://theguadalajarareporter.net/index.php/news/news/regional/58919-aguascalientes-is-nation-s-day-of-the-dead-capital ; https://www.unotv.com/estados/aguascalientes/mas-de-375-mil-visitantes-en-festival-de-calaveras/ ; https://www.razon.com.mx/estados/2022/10/20/festival-cultural-de-calaveras-llegara-a-todos-los-municipios-de-aguascalientes-tere-jimenez/ . **[solid]**. The start year **[varies]**.
 
 **8.8 Puebla.**
 - **Huaquechula's monumental ofrendas**, in the Atlixco valley:
-  - Altars **3–5 m tall**, tiered and covered in white, shiny cloth, built by families **for someone who died in the past year**.
+  - Altars **3-5 m tall**, tiered and covered in white, shiny cloth, built by families **for someone who died in the past year**.
   - At the center: the photo, with a mirror in front.
-  - Families open their homes to visitors. Schedule: **Oct 28** for accident victims, **Oct 31** for children, **Nov 1–2** for adults.
+  - Families open their homes to visitors. Schedule: **Oct 28** for accident victims, **Oct 31** for children, **Nov 1-2** for adults.
   - They can cost families tens of thousands of pesos.
   - The ofrendas are **state cultural heritage of Puebla** (one source says since 1997). They are **not** individually UNESCO-listed.
 - **Huixcolotla's papel picado** (6.6).
@@ -781,7 +781,7 @@ It is a useful teaching frame, but no source documents it as an old or universal
 - **(BK)**. A National Geographic photo essay covers Mexico and Guatemala: https://www.nationalgeographic.com/travel/article/photos-day-of-the-dead-dia-de-los-muertos-mexico-guatemala (found by search; content not reviewed). **[solid (BK)]**
 
 **9.2 Bolivia.**
-- **Todos Santos (Nov 1–2):** families set up tables of offerings for the souls. They include ***t'antawawas*** (bread "babies": *t'anta* "bread" + *wawa* "baby", Aymara/Quechua), bread ladders and horses to help the souls travel, sugarcane, flowers and favorite foods.
+- **Todos Santos (Nov 1-2):** families set up tables of offerings for the souls. They include ***t'antawawas*** (bread "babies": *t'anta* "bread" + *wawa* "baby", Aymara/Quechua), bread ladders and horses to help the souls travel, sugarcane, flowers and favorite foods.
 - A widespread Andean belief is that the souls arrive at noon on Nov 1 and leave on Nov 2.
 - **Día de las Ñatitas** (about **Nov 8**, a week after; centered on La Paz's General Cemetery): people bring decorated **human skulls** (*ñatitas*, "little snub-noses"), considered protectors, with flowers, hats, coca leaves and candles. The Catholic Church doesn't officially endorse it.
 - Game note: this is sensitive (real human remains).
@@ -798,7 +798,7 @@ It is a useful teaching frame, but no source documents it as an old or universal
 - **(BK)** **[varies; (BK)]**
 
 **9.5 Philippines.**
-- ***Undas*** (Nov 1–2; the word is usually derived from Spanish *honras*, "honors"): families clean and repaint tombs, light candles, bring food, and often spend the day or night at the cemetery.
+- ***Undas*** (Nov 1-2; the word is usually derived from Spanish *honras*, "honors"): families clean and repaint tombs, light candles, bring food, and often spend the day or night at the cemetery.
 - Nov 1 is a public holiday.
 - **(BK)** **[solid (BK)]**
 

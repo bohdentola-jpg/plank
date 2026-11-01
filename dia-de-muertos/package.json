@@ -1,7 +1,7 @@
 {
   "name": "the-marigold-path",
   "version": "1.0.0",
-  "description": "The Marigold Path (El Camino de Cempasúchil) — an educational point-and-click Día de Muertos adventure in 3D.",
+  "description": "The Marigold Path (El Camino de Cempasúchil): an educational point-and-click Día de Muertos adventure in 3D.",
   "type": "module",
   "private": true,
   "scripts": {
@@ -9,7 +9,10 @@
     "build": "node tools/build.mjs",
     "smoke": "node tools/smoke.mjs",
     "story": "node tools/story.mjs",
-    "shot": "node tools/shot.mjs"
+    "shot": "node tools/shot.mjs",
+    "undo": "node tools/undo.mjs",
+    "views": "node tools/views.mjs",
+    "gallery": "node tools/gallery.mjs"
   },
   "devDependencies": {
     "esbuild": "0.24.2"

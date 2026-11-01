@@ -1,7 +1,7 @@
 // Base class for every place in the game: lights, sky, characters, hotspots,
 // named camera views, and the hidden monarch butterflies.
 import * as THREE from 'three';
-import { RIM, disposeTree, glowSprite } from '../toon.js';
+import { RIM, disposeTree, glowSprite, toon, box, outline } from '../toon.js';
 import { makeCharacter } from '../characters.js';
 import { monarch } from '../props.js';
 import { skyDome, clouds, hills, mergeStatic } from '../world.js';
@@ -11,7 +11,7 @@ export const LIGHTS = {
   day: { sky: ['#4fa9ec', '#d8f0ff', '#cfe6c0'], hemi: ['#e4f4ff', '#c9a27a', 1.45], sun: ['#fff4dc', 2.7], sunPos: [12, 18, 10], rim: ['#fff1d6', 0.32], fog: ['#cfe7f5', 60, 190], exposure: 1 },
   golden: { sky: ['#5a8fd6', '#ffd7a0', '#e9b98a'], hemi: ['#ffe0bd', '#8a6a6a', 1.25], sun: ['#ffc98a', 2.5], sunPos: [-16, 8, 10], rim: ['#ffd9a6', 0.38], fog: ['#f4cfa4', 55, 180] },
   evening: { sky: ['#2b2d7a', '#f08a5d', '#6a4a6a'], hemi: ['#ffb894', '#3e3550', 1.0], sun: ['#ff9f6b', 1.6], sunPos: [-18, 5, 6], rim: ['#ffb37a', 0.42], fog: ['#7a5a7a', 40, 160] },
-  night: { sky: ['#0b1036', '#2a2f6e', '#141a3a'], hemi: ['#6a78c9', '#1a1626', 0.75], sun: ['#a9b8ff', 0.75], sunPos: [10, 20, -6], rim: ['#ffc98a', 0.3], fog: ['#1a1f4a', 30, 120], stars: true },
+  night: { sky: ['#0b1036', '#2a2f6e', '#141a3a'], hemi: ['#7482d0', '#231c30', 0.95], sun: ['#a9b8ff', 0.85], sunPos: [10, 20, -6], rim: ['#ffc98a', 0.3], fog: ['#1a1f4a', 30, 120], stars: true },
   interior: { sky: ['#4fa9ec', '#d8f0ff', '#cfe6c0'], hemi: ['#fff4e2', '#a07a5a', 1.35], sun: ['#fff1d6', 2.2], sunPos: [6, 9, 8], rim: ['#fff1d6', 0.3], fog: null },
 };
 
@@ -80,6 +80,32 @@ export class Scene {
     return c;
   }
 
+  // sit a character on a little wooden stool (nobody sits on thin air)
+  sitOnStool(c) {
+    c.play('sit');
+    if (c.stool) return c.stool;
+    const k = c.root.scale.x;
+    const kid = c.spec?.age === 'kid' || c.spec?.age === 'small';
+    const h = Math.max(0.1, (c.hipY - (kid ? 0.2 : 0.3) - 0.07) * k);
+    const g = new THREE.Group();
+    const wood = toon('#8a5a33');
+    const seat = box(0.34 * k, 0.04, 0.3 * k, wood);
+    seat.position.y = h - 0.02;
+    g.add(seat);
+    for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      const leg = box(0.035, h - 0.04, 0.035, wood);
+      leg.position.set(x * 0.13 * k, (h - 0.04) / 2, z * 0.11 * k);
+      g.add(leg);
+    }
+    const ry = c.root.rotation.y;
+    g.position.set(c.root.position.x + Math.sin(ry) * 0.05 * k, 0, c.root.position.z + Math.cos(ry) * 0.05 * k);
+    g.rotation.y = ry;
+    outline(g, 0.006);
+    this.scene.add(g);
+    c.stool = g;
+    return g;
+  }
+
   // make a character clickable to talk
   talkable(id, label, fn, opts = {}) {
     const c = this.chars[id];
@@ -87,7 +113,7 @@ export class Scene {
   }
 
   // ---------------------------------------------------------------- hotspots
-  // a clickable thing. While one handler runs, other hotspots wait — except
+  // a clickable thing. While one handler runs, other hotspots wait, except
   // ones marked nested (the pieces of a mini-game that's already running).
   hot(obj, label, onClick, opts = {}) {
     obj.userData.dynamic = true;
@@ -122,7 +148,7 @@ export class Scene {
     const v = this.views[name];
     if (!v) return;
     this.currentView = name;
-    await this.engine.setRig(v.pos, v.target, v.fov, dur, name === 'main' ? 0.3 : 0.12);
+    await this.engine.setRig(v.pos, v.target, v.fov, dur, name === 'main' ? 0.18 : 0.08);
     if (back && name !== 'main') this.game.ui.back({ en: 'Back', es: 'Atrás' }, () => this.backToMain());
     else this.game.ui.back(null);
   }

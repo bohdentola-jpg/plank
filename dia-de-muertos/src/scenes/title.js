@@ -2,6 +2,7 @@
 // fluttering, marigold petals drifting, Lupita and Chispa saying hello.
 import * as THREE from 'three';
 import { Scene } from './base.js';
+import { hasBackup, restoreBackup } from '../save.js';
 import { street, potRow } from './town.js';
 import { monarch } from '../props.js';
 import { toon, rng } from '../toon.js';
@@ -9,6 +10,9 @@ import { t, UI as S, getLang } from '../i18n.js';
 import { icon, hydrateIcons } from '../icons.js';
 
 export class TitleScene extends Scene {
+  // the title fills the whole screen (no top bar or dialogue box)
+  get frameAspect() { return 1.6; }
+
   async build() {
     await super.build();
     this.setLights('golden', { shadowBox: 18 });
@@ -102,6 +106,7 @@ export class TitleScene extends Scene {
       <div class="tmenu">
         <button type="button" class="btn rosa" data-a="play">${icon('play')} ${started ? t(S.continue) : t(S.play)}</button>
         ${started ? `<button type="button" class="btn cream small" data-a="new">${t(S.newGame)}</button>` : ''}
+        ${!started && hasBackup() ? `<button type="button" class="btn cream small" data-a="restore">${icon('undo')} ${t({ en: 'Bring back my old adventure', es: 'Recuperar mi aventura anterior' })}</button>` : ''}
         <div class="row">
           <button type="button" class="btn turq" data-a="free">${icon('heart')} ${t(S.freeMode)}</button>
           <button type="button" class="btn purple" data-a="loteria">${icon('cards')} ${t(S.loteria)}</button>
@@ -110,7 +115,7 @@ export class TitleScene extends Scene {
           <button type="button" class="btn cream" data-a="book">${icon('book')} ${t(S.book)}</button>
           <button type="button" class="btn cream" data-a="about">${icon('info')} ${t(S.credits)}</button>
         </div>
-        <div class="tfoot">${t({ en: 'Santa María del Lago is a made-up town inspired by the lake region of Michoacán, Mexico. Every family and region celebrates in its own way.', es: 'Santa María del Lago es un pueblo inventado, inspirado en la región del lago en Michoacán. Cada familia y cada región lo celebra a su manera.' })}</div>
+        <div class="tfoot">${t({ en: 'Santa María del Lago is a made-up town, inspired by the lake region of Michoacán, Mexico. Each family and each region does things a little differently.', es: 'Santa María del Lago es un pueblo inventado, inspirado en la región del lago en Michoacán. Cada familia y cada región lo hace un poco distinto.' })}</div>
       </div>`;
     el.classList.remove('hidden');
     hydrateIcons(el);
@@ -118,6 +123,7 @@ export class TitleScene extends Scene {
     on('lang', () => { g.toggleLang(); this.renderMenu(); });
     on('play', () => this.start());
     on('new', () => { if (window.confirm(t(S.resetConfirm))) { g.reset(false); this.start(); } });
+    on('restore', () => { if (restoreBackup()) location.href = location.pathname; });
     on('free', () => g.startFree());
     on('loteria', () => g.openLoteria());
     on('book', () => g.openBook());

@@ -56,9 +56,9 @@ export class HomeScene extends Scene {
     this.buildOutside();
     this.buildFurniture();
     this.buildCharacters();
-    this.defineView('main', [0, 1.8, 6.5], [0, 1.15, -1.4], 46);
-    this.defineView('ofrenda', [0, 1.6, 0.7], [0, 0.98, -3.4], 50);
-    this.defineView('door', [1.2, 1.6, 2.4], [4.6, 0.6, -1.2], 50);
+    this.defineView('main', [0, 1.8, 6.5], [0, 1.15, -1.4], 34.0);
+    this.defineView('ofrenda', [0, 1.65, 0.75], [0, 1.25, -3.4], 31.0);
+    this.defineView('door', [1.2, 1.6, 2.4], [4.6, 0.6, -1.2], 37.1);
     this.hideMonarch('plant', 4.6, 1.5, -2.6);
     this.hideMonarch('trastero', 3.9, 2.15, -3.6);
   }
@@ -103,7 +103,7 @@ export class HomeScene extends Scene {
     const door = box(1.1, 2.25, 0.08, toon('#ffffff', { map: null, rim: 0 }));
     door.material = toon('#6e4127', { rim: 0 });
     door.position.set(W / 2 - 0.08, 1.125, -0.5 + 0.55);
-    door.rotation.y = -Math.PI / 2 + (this.night ? 0.9 : 0);
+    door.rotation.y = -Math.PI / 2; // stands open against the wall, out of the way
     door.geometry.translate(0, 0, 0);
     this.doorMesh = door;
     room.add(door);
@@ -287,7 +287,9 @@ export class HomeScene extends Scene {
 
   buildCharacters() {
     const ph = this.ph;
-    const lu = this.addChar('lupita', 0.55, 1.05, 0.15);
+    // in the evening Lupita waits by the ofrenda, out of the camera's way
+    const evening = ph === 'build' || ph === 'done';
+    const lu = evening ? this.addChar('lupita', 3.4, -1.6, -0.7) : this.addChar('lupita', 0.55, 1.05, 0.15);
     const ch = this.addChar('chispa', 1.45, 1.35, -0.4);
     ch.play('sit');
     if (ph === 'ending' || ph === 'after') {
@@ -296,15 +298,16 @@ export class HomeScene extends Scene {
       this.addChar('papa', 1.8, -1.5, -0.5);
       this.addChar('nico', -0.6, 1.4, 0.3);
     } else if (ph === 'build' || ph === 'done') {
-      this.addChar('abuela', 2.3, -2.05, -0.65);
-      this.addChar('mama', -1.9, -1.9, 0.4);
-      this.addChar('papa', -2.7, -1.2, 0.7);
-      this.addChar('nico', -0.9, 0.6, 0.3).play('sit');
+      // around the room, so the ofrenda itself is never blocked
+      this.addChar('abuela', -1.6, -0.8, 0.5); // Abuelo's armchair stays empty
+      this.addChar('mama', -2.9, -1.6, 0.6);
+      this.addChar('papa', -3.4, -0.6, 0.9);
+      this.addChar('nico', -0.9, 0.6, 0.3).play('floor');
     } else {
       const ab = this.addChar('abuela', 2.42, -2.1, -0.62);
       ab.play('sit');
       ab.root.position.y = 0.06;
-      this.addChar('nico', -0.9, 0.55, 0.4).play('sit');
+      this.addChar('nico', -0.9, 0.55, 0.4).play('floor');
       this.addChar('mama', -3.4, -4.75, 0.15);
     }
     lu.look(new THREE.Vector3(0, 1.6, 7));
@@ -330,7 +333,7 @@ export class HomeScene extends Scene {
     else if (ph === 'ending') await this.ending();
     else if (ph === 'explore' && !this.game.has('homeHint')) {
       this.game.flag('homeHint');
-      await this.say([{ who: 'lupita', text: { en: 'Click things in the house to learn about them — look for the sparkles! When you\'re ready, open the **Map**.', es: 'Haz clic en las cosas de la casa para aprender. ¡Busca los destellos! Cuando quieras, abre el **Mapa**.' } }]);
+      await this.say([{ who: 'lupita', text: { en: 'Click things in the house to learn about them. Look for the sparkles! When you\'re ready, open the **Map**.', es: 'Haz clic en las cosas de la casa para aprender. ¡Busca los destellos! Cuando quieras, abre el **Mapa**.' } }]);
     }
   }
 
@@ -344,7 +347,7 @@ export class HomeScene extends Scene {
     if (this.chars.mama) this.talkable('mama', { en: 'Mamá', es: 'Mamá' }, () => this.talkMama());
     if (this.chars.papa) this.talkable('papa', { en: 'Papá', es: 'Papá' }, () => this.talkPapa());
     this.hot(this.calendar, { en: 'The calendar', es: 'El calendario' }, async () => {
-      await this.say([{ who: 'lupita', text: { en: 'Look — November 1 and 2 are circled in orange!', es: '¡Mira! El 1 y el 2 de noviembre están marcados en naranja.' } }]);
+      await this.say([{ who: 'lupita', text: { en: 'Look! November 1 and 2 are circled in orange!', es: '¡Mira! El 1 y el 2 de noviembre están marcados en naranja.' } }]);
       await g.learn('fechas', { force: true });
     });
     this.hot(this.guitar, { en: 'Abuelo\'s guitar', es: 'La guitarra del Abuelo' }, async () => {
@@ -356,7 +359,7 @@ export class HomeScene extends Scene {
     }, { enabled: () => ph !== 'build' });
     this.hot(this.radio, { en: 'The old radio', es: 'El radio viejo' }, async () => {
       g.sound.music('ofrenda', true);
-      await this.say([{ who: 'lupita', text: { en: 'This was Abuelo\'s radio. Abuela says he sang along to every song — even the ones he didn\'t know!', es: 'Este era el radio del Abuelo. Abuela dice que cantaba todas las canciones, ¡hasta las que no se sabía!' }, emote: 'laugh' }]);
+      await this.say([{ who: 'lupita', text: { en: 'This was Abuelo\'s radio. Abuela says he sang along to every song, even the ones he didn\'t know!', es: 'Este era el radio del Abuelo. Abuela dice que cantaba todas las canciones, ¡hasta las que no se sabía!' }, emote: 'laugh' }]);
       g.sound.music(this.night ? 'ofrenda' : 'home', true);
     });
     this.hot(this.ofrendaTable, { en: 'The ofrenda table', es: 'La mesa de la ofrenda' }, async () => {
@@ -403,9 +406,8 @@ export class HomeScene extends Scene {
     this.chars.chispa.play('jump', { restart: true, then: 'happy' });
     g.sfx('bark');
     await this.say([
-      { who: 'lupita', emote: 'happy', text: { en: '¡Hola! I\'m Lupita, and this is my dog Chispa. She\'s a [[Xoloitzcuintle]] — a Xolo for short!', es: '¡Hola! Soy Lupita y ella es mi perrita Chispa. Es una [[Xoloitzcuintle]]… ¡Xolo, para los cuates!' } },
-      { who: 'chispa', text: { en: 'Woof! Woof!', es: '¡Guau! ¡Guau!' }, do: () => this.game.sfx('bark') },
-      { who: 'lupita', text: { en: 'Today is October 31st. In my family — and in lots of families in Mexico — the next days are [[Día de Muertos]], the Day of the Dead.', es: 'Hoy es 31 de octubre. En mi familia —y en muchas familias de México— los próximos días son [[Día de Muertos]].' } },
+      { who: 'lupita', emote: 'happy', text: { en: '¡Hola! I\'m Lupita, and this is my dog Chispa. She\'s a [[Xoloitzcuintle]]. Xolo for short!', es: '¡Hola! Soy Lupita y ella es mi perrita Chispa. Es una [[Xoloitzcuintle]]… ¡Xolo, para los cuates!' } },
+      { who: 'lupita', text: { en: 'Today is October 31st. For my family, and for lots of families in Mexico, the next few days are [[Día de Muertos]], the Day of the Dead.', es: 'Hoy es 31 de octubre. Para mi familia, y para muchas familias de México, los próximos días son [[Día de Muertos]].' } },
       {
         who: 'lupita', text: { en: 'Do you know what it is?', es: '¿Sabes qué es?' },
         choices: [
@@ -414,9 +416,9 @@ export class HomeScene extends Scene {
           { label: { en: 'Yes, my family celebrates too!', es: '¡Sí, mi familia también lo celebra!' }, value: 'yes' },
         ],
         then: (v) => {
-          if (v === 'hw') return [{ who: 'lupita', text: { en: 'A lot of people think so, but no! It\'s not about being scary. It\'s when we remember people we love who have died — and welcome them home.', es: 'Mucha gente lo piensa, ¡pero no! No es para asustar. Es cuando recordamos a las personas que queremos y que ya murieron, y las recibimos en casa.' } }];
+          if (v === 'hw') return [{ who: 'lupita', text: { en: 'Lots of people think so, but no! It isn\'t scary at all. It\'s when we remember people we love who have died, and welcome them home.', es: 'Mucha gente lo piensa, ¡pero no! No es para dar miedo. Es cuando recordamos a las personas que queremos y que ya murieron, y las recibimos en casa.' } }];
           if (v === 'yes') return [{ who: 'lupita', emote: 'happy', text: { en: '¡Qué padre! Then you know every family does it a little differently. Let me show you how mine does it!', es: '¡Qué padre! Entonces sabes que cada familia lo hace un poquito distinto. ¡Te enseño cómo lo hace la mía!' } }];
-          return [{ who: 'lupita', text: { en: 'It\'s when we remember people we love who have died. We believe their souls come home to visit for a little while — so we get everything ready to welcome them!', es: 'Es cuando recordamos a las personas que queremos y que ya murieron. Creemos que sus almas vienen de visita un ratito, ¡así que preparamos todo para recibirlas!' } }];
+          return [{ who: 'lupita', text: { en: 'It\'s when we remember people we love who have died. We believe their souls come home to visit for a little while, so we get everything ready for them!', es: 'Es cuando recordamos a las personas que queremos y que ya murieron. Creemos que sus almas vienen de visita un ratito, ¡así que preparamos todo para recibirlas!' } }];
         },
       },
     ]);
@@ -425,20 +427,20 @@ export class HomeScene extends Scene {
       { who: 'lupita', text: { en: 'This year we\'re making an [[ofrenda]] for my Abuelo Beto. Come meet my Abuela!', es: 'Este año vamos a poner una [[ofrenda]] para mi Abuelo Beto. ¡Ven a conocer a mi Abuela!' } },
     ]);
     lu.look(this.chars.abuela.root.position.clone().add(new THREE.Vector3(0, 1, 0)));
-    await this.engine.setRig([1.4, 1.6, 2.6], [2.2, 1.0, -2.0], 46, 1.4, 0.15);
+    await this.engine.setRig([1.4, 1.6, 2.6], [2.2, 1.0, -2.0], 34.0, 1.4, 0.15);
     this.chars.abuela.look(new THREE.Vector3(1.4, 1.6, 2.6));
     await this.say([
-      { who: 'abuela', text: { en: 'Ay, mija, who did you bring? Come in, come in — make yourself at home!', es: 'Ay, mija, ¿a quién trajiste? ¡Pásale, pásale, estás en tu casa!' }, emote: 'happy' },
+      { who: 'abuela', text: { en: 'Ay, mija, who did you bring? Come in, come in. Make yourself at home!', es: 'Ay, mija, ¿a quién trajiste? ¡Pásale, pásale, estás en tu casa!' }, emote: 'happy' },
       { who: 'abuela', text: { en: 'Your Abuelo Beto died two years ago. I miss him every day… and on Día de Muertos, we welcome him back with everything he loved.', es: 'Tu Abuelo Beto murió hace dos años. Lo extraño todos los días… y en Día de Muertos lo recibimos con todo lo que le gustaba.' }, emote: 'sad' },
-      { who: 'abuela', text: { en: 'It is a little sad and a little happy at the same time. That is all right — both feelings are welcome here.', es: 'Es un poquito triste y un poquito alegre a la vez. Está bien: aquí caben los dos sentimientos.' } },
-      { who: 'abuela', text: { en: 'In our town, the [[ofrenda]] has his photo, [[cempasúchil]] flowers, [[veladoras|veladora]], water, bread… every family does it its own way.', es: 'En nuestro pueblo, la [[ofrenda]] lleva su foto, [[cempasúchil]], [[veladoras|veladora]], agua, pan… cada familia la pone a su manera.' } },
+      { who: 'abuela', text: { en: 'It feels a little sad and a little happy at the same time. And that\'s okay.', es: 'Se siente un poquito triste y un poquito alegre a la vez. Y está bien.' } },
+      { who: 'abuela', text: { en: 'In our town, the [[ofrenda]] has his photo, [[cempasúchil]] flowers, [[veladoras|veladora]], water, bread… and every family does it a little differently.', es: 'En nuestro pueblo, la [[ofrenda]] lleva su foto, [[cempasúchil]], [[veladoras|veladora]], agua, pan… y cada familia la pone un poco distinto.' } },
       { who: 'abuela', text: { en: 'Will you help Lupita? Here is my list:\n**The market:** marigolds, candles, copal, fruit, a sugar skull and tissue paper.\n**Don Ramón\'s bakery:** pan de muerto.\n**Tía Lucía\'s workshop:** papel picado and decorating the skull.', es: '¿Le ayudas a Lupita? Aquí está mi lista:\n**El mercado:** cempasúchil, veladoras, copal, fruta, una calaverita y papel de China.\n**La panadería de Don Ramón:** pan de muerto.\n**El taller de Tía Lucía:** papel picado y decorar la calaverita.' } },
     ]);
     g.flag('intro');
-    await this.engine.setRig(this.views.main.pos, this.views.main.target, 46, 1.2, 0.3);
+    await this.engine.setRig(this.views.main.pos, this.views.main.target, 34.0, 1.2, 0.18);
     lu.look(new THREE.Vector3(0, 1.6, 7));
     await this.say([
-      { who: 'lupita', emote: 'happy', text: { en: '¡Vámonos! When we\'re ready, we open the **Map** (top right). But first, click around the house — there\'s lots to learn!', es: '¡Vámonos! Cuando estemos listos abrimos el **Mapa** (arriba a la derecha). Pero antes, haz clic por la casa: ¡hay mucho que aprender!' } },
+      { who: 'lupita', emote: 'happy', text: { en: '¡Vámonos! When we\'re ready, we open the **Map** (top right). But first, click around the house. There\'s lots to see!', es: '¡Vámonos! Cuando estemos listos abrimos el **Mapa** (arriba a la derecha). Pero antes, haz clic por la casa. ¡Hay mucho que ver!' } },
     ]);
     g.ui.pulse('#btn-map', true);
     g.refreshHud();
@@ -453,7 +455,7 @@ export class HomeScene extends Scene {
     } else if (ph === 'done') {
       await this.say([{ who: 'lupita', text: { en: 'The ofrenda is ready. Tomorrow evening we go to the plaza, and then we keep Abuelo company at the [[panteón]].', es: 'La ofrenda está lista. Mañana en la tarde vamos a la plaza y luego acompañamos al Abuelo en el [[panteón]].' } }]);
     } else if (ph === 'after') {
-      await this.say([{ who: 'lupita', text: { en: 'Thank you for helping me remember Abuelo. You can make your own ofrenda, play Lotería, or read the Book of Memories from the main menu!', es: '¡Gracias por ayudarme a recordar al Abuelo! Desde el menú principal puedes hacer tu propia ofrenda, jugar Lotería o leer el Libro de los Recuerdos.' } }]);
+      await this.say([{ who: 'lupita', text: { en: 'Thanks for helping me remember Abuelo! From the main menu you can make your own ofrenda, play Lotería or read the Book of Memories.', es: '¡Gracias por ayudarme a recordar al Abuelo! Desde el menú principal puedes hacer tu propia ofrenda, jugar Lotería o leer el Libro de los Recuerdos.' } }]);
     } else if (ph === 'intro') {
       await this.intro();
     } else {
@@ -467,7 +469,7 @@ export class HomeScene extends Scene {
     g.sfx('bark');
     if (!g.knows('xolo')) {
       await this.say([
-        { who: 'lupita', text: { en: 'Chispa is a Xolo — a hairless dog from Mexico. Her breed is thousands of years old!', es: 'Chispa es una Xolo, un perro sin pelo de México. ¡Su raza tiene miles de años!' } },
+        { who: 'lupita', text: { en: 'Chispa is a Xolo, a hairless dog from Mexico. Her breed is thousands of years old!', es: 'Chispa es una Xolo, un perro sin pelo de México. ¡Su raza tiene miles de años!' } },
         { who: 'abuela', text: { en: 'The old [[mexicas]] told a story: when people died, a little dog helped their souls cross a river on the way to [[Mictlán]], the land of the dead.', es: 'Los antiguos [[mexicas]] contaban que, al morir, un perrito ayudaba a las almas a cruzar un río camino al [[Mictlán]], la tierra de los muertos.' } },
       ]);
       await g.learn('xolo');
@@ -483,13 +485,13 @@ export class HomeScene extends Scene {
     if (ph === 'explore') {
       const lines = [{ who: 'abuela', text: { en: 'Did you find everything on my list? Take your time. The market closes late today.', es: '¿Encontraste todo lo de mi lista? Con calma. Hoy el mercado cierra tarde.' } }];
       if (!g.knows('origen')) {
-        lines.push({ who: 'abuela', text: { en: 'My grandmother told me these customs are very old — older than the churches, and mixed with what came after. Ask Maestra Eréndira at the plaza; she knows the history.', es: 'Mi abuela me decía que estas costumbres son muy antiguas, más que las iglesias, y se mezclaron con lo que llegó después. Pregúntale a la Maestra Eréndira en la plaza: ella sabe la historia.' } });
+        lines.push({ who: 'abuela', text: { en: 'My grandmother told me these customs are very old, older than the churches, and that they got mixed with what came later. Ask Maestra Eréndira at the plaza. She knows the history.', es: 'Mi abuela me decía que estas costumbres son muy antiguas, más que las iglesias, y que se mezclaron con lo que llegó después. Pregúntale a la Maestra Eréndira en la plaza. Ella sabe la historia.' } });
       }
       await this.say(lines);
     } else if (ph === 'done') {
       await this.say([{ who: 'abuela', text: { en: 'Look how the candles shine. Thank you, from my heart. Your Abuelo would have made you laugh all night.', es: 'Mira cómo brillan las velas. Gracias, de corazón. Tu abuelo te habría hecho reír toda la noche.' }, emote: 'happy' }]);
     } else {
-      await this.say([{ who: 'abuela', text: { en: 'Every family remembers in its own way. That is what makes it beautiful.', es: 'Cada familia recuerda a su manera. Eso es lo bonito.' } }]);
+      await this.say([{ who: 'abuela', text: { en: 'Each family remembers in its own way. In this house, we talk. A lot!', es: 'Cada familia recuerda a su manera. En esta casa, platicamos. ¡Mucho!' }, emote: 'laugh' }]);
     }
   }
 
@@ -497,7 +499,7 @@ export class HomeScene extends Scene {
     const g = this.game;
     this.chars.nico.emote('happy');
     await this.say([
-      { who: 'nico', text: { en: 'Tonight I\'m going door to door to ask: "[[¿Me da mi calaverita?]]" — and people give us candy or coins!', es: 'Hoy en la noche voy a ir de casa en casa a decir: "[[¿Me da mi calaverita?]]", ¡y nos dan dulces o moneditas!' }, emote: 'happy' },
+      { who: 'nico', text: { en: 'Tonight I\'m going door to door to ask "[[¿Me da mi calaverita?]]", and people give us candy or coins!', es: 'Hoy en la noche voy a ir de casa en casa a decir: "[[¿Me da mi calaverita?]]", ¡y nos dan dulces o moneditas!' }, emote: 'happy' },
     ]);
     await g.learn('pedir');
   }
@@ -505,7 +507,7 @@ export class HomeScene extends Scene {
   async talkMama() {
     const g = this.game;
     await this.say([
-      { who: 'mama', text: { en: 'I\'m making [[corundas]] — triangle tamales from Michoacán. Your Abuelo could eat six at once!', es: 'Estoy haciendo [[corundas]], tamales de triángulo de Michoacán. ¡Tu abuelo se comía seis de un jalón!' }, emote: 'laugh' },
+      { who: 'mama', text: { en: 'I\'m making [[corundas]], triangle tamales from Michoacán. Your Abuelo could eat six in one go!', es: 'Estoy haciendo [[corundas]], tamales de triángulo de Michoacán. ¡Tu abuelo se comía seis de un jalón!' }, emote: 'laugh' },
     ]);
     await g.learn('tamales');
   }
@@ -557,19 +559,69 @@ export class HomeScene extends Scene {
       g.flag('buildIntro');
     }
     await this.view('ofrenda', { back: false });
-    const levels = await this.say([{
-      who: 'abuela',
-      text: { en: 'First: how many levels should it have? Families do it differently — there is no wrong answer.', es: 'Primero: ¿cuántos niveles le ponemos? Cada familia lo hace distinto; no hay respuesta equivocada.' },
-      choices: [1, 2, 3, 7].map((n) => ({ label: { en: `${n} ${n === 1 ? 'level (a table)' : 'levels'}`, es: `${n} ${n === 1 ? 'nivel (una mesa)' : 'niveles'}` }, value: n })),
-    }]);
+    if (this.abueloWall) { this.scene.remove(this.abueloWall); this.engine.removeHotspot(this.abueloWall); }
     this.builder = new OfrendaBuilder(this, { base: this.ofrendaTable, baseY: 0.78, mode: 'story', portrait: this.abueloCanvas });
     this.builder.onChange = (id) => this.onBuilderChange(id);
+    this.popUndo = g.ui.pushUndo(() => this.undoBuild());
+    const draft = g.state.ofrendaDraft;
+    if (draft) {
+      // you left halfway through: everything is where you put it
+      this.builder.load(draft);
+      await this.say([{ who: 'abuela', text: { en: 'Welcome back! The ofrenda is just how you left it.', es: '¡Qué bueno que volviste! La ofrenda está como la dejaste.' } }]);
+      this.showBuildTray();
+      return;
+    }
+    const levels = await this.say([{
+      who: 'abuela',
+      text: { en: 'First: how many levels should it have? Families do it differently. There\'s no wrong answer, and you can change it later.', es: 'Primero: ¿cuántos niveles le ponemos? Cada familia lo hace distinto. No hay respuesta equivocada y luego lo puedes cambiar.' },
+      choices: [1, 2, 3, 7].map((n) => ({ label: { en: `${n} ${n === 1 ? 'level (a table)' : 'levels'}`, es: `${n} ${n === 1 ? 'nivel (una mesa)' : 'niveles'}` }, value: n })),
+    }]);
     this.builder.setLevels(levels);
+    this.saveDraft();
     await this.say([{ who: 'abuela', text: LEVEL_INFO[levels] }]);
     await g.learn('niveles');
-    if (this.abueloWall) { this.scene.remove(this.abueloWall); this.engine.removeHotspot(this.abueloWall); }
-    await this.say([{ who: 'lupita', text: { en: 'Now pick something from the tray below, then click on the ofrenda to put it there. Click a placed thing to move it.', es: 'Ahora elige algo de la bandeja de abajo y haz clic en la ofrenda para ponerlo. Haz clic en algo ya puesto para moverlo.' } }]);
+    await this.say([{ who: 'lupita', text: { en: 'Pick something from the tray, then click on the ofrenda to put it there. Click a thing on the ofrenda to move it or put it back. Made a mistake? Press **Undo**.', es: 'Elige algo de la bandeja y haz clic en la ofrenda para ponerlo. Haz clic en algo de la ofrenda para moverlo o regresarlo. ¿Te equivocaste? Usa **Deshacer**.' } }]);
     this.showBuildTray();
+  }
+
+  // the half-built ofrenda is saved, so leaving and coming back loses nothing
+  saveDraft() {
+    if (!this.builder || this.builder.locked) return;
+    this.game.state.ofrendaDraft = this.builder.serialize();
+    this.game.save();
+  }
+
+  exit() {
+    this.popUndo?.();
+    super.exit();
+  }
+
+  undoBuild() {
+    const b = this.builder;
+    if (!b || b.locked) return;
+    b.undo();
+    this.game.ui.setTrayActive(b.holding && !b.holding.fromMove ? b.holding.id : null);
+  }
+
+  async askLevels() {
+    const b = this.builder;
+    if (!b || b.locked || this.busy) return;
+    this.busy = true;
+    const n = await this.say([{
+      who: 'abuela',
+      text: { en: 'How many levels? Everything on it stays on.', es: '¿Cuántos niveles? Todo lo que ya pusiste se queda.' },
+      choices: [1, 2, 3, 7].map((k) => ({ label: { en: `${k} ${k === 1 ? 'level' : 'levels'}${k === b.levels ? ' ✓' : ''}`, es: `${k} ${k === 1 ? 'nivel' : 'niveles'}${k === b.levels ? ' ✓' : ''}` }, value: k })),
+    }]);
+    this.busy = false;
+    if (n !== b.levels) {
+      b.changeLevels(n);
+      this.game.ui.toast(t(LEVEL_INFO[n]), { ico: 'info', ms: 4200 });
+    }
+  }
+
+  onEscape() {
+    const b = this.builder;
+    if (b && !b.locked && b.holding) { b.drop(); this.game.ui.setTrayActive(null); this.showBuildTray(); }
   }
 
   async showBuildTray() {
@@ -582,22 +634,40 @@ export class HomeScene extends Scene {
       items.push({ id, label: info.name || HOME_ITEM_TEXT[id]?.name, img: await g.itemImage(id), used: b.remaining(id) <= 0, count: b.remaining(id) });
     }
     const side = document.createElement('div');
-    side.innerHTML = `<button type="button" class="btn rosa small" data-a="done">${icon('candle')} ${t({ en: 'Light it up!', es: '¡A encender!' })}</button>`;
+    side.innerHTML = `<div class="grid2">
+      <button type="button" class="btn cream small" data-a="undo" title="Ctrl+Z">${icon('undo')} ${t(S.undo)}</button>
+      <button type="button" class="btn cream small" data-a="levels">${t(S.levels)}: ${b.levels}</button>
+      <button type="button" class="btn cream small" data-a="clear">${icon('trash')} ${t(S.clearAll)}</button>
+      <button type="button" class="btn rosa small" data-a="done">${icon('candle')} ${t({ en: 'Light it up!', es: '¡A encender!' })}</button></div>`;
     const ok = b.wishState().every((w) => w.ok);
     const btn = side.querySelector('[data-a=done]');
     btn.disabled = !ok;
+    btn.title = ok ? '' : t({ en: 'Put everything on Abuela\'s list first', es: 'Primero pon todo lo que pidió Abuela' });
     btn.onclick = () => this.finishBuild();
-    g.ui.showTray({ label: { en: 'Put on the ofrenda', es: 'Pon en la ofrenda' }, items, active: b.holding?.id, side, onPick: (id) => {
+    const undo = side.querySelector('[data-a=undo]');
+    undo.disabled = !b.canUndo();
+    undo.onclick = () => this.undoBuild();
+    side.querySelector('[data-a=levels]').onclick = () => this.askLevels();
+    const clear = side.querySelector('[data-a=clear]');
+    clear.disabled = b.isEmpty();
+    clear.onclick = () => { b.clearAll(); g.ui.setTrayActive(null); };
+    const active = b.holding && !b.holding.fromMove ? b.holding.id : null;
+    g.ui.showTray({ label: { en: 'Put on the ofrenda', es: 'Pon en la ofrenda' }, items, active, side, onPick: (id) => {
+      const had = b.holding?.id;
       if (b.pick(id)) {
         g.ui.setTrayActive(b.holding ? id : null);
         if (b.holding) g.ui.toast(t({ en: 'Now click on the ofrenda!', es: '¡Ahora haz clic en la ofrenda!' }), { ico: 'sparkle', ms: 1500 });
+      } else if (had === id) {
+        g.ui.setTrayActive(null);
       }
+      this.showBuildTray();
     } });
     g.ui.sidePanel(wishesHtml(b, 'story'));
   }
 
   async onBuilderChange(id) {
     const g = this.game;
+    this.saveDraft();
     this.showBuildTray();
     const card = g.itemInfo(id)?.card || { foto: 'foto', agua: 'agua', sal: 'sal', cruz: 'cruz', xolo: 'xolo', petate: 'petate', arco: 'arco', lavamanos: 'lavamanos', guitarra: 'personales', domino: 'personales', lentes: 'personales', gorra: 'personales', dibujo: 'personales', tamales: 'tamales', cafe: 'bebidas' }[id];
     if (card && !g.knows(card) && this.builder.has(id)) {
@@ -608,7 +678,7 @@ export class HomeScene extends Scene {
       guitarra: { who: 'papa', text: { en: 'His guitar! He\'d want it close.', es: '¡Su guitarra! Él la querría cerquita.' } },
       domino: { who: 'papa', text: { en: 'Maybe tonight he\'ll finally let somebody else win.', es: 'A lo mejor hoy por fin deja ganar a alguien más.' }, emote: 'laugh' },
       dibujo: { who: 'lupita', text: { en: 'I drew Abuelo with his guitar. I hope he likes it!', es: 'Dibujé al Abuelo con su guitarra. ¡Ojalá le guste!' } },
-      cruz: { who: 'abuela', text: { en: 'Our family is Catholic, so we put a small cross. Other families use other things — or none.', es: 'Nuestra familia es católica, por eso ponemos una crucecita. Otras familias ponen otras cosas, o nada.' } },
+      cruz: { who: 'abuela', text: { en: 'Our family is Catholic, so we put out a small cross. Other families use other things, or nothing.', es: 'Nuestra familia es católica, por eso ponemos una crucecita. Otras familias ponen otras cosas, o nada.' } },
       calavera: { who: 'lupita', text: { en: 'The sugar skull we decorated, with his name on it!', es: '¡La calaverita que decoramos, con su nombre!' } },
     };
     if (remarks[id] && this.builder.has(id) && !this['said_' + id]) {
@@ -623,7 +693,11 @@ export class HomeScene extends Scene {
   }
 
   onPointerDown() {
-    if (this.petalMode) { this.painting = true; this.paintPetals(); }
+    if (this.petalMode) {
+      if (this.petalMarks.at(-1) !== this.petalT) this.petalMarks.push(this.petalT);
+      this.painting = true;
+      this.paintPetals();
+    }
   }
 
   onPointerUp() {
@@ -646,11 +720,22 @@ export class HomeScene extends Scene {
   async finishBuild() {
     const g = this.game;
     const b = this.builder;
+    if (this.busy || b.locked) return;
+    this.busy = true;
+    const go = await this.say([{
+      who: 'abuela',
+      text: { en: 'Is it ready? Once the candles are lit, the ofrenda stays like this for the night.', es: '¿Ya está lista? Cuando encendamos las velas, la ofrenda se queda así toda la noche.' },
+      choices: [{ label: { en: 'Yes, light it up!', es: '¡Sí, a encender!' }, value: true }, { label: { en: 'Not yet', es: 'Todavía no' }, value: false }],
+    }]);
+    this.busy = false;
+    if (!go) return;
+    this.popUndo?.();
     b.lock();
     this.lighting = true;
     g.ui.hideTray();
     g.ui.setGoal(null);
     g.state.ofrenda = b.serialize();
+    delete g.state.ofrendaDraft;
     g.save();
     // light the candles one by one
     const candles = b.candles();
@@ -672,7 +757,6 @@ export class HomeScene extends Scene {
       }
     });
     for (const c of candles) this.engine.removeHotspot(c.obj);
-    this.animateTree(b.root);
     const copals = b.copals();
     if (copals.length) {
       await this.say([{ who: 'mama', text: { en: 'And the [[copal]]. Its smoke smells like the forest after rain.', es: 'Y el [[copal]]. Su humo huele a bosque después de la lluvia.' } }]);
@@ -705,7 +789,7 @@ export class HomeScene extends Scene {
 
   async petalPathStep() {
     const g = this.game;
-    await this.engine.setRig([1.6, 3.6, 4.2], [2.2, 0, -1.6], 50, 1.2, 0.1);
+    await this.engine.setRig([1.3, 2.6, 3.4], [2.6, 0, -1.3], 40, 1.2, 0.08); // under the beams
     await this.say([{ who: 'lupita', text: { en: 'Last thing: a path of [[cempasúchil]] petals from the door to the ofrenda, so Abuelo can find his way. **Drag from the door to the ofrenda!**', es: 'Lo último: un camino de pétalos de [[cempasúchil]] desde la puerta hasta la ofrenda, para que el Abuelo encuentre el camino. **¡Arrastra desde la puerta hasta la ofrenda!**' } }]);
     const pts = [[5.0, -0.5], [3.6, -0.2], [2.4, -0.9], [1.2, -1.6], [0.3, -2.4]];
     const path = petalPath(pts, { width: 0.45, density: 90, seed: 3 });
@@ -727,10 +811,29 @@ export class HomeScene extends Scene {
     this.guide = guide;
     this.petalMode = true;
     this.petalT = 0;
+    this.petalMarks = [];
+    // Undo takes away the petals from your last drag
+    const side = document.createElement('div');
+    side.innerHTML = `<button type="button" class="btn cream small" data-a="undo" title="Ctrl+Z">${icon('undo')} ${t(S.undo)}</button>`;
+    g.ui.showTray({ label: { en: 'Petal path', es: 'Camino de pétalos' }, items: [], side, onPick: () => {} });
+    side.querySelector('[data-a=undo]').onclick = () => this.undoPetals();
+    const popUndo = g.ui.pushUndo(() => this.undoPetals());
     await new Promise((resolve) => { this.petalDone = resolve; });
+    popUndo();
+    g.ui.hideTray();
     this.petalMode = false;
     this.scene.remove(guide);
     g.sfx('success');
+  }
+
+  undoPetals() {
+    if (!this.petalMode) return;
+    const t0 = this.petalMarks.pop();
+    if (t0 === undefined) { this.game.sfx('oops'); return; }
+    this.petalT = t0;
+    this.petals.count = Math.floor(this.petals.userData.total * t0);
+    this.guide.children.forEach((d, i) => { d.visible = i / 24 > t0; });
+    this.game.sfx('tap');
   }
 
   paintPetals() {
@@ -768,7 +871,7 @@ export class HomeScene extends Scene {
       this.lampLight.intensity = lamp0 * (1 - k * 0.7);
       this.hemi.intensity = 0.55 * (1 - k * 0.3);
     });
-    await this.engine.setRig([0.6, 1.7, 2.2], [0, 1.2, -3.2], 48, 2.5, 0.1);
+    await this.engine.setRig([0.6, 1.7, 2.2], [0, 1.2, -3.2], 35.5, 2.5, 0.1);
     const ab = this.chars.abuela;
     for (const id of ['lupita', 'abuela', 'mama', 'papa', 'nico']) this.chars[id]?.look(new THREE.Vector3(0, 1.3, -3.4));
     // the gentle signs: a monarch comes in through the door and rests on the photo; Chispa wags at the chair
@@ -790,9 +893,9 @@ export class HomeScene extends Scene {
     this.chars.chispa.play('happy', { dur: 8 });
     await this.say([
       { who: 'abuela', text: { en: 'Do you see? A [[mariposa monarca]]… My mother used to say the butterflies bring our loved ones home.', es: '¿Ves? Una [[mariposa monarca]]… Mi mamá decía que las mariposas traen a nuestros seres queridos a casa.' }, emote: 'happy' },
-      { who: 'lupita', text: { en: 'And look at Chispa — she\'s wagging her tail at Abuelo\'s chair!', es: '¡Y mira a Chispa, le mueve la cola al sillón del Abuelo!' }, emote: 'surprised' },
+      { who: 'lupita', text: { en: 'And look at Chispa! She\'s wagging her tail at Abuelo\'s chair!', es: '¡Y mira a Chispa, le mueve la cola al sillón del Abuelo!' }, emote: 'surprised' },
       { who: 'papa', text: { en: 'Every year on this night, he would play us one song. Badly!', es: 'Cada año, esta noche, nos tocaba una canción. ¡Bien mal!' }, emote: 'laugh' },
-      { who: 'abuela', text: { en: 'We are sad that he is gone, and happy that we had him. Both things are true. ¡Bienvenido a casa, Beto!', es: 'Nos da tristeza que ya no esté y alegría de haberlo tenido. Las dos cosas son ciertas. ¡Bienvenido a casa, Beto!' } },
+      { who: 'abuela', text: { en: 'We\'re sad he\'s gone, and so glad we had him. ¡Bienvenido a casa, Beto!', es: 'Nos da tristeza que ya no esté, y mucha alegría de haberlo tenido. ¡Bienvenido a casa, Beto!' } },
       { who: 'lupita', text: { en: 'Welcome home, Abuelo.', es: 'Bienvenido a casa, Abuelo.' }, emote: 'smile' },
     ]);
     void ab;
@@ -848,13 +951,13 @@ export class HomeScene extends Scene {
     const g = this.game;
     await this.say([
       { who: 'lupita', text: { en: 'It\'s November 2. After the souls\' visit, families share the food from the ofrenda.', es: 'Es 2 de noviembre. Después de la visita de las almas, las familias comparten la comida de la ofrenda.' } },
-      { who: 'abuela', text: { en: 'They say the souls take the smell and the steam — the essence. Taste the bread… it\'s not as sweet as yesterday, ¿verdad?', es: 'Dicen que las almas se llevan el olor y el vapor, la esencia. Prueba el pan… ya no está tan dulce como ayer, ¿verdad?' }, emote: 'happy' },
+      { who: 'abuela', text: { en: 'They say the souls take the smell and the steam, the essence of the food. Taste the bread… it\'s not as sweet as yesterday, ¿verdad?', es: 'Dicen que las almas se llevan el olor y el vapor, la esencia. Prueba el pan… ya no está tan dulce como ayer, ¿verdad?' }, emote: 'happy' },
     ]);
     await g.learn('despues');
     await this.say([
       { who: 'papa', text: { en: 'Thank you for being here with our family.', es: 'Gracias por acompañar a nuestra familia.' } },
       { who: 'lupita', text: { en: 'As long as we tell his stories, Abuelo stays with us.', es: 'Mientras contemos sus historias, el Abuelo sigue con nosotros.' } },
-      { who: 'lupita', text: { en: 'Every family remembers in its own way. If you\'d like, you can ask a grown-up in your family about someone they remember. And if you\'d rather not, that\'s okay too.', es: 'Cada familia recuerda a su manera. Si quieres, puedes preguntarle a alguien de tu familia sobre alguien a quien recuerde. Y si prefieres no hacerlo, también está bien.' } },
+      { who: 'lupita', text: { en: 'If you want, you could ask a grown-up in your family about someone they remember. If you\'d rather not, that\'s okay too.', es: 'Si quieres, puedes preguntarle a alguien de tu familia por alguien a quien recuerde. Y si prefieres no hacerlo, también está bien.' } },
     ]);
     g.flag('ending');
     g.addPetals(5);
@@ -876,7 +979,7 @@ export class HomeScene extends Scene {
         <button type="button" class="btn turq" data-a="free">${icon('heart')} ${t(S.freeMode)}</button>
         <button type="button" class="btn cream" data-a="book">${icon('book')} ${t(S.book)}</button>
       </div>`;
-    const m = g.ui.modal({ title: { en: 'The end — and a beginning', es: 'El fin… y un comienzo' }, ico: 'star', body, cls: 'narrow' });
+    const m = g.ui.modal({ title: { en: 'The end, and a beginning', es: 'El fin, y un comienzo' }, ico: 'star', body, cls: 'narrow' });
     body.querySelector('[data-a=lot]').onclick = () => { m.close(); g.openLoteria(); };
     body.querySelector('[data-a=free]').onclick = () => { m.close(); g.startFree(); };
     body.querySelector('[data-a=book]').onclick = () => { m.close(); g.openBook(); };
@@ -886,7 +989,7 @@ export class HomeScene extends Scene {
   goalOverride() {
     if (this.ph === 'ending' && !this.game.has('ending')) return false;
     if (this.ph === 'build' && this.lighting && !this.game.has('ofrenda')) return false;
-    if (this.ph === 'build' && !this.lighting) return { en: 'Build Abuelo\'s ofrenda — anything goes!', es: 'Pon la ofrenda del Abuelo: ¡como tú quieras!' };
+    if (this.ph === 'build' && !this.lighting) return { en: 'Build Abuelo\'s ofrenda. Anything goes!', es: 'Pon la ofrenda del Abuelo: ¡como tú quieras!' };
     return null;
   }
 

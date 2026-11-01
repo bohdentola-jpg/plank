@@ -5,9 +5,9 @@ import { Scene } from './base.js';
 import { toon, box, mesh, cyl, rng, PAL, outline } from '../toon.js';
 import { wall, floor, plant } from '../room.js';
 import { papelString, woodTex, talaveraTex, bougainvillea } from '../world.js';
-import { sugarSkull, alebrije, catrinaFigure } from '../props.js';
+import { sugarSkull, alebrije, catrinaFigure, plainSkullCanvas } from '../props.js';
 import { openPapel, papelCanvases, PAPER_COLORS } from '../games/papel.js';
-import { t } from '../i18n.js';
+import { t, UI as S } from '../i18n.js';
 import { icon, hydrateIcons } from '../icons.js';
 
 const ICING = [PAL.rosa, PAL.turquoise, PAL.gold, PAL.purple, PAL.lime, PAL.orange, '#ffffff', '#2357d1'];
@@ -149,10 +149,10 @@ export class WorkshopScene extends Scene {
     this.addChar('lucia', -1.1, -2.1, 0.1);
     this.addChar('lupita', 0.9, 0.9, -0.3);
     this.addChar('chispa', 0.2, 1.6, 0.2).play('lie');
-    this.defineView('main', [0, 2.2, 6.6], [0, 1.0, -1.4], 46);
-    this.defineView('cut', [-1.2, 2.3, 1.6], [-1.2, 0.9, -0.9], 44);
-    this.defineView('skull', [2.4, 1.55, 1.15], [2.4, 1.15, -0.6], 40);
-    this.defineView('shelf', [-2.6, 1.8, 0.4], [-4.8, 1.6, -1.5], 44);
+    this.defineView('main', [0, 2.2, 6.6], [0, 1.0, -1.4], 34.0);
+    this.defineView('cut', [-1.2, 2.3, 1.6], [-1.2, 0.9, -0.9], 32.4);
+    this.defineView('skull', [2.4, 1.55, 1.15], [2.4, 1.15, -0.6], 29.4);
+    this.defineView('shelf', [-2.6, 1.8, 0.4], [-4.8, 1.6, -1.5], 32.4);
     this.hideMonarch('bug', 3.4, 2.6, -4.2);
     this.hideMonarch('pot', -4.7, 1.35, 2.6);
     this.hangMyPapel();
@@ -174,8 +174,8 @@ export class WorkshopScene extends Scene {
     g.sound.music('workshop');
     g.sound.setAmbient('birds');
     this.talkable('lucia', { en: 'Tía Lucía', es: 'Tía Lucía' }, () => this.lucia());
-    this.hot(this.cutTable, { en: 'Cut papel picado', es: 'Cortar papel picado' }, () => this.papel(), { enabled: () => !g.has('papel') });
-    this.hot(this.station, { en: 'Decorate the sugar skull', es: 'Decorar la calaverita' }, () => this.decorate(), { enabled: () => !g.has('skull') && !this.decorating });
+    this.hot(this.cutTable, () => (g.has('papel') ? { en: 'Cut new papel picado', es: 'Cortar otro papel picado' } : { en: 'Cut papel picado', es: 'Cortar papel picado' }), () => this.papel(), { enabled: () => !this.decorating });
+    this.hot(this.station, () => (g.has('skull') ? { en: 'Paint the sugar skull again', es: 'Volver a pintar la calaverita' } : { en: 'Decorate the sugar skull', es: 'Decorar la calaverita' }), () => this.decorate(), { enabled: () => !this.decorating });
     this.hot(this.alebrije, { en: 'A colorful creature', es: 'Una criatura de colores' }, async () => {
       await this.view('shelf');
       await this.say([{ who: 'lucia', text: { en: 'My [[alebrije]]! Pedro Linares invented them in 1936. People love them now, but they aren\'t an old part of Día de Muertos.', es: '¡Mi [[alebrije]]! Los inventó Pedro Linares en 1936. Hoy a todos les encantan, pero no son parte antigua del Día de Muertos.' } }]);
@@ -191,7 +191,7 @@ export class WorkshopScene extends Scene {
   lupitaLine() {
     const g = this.game;
     if (!g.has('papel')) return { en: 'Let\'s cut papel picado at the big table!', es: '¡Vamos a cortar papel picado en la mesa grande!' };
-    if (!g.has('skull')) return { en: 'Now the sugar skull for Abuelo — at the little table!', es: '¡Ahora la calaverita del Abuelo, en la mesita!' };
+    if (!g.has('skull')) return { en: 'Now the sugar skull for Abuelo, at the little table!', es: '¡Ahora la calaverita del Abuelo, en la mesita!' };
     return { en: 'Our papel picado and calaverita are ready! Open the **Map**.', es: '¡Ya están el papel picado y la calaverita! Abre el **Mapa**.' };
   }
 
@@ -210,19 +210,40 @@ export class WorkshopScene extends Scene {
     const g = this.game;
     if (!g.has('papel')) return this.papel();
     if (!g.has('skull')) return this.decorate();
-    await this.say([{ who: 'lucia', text: { en: 'Your Abuelo would laugh — he used to say my papel picado looked like Swiss cheese. ¡Ja!', es: 'Tu abuelo se reiría: decía que mi papel picado parecía queso suizo. ¡Ja!' }, emote: 'laugh' }]);
+    const v = await this.say([{
+      who: 'lucia', text: { en: 'Your Abuelo used to say my papel picado looked like Swiss cheese. ¡Ja! Want to make something again?', es: 'Tu abuelo decía que mi papel picado parecía queso suizo. ¡Ja! ¿Quieres hacer algo otra vez?' }, emote: 'laugh',
+      choices: [
+        { label: { en: 'Cut new papel picado', es: 'Cortar otro papel picado' }, value: 'papel' },
+        { label: { en: 'Repaint the skull', es: 'Pintar otra vez la calaverita' }, value: 'skull' },
+        { label: { en: 'No, thanks!', es: '¡No, gracias!' }, value: 'no' },
+      ],
+    }]);
+    if (v === 'papel') await this.papel();
+    else if (v === 'skull') await this.decorate();
   }
 
   async papel() {
     const g = this.game;
-    if (g.has('papel')) return;
+    const again = g.has('papel');
     await this.view('cut', { back: false });
-    await this.say([
-      { who: 'lucia', text: { en: 'We don\'t fold and snip with scissors. We stack fifty sheets of [[papel de China]] on a lead plate, lay the pattern on top, and strike a [[cincel]] — a chisel — with a mallet. ¡Tac, tac, tac!', es: 'No doblamos ni recortamos con tijeras. Apilamos cincuenta hojas de [[papel de China]] sobre una plancha de plomo, ponemos el patrón encima y golpeamos el [[cincel]] con un mazo. ¡Tac, tac, tac!' } },
-      { who: 'lucia', text: { en: 'Every tap cuts all the sheets at once. ¿Listos?', es: 'Cada golpe corta todas las hojas a la vez. ¿Empezamos?' } },
-    ]);
+    if (!again) {
+      await this.say([
+        { who: 'lucia', text: { en: 'We don\'t fold and snip with scissors. We stack fifty sheets of [[papel de China]] on a lead plate, lay the pattern on top, and hit a [[cincel]] (a chisel) with a mallet. ¡Tac, tac, tac!', es: 'No doblamos ni recortamos con tijeras. Apilamos cincuenta hojas de [[papel de China]] sobre una plancha de plomo, ponemos el patrón encima y golpeamos el [[cincel]] con un mazo. ¡Tac, tac, tac!' } },
+        { who: 'lucia', text: { en: 'Every tap cuts all the sheets at once. ¿Listos?', es: 'Cada golpe corta todas las hojas a la vez. ¿Empezamos?' } },
+      ]);
+    }
     const res = await openPapel(g);
+    if (!res) { await this.backToMain(); return; }
     g.state.papel = res;
+    if (again) {
+      g.save();
+      this.hangMyPapel();
+      delete g.cache.item.papel;
+      g.sfx('success');
+      await this.say([{ who: 'lucia', emote: 'happy', text: { en: '¡Precioso! I\'ll hang the new one up. Your old one goes in my box of samples.', es: '¡Precioso! Cuelgo el nuevo. El otro lo guardo en mi caja de muestras.' } }]);
+      await this.backToMain();
+      return;
+    }
     g.take('papel-china');
     g.flag('papel');
     this.hangMyPapel();
@@ -235,22 +256,25 @@ export class WorkshopScene extends Scene {
     ]);
     await g.learn('colores');
     await this.backToMain();
-    if (!g.has('skull')) await this.say([{ who: 'lupita', text: { en: 'Now let\'s decorate the sugar skull — click the little table!', es: 'Ahora decoremos la calaverita: ¡haz clic en la mesita!' } }]);
+    if (!g.has('skull')) await this.say([{ who: 'lupita', text: { en: 'Now let\'s decorate the sugar skull. Click the little table!', es: 'Ahora decoremos la calaverita: ¡haz clic en la mesita!' } }]);
   }
 
   // ---------------------------------------------------------------- sugar skull
   async decorate() {
     const g = this.game;
-    if (g.has('skull') || this.decorating) return;
-    if (!g.hasItem('calavera-blanca')) {
+    if (this.decorating) return;
+    const again = g.has('skull');
+    if (!again && !g.hasItem('calavera-blanca')) {
       await this.say([{ who: 'lucia', text: { en: 'First you need a plain sugar skull from Doña Mago at the market!', es: '¡Primero necesitas una calaverita sin decorar del puesto de Doña Mago, en el mercado!' } }]);
       return;
     }
     this.decorating = true;
     await this.view('skull', { back: false });
-    await this.say([
-      { who: 'lucia', text: { en: 'This is [[alfeñique]]: sugar paste. Paint it with icing! **Drag on the skull to draw**, add flowers and foil, and write your Abuelo\'s name on the forehead.', es: 'Esto es [[alfeñique]], pasta de azúcar. ¡Píntala con betún! **Arrastra sobre la calaverita para dibujar**, ponle flores y papel metálico, y escribe el nombre de tu abuelo en la frente.' } },
-    ]);
+    if (!again) {
+      await this.say([
+        { who: 'lucia', text: { en: 'This is [[alfeñique]]: sugar paste. Paint it with icing! **Drag on the skull to draw**, add flowers and foil, and write your Abuelo\'s name on the forehead. Oops? Press **Undo**.', es: 'Esto es [[alfeñique]], pasta de azúcar. ¡Píntala con betún! **Arrastra sobre la calaverita para dibujar**, ponle flores y papel metálico, y escribe el nombre de tu abuelo en la frente. ¿Te equivocaste? Usa **Deshacer**.' } },
+      ]);
+    }
     const head = this.skull.userData.head;
     this.skullCv = this.skull.userData.canvas;
     this.brush = { color: PAL.rosa, size: 9, mode: 'paint' };
@@ -267,10 +291,13 @@ export class WorkshopScene extends Scene {
         <button type="button" class="tool" data-m="foil">${t({ en: 'Foil eyes', es: 'Ojos de papel metálico' })}</button>
       </div>
       <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
-        <input class="inp" maxlength="14" style="max-width:170px;padding:6px 10px;font-size:16px" value="BETO" aria-label="name">
+        <input class="inp" maxlength="14" style="max-width:170px;padding:6px 10px;font-size:16px" value="${(g.state.skull?.name || 'BETO').replace(/"/g, '')}" aria-label="name">
         <button type="button" class="btn turq small" data-a="name">${t({ en: 'Write name', es: 'Escribir nombre' })}</button>
-        <button type="button" class="btn cream small" data-a="undo">${icon('undo')}</button>
-        <button type="button" class="btn cream small" data-a="rot">${icon('rotate')}</button>
+        <button type="button" class="btn cream small" data-a="rot" title="${t({ en: 'Turn it', es: 'Girar' })}">${icon('rotate')}</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
+        <button type="button" class="btn cream small" data-a="undo" title="Ctrl+Z" disabled>${icon('undo')} ${t(S.undo)}</button>
+        <button type="button" class="btn cream small" data-a="clear">${icon('eraser')} ${t(S.startOver)}</button>
         <button type="button" class="btn rosa small" data-a="done">${icon('check')} ${t({ en: 'Done!', es: '¡Lista!' })}</button>
       </div>`;
     g.ui.showTray({ label: { en: 'Sugar skull', es: 'Calaverita' }, items: [], side, onPick: () => {} });
@@ -278,20 +305,35 @@ export class WorkshopScene extends Scene {
     side.querySelectorAll('[data-m]').forEach((b) => { b.onclick = () => { this.brush.mode = b.dataset.m; side.querySelectorAll('[data-m]').forEach((x) => x.classList.toggle('on', x === b)); g.sfx('tap'); }; });
     const inp = side.querySelector('input');
     side.querySelector('[data-a=name]').onclick = () => { this.writeName(inp.value.trim().toUpperCase()); };
-    side.querySelector('[data-a=undo]').onclick = () => this.undoPaint();
+    this.undoBtn = side.querySelector('[data-a=undo]');
+    this.undoBtn.onclick = () => this.undoPaint();
+    side.querySelector('[data-a=clear]').onclick = () => {
+      this.snapshotCanvas();
+      this.skullCv.getContext('2d').drawImage(plainSkullCanvas(), 0, 0, this.skullCv.width, this.skullCv.height);
+      this.skull.userData.material.map.needsUpdate = true;
+      g.sfx('brush');
+    };
     side.querySelector('[data-a=rot]').onclick = () => { this.spin = (this.spin || 0) + Math.PI / 2; g.sfx('whoosh'); };
     hydrateIcons(side);
+    const popUndo = g.ui.pushUndo(() => this.undoPaint());
     await new Promise((resolve) => {
       side.querySelector('[data-a=done]').onclick = () => resolve();
     });
+    popUndo();
     // save the decorated skull
     g.state.skull = { canvas: this.skullCv.toDataURL('image/png'), name: inp.value.trim().toUpperCase() };
     delete g.cache.item.calavera;
-    g.take('calavera-blanca');
-    g.flag('skull');
     g.ui.hideTray();
     this.decorating = false;
     g.sfx('success');
+    if (again) {
+      g.save();
+      await this.say([{ who: 'lucia', emote: 'happy', text: { en: '¡Qué bonita quedó! Even better than before.', es: '¡Qué bonita quedó! Mejor que antes.' } }]);
+      await this.backToMain();
+      return;
+    }
+    g.take('calavera-blanca');
+    g.flag('skull');
     await g.give('calavera');
     await this.say([{ who: 'lucia', emote: 'happy', text: { en: '¡Qué bonita! In Mexico people also give sugar skulls with their friends\' names as gifts. A sweet joke between the living!', es: '¡Qué bonita! En México también se regalan calaveritas con el nombre de los amigos. ¡Una broma dulce entre vivos!' } }]);
     if (!g.knows('calavera')) await g.learn('calavera');
@@ -305,16 +347,18 @@ export class WorkshopScene extends Scene {
     c.width = this.skullCv.width; c.height = this.skullCv.height;
     c.getContext('2d').drawImage(this.skullCv, 0, 0);
     this.undo.push(c);
-    if (this.undo.length > 20) this.undo.shift();
+    if (this.undo.length > 40) this.undo.shift();
+    if (this.undoBtn) this.undoBtn.disabled = false;
   }
 
   undoPaint() {
     const prev = this.undo.pop();
-    if (!prev) return;
+    if (!prev) { this.game.sfx('oops'); return; }
     const ctx = this.skullCv.getContext('2d');
     ctx.clearRect(0, 0, this.skullCv.width, this.skullCv.height);
     ctx.drawImage(prev, 0, 0);
     this.skull.userData.material.map.needsUpdate = true;
+    if (this.undoBtn) this.undoBtn.disabled = !this.undo.length;
     this.game.sfx('tap');
   }
 

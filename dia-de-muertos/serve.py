@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The Marigold Path — local game server.
+"""The Marigold Path: local game server.
 
 - Tells the browser never to cache, so updates always show after a refresh.
 - If the port is taken (a forgotten old server), it picks the next free one.
@@ -50,7 +50,7 @@ def main():
     print('  THE MARIGOLD PATH  ·  El Camino de Cempasúchil')
     print(f'  The game is running at  {url}')
     if port != START_PORT:
-        print(f'  (port {START_PORT} was busy — an old window may still be running)')
+        print(f'  (port {START_PORT} was busy, an old window may still be running)')
     print('  Keep this window open while you play. Ctrl+C or close it to stop.')
     print()
     if '--no-browser' not in sys.argv:

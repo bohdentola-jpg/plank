@@ -1,4 +1,4 @@
-// The Marigold Path — a Día de Muertos point-and-click adventure.
+// The Marigold Path: a Día de Muertos point-and-click adventure.
 // Game ties together the engine (3D), the UI (DOM), saving, sound and story.
 import * as THREE from 'three';
 import { Engine } from './engine.js';
@@ -46,15 +46,15 @@ export const NAMES = {
 const ABOUT = {
   en: `<h3>The Marigold Path</h3>
     <p class="lead">An educational point-and-click adventure about Día de Muertos (Day of the Dead).</p>
-    <p>Lupita, her family and Santa María del Lago are made up. The town is inspired by the lake region of Michoacán, where Purépecha families keep vigils on the night of November 1. Every region, town and family in Mexico celebrates in its own way — and some families don't celebrate at all.</p>
+    <p>Lupita, her family and Santa María del Lago are made up. The town is inspired by the lake region of Michoacán, where Purépecha families keep vigils on the night of November 1. Each region, town and family in Mexico does it its own way, and some families don't celebrate it at all.</p>
     <p>The facts in this game were researched from Mexican institutions (INAH, INPI, the Secretaría de Cultura and other government agencies), UNESCO, museums like the Smithsonian and the National Museum of Mexican Art, and scholars. Open the <b>Book of Memories → Sources</b> to see them all.</p>
-    <p>Everything you see and hear — the 3D art, the music, the sounds — was made with code. No photos of real people are used.</p>
-    <div class="note">If your family celebrates Día de Muertos, you know things this game doesn't. Share them with your friends — that's how traditions stay alive.</div>`,
+    <p>All the 3D art, music and sounds were made with code. There are no photos of real people in it.</p>
+    <div class="note">If your family celebrates Día de Muertos, you know things this game doesn't. Tell your friends about them. That's how traditions stay alive.</div>`,
   es: `<h3>El Camino de Cempasúchil</h3>
     <p class="lead">Una aventura educativa de "apuntar y hacer clic" sobre el Día de Muertos.</p>
     <p>Lupita, su familia y Santa María del Lago son inventados. El pueblo está inspirado en la región del lago en Michoacán, donde las familias purépechas velan la noche del 1 de noviembre. Cada región, pueblo y familia de México lo celebra a su manera, y algunas familias no lo celebran.</p>
     <p>Los datos del juego se investigaron en instituciones mexicanas (INAH, INPI, Secretaría de Cultura y otras dependencias), la UNESCO, museos como el Smithsonian y el Museo Nacional de Arte Mexicano, y trabajos de especialistas. Abre el <b>Libro de los Recuerdos → Fuentes</b> para verlos todos.</p>
-    <p>Todo lo que ves y oyes —el arte 3D, la música y los sonidos— se hizo con código. No se usan fotos de personas reales.</p>
+    <p>El arte 3D, la música y los sonidos se hicieron con código. No hay fotos de personas reales.</p>
     <div class="note">Si tu familia celebra el Día de Muertos, sabes cosas que este juego no sabe. Compártelas con tus amigos: así se mantienen vivas las tradiciones.</div>`,
 };
 
@@ -70,6 +70,7 @@ class Game {
     document.body.classList.toggle('big', !!this.state.settings.big);
     document.body.classList.toggle('calm', !!this.state.settings.calm);
     this.engine = new Engine(document.getElementById('stage'));
+    this.engine.calm = !!this.state.settings.calm;
     this.speech = new Speech();
     this.speech.enabled = !!this.state.settings.read;
     this.sound = new Sound();
@@ -132,6 +133,8 @@ class Game {
       this.ui.setPlace(place?.name, stage.dayLabel?.() || '');
       this.refreshHud();
     }
+    this.ui.relayout();
+    this.engine.snapInsets();
     if (!opts.quick) await this.ui.fadeIn();
     this.busy = false;
     stage.afterEnter?.(opts);
@@ -209,14 +212,14 @@ class Game {
   // the goal line under the HUD, computed from progress
   goalText() {
     const f = this.state.flags;
-    if (!f.intro) return { en: 'Talk to Lupita — click on her!', es: 'Habla con Lupita: ¡haz clic en ella!' };
+    if (!f.intro) return { en: 'Talk to Lupita: click on her!', es: 'Habla con Lupita: ¡haz clic en ella!' };
     if (!f.ofrenda) {
       const got = MARKET_LIST.filter((id) => this.hasItem(id) || (id === 'calavera-blanca' && this.hasItem('calavera')) || (id === 'papel-china' && this.hasItem('papel'))).length;
       const parts = [];
       if (got < MARKET_LIST.length) parts.push({ en: `Market ${got}/${MARKET_LIST.length}`, es: `Mercado ${got}/${MARKET_LIST.length}` });
       if (!f.pan) parts.push({ en: 'Bakery', es: 'Panadería' });
       if (!f.papel || !f.skull) parts.push({ en: 'Tía Lucía\'s workshop', es: 'Taller de Tía Lucía' });
-      if (!parts.length) return { en: 'Everything is ready — go home and build the ofrenda!', es: '¡Todo listo! Ve a casa a poner la ofrenda.' };
+      if (!parts.length) return { en: 'You have everything! Go home and build the ofrenda.', es: '¡Ya tienes todo! Ve a casa a poner la ofrenda.' };
       return { en: `Abuela's list: ${parts.map((p) => p.en).join(' · ')}  (open the Map!)`, es: `La lista de Abuela: ${parts.map((p) => p.es).join(' · ')}  (¡abre el Mapa!)` };
     }
     if (!f.plaza) return { en: 'November 1: go to the plaza (open the Map)', es: '1 de noviembre: ve a la plaza (abre el Mapa)' };
@@ -349,9 +352,19 @@ class Game {
     this.ui.modal({ title: S.credits, ico: 'info', body, cls: 'narrow' });
   }
 
+  // the butterfly button: show what can be clicked, and say what to do next
   hint() {
     this.engine.flashHotspots();
     this.engine.stage?.onHint?.();
+    if (this.sceneId === 'title') return;
+    const o = this.engine.stage?.goalOverride?.();
+    const goal = o === false ? null : (o || this.goalText());
+    if (!goal) return;
+    this.ui.toast(t(goal), { ico: 'star', ms: 4200 });
+    if (/\bMap\b|\bMapa\b/.test(t(goal))) {
+      this.ui.pulse('#btn-map', true);
+      setTimeout(() => this.ui.pulse('#btn-map', false), 4000);
+    }
   }
 
   sfx(name) { this.sound.sfx(name); }
@@ -394,8 +407,8 @@ class Game {
         if (k === 'music') this.sound.setMusic(s.music);
         if (k === 'sfx') this.sound.setSfx(s.sfx);
         if (k === 'read') { this.speech.enabled = s.read; if (s.read) this.speech.line(t({ en: 'I will read the story out loud.', es: 'Voy a leer la historia en voz alta.' }), getLang()); }
-        if (k === 'big') document.body.classList.toggle('big', s.big);
-        if (k === 'calm') document.body.classList.toggle('calm', s.calm);
+        if (k === 'big') { document.body.classList.toggle('big', s.big); this.ui._band = null; this.ui.relayout(); }
+        if (k === 'calm') { document.body.classList.toggle('calm', s.calm); this.engine.calm = s.calm; }
         this.ui.setSoundIcon(s.music || s.sfx);
         this.save();
       };
