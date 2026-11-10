@@ -183,6 +183,9 @@ export async function uniforms(w) {
           onclick: (e) => { t[key] = c; G.audio.sfx('ok'); for (const b of col.querySelectorAll(`[data-k="${key}"]`)) b.style.borderColor = b.dataset.c === c ? 'var(--maple)' : 'var(--ink)'; refresh(); void e; },
         }))));
       }
+      if (S().costumes.length) {
+        col.append(el('div.lbl', 'Sideline mascot'), el('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '0.3em' } }, S().costumes.map((c) => el(`button.card.focusable.mc${(S().mascot || S().costumes[S().costumes.length - 1]) === c ? '.sel' : ''}`, { text: c, style: { padding: '0.1em 0.7em', fontWeight: 800, textTransform: 'capitalize' }, onclick: (e) => { S().mascot = c; G.audio.sfx('ok'); for (const b of col.querySelectorAll('.mc')) b.classList.toggle('sel', b === e.currentTarget); } }))));
+      }
       body.append(el('div.creator', el('div.col.center', img1, img2), col));
       refresh();
     },

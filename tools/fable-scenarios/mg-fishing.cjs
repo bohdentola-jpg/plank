@@ -138,5 +138,23 @@ module.exports = async (h, args) => {
   assert(gone, 'results card "Done" should leave the minigame');
   report.paced = { frames: r.frames, caught: r.result.extra.caught.length };
 
+  // 6) the way the game really launches it: from the overworld through G.hooks.minigame
+  await h.open('area=hollow&preset=ch2');
+  await h.step(10);
+  const before = await h.ev(() => ({ mode: window.__fable.mode(), coins: window.__fable.G.S.coins }));
+  assert(before.mode === 'world', `expected to start in the world, got ${before.mode}`);
+  await h.ev(() => { window.__res = null; window.__fable.G.hooks.minigame('fishing', { night: true, seed: 3 }).then((x) => { window.__res = x; }); });
+  let mode = null;
+  for (let i = 0; i < 80 && mode !== 'minigame'; i++) { await h.step(5); await h.sleep(40); mode = await h.ev(() => window.__fable.mode()); }   // the module is fetched on demand
+  assert(mode === 'minigame', `fishing did not open from the hook (mode ${mode})`);
+  assert(await h.ev(() => window.__fable.G.top().night === true), 'hook: { night: true } should give the night pond');
+  r = await play({ power: [0.95], style: 'good' });
+  await h.step(30);
+  const after = await h.ev(() => ({ mode: window.__fable.mode(), res: window.__res, coins: window.__fable.G.S.coins, fish: window.__fable.G.S.fish }));
+  assert(after.mode === 'world', `after fishing we should be back in the world, got ${after.mode}`);
+  assert(after.res && after.res.id === 'fishing' && after.res.extra.caught.length > 0, `hook result wrong: ${JSON.stringify(after.res)}`);
+  assert(after.coins === before.coins, 'fishing must not change coins');
+  report.hook = { score: after.res.score, fish: after.fish };
+
   console.log('[fishing]', JSON.stringify(report, null, 1));
 };

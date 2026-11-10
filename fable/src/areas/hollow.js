@@ -108,7 +108,7 @@ export default {
     w.add(M(rbox(0.9, 1.3, 0.4, 0.06), toon(0x6a7480), 48.5, 1.5, 9.3));
     w.add(M(box(0.5, 0.12, 0.05), toon(0xffd45a), 48.5, 1.8, 9.52));
     w.interact(48.5, 10.6, { r: 1.6, label: 'Check the fuse box', fn: () => story.fuseBox(w) });
-    w.trigger(39, 14, 20, 3, () => story.stadiumApproach(w), { once: 'seen_stadium_approach_gate' });
+    w.trigger(39, 14, 20, 3, () => story.stadiumApproach(w));
 
     // ---------------- practice field + pond
     w.put('goalpost', 6.6, 22.2, { w: 4, ry: Math.PI / 2, crooked: town.field ? 0 : 0.08 });

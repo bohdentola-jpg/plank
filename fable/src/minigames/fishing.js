@@ -544,8 +544,8 @@ export default class Fishing extends Minigame {
     this.bob.on = false;
     const n = this.caught.length;
     const list = this.caught.map((c) => `${FISH[c.id].icon} ${FISH[c.id].name} <span class="muted">${c.size} cm</span>`).join(' · ');
-    const detail = n ? `${list}<br>${n} in the bucket. ${displayName('captain')} can sell them at the shop.` : 'Nothing in the bucket — but it was a nice sit.';
-    this.finish({ score: this.value, won: true, title: n ? 'Packed up' : 'Skunked', detail, extra: { caught: this.caught.slice(), casts: this.casts } });
+    const detail = n ? `${list}<br>${n} in the bucket. ${displayName('captain')} can sell them at the shop.` : this.casts ? 'Nothing in the bucket — but it was a nice sit.' : 'The pond will still be here later.';
+    this.finish({ score: this.value, won: true, title: n ? 'Packed up' : this.casts ? 'Skunked' : 'Another time', detail, extra: { caught: this.caught.slice(), casts: this.casts } });
   }
 
   _showCard(f, size, tag) {

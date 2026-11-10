@@ -12,6 +12,7 @@ import { CAST, teamSpec, displayName, normalizeSquads, charState, maxStamina } f
 import { NPCS } from '../data/npcs.js';
 import { el, rand, TAU } from '../core/util.js';
 import { World } from '../world/world.js';
+import { AREAS } from '../areas/index.js';
 import { setFlag, recruit, startQuest } from './state.js';
 
 export const CAPTAIN_SPECIES = ['fox', 'cat', 'dog', 'raccoon', 'badger', 'deer', 'squirrel', 'skunk'];
@@ -41,7 +42,7 @@ class Title extends Mode {
     house.position.set(-1.5, 0, -4);
     this.scene.add(house);
     const sb = PROPS.scoreboard({ w: 9, h: 3.6, lines: ['WELCOME BACK,', 'CAPTAIN.'] });
-    sb.position.set(11, 0, -9); sb.rotation.y = -0.5;
+    sb.position.set(7.4, 0, -10.5); sb.rotation.y = -0.42;
     this.scene.add(sb);
     for (const [x, z, s] of [[-9, -5, 1.2], [-12, 1, 1], [8, -3, 1.1], [14, 2, 1.3], [-6, -10, 1.3], [4, -11, 1.1]]) { const t = PROPS.tree({ s }); t.position.set(x, 0, z); this.scene.add(t); }
     const lamp = PROPS.lamp({ night: true }); lamp.position.set(4.6, 0, 0.5); this.scene.add(lamp);
@@ -66,8 +67,10 @@ class Title extends Mode {
   _place() {
     const a = Math.sin(this.t * 0.12) * 0.22;
     const d = 19;
-    this.camera.position.set(Math.sin(a) * d, 6.5, Math.cos(a) * d + 2);
-    this.camera.lookAt(0.6, 2.6, 0);
+    // frame the lineup on the right so the logo and menu sit clear of it on the left
+    const wide = this.camera.aspect > 1.25;
+    this.camera.position.set(Math.sin(a) * d + (wide ? -4.5 : 0), 6.5, Math.cos(a) * d + 2);
+    this.camera.lookAt(wide ? -5.2 : 0.6, wide ? 2.9 : 4.4, 0);
     this.rig.follow(0, 0);
   }
   _menu() {
@@ -181,7 +184,8 @@ export async function enterWorld(o = {}) {
   const world = new World();
   G.world = world;
   const pos = S.pos || {};
-  await G.reset(world, { area: o.area || S.area || 'hollow', x: o.x ?? pos.x, z: o.z ?? pos.z });
+  const area = o.area || (AREAS[S.area] ? S.area : 'hollow');
+  await G.reset(world, { area, x: o.x ?? pos.x, z: o.z ?? pos.z });
   return world;
 }
 
@@ -207,6 +211,7 @@ export async function startGame(params) {
     applyPreset(params.get('preset') || 'team');
     const { MINIGAMES } = mods[0];
     const mod = await MINIGAMES[params.get('mg')].load();
+    if (params.has('auto')) G.debug.auto = true;
     const opts = { hard: params.has('hard'), noLeave: true };
     for (const [k, v] of params) if (!['mg', 'hard', 'test', 'preset', 'shadows', 'dialog'].includes(k)) opts[k] = isNaN(parseFloat(v)) ? v : parseFloat(v);
     G.push(new mod.default(), opts).then((r) => { G.debug.lastResult = r; });

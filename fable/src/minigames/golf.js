@@ -449,7 +449,7 @@ function buildSock() {
 export default class FieldGoalGolf extends Minigame {
   static meta = {
     id: 'golf', title: 'Field Goal Golf', icon: '⛳',
-    blurb: 'Kick the football through the uprights in as few kicks as you can. Hay bales bounce it, sand stops it, slopes carry it — and the wind has opinions.',
+    blurb: 'Kick the football through the uprights in as few kicks as you can. They don\'t always face you — work the ball round to the open side. Hay bales bounce it, sand stops it, slopes carry it, and the wind has opinions.',
     controls: [['move', 'aim ◄ ► · pick a kick ▲ ▼'], ['a', 'start the meter, press again to kick'], ['b', 'hold to fine-aim · cancels the meter']],
     scoreLabel: 'kicks', goals: [27, 22, 18], lower: true, hasHard: true, music: 'fair',
   };

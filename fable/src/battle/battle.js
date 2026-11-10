@@ -22,6 +22,7 @@ import { PLAYS, DEF_PLAYS, OFF_FORM, DEF_FORM, STARTER_PLAYS, STARTER_DEF, getPl
 import { ITEMS } from '../data/items.js';
 import { clamp, lerp, damp, dist, rand, pick, chance, TAU, wrapAngle, ordinal, ease, el, rich } from '../core/util.js';
 import { addItem, itemCount } from '../game/state.js';
+import { buildMascot } from '../art/mascots.js';
 
 const SCALE = 1.34;
 const OFF_ROLE_OF_SLOT = ['QB', 'LINE', 'WR1', 'WR2', 'BACK'];
@@ -95,6 +96,17 @@ export class Battle extends Mode {
     this.scene.add(this.losLine, this.ltgLine, this.userRing);
     this.syrups = [];
     this.decoy = null;
+    // your sideline mascot (a costume won at Mascot Mayhem)
+    this.mascot = null;
+    if (S.costumes && S.costumes.length && this.size >= 5) {
+      const kind = S.costumes.includes(S.mascot) ? S.mascot : S.costumes[S.costumes.length - 1];
+      try {
+        this.mascot = buildMascot(kind, { color: S.team.jersey });
+        this.mascot.root.position.set(3.5, 0, this.HW + 2.7);
+        this.mascot.root.rotation.y = Math.PI;
+        this.scene.add(this.mascot.root);
+      } catch (e) { this.mascot = null; }
+    }
     this.all = []; this.off = []; this.def = [];
     this.camX = 20; this.camZoom = 1;
     this._placeBench();
@@ -1489,7 +1501,7 @@ export class Battle extends Mode {
   // ---------------------------------------------------------------- after the whistle
   async afterPlay(res, one) {
     this.stats.plays++;
-    (G.debug.plays = G.debug.plays || []).push({ poss: this.poss, play: this.play.name, def: this.dplay.name, type: res.type, gain: res.x !== undefined ? +(res.x - this.los).toFixed(1) : 0, t: +this.playT.toFixed(1), down: this.down, snap: this.snapGrade });
+    if (G.debug.test) (G.debug.plays = G.debug.plays || []).push({ poss: this.poss, play: this.play.name, def: this.dplay.name, type: res.type, gain: res.x !== undefined ? +(res.x - this.los).toFixed(1) : 0, t: +this.playT.toFixed(1), down: this.down, snap: this.snapGrade });
     const youOff = this.poss === YOU;
     const offName = youOff ? G.S.team.name : this.team.short;
     // fatigue + bench recovery + status countdown
@@ -1975,6 +1987,7 @@ export class Battle extends Mode {
     } else if (this.phase !== 'live') this.hudUI.clearTargets();
     if (this.phase === 'live' && this.poss === CPU && this.sub === 'pocket' && !this.result) this.hudUI.setHint(`${G.ui.key('move')} move · ${G.ui.key('a')} dive tackle · ${G.ui.key('y')} switch defender`);
     this.field.update(dt, this.time, this.phase === 'dead' ? 1 : 0.15);
+    if (this.mascot) this.mascot.update(dt, 0, this.phase === 'over' || (this.result && (this.result.type === 'td' || this.result.type === 'ret_td')) ? 'cheer' : 'idle');
     this._camera(dt, false);
     this.fx.update(dt, this.camera);
     if (this.phase === 'live') { this._bugT = (this._bugT || 0) + dt; if (this._bugT > 0.15) { this._bugT = 0; this._squadBar(); } }

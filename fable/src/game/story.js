@@ -46,6 +46,10 @@ export async function arrival(w) {
 }
 
 export async function gus(w) {
+  if (flag('scoreboard_on') && !flag('bus_open')) {
+    await say(w, 'gus', 'You seen the old stadium tonight? Whole town\'s staring at it. Go have a look, then come see me. Bus has been making noises like it wants to go somewhere.');
+    return;
+  }
   if (S().chapter < 1 || !flag('bus_open')) {
     const lines = [
       'Bus only runs when somebody needs it to. Right now nobody needs it to. Trust me, I asked it.',
@@ -135,7 +139,16 @@ export async function pipLadder(w) {
 
 // ================================================================ Zip (block party race)
 export async function bleat(w) {
-  await say(w, 'bleat', 'Step right up! *Lawn Dash!* Beat the Borough\'s fastest feet and win a prize! Nobody has! That\'s what makes it a good business!');
+  if (!S().roster.includes('zip')) {
+    await say(w, 'bleat', 'Step right up! *Lawn Dash!* Beat the Borough\'s fastest feet and win a prize! Nobody has! That\'s what makes it a good business!');
+    return;
+  }
+  const best = (S().best.dash || {}).normal;
+  const p = await G.ui.choose('bleat', `You hired away my star attraction! Fine — she still runs for fun. Race her again?${best !== undefined ? ` Your best: ${best}s.` : ''}`, ['Race Zip', 'HARD course', 'No thanks'], { cancel: 2 });
+  if (p === 2) return;
+  if (p === 1 && !((S().best.dash || {}).medal >= 2)) { await say(w, 'bleat', 'The long course is for silver medalists. Insurance.'); return; }
+  await G.hooks.minigame('dash', { rival: 'zip', hard: p === 1, ease: 0 });
+  save();
 }
 
 export async function zip(w) {
@@ -157,6 +170,8 @@ export async function zip(w) {
     recruit('zip');
     afterRecruit(w);
     await duskNotice(w);
+  } else if (res && res.quit) {
+    await say(w, 'zip', 'Stretching first? Smart. I never stretch. I just go.');
   } else {
     await say(w, 'zip', 'Ha! Good race! You were close. Ish. Close-ish. Come back when your legs stop being sad.');
   }
@@ -293,6 +308,8 @@ export async function firstTouchdownCut() {
 
 export async function stadiumApproach(w) {
   if (!flag('scoreboard_on')) {
+    if (flag('stadium_early') || !S().roster.includes('hollow')) return;
+    setFlag('stadium_early');
     await say(w, 'hollow', 'The old stadium. Lights went out a long time ago and nobody\'s found the right fuse since.');
     await say(w, 'hollow', 'Sometimes you hear things under the bleachers. Raccoons, probably. Ambitious ones.');
     return;
@@ -312,6 +329,7 @@ export async function stadiumApproach(w) {
   if (pick === 0) await say(w, 'hollow', 'That\'s the part I can\'t answer, Captain. Literally can\'t. It\'s in the contract.');
   else await say(w, 'hollow', 'Halftime. Lights went out. When they came back on, there was no other team, no crowd, and — as it turned out — no me. Details are fuzzy.');
   await say(w, 'hollow', 'Talk to *Gus* about the bus. And the Mayor\'s been waving a clipboard at the *notice board* all evening.');
+  await narr('From now on, the cot in the clubhouse lets you rest until *morning, sunset or night* — the town keeps your hours.');
   G.ui.cine(false);
   w.release();
   finishQuest('first_match');

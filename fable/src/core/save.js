@@ -26,7 +26,7 @@ export function newSave() {
     best: {},            // minigame id → { normal, hard }
     wins: {},            // rival id → count
     seen: {},            // misc one-shot markers (tutorial tips, notes)
-    area: 'bus', pos: null,
+    area: 'hollow', pos: null,
     tod: 'day',          // day | dusk | night
     chapter: 0,
     meal: null,

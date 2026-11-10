@@ -185,5 +185,36 @@ module.exports = async (h, args) => {
     assert(gone, 'results card "Done" should leave the minigame');
     report.card = { ok: true, pacedFrames: r.frames, score: r.result.score };
   }
+  if (want('hook')) {
+    // the way the game really launches it: from the overworld through G.hooks.minigame, rewards via the registry
+    await h.open('area=hollow&preset=ch2');
+    await h.step(10);
+    const before = await h.ev(() => ({ mode: window.__fable.mode(), coins: window.__fable.G.S.coins }));
+    assert(before.mode === 'world', `expected to start in the world, got ${before.mode}`);
+    await h.ev(() => { window.__res = null; window.__fable.G.hooks.minigame('golf', {}).then((r) => { window.__res = r; }); });
+    let mode = null;
+    for (let i = 0; i < 80 && mode !== 'minigame'; i++) { await h.step(5); await h.sleep(40); mode = await h.ev(() => window.__fable.mode()); }   // the module is fetched on demand
+    assert(mode === 'minigame', `golf did not open from the hook (mode ${mode})`);
+    for (let i = 0; i < 60; i++) {
+      const done = await h.ev(async () => {
+        const F = window.__fable, G = F.G;
+        for (let f = 0; f < 600; f++) {
+          const m = G.top();
+          if (!m || m.name !== 'minigame') return true;
+          if (m.phase === 'aim') { const p = m.plan(); m.debugKick(p.aim, p.lofti, p.power); }
+          await F.step(1);
+        }
+        return false;
+      });
+      if (done) break;
+    }
+    await h.step(30);
+    const g = await h.ev(() => ({ mode: window.__fable.mode(), res: window.__res, coins: window.__fable.G.S.coins, gear: window.__fable.G.S.gear.slice(), best: window.__fable.G.S.best.golf }));
+    assert(g.mode === 'world', `after golf we should be back in the world, got ${g.mode}`);
+    assert(g.res && g.res.id === 'golf' && g.res.medal === 3, `golf result wrong: ${JSON.stringify(g.res)}`);
+    assert(g.best && g.best.normal === g.res.score, 'best score not recorded');
+    assert(g.coins > before.coins && g.gear.includes('lucky_tee'), `gold should pay coins and kicking gear (coins +${g.coins - before.coins}, gear ${g.gear})`);
+    report.hook = { score: g.res.score, coins: g.coins - before.coins, gear: g.gear };
+  }
   console.log('[golf]', JSON.stringify(report, null, 1));
 };

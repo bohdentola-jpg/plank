@@ -34,11 +34,11 @@ const PADMAP = {
 };
 const KEY_GLYPH = {
   a: 'SPACE', b: 'SHIFT', x: 'Q', y: 'E', l: 'Z', r: 'C', start: 'ESC', menu: 'TAB', back: 'ESC',
-  t1: '1', t2: '2', t3: '3', t4: '4', t5: '5', t6: '6', move: 'WASD',
+  t1: '1', t2: '2', t3: '3', t4: '4', t5: '5', t6: '6', move: 'WASD', mute: 'M',
 };
 const PAD_GLYPH = {
   a: '✕', b: '◯', x: '□', y: '△', l: 'L1', r: 'R1', start: 'OPTIONS', menu: 'SHARE', back: '◯',
-  t1: '□', t2: '△', t3: '◯', move: 'L-STICK',
+  t1: '□', t2: '△', t3: '◯', move: 'L-STICK', mute: 'M',
 };
 const PREVENT = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab']);
 const DEADZONE = 0.22;
