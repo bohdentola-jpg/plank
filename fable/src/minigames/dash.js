@@ -99,9 +99,10 @@ export default class LawnDash extends Minigame {
     id: 'dash', title: 'Lawn Dash', icon: '🐇',
     blurb: 'First to the far fence! You run by yourself — <b>switch lanes</b> to dodge and <b>hop</b> the low stuff. Clean running builds speed; yellow chevrons are a free boost. Sprinklers soak, lawn chairs trip (you can\'t hop a chair).',
     controls: [['move', 'up / down: change lane'], ['a', 'hop']],
-    scoreLabel: 'seconds', goals: [37, 32.5, 29.5], lower: true, hasHard: true, music: 'borough',
+    scoreLabel: 'seconds', goals: [34.5, 30.5, 27.5], goalsHard: [39, 34, 30], lower: true, hasHard: true, music: 'borough',
   };
-  get meta() { return this.hard ? HARD_META : LawnDash.meta; }
+  // the hard course is longer and denser, so it has its own medal times
+  get meta() { const m = LawnDash.meta; return this.hard ? (this._hardMeta || (this._hardMeta = { ...m, goals: m.goalsHard })) : m; }
 
   // ================================================================ setup
   setup(opts) {
@@ -259,8 +260,8 @@ export default class LawnDash extends Minigame {
     this.P = mk('you', teamSpec('captain'), 1, 0.26);
     this.Z = mk('zip', teamSpec('zip', { jersey: 0xf7b9c2, trim: 0xffffff, pants: 0xfffaf0, helmet: { color: 0xfffaf0, stripe: 0xe58a9c } }), 0, -0.26);
     const Z = this.Z;
-    if (this.hard) { Z.base = 9.75; Z.err = 0.1; }
-    else { Z.base = BASE - 0.35 * this.ease; Z.err = 0.3 + 0.08 * this.ease; }
+    if (this.hard) { Z.base = 9.6; Z.err = 0.14; }
+    else { Z.base = BASE - 0.4 * this.ease; Z.err = 0.33 + 0.09 * this.ease; }
     Z.plan = []; Z.ri = 0; Z.laneCd = 0; Z.quipT = 2.2; Z.lead = 0;
     const mark = new THREE.Mesh(ring(0.52, 0.68, 24), flat(0xffd45a, { transparent: true, opacity: 0.9, depthWrite: false }));
     mark.rotation.x = -Math.PI / 2; mark.renderOrder = 4;
@@ -353,18 +354,18 @@ export default class LawnDash extends Minigame {
     r.flow = o.type === 'leaf' ? r.flow * 0.45 : 0;
     r.boostT = 0;
     if (o.type === 'sprinkler') {
-      r.slowT = 1.3; r.slowK = 0.45; r.v *= 0.6;
+      r.slowT = 1.5; r.slowK = 0.42; r.v *= 0.55;
       r.ch.play('flinch'); r.ch.setExpr('wide', 1.2);
       this.fx.burst('drop', pos, 14, { speed: 3.4, up: 3.6, life: 0.55, s0: 0.26, color: 0x9be8ff });
       if (mine) { G.audio.sfx('splash'); this._say(r, 'SOAKED!', 'cool'); this.fx.shake(0.12, 0.2); } else this._quip('soak');
     } else if (o.type === 'leaf') {
-      r.slowT = 0.55; r.slowK = 0.74;
+      r.slowT = 0.6; r.slowK = 0.72;
       o.gone = true; o.obj.visible = false;
       this.fx.burst('leaf', pos, 16, { speed: 3.6, up: 4, g: -5, life: 1.1, s0: 0.3, s1: 0.2, flip: 8, color: [0xe8842c, 0xd4502f, 0xf2b632] });
       if (mine) { G.audio.sfx('land'); this._say(r, 'Fwumph', 'white small'); }
     } else {
       // chair or gnome: a proper trip
-      r.stumbleT = o.type === 'chair' ? 0.85 : 0.65; r.v = 2.4;
+      r.stumbleT = o.type === 'chair' ? 1.0 : 0.75; r.v = 2.4;
       r.ch.play('stumble', r.stumbleT + 0.1); r.ch.setExpr('dizzy', 0.9);
       o.gone = true;
       o.fly = { vx: 5 + r.v, vy: 6.5, vz: (this.aiRng() - 0.5) * 5, t: 0, spin: 9 };
@@ -586,4 +587,3 @@ export default class LawnDash extends Minigame {
   }
 }
 
-const HARD_META = { ...LawnDash.meta, goals: [41, 36, 32.5] };

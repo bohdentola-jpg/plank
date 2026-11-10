@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { G } from '../core/game.js';
 import { Minigame } from './shell.js';
-import { toon, flat, lit, M, rbox, box, cyl, cone, sphere, circle, ring, lightRig, canvasTex, glowSprite, signPlane, bake, disposeTree, roundRect } from '../art/kit.js';
+import { toon, flat, lit, M, box, cyl, cone, sphere, circle, ring, lightRig, canvasTex, glowSprite, signPlane, bake, disposeTree, roundRect } from '../art/kit.js';
 import { PROPS, fence, bunting } from '../art/props.js';
 import { Character, buildFootball } from '../art/characters.js';
 import { teamSpec } from '../data/cast.js';
@@ -18,7 +18,7 @@ import { clamp, lerp, damp, el, TAU, wrapAngle, makeRng } from '../core/util.js'
 const DEG = Math.PI / 180;
 const H = 1 / 120;                 // physics step
 const GRAV = 22, R_BALL = 0.28, WIND_K = 0.8, FRICTION = 8.5, SLOPE_ACC = 11, RAIL_H = 1.0;
-const METER_SPEED = 1.15, WINDUP = 0.22, MAX_STROKES = 6;
+const METER_SPEED = 1.15, WINDUP = 0.22, MAX_STROKES = 6, POST_H = 5.4;
 const PPU = 14;                    // ground texture pixels per unit
 const LOFTS = [
   { name: 'CHIP', tip: 'low — skips and runs, but bumps into bales', ang: 18 * DEG, v: 17 },
@@ -144,7 +144,7 @@ function stepBall(b, hole, T, ev) {
       b.vx -= (1 + e) * vn * g.nx; b.vz -= (1 + e) * vn * g.nz;
       b.x = px; b.y = py; b.z = pz;
     };
-    if (Math.abs(al - g.hw) < 0.3 && cy < 6.7) {           // clanged a post
+    if (Math.abs(al - g.hw) < 0.3 && cy < POST_H + 0.1) {   // clanged a post
       bounceBack(0.45);
       const k = (lat > 0 ? 1 : -1) * (al > g.hw ? 1 : -1) * 2.5;
       b.vx += g.tx * k; b.vz += g.tz * k;
@@ -376,9 +376,9 @@ function buildGoal(g) {
   const grp = new THREE.Group();
   const gold = toon(0xffd45a);
   for (const sgn of [-1, 1]) {
-    grp.add(M(cyl(0.13, 0.16, 6.6, 8), gold, sgn * g.hw, 3.3, 0));
+    grp.add(M(cyl(0.13, 0.16, POST_H, 8), gold, sgn * g.hw, POST_H / 2, 0));
     grp.add(M(cyl(0.36, 0.36, 1.5, 10), toon(0xd4502f), sgn * g.hw, 0.75, 0));
-    grp.add(M(cone(0.22, 0.5, 6), toon(sgn > 0 ? 0xd4502f : 0x2a6f77), sgn * g.hw, 6.85, 0));
+    grp.add(M(cone(0.24, 0.55, 6), toon(sgn > 0 ? 0xd4502f : 0x2a6f77), sgn * g.hw, POST_H + 0.27, 0));
   }
   grp.add(M(cyl(0.1, 0.1, g.hw * 2, 8), gold, 0, 2.6, 0, { rz: Math.PI / 2 }));
   grp.position.set(g.x, 0, g.z);
@@ -486,22 +486,21 @@ export default class FieldGoalGolf extends Minigame {
     lawn.userData.keep = true;
     g.add(lawn);
     const put = (name, x, z, o = {}) => { const p = PROPS[name](o); p.position.x += x; p.position.z += z; if (o.ry) p.rotation.y += o.ry; if (o.scale) p.scale.multiplyScalar(o.scale); g.add(p); return p; };
-    // the midway behind the course
-    put('tent', -27, -21, { color: 0xd4502f, r: 3 });
-    put('tent', 29, -22, { color: 0x2a6f77, r: 3 });
-    put('tent', 4, -27, { color: 0x8a5aa8, r: 2.6 });
-    put('booth', -13, -20.5, { text: 'POPCORN', color: 0xd4502f });
-    put('booth', 17, -21, { text: 'PRIZES', color: 0x2a6f77 });
-    put('balloons', -10.6, -20, { seed: 1 }); put('balloons', 19.6, -20.5, { seed: 2 }); put('balloons', -30, -17, { seed: 3 });
-    const wheel = put('ferrisWheel', -2, -38, { scale: 1.5 });
+    // the midway behind the course (laid out for a far rail at z = -13; slid into place per hole)
+    put('tent', -25, -19.6, { color: 0xd4502f, r: 2.8 });
+    put('tent', 26, -20, { color: 0x2a6f77, r: 2.8 });
+    put('tent', 2, -23.5, { color: 0x8a5aa8, r: 2.6 });
+    put('booth', -11.5, -17.6, { text: 'POPCORN', color: 0xd4502f });
+    put('booth', 13.5, -17.8, { text: 'PRIZES', color: 0x2a6f77 });
+    put('balloons', -9.2, -17.2, { seed: 1 }); put('balloons', 15.9, -17.4, { seed: 2 }); put('balloons', -28.4, -17.6, { seed: 3 });
+    const wheel = put('ferrisWheel', -3, -35, { scale: 1.5 });
     this.wheel = wheel.userData.spin;
-    for (const [x, z, s] of [[-40, -24, 1.3], [-36, -8, 1.1], [-41, 6, 1.2], [40, -26, 1.3], [38, -6, 1.1], [42, 9, 1.2], [-20, -31, 1.2], [20, -32, 1.3], [-48, -14, 1.2], [50, -16, 1.2], [-34, 18, 1.1], [35, 19, 1.1]]) put('tree', x, z, { s, rng: makeRng(Math.round(x * 7 + z * 13 + 999)) });
-    for (const [x, z] of [[-30, -13], [-31.8, -13.4], [-30.8, -12.4], [31, -13.6], [32.4, -13]]) put('hayBale', x, z, { ry: x * 0.3 });
-    for (const [x, z, s] of [[-28.4, -12.2, 1], [-27.6, -12.9, 0.7], [29.6, -12.4, 0.9], [-33, 14, 1.1], [33.6, 14.4, 0.8], [34.5, 13.6, 1.1]]) put('pumpkin', x, z, { s });
-    put('scarecrowPost', 37, -12);
-    put('signPost', -36.5, -15, { text: 'FIELD GOAL\nGOLF', w: 3.2, h: 1.5 });
-    g.add(bunting(-26, -17.4, -8, -17.4, { y: 4.2 })); g.add(bunting(-8, -17.4, 10, -17.4, { y: 4.2 })); g.add(bunting(10, -17.4, 28, -17.4, { y: 4.2 }));
-    for (const x of [-26, -8, 10, 28]) g.add(M(cyl(0.08, 0.1, 4.6, 6), toon(0xfffaf0), x, 2.3, -17.4));
+    for (const [x, z, s] of [[-40, -22, 1.3], [-36, -6, 1.1], [-41, 8, 1.2], [40, -24, 1.3], [38, -4, 1.1], [42, 11, 1.2], [-19, -27, 1.2], [20, -28, 1.3], [-48, -12, 1.2], [50, -14, 1.2], [-34, 20, 1.1], [35, 21, 1.1], [9, -30, 1.2]]) put('tree', x, z, { s, rng: makeRng(Math.round(x * 7 + z * 13 + 999)) });
+    for (const [x, z] of [[-31, -14], [-32.8, -14.4], [-31.8, -13.4], [32, -14.6], [33.4, -14]]) put('hayBale', x, z, { ry: x * 0.3 });
+    for (const [x, z, s] of [[-29.4, -13.2, 1], [-28.6, -13.9, 0.7], [30.6, -13.4, 0.9], [-33, 16, 1.1], [33.6, 16.4, 0.8], [34.5, 15.6, 1.1]]) put('pumpkin', x, z, { s });
+    put('scarecrowPost', 36.5, -11);
+    g.add(bunting(-27, -15.6, -9, -15.6, { y: 4.1 })); g.add(bunting(-9, -15.6, 9, -15.6, { y: 4.1 })); g.add(bunting(9, -15.6, 27, -15.6, { y: 4.1 }));
+    for (const x of [-27, -9, 9, 27]) g.add(M(cyl(0.08, 0.1, 4.5, 6), toon(0xfffaf0), x, 2.25, -15.6));
     bake(g);
     this.scene.add(g);
     this.backdrop = g;
@@ -523,9 +522,9 @@ export default class FieldGoalGolf extends Minigame {
     this.helpers = g;
     this.scene.add(g);
     // the ball + its shadow
-    this.ballMesh = buildFootball(1.75);
+    this.ballMesh = buildFootball(2.1);
     g.add(this.ballMesh);
-    this.ballShadow = new THREE.Mesh(circle(0.42, 14), new THREE.MeshBasicMaterial({ color: 0x1b1024, transparent: true, opacity: 0.28, depthWrite: false }));
+    this.ballShadow = new THREE.Mesh(circle(0.5, 14), new THREE.MeshBasicMaterial({ color: 0x1b1024, transparent: true, opacity: 0.28, depthWrite: false }));
     this.ballShadow.rotation.x = -Math.PI / 2;
     this.ballShadow.renderOrder = 3;
     g.add(this.ballShadow);
@@ -536,7 +535,10 @@ export default class FieldGoalGolf extends Minigame {
     this.marks = [0.5, 0.75, 1].map((p, i) => {
       const r = new THREE.Mesh(ring(0.3, 0.46, 18), new THREE.MeshBasicMaterial({ color: i === 2 ? 0xff8f7a : 0xffffff, transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide }));
       r.rotation.x = -Math.PI / 2; r.renderOrder = 4; g.add(r);
-      return { mesh: r, p };
+      const label = signPlane(['50%', '75%', 'MAX'][i], 1.5, 0.62, { color: i === 2 ? '#ffb3a4' : '#ffffff', stroke: '#2b1a33', strokeW: 9 });
+      label.rotation.x = -Math.PI / 2; label.renderOrder = 6; label.material.depthWrite = false;
+      g.add(label);
+      return { mesh: r, p, label };
     });
     const tri = new THREE.Shape();
     tri.moveTo(0.9, 0); tri.lineTo(-0.35, 0.62); tri.lineTo(-0.1, 0); tri.lineTo(-0.35, -0.62); tri.closePath();
@@ -596,6 +598,10 @@ export default class FieldGoalGolf extends Minigame {
         stat.add(p);
       }
     }
+    for (const [x, z, c] of [[-0.3, -0.3, 0xd4502f], [L + 0.3, -0.3, 0x2a6f77], [-0.3, D + 0.3, 0xffd45a], [L + 0.3, D + 0.3, 0xf08a24]]) {
+      stat.add(M(cyl(0.07, 0.09, 2.6, 6), toon(0xfffaf0), x, 1.3, z));
+      stat.add(M(cone(0.34, 0.8, 4), toon(c), x + 0.36, 2.3, z, { rz: -Math.PI / 2, sz: 0.2 }));
+    }
     stat.add(buildGoal(hole.goal));
     // tee marker
     stat.add(M(cyl(0.12, 0.16, 0.5, 8), toon(0xd4502f), def.tee[0] - 1.2, 0.25, def.tee[1] + 1.2));
@@ -617,10 +623,11 @@ export default class FieldGoalGolf extends Minigame {
     // helpers ride in the same hole-local space
     this.helpers.position.copy(g.position);
     this.sock.position.set(def.tee[0] - 2.4, 0, def.tee[1] - 2.6 < 0.8 ? def.tee[1] + 2.6 : def.tee[1] - 2.6);
-    this.star.position.set(hole.goal.x, 8.4, hole.goal.z);
-    // fans line the far rail
+    this.star.position.set(hole.goal.x, 7.4, hole.goal.z);
+    // the fairground slides up behind this hole's far rail; fans line the rail
+    this.backdrop.position.z = this.oz + 13;
     this.fans.forEach((f, k) => {
-      const x = this.ox + L * (0.2 + 0.15 * k), z = this.oz - 2.4 - (k % 2) * 0.9;
+      const x = this.ox + L * (0.14 + 0.18 * k), z = this.oz - 1.7 - (k % 2) * 0.8;
       f.ch.setPos(x, z); f.ch.face(0); f.home = { x, z };
     });
 
@@ -633,9 +640,9 @@ export default class FieldGoalGolf extends Minigame {
     this.loft = 1;
     this.meter = 0; this.meterDir = 1; this.power = 0;
     this.phase = 'intro'; this.pt = G.debug.fast ? 0.05 : 1.5;
-    this.spin = 0;
+    this.spin = 0; this.trailT = 0;
     this.hpos.x = this.lie.x - Math.cos(this.aim) * 1.6; this.hpos.z = this.lie.z - Math.sin(this.aim) * 1.6;
-    this._showCard(`HOLE ${i + 1} OF ${this.holes.length}`, def.name, `Par ${def.par}`);
+    if (this.playing) this._showCard(`HOLE ${i + 1} OF ${this.holes.length}`, def.name, `Par ${def.par}`);
     this._windUi();
   }
 
@@ -668,9 +675,11 @@ export default class FieldGoalGolf extends Minigame {
   _hideCard() { if (this.eCard) { this.eCard.remove(); this.eCard = null; } }
   _refreshUi() {
     const def = this.def;
-    const total = this.card.reduce((a, b) => a + b, 0) + this.strokes;
+    const holed = this.phase === 'made' || this.phase === 'pickup' || this.phase === 'done';
+    const total = this.card.reduce((a, b) => a + b, 0) + (holed ? 0 : this.strokes);
     this.hudScore(`⛳ Hole ${this.holeIndex + 1}/${this.holes.length} · Par ${def.par}`);
-    this.hudInfo(`Kick ${Math.min(this.strokes + 1, MAX_STROKES)} · Total ${total}`);
+    const upNext = this.phase === 'intro' || this.phase === 'aim' || this.phase === 'power' || this.phase === 'walk';
+    this.hudInfo(`Kick ${Math.min(this.strokes + (upNext ? 1 : 0), MAX_STROKES)} · Total ${total}`);
     const sig = `${this.holeIndex}|${this.card.join(',')}|${this.strokes}`;
     if (sig !== this._scSig) {
       this._scSig = sig;
@@ -693,7 +702,11 @@ export default class FieldGoalGolf extends Minigame {
   wp(x, y, z) { return { x: x + this.ox, y, z: z + this.oz }; }
 
   // ---------------------------------------------------------------- flow
-  begin() { this._refreshUi(); }
+  begin() {
+    this.pt = G.debug.fast ? 0.05 : 1.5;
+    this._showCard(`HOLE 1 OF ${this.holes.length}`, this.def.name, `Par ${this.def.par}`);
+    this._refreshUi();
+  }
 
   tick(dt) {
     const inp = G.input;
@@ -856,6 +869,7 @@ export default class FieldGoalGolf extends Minigame {
   // ---------------------------------------------------------------- per-frame visuals
   ambient(dt) {
     const hole = this.hole, b = this.ball;
+    if (this.state !== 'play') scrubNulls();
     const t = this.time;
     // ball
     const sp = Math.hypot(b.vx, b.vz);
@@ -870,7 +884,7 @@ export default class FieldGoalGolf extends Minigame {
       if (b.air && b.y > 0.5 && this.trailT <= 0 && this.phase === 'fly') { this.trailT = 0.035; this.fx.emit('puff', b.x + this.ox, b.y + 0.3, b.z + this.oz, { life: 0.35, s0: 0.26, s1: 0.02, color: 0xffffff }); }
     }
     this.ballMesh.visible = this.phase !== 'penalty' || this.pt > 0.9;
-    this.ballMesh.position.set(b.x, b.y + 0.3, b.z);
+    this.ballMesh.position.set(b.x, b.y + 0.34, b.z);
     this.ballMesh.rotation.set(this.spin || 0, this.ballYaw ?? Math.PI / 2, 0, 'YXZ');
     this.ballShadow.visible = this.ballMesh.visible;
     this.ballShadow.position.set(b.x, 0.03, b.z);
@@ -881,7 +895,7 @@ export default class FieldGoalGolf extends Minigame {
     for (const c of this.cartMeshes) { const p = cartPos(c.cart, this.T); c.mesh.position.set(p.x, 0, p.z); }
     for (const bm of this.bumperMeshes) { if (bm.flash > 0) bm.flash = Math.max(0, bm.flash - dt * 4); const k = 1 + bm.flash * 0.28; bm.mesh.scale.set(k, 1 - bm.flash * 0.12, k); }
     if (this.wheel) this.wheel.rotation.z += dt * 0.16;
-    this.star.position.y = 8.4 + Math.sin(t * 2.4) * 0.35;
+    this.star.position.y = 7.4 + Math.sin(t * 2.4) * 0.35;
     this.star.rotation.y += dt * 2;
     this.star.visible = this.phase !== 'made';
 
@@ -908,6 +922,10 @@ export default class FieldGoalGolf extends Minigame {
       mk.mesh.visible = aiming;
       const c = carryOf(this.loft, mk.p);
       mk.mesh.position.set(this.lie.x + ca * c, 0.06, this.lie.z + sa * c);
+      mk.label.visible = aiming;
+      // tuck the label on whichever side of the line is away from the aim, so it never sits on the dots
+      const side = Math.abs(sa) > 0.75 ? 0 : 1;
+      mk.label.position.set(this.lie.x + ca * c + (side ? 0 : 1.25), 0.09, this.lie.z + sa * c + (side ? 0.95 : 0));
     }
     this.chevron.visible = aiming;
     this.chevron.position.set(this.lie.x + ca * 1.15, 0.07, this.lie.z + sa * 1.15);
@@ -946,7 +964,8 @@ export default class FieldGoalGolf extends Minigame {
     const aspect = this.camera.aspect;
     const spanX = Math.abs(bx - g.x) + 15, spanZ = Math.abs(bz - g.z) + 13 + Math.min(8, b.y * 0.5);
     let d = Math.max(spanX / (0.389 * aspect), spanZ / 0.484);
-    d = clamp(d, 36, 86);
+    d = clamp(d * 1.03, 36, 90);
+    tz += d * 0.026;
     if (snap) { this.cam.x = tx; this.cam.z = tz; this.cam.d = d; }
     else { const lam = 2.6; this.cam.x = damp(this.cam.x, tx, lam, dt); this.cam.z = damp(this.cam.z, tz, lam, dt); this.cam.d = damp(this.cam.d, d, 2.2, dt); }
     const pitch = 0.93;
@@ -1020,6 +1039,13 @@ export default class FieldGoalGolf extends Minigame {
     const c = best;
     for (let da = -0.06; da <= 0.0601; da += 0.012) for (let dp = -0.08; dp <= 0.0801; dp += 0.02) tryShot(c.aim + da, c.lofti, clamp(c.power + dp, 0, 1));
     return best;
+  }
+}
+
+/** The shell builds its cards with native append(), which prints null/false children as text. Sweep them away. */
+function scrubNulls() {
+  for (const b of document.querySelectorAll('.mg-card .panel-body')) {
+    for (const n of [...b.childNodes]) if (n.nodeType === 3 && /^(null|false|undefined)+$/.test(n.nodeValue)) n.remove();
   }
 }
 

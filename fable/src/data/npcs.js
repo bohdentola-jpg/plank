@@ -20,6 +20,7 @@ export const NPCS = {
   stitch: { name: 'Old Stitch', color: '#b98a3a', pitch: 0.65, spec: { kind: 'pumpkin', shirt: 0x4a3a5a, helmet: { color: 0x5a7a3c }, build: 'big' } },
   scarecrow: { name: 'Haymaker', color: '#4a6fa5', pitch: 0.9, spec: { kind: 'scarecrow', shirt: 0x4a6fa5, helmet: { color: 0x8a5a34, stripe: 0xe8c95a } } },
   crowe: { name: 'Corvina', color: '#4a4a58', pitch: 1.05, spec: { kind: 'animal', species: 'crow', shirt: 0x8a5aa8, hat: 'witch', hatC: 0x3b2148 } },
+  par: { name: 'Par', color: '#3f7a52', pitch: 0.85, spec: { kind: 'animal', species: 'frog', shirt: 0xfffaf0, hat: 'visor', hatC: 0x3f7a52 } },
   ringmaster: { name: 'Ringmaster Rind', color: '#d4502f', pitch: 1.0, spec: { kind: 'animal', species: 'pig', shirt: 0xd4502f, hat: 'top', hatC: 0x2b1a33, acc: ['cape'], capeC: 0xffd45a } },
   avalanche: { name: 'Avalanche', color: '#58b8c9', pitch: 0.5, spec: { kind: 'animal', species: 'yeti', build: 'huge', jersey: 0x2a6f9a, pants: 0xf4f0e6, helmet: { color: 0x2a6f9a, stripe: 0xffffff } } },
   flurry: { name: 'Flurry', color: '#2a6f9a', pitch: 1.3, spec: { kind: 'snowman', jersey: 0x2a6f9a, helmet: { color: 0x2a6f9a, stripe: 0xffffff } } },

@@ -138,18 +138,28 @@ module.exports = async (h, args) => {
     }
   }
   if (want('card')) {
-    // the real intro card, then make sure "Play!" actually starts the game
+    // real pacing (no test fast-forward): intro card → countdown → hole card → play → results card → leave
     await h.open('mg=golf&dialog&shadows');
+    await h.ev(() => { window.__fable.G.debug.fast = false; });
     await h.step(10);
+    await h.sleep(500);
     await h.shot('mg-golf-card.png');
-    await h.press('a');
-    await h.step(10);
+    await h.press('a');                                   // "Play!"
+    await h.step(200);                                    // 3-2-1-GO
     const st = await h.ev(() => { const m = window.__fable.G.top(); return { state: m.state, phase: m.phase }; });
     assert(st.state === 'play', `intro card did not start the game: ${JSON.stringify(st)}`);
-    // by hand: start the meter, cancel it, start again, kick
-    await h.step(120);
-    await h.press('a'); await h.step(20);
+    await h.step(110);                                    // the "HOLE 1" card clears itself
     let ph = await h.ev(() => window.__fable.G.top().phase);
+    assert(ph === 'aim', `hole card should hand over to aiming (phase ${ph})`);
+    // by hand: change the kick, start the meter, cancel it, start again, kick
+    await h.ev(() => window.__fable.hold('up', true)); await h.step(1);
+    await h.ev(() => window.__fable.hold('up', false)); await h.step(2);
+    const loft = await h.ev(() => window.__fable.G.top().loft);
+    assert(loft === 2, `▲ should pick the higher kick (loft ${loft})`);
+    await h.ev(() => window.__fable.hold('down', true)); await h.step(1);
+    await h.ev(() => window.__fable.hold('down', false)); await h.step(2);
+    await h.press('a'); await h.step(20);
+    ph = await h.ev(() => window.__fable.G.top().phase);
     assert(ph === 'power', `meter did not start (phase ${ph})`);
     await h.shot('mg-golf-meter.png');
     await h.press('b'); await h.step(3);
@@ -159,7 +169,21 @@ module.exports = async (h, args) => {
     const fl = await h.ev(() => { const m = window.__fable.G.top(); return { phase: m.phase, strokes: m.strokes }; });
     assert(fl.strokes === 1, `kick did not register: ${JSON.stringify(fl)}`);
     await h.shot('mg-golf-flight.png');
-    report.card = 'ok';
+    // let the planner finish the round at real speed, then check the results card
+    let r = null;
+    for (let guard = 0; guard < 6 && !(r && r.result !== undefined); guard++) r = await drive({ mode: 'planner', seed: 1, pauseKick: guard === 0 ? 3 : 0, pauseFrames: 75 });
+    if (r.pause) r = await drive({ mode: 'planner', seed: 1 });
+    checkResult(r, 'paced round');
+    await h.step(70);
+    await h.sleep(600);
+    const stray = await h.ev(() => [...document.querySelectorAll('.mg-card .panel-body')].some((b) => [...b.childNodes].some((n) => n.nodeType === 3 && /null|false/.test(n.nodeValue))));
+    assert(!stray, 'results card has stray "null" text');
+    await h.shot('mg-golf-results.png');
+    await h.press('a');                                   // "Done"
+    await h.step(60);
+    const gone = await h.ev(() => window.__fable.G.top() === null);
+    assert(gone, 'results card "Done" should leave the minigame');
+    report.card = { ok: true, pacedFrames: r.frames, score: r.result.score };
   }
   console.log('[golf]', JSON.stringify(report, null, 1));
 };

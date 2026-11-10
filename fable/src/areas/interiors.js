@@ -57,7 +57,7 @@ export const clubhouse = {
       if (!def) continue;
       w.put(def.prop, d.x, d.z, { ...def.opts, ry: d.r || 0, solid: !def.flat });
     }
-    w.interact(8, 7.6, { r: 1.2, label: 'Decorate', fn: () => (G.hooks.decorate ? G.hooks.decorate(w) : null), cond: () => S.chapter >= 2 && !w.near_bed });
+    w.interact(8, 6, { r: 9, label: 'Decorate here', fn: () => (G.hooks.decorate ? G.hooks.decorate(w) : null), cond: () => S.chapter >= 2 });
     // Coach Hollow haunts the middle of the room until he joins
     if (!flag('met_hollow')) {
       const a = w.npc('hollow', 8, 4.4, { spec: CAST.hollow.spec, name: 'Coach Hollow', face: 0, r: 0 });
@@ -100,7 +100,7 @@ export const diner = {
     } else {
       w.npc('maple', 9, 1.9, { ...NPCS.maple, face: 0, r: 3.7, label: fixed ? 'Order a game-day meal' : 'Talk to Maple', talk: () => story.maple(w) });
     }
-    if (G.hooks.dinerGuests) G.hooks.dinerGuests(w);
+    w.interact(13.6, 7.9, { r: 1.6, label: 'Sit and chat with a teammate', cond: () => !!S.town.diner && S.roster.length > 1, fn: () => (G.hooks.chat ? G.hooks.chat(w) : null) });
     w.exit(4, RD - 0.5, 3, 0.9, 'hollow', 61.9, 23.6, { dir: Math.PI, arrow: false });
   },
 };

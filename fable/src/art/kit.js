@@ -215,7 +215,7 @@ export const SKIES = {
   dusk: { sky: 0xe98a5b, fog: 0xd97b5a, hemiSky: 0xffc59a, hemiGround: 0x6a4a6e, hemi: 1.25, sun: 0xffa66b, sunI: 1.9, sunDir: [-0.9, 0.55, 0.3], amb: 0.0 },
   night: { sky: 0x1b1836, fog: 0x1b1836, hemiSky: 0x6f78c8, hemiGround: 0x2a2244, hemi: 1.05, sun: 0x9fb4ff, sunI: 0.75, sunDir: [0.4, 1, 0.5], amb: 0.0 },
   indoor: { sky: 0x2b1a33, fog: 0x2b1a33, hemiSky: 0xfff0d8, hemiGround: 0xa07a66, hemi: 1.7, sun: 0xfff2dc, sunI: 1.5, sunDir: [-0.3, 1, 0.6], amb: 0.0 },
-  snow: { sky: 0xcfe6f5, fog: 0xd8ecf8, hemiSky: 0xffffff, hemiGround: 0x9fb8d8, hemi: 1.7, sun: 0xfff6e8, sunI: 2.0, sunDir: [-0.5, 1, 0.4], amb: 0.0 },
+  snow: { sky: 0xcfe6f5, fog: 0xd8ecf8, hemiSky: 0xf4faff, hemiGround: 0x9fb8d8, hemi: 1.25, sun: 0xfff2e0, sunI: 1.55, sunDir: [-0.5, 1, 0.4], amb: 0.0 },
   neon: { sky: 0x140f2e, fog: 0x1a1140, hemiSky: 0x8c7bff, hemiGround: 0x3b1d5e, hemi: 1.2, sun: 0xff8ad8, sunI: 0.9, sunDir: [0.3, 1, 0.4], amb: 0.0 },
   bowl: { sky: 0x0e0b24, fog: 0x15103a, hemiSky: 0x8f9bff, hemiGround: 0x2a1f55, hemi: 1.25, sun: 0xcfd8ff, sunI: 1.3, sunDir: [-0.2, 1, 0.35], amb: 0.0 },
 };

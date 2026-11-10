@@ -467,7 +467,7 @@ export class World extends Mode {
 
   _arrow(x, z, dir) {
     const a = M(cone(0.42, 0.7, 4), flat(0xffd45a), x, 0.06, z, { shadow: false });
-    a.rotation.set(Math.PI / 2, 0, -dir);
+    a.rotation.set(Math.PI / 2, 0, Math.PI + dir);      // dir: 0 = north, π/2 = east, π = south
     a.scale.set(1, 1, 0.25);
     a.userData.keep = true;
     this.dynRoot.add(a);
@@ -820,6 +820,10 @@ export class World extends Mode {
       }
       if (c.slide) {
         const sp = 11;
+        if (ice.cell) {
+          const snap = (v, o) => o + (Math.floor((v - o) / ice.cell) + 0.5) * ice.cell;
+          if (c.slide.x) c.z = damp(c.z, snap(c.z, ice.z - ice.d / 2), 18, dt); else c.x = damp(c.x, snap(c.x, ice.x - ice.w / 2), 18, dt);
+        }
         const px = c.x, pz = c.z;
         this.moveCircle(c, c.slide.x * sp * dt, c.slide.z * sp * dt, c.r, c.small);
         const moved = Math.hypot(c.x - px, c.z - pz);
@@ -1074,7 +1078,7 @@ export class World extends Mode {
   }
   _updateHud() {
     const S = G.S;
-    const sig = `${S.coins}|${S.parts}|${G.input.device}|${S.questLog.length}|${JSON.stringify(S.quests)}|${S.roster.length}|${this.solo ? 1 : 0}|${flag('has_ball')}`;
+    const sig = `${S.coins}|${S.parts}|${G.input.device}|${S.questLog.length}|${JSON.stringify(S.quests)}|${S.roster.length}|${this.solo ? 1 : 0}|${flag('has_ball')}|${G.ui.busy}`;
     if (sig === this._hudSig && !this._hudDirty) return;
     this._hudSig = sig; this._hudDirty = false;
     const q = trackedQuest();
@@ -1085,6 +1089,7 @@ export class World extends Mode {
     } else this.hQuest.classList.add('hidden');
     this.hWallet.innerHTML = S.chapter > 0 || S.coins || S.parts ? `<div class="chip">🪙 ${S.coins}</div><div class="chip">🔩 ${S.parts}</div>` : '';
     const k = (a) => G.ui.key(a);
+    this.hHelp.style.visibility = G.ui.busy ? 'hidden' : '';
     const bits = [`${k('move')} move`, `${k('b')} run`, `${k('a')} talk`];
     if (flag('has_ball')) bits.push(`${k('x')} throw`);
     if (this.solo) bits.push(`${k('y')} regroup`);

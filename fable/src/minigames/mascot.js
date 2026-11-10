@@ -344,7 +344,11 @@ export default class MascotMayhem extends Minigame {
   _endRound() {
     const rd = this.round, p = this.player;
     const alive = this.cs.filter((c) => !c.out);
-    for (const c of alive) { c.place = 1; c.cheer = true; }
+    for (const c of alive) {
+      c.place = 1; c.cheer = true;
+      const i = this.cs.indexOf(c);
+      this.tags[i].innerHTML = `${c.icon} ${c.name}<span class="pl">${p.out && !c.isPlayer ? 'still in' : '1st'}</span>`;
+    }
     const place = p.out ? p.place : 1;
     const surv = Math.round(2 * (p.out ? p.outAt : Math.min(this.roundT, rd.time)));
     const beatCheese = this.cheese.out && (!p.out || this.cheese.outAt < p.outAt);
@@ -633,7 +637,7 @@ export default class MascotMayhem extends Minigame {
     }
     const cn = shot.cn;
     shot.t -= dt;
-    cn.decal.material.opacity = 0.2 + Math.abs(Math.sin(shot.t * 16)) * 0.3;
+    cn.decal.material.opacity = 0.3 + Math.abs(Math.sin(shot.t * 16)) * 0.35;
     cn.barrel.rotation.z = Math.sin(shot.t * 50) * 0.05;
     if (shot.t <= 0) {
       cn.decal.material.opacity = 0;

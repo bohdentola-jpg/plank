@@ -15,7 +15,7 @@ function squad(level, members) {
   return members.map((m, i) => {
     const base = ROLE_BASE[ORDER[i]];
     const stats = {};
-    for (const k of Object.keys(base)) stats[k] = Math.min(10.5, base[k] + level * 0.36 + ((m.plus && m.plus[k]) || 0));
+    for (const k of Object.keys(base)) stats[k] = Math.min(10.2, base[k] + level * 0.31 + ((m.plus && m.plus[k]) || 0));
     stats.sta = 70 + level * 6;
     return { name: m.name, spec: m.spec, stats, n: m.n ?? (i + 1) * 11 };
   });

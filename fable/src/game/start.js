@@ -194,6 +194,9 @@ export async function startGame(params) {
     import('../minigames/index.js'),
     import('../battle/index.js'),
     import('./cutscenes.js'),
+    import('./menu.js'),
+    import('./town.js'),
+    import('./story2.js'),
     import('./hooks.js'),
   ]);
   for (const m of mods) if (m.install) m.install();
@@ -225,6 +228,7 @@ export async function startGame(params) {
     G.S = newSave();
     G.S.area = 'hollow';
     applyPreset(params.get('preset') || 'team');
+    if (params.has('tod')) G.S.tod = params.get('tod');
     const world = new World();
     G.world = world;
     G.push(world, { area: params.get('area') || 'hollow', x: params.has('x') ? parseFloat(params.get('x')) : undefined, z: params.has('z') ? parseFloat(params.get('z')) : undefined });

@@ -2,6 +2,7 @@
 // 90-second shifts on normal and hard; we check the result and grab screenshots.
 //   node tools/fable-qa.cjs --script tools/fable-scenarios/mg-snack.cjs            (smoke + screenshots)
 //   node tools/fable-qa.cjs --script tools/fable-scenarios/mg-snack.cjs --tune     (score table across skills/seeds)
+//   … --realtime  (un-stepped rAF run through the intro card and countdown)
 module.exports = async (h, args) => {
   const tune = args.includes('--tune');
   const play = async (query, shots = {}) => {
@@ -23,6 +24,23 @@ module.exports = async (h, args) => {
     if (!res.extra || !(res.extra.served >= 0)) throw new Error(`${label}: missing extra`);
     console.log(`${label}: score ${res.score} medal ${res.medal} served ${res.extra.served} lost ${res.extra.lost}`);
   };
+
+  // optional: real-time pass (no frame stepping) — intro card → Play → countdown → gameplay under rAF
+  if (args.includes('--realtime')) {
+    await h.open('mg=snack');
+    const base = h.page.url().split('?')[0];
+    await h.page.goto(`${base}?mg=snack&auto=1&skill=0.8&seed=3`);
+    await h.page.waitForFunction(() => window.__fable && window.__fable.G.top(), null, { timeout: 60000 });
+    await h.page.waitForSelector('.mg-card .btn', { timeout: 20000 });
+    await h.page.keyboard.press('Enter');
+    await h.page.waitForFunction(() => window.__fable.G.top() && window.__fable.G.top().state === 'play', null, { timeout: 30000 });
+    await h.page.waitForTimeout(5000);
+    await h.page.screenshot({ path: `${h.qaDir}/mg-snack-realtime.png` });
+    const info = await h.ev(() => { const m = window.__fable.G.top(); return { state: m.state, elapsed: +m.elapsed.toFixed(1) }; });
+    console.log('realtime:', JSON.stringify(info));
+    if (info.state !== 'play' || !(info.elapsed > 0.5)) throw new Error('realtime run did not progress');
+    return;
+  }
 
   if (tune) {
     for (const mode of ['', '&hard=1']) {

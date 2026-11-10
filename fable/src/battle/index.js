@@ -14,6 +14,7 @@ export async function runBattle(cfg) {
     const story = await import('../game/story.js');
     cfg.onFirstTD = () => story.firstTouchdownCut();
   }
+  if (G.debug.autoWin) { if (cfg.onFirstTD) await cfg.onFirstTD(); return { won: true, score: [7, 0], stats: {}, skipped: true }; }
   let res;
   for (;;) {
     res = await G.run(new Battle(), cfg);

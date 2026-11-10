@@ -79,13 +79,14 @@ export class Minigame extends Mode {
     const pick = await G.ui.panel({
       title: `${m.icon || ''} ${m.title}${this.hard ? ' — HARD' : ''}`, closable: false, cls: 'mg-card',
       build: (body, api) => {
-        body.append(
+        body.append(...[
           el('p.mg-blurb', { html: m.blurb }),
           el('div.mg-controls', (m.controls || []).map(([a, t]) => el('div', { html: `${G.ui.key(a)} ${t}` }))),
           m.goals ? el('div.mg-goals', { html: `🥉 ${m.goals[0]} · 🥈 ${m.goals[1]} · 🥇 ${m.goals[2]} ${m.scoreLabel || ''}${m.lower ? ' (lower is better)' : ''}${best !== undefined ? ` — your best: <b>${best}</b>` : ''}` }) : null,
           el('div.row.center', { style: { marginTop: '0.9em' } },
             el('button.btn.focusable.first', { text: 'Play!', onclick: () => api.close('play') }),
-            this.opts.noLeave ? null : el('button.btn.alt.focusable', { text: 'Not now', onclick: () => api.close('leave') })));
+            this.opts.noLeave ? null : el('button.btn.alt.focusable', { text: 'Not now', onclick: () => api.close('leave') })),
+        ].filter(Boolean));
       },
     });
     if (pick === 'leave') { this.state = 'over'; G.leave({ quit: true, won: false, score: 0, medal: 0 }); return; }
@@ -130,7 +131,7 @@ export class Minigame extends Mode {
     const pick = await G.ui.panel({
       title: result.title || (won ? 'Nice!' : 'Time!'), closable: false, cls: 'mg-card',
       build: (body, api) => {
-        body.append(
+        body.append(...[
           el('div.mg-result', el('div.big', String(score)), el('div', m.scoreLabel || 'points')),
           m.goals || result.fail ? el('div.mg-medal', medal ? MEDALS[medal] : (result.fail ? (result.failText || 'No medal this time') : 'No medal this time')) : null,
           isBest && prev !== undefined ? el('div.tag', 'NEW BEST') : null,
@@ -138,7 +139,8 @@ export class Minigame extends Mode {
           rewards.length ? el('div.mg-rewards', rewards.map((r) => el('div.toastlike', { html: r }))) : null,
           el('div.row.center', { style: { marginTop: '0.9em' } },
             el('button.btn.focusable.first', { text: 'Done', onclick: () => api.close('done') }),
-            this.opts.noRetry ? null : el('button.btn.alt.focusable', { text: 'Play again', onclick: () => api.close('again') })));
+            this.opts.noRetry ? null : el('button.btn.alt.focusable', { text: 'Play again', onclick: () => api.close('again') })),
+        ].filter(Boolean));
       },
     });
     if (pick === 'again') { out.again = true; }

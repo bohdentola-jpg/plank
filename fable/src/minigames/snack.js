@@ -201,10 +201,10 @@ export default class SnackShackRush extends Minigame {
     id: 'snack', title: 'Snack Shack Rush', icon: '🌭',
     blurb: 'It\'s <b>halftime</b> and the whole stadium is hungry. Read each fan\'s order, load your tray (three items max) and serve them before they storm off. Hot dogs take time on the grill — and burn if you forget them. Stop the soda needle in the green.',
     controls: [['move', 'run the kitchen'], ['a', 'grab · cook · pour · serve'], ['b', 'toss the last tray item']],
-    scoreLabel: 'points', goals: [180, 450, 760], hasHard: true, music: 'minigame',
+    scoreLabel: 'points', goals: [180, 450, 760], goalsHard: [150, 360, 620], hasHard: true, music: 'minigame',
   };
   // hard mode is scored on its own scale (thinner patience, bigger orders)
-  get meta() { return this.hard ? HARD_META : SnackShackRush.meta; }
+  get meta() { const m = SnackShackRush.meta; return this.hard ? (this._hardMeta || (this._hardMeta = { ...m, goals: m.goalsHard })) : m; }
 
   // ================================================================ setup
   setup(opts) {
@@ -389,6 +389,7 @@ export default class SnackShackRush extends Minigame {
     G.audio.sfx('whistle');
     G.ui.banner('SECOND HALF!', 'Everybody back to their seats', { dur: 1.2, cls: 'small' });
     for (const c of this.customers) if (c.state === 'in' || c.state === 'wait') { this._dropBubble(c); c.state = 'out'; c.leg = 0; }
+    if (this.pour) this.pour.st.obj.userData.cup.visible = false;
     this.pour = null;
     this.elMeter.style.display = 'none';
     this.elPrompt.style.display = 'none';
@@ -906,7 +907,6 @@ export default class SnackShackRush extends Minigame {
   }
 }
 
-const HARD_META = { ...SnackShackRush.meta, goals: [150, 360, 620] };
 const _cooked = new THREE.Color(0xb5452f);
 const _dark = new THREE.Color(0x3a2a26);
 const _burnt = new THREE.Color(0x2b2226);

@@ -503,7 +503,7 @@ export class Battle extends Mode {
     if (this.size < 5) { for (const e of this.def) if (e.job === 'rush') e.rushDelay = this.cfg.rushDelay ?? 2.2; }
   }
   /** IQ of whoever is on defence: the CPU's, or a fixed value for your AI teammates. */
-  defIq() { return this.poss === YOU ? this.iq : 0.62; }
+  defIq() { return this.poss === YOU ? this.iq : 0.72; }
   offIq() { return this.poss === CPU ? this.iq : 0.62; }
 
   // ---------------------------------------------------------------- snap
@@ -1300,7 +1300,7 @@ export class Battle extends Mode {
     if (Math.hypot(q.vx, q.vz) > 4) err *= 1.3;
     if (this.has(q, 'dizzy')) err *= 1.8;
     if (q.team === CPU && this.lightsOut > 0) err *= 2.1;
-    if (q.team === CPU) err *= 1.5 - this.iq * 0.6;
+    if (q.team === CPU) err *= 1.7 - this.iq * 0.6;
     const ea = rand(TAU), em = Math.abs((Math.random() + Math.random() + Math.random()) / 1.5 - 1) * err * 1.6;
     ax += Math.cos(ea) * em; az += Math.sin(ea) * em;
     q.hasBall = false;

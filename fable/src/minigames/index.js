@@ -22,7 +22,7 @@ const REWARDS = {
   blitz: { coins: [15, 30, 50], first: { 2: { play: 'flea_flicker' }, 3: { play: 'hook_ladder' } }, hard: { 2: { play: 'statue' } } },
   snack: { coins: [20, 40, 70], first: { 1: { recipe: 'moonpie' }, 2: { recipe: 'chili' } }, hard: { 2: { recipe: 'cocoa_float' } } },
   golf: { coins: [15, 30, 50], first: { 1: { gear: 'lucky_tee' }, 2: { gear: 'wind_sock' } }, hard: { 2: { gear: 'golden_arm' } } },
-  mascot: { coins: [15, 30, 50], first: { 1: { costume: 'acorn' }, 2: { costume: 'pumpkin' }, 3: { recruit: 'cheese' } }, hard: { 1: { costume: 'corn' } } },
+  mascot: { coins: [15, 30, 50], first: { 1: { costume: 'acorn' }, 2: { recruit: 'cheese' }, 3: { costume: 'pumpkin' } }, hard: { 1: { costume: 'corn' } } },
   lights: { coins: [10, 20, 30], first: { 1: { clue: 0, parts: 2 }, 2: { clue: 1, parts: 4 }, 3: { clue: 2, parts: 6 } }, hard: { 1: { clue: 3, gear: 'moth_goggles' } } },
   fishing: { coins: [0, 0, 0] },
 };

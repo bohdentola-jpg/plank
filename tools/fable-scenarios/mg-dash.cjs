@@ -2,6 +2,7 @@
 // against Zip; we check the result, exercise real input, and grab screenshots.
 //   node tools/fable-qa.cjs --script tools/fable-scenarios/mg-dash.cjs            (smoke + screenshots)
 //   node tools/fable-qa.cjs --script tools/fable-scenarios/mg-dash.cjs --tune     (times / win rates across skill and ease)
+//   … --realtime  (un-stepped rAF run through the intro card and countdown)
 module.exports = async (h, args) => {
   const tune = args.includes('--tune');
   const play = async (query, shots = {}) => {
@@ -23,6 +24,23 @@ module.exports = async (h, args) => {
     console.log(`${label}: time ${res.score}s  won=${res.won}  medal ${res.medal}  zip ${res.extra.zip}s  hits ${res.extra.hits}/${res.extra.zipHits}`);
   };
 
+  // optional: real-time pass (no frame stepping) — intro card → Play → countdown → gameplay under rAF
+  if (args.includes('--realtime')) {
+    await h.open('mg=dash');
+    const base = h.page.url().split('?')[0];
+    await h.page.goto(`${base}?mg=dash&auto=1&skill=0.8&seed=3`);
+    await h.page.waitForFunction(() => window.__fable && window.__fable.G.top(), null, { timeout: 60000 });
+    await h.page.waitForSelector('.mg-card .btn', { timeout: 20000 });
+    await h.page.keyboard.press('Enter');
+    await h.page.waitForFunction(() => window.__fable.G.top() && window.__fable.G.top().state === 'play', null, { timeout: 30000 });
+    await h.page.waitForTimeout(5000);
+    await h.page.screenshot({ path: `${h.qaDir}/mg-dash-realtime.png` });
+    const info = await h.ev(() => { const m = window.__fable.G.top(); return { state: m.state, elapsed: +m.elapsed.toFixed(1) }; });
+    console.log('realtime:', JSON.stringify(info));
+    if (info.state !== 'play' || !(info.elapsed > 0.5)) throw new Error('realtime run did not progress');
+    return;
+  }
+
   if (tune) {
     for (const mode of ['', '&hard=1']) {
       for (const skill of [0.3, 0.55, 0.8, 1]) {
@@ -37,11 +55,17 @@ module.exports = async (h, args) => {
         }
       }
     }
+    // nobody at the controls: should be slower than the bronze time
+    for (const mode of ['', '&hard=1']) {
+      const times = [];
+      for (const seed of [1, 2, 3, 4, 5, 6]) times.push((await play(`mg=dash&seed=${seed}${mode}`)).score);
+      console.log(`${mode ? 'HARD  ' : 'NORMAL'} no input: ${times.join(', ')}`);
+    }
     return;
   }
 
   // 1) a clean race with screenshots
-  check(await play('mg=dash&auto=1&skill=0.9&seed=3&shadows', { 60: 'mg-dash-1.png', 480: 'mg-dash-2.png', 1080: 'mg-dash-3.png' }), 'normal');
+  check(await play('mg=dash&auto=1&skill=0.9&seed=3&shadows', { 60: 'mg-dash-1.png', 480: 'mg-dash-2.png', 1080: 'mg-dash-3.png', 1620: 'mg-dash-4.png', 1680: 'mg-dash-5.png' }), 'normal');
   // 2) hard course
   check(await play('mg=dash&auto=1&skill=0.9&seed=4&hard=1&shadows', { 900: 'mg-dash-hard.png' }), 'hard');
   // 3) story call shape (rival + ease) with a clumsy runner — must still finish
