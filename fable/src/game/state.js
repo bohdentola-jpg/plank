@@ -1,7 +1,7 @@
 // Small helpers over the save state: flags, wallet, inventory, roster, quests.
 import { G } from '../core/game.js';
 import { writeSave } from '../core/save.js';
-import { CAST, charState, maxStamina, normalizeSquads, displayName } from '../data/cast.js';
+import { CAST, charState, maxStamina, normalizeSquads, autoSquads, displayName } from '../data/cast.js';
 import { ITEMS } from '../data/items.js';
 import { QUESTS } from '../data/quests.js';
 
@@ -43,8 +43,8 @@ export function recruit(id, quiet) {
   if (S.roster.includes(id)) return false;
   S.roster.push(id);
   charState(id).st = maxStamina(id);
-  for (const sq of S.squads) if (sq.length < 5 && !sq.includes(id)) sq.push(id);
-  normalizeSquads();
+  if (!S.flags.squads_custom) autoSquads();
+  else { for (const sq of S.squads) if (sq.length < 5 && !sq.includes(id)) sq.push(id); normalizeSquads(); }
   if (!quiet) { G.audio.sfx('recruit'); G.ui.banner(`${displayName(id)} joined!`, CAST[id].title, { dur: 2.2, cls: 'small' }); }
   return true;
 }

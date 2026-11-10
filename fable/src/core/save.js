@@ -16,7 +16,7 @@ export function newSave() {
     roster: ['captain'],
     chars: {},           // id → { lv, xp, st, gear, bond, hang }
     squads: [['captain'], ['captain']],
-    offSquad: 0, defSquad: 0,
+    offSquad: 0, defSquad: 1,
     plays: [], defPlays: [],
     customPlays: [],
     town: { diner: 0, arcade: 0, field: 0, stadium: 0 },

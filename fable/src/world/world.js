@@ -498,8 +498,7 @@ export class World extends Mode {
   // ================================================================ party
   _spawnParty(x, z) {
     const S = G.S;
-    const ids = ['captain'];
-    for (const id of S.squads[0]) if (id !== 'captain' && S.roster.includes(id) && ids.length < 5) ids.push(id);
+    const ids = this._partyIds();
     const FAN = [[0, 0], [-1.25, 0.5], [1.25, 0.5], [-2.3, 1.0], [2.3, 1.0]];
     this.party = ids.map((id, i) => {
       const ch = new Character(teamSpec(id));
@@ -516,12 +515,18 @@ export class World extends Mode {
     this.partyIds = ids.join(',');
   }
 
+  _partyIds() {
+    const S = G.S;
+    const ids = ['captain'];
+    for (const id of [...S.squads[0], ...S.squads[1], ...S.roster]) if (!ids.includes(id) && S.roster.includes(id) && ids.length < 5) ids.push(id);
+    return ids;
+  }
+
   /** Rebuild followers if the squad changed (after recruiting / editing squads / uniforms). */
   refreshParty(force) {
     if (!this.root) return;
     const S = G.S;
-    const ids = ['captain'];
-    for (const id of S.squads[0]) if (id !== 'captain' && S.roster.includes(id) && ids.length < 5) ids.push(id);
+    const ids = this._partyIds();
     const sig = ids.join(',') + JSON.stringify(S.team) + S.captain.species;
     if (!force && sig === this._partySig) return;
     this._partySig = sig;

@@ -191,9 +191,34 @@ export async function startGame(params) {
   G.hooks = G.hooks || {};
   installSpeakers();
   const mods = await Promise.all([
+    import('../minigames/index.js'),
+    import('../battle/index.js'),
+    import('./cutscenes.js'),
     import('./hooks.js'),
   ]);
   for (const m of mods) if (m.install) m.install();
+
+  if (params.has('mg')) {
+    // QA shortcut: launch one minigame directly.  ?test&mg=snack&hard=1
+    G.S = newSave();
+    applyPreset(params.get('preset') || 'team');
+    const { MINIGAMES } = mods[0];
+    const mod = await MINIGAMES[params.get('mg')].load();
+    const opts = { hard: params.has('hard'), noLeave: true };
+    for (const [k, v] of params) if (!['mg', 'hard', 'test', 'preset', 'shadows', 'dialog'].includes(k)) opts[k] = isNaN(parseFloat(v)) ? v : parseFloat(v);
+    G.push(new mod.default(), opts).then((r) => { G.debug.lastResult = r; });
+    return;
+  }
+
+  if (params.has('battle')) {
+    // QA shortcut: jump into a battle.  ?test&battle=gnomes&kind=match&side=off&auto=1
+    G.S = newSave();
+    applyPreset(params.get('preset') || 'team');
+    if (params.has('auto')) G.debug.auto = true;
+    const cfg = { team: params.get('battle'), kind: params.get('kind') || 'drive', side: params.get('side') || 'off', venue: params.get('venue') || 'backyard', drives: parseInt(params.get('drives') || '2', 10), start: params.has('start') ? parseFloat(params.get('start')) : undefined, tod: params.get('tod') || undefined, tutorial: params.get('tutorial') || undefined };
+    G.hooks.battle(cfg).then((r) => { G.debug.lastResult = r; });
+    return;
+  }
 
   if (params.has('area') || params.has('preset')) {
     // QA shortcut:  ?test&area=borough&x=40&z=20&preset=team

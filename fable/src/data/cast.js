@@ -203,3 +203,21 @@ export function normalizeSquads() {
     S.squads[q] = sq.slice(0, 5);
   }
 }
+
+/** Build an offence-minded squad 1 and a defence-minded squad 2 from whoever you have. */
+export function autoSquads() {
+  const S = G.S;
+  const best = (slots) => {
+    const left = S.roster.slice();
+    const out = [];
+    for (const slot of slots) {
+      if (!left.length) break;
+      let bi = 0, bs = -1;
+      left.forEach((id, k) => { const sc = (CAST[id].pos[slot] || 0) * 10 + (CAST[id].role === slot ? 4 : 0) + (id === 'captain' ? 1 : 0); if (sc > bs) { bs = sc; bi = k; } });
+      out.push(left.splice(bi, 1)[0]);
+    }
+    return out;
+  };
+  S.squads = [best(OFF_SLOTS), best(DEF_SLOTS)];
+  S.offSquad = 0; S.defSquad = 1;
+}

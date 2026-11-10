@@ -96,9 +96,9 @@ export const diner = {
     w.put('jukebox', 1.4, 1.4, {});
     w.interact(1.6, 2.5, { r: 1.4, label: 'Poke the jukebox', fn: async () => { G.audio.sfx('ding'); const songs = ['town', 'borough', 'indoors', 'fair', 'frost', 'neon']; const s = songs[(S.seen.juke = ((S.seen.juke || 0) + 1)) % songs.length]; G.audio.music(s); G.ui.toast(`♪ Now playing: <b>${s}</b>`); } });
     if (!S.roster.includes('waffle')) {
-      w.npc('waffle', 9, 1.8, { spec: { ...CAST.waffle.spec, shirt: 0xfffaf0, hat: 'chef', acc: ['apron'] }, name: 'Waffle', face: 0, mark: S.roster.includes('pip') && S.roster.includes('zip') ? '!' : null, r: 3.2, talk: () => story.waffle(w) });
+      w.npc('waffle', 9, 1.8, { spec: { ...CAST.waffle.spec, shirt: 0xfffaf0, hat: 'chef', acc: ['apron'] }, name: 'Waffle', face: 0, mark: S.roster.includes('pip') && S.roster.includes('zip') ? '!' : null, r: 3.7, talk: () => story.waffle(w) });
     } else {
-      w.npc('maple', 9, 1.9, { ...NPCS.maple, face: 0, r: 3.2, label: fixed ? 'Order a game-day meal' : 'Talk to Maple', talk: () => story.maple(w) });
+      w.npc('maple', 9, 1.9, { ...NPCS.maple, face: 0, r: 3.7, label: fixed ? 'Order a game-day meal' : 'Talk to Maple', talk: () => story.maple(w) });
     }
     if (G.hooks.dinerGuests) G.hooks.dinerGuests(w);
     w.exit(4, RD - 0.5, 3, 0.9, 'hollow', 61.9, 23.6, { dir: Math.PI, arrow: false });
