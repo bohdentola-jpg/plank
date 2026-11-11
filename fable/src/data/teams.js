@@ -11,11 +11,11 @@ const ORDER = ['QB', 'LINE', 'WR', 'WR', 'BACK'];
 export const CPU_OFF = ['QB', 'LINE', 'WR1', 'WR2', 'BACK'];
 export const CPU_DEF = ['S', 'RUSH', 'CB1', 'CB2', 'LB'];
 
-function squad(level, members) {
+function squad(level, members, cap = 10.2) {
   return members.map((m, i) => {
     const base = ROLE_BASE[ORDER[i]];
     const stats = {};
-    for (const k of Object.keys(base)) stats[k] = Math.min(10.2, base[k] + level * 0.31 + ((m.plus && m.plus[k]) || 0));
+    for (const k of Object.keys(base)) stats[k] = Math.min(cap, base[k] + level * 0.31 + ((m.plus && m.plus[k]) || 0));
     stats.sta = 70 + level * 6;
     return { name: m.name, spec: m.spec, stats, n: m.n ?? (i + 1) * 11 };
   });
@@ -118,7 +118,8 @@ export const TEAMS = {
     name: 'The Graveyard Shift', short: 'SHIFT', color: '#6a5a9a', level: 11, iq: 0.9, xp: 250, coins: 0, rival: true,
     hazard: 'fog', tackleStatus: ['spook', 0.3],
     off: { pass: ['cpu_outs', 'cpu_deep', 'cpu_cross', 'cpu_slants'], run: ['cpu_dive', 'cpu_sweep'], runRate: 0.42 }, def: ['man_lock', 'zone_blanket', 'double_trouble', 'blitz_party', 'fence_line'],
-    squad: squad(10.6, [{ name: 'The Captain Before', spec: ghost(1, 0xc9b6f2), plus: { arm: 1 } }, { name: 'Tombstone', spec: { ...ghost(78, 0xb6c9f2), scale: 1.25 }, plus: { str: 2 } }, { name: 'Wisp', spec: ghost(80, 0xd9c6ff), plus: { spd: 1 } }, { name: 'Shiver', spec: ghost(87, 0xd9c6ff) }, { name: 'Moan', spec: ghost(35, 0xc9b6f2) }]),
+    // the finale gets a higher stat ceiling: by now your own squad has outgrown the usual one
+    squad: squad(11.3, [{ name: 'The Captain Before', spec: ghost(1, 0xc9b6f2), plus: { arm: 1 } }, { name: 'Tombstone', spec: { ...ghost(78, 0xb6c9f2), scale: 1.25 }, plus: { str: 2 } }, { name: 'Wisp', spec: ghost(80, 0xd9c6ff), plus: { spd: 1 } }, { name: 'Shiver', spec: ghost(87, 0xd9c6ff) }, { name: 'Moan', spec: ghost(35, 0xc9b6f2) }], 10.9),
   },
   // ---------------------------------------------------------------- Backyard Blitz (2 on 2)
   acorns: {

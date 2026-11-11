@@ -206,6 +206,24 @@ node tools/fable-qa.cjs --script tools/fable-scenarios/realtime.cjs     # un-ste
 node tools/fable-qa.cjs --script tools/fable-scenarios/docs.cjs         # regenerate docs/*.jpg
 ```
 
+**How hard is it?** `battle-manual.cjs` plays whole matches through the same
+virtual buttons a player presses, with one human-like timing error per snap,
+catch and tackle. With the party at roughly the level the story leaves it — and
+no items, no meals, random play calls — it wins:
+
+| Rival | decent timing (skill 0.7) | sloppy timing (skill 0.45) |
+| --- | --- | --- |
+| Cul-de-Sac Gnomes | 8 of 8 | 6 of 8 |
+| Harvest Haymakers | 8 of 8 | 5 of 8 |
+| Falls Flurries | 7 of 8 | 2 of 8 |
+| Boardwalk Buzzers | 8 of 8 | 3 of 8 |
+| The Graveyard Shift | 8 of 8 | 5 of 10 |
+
+Small samples — read them as "nearly always" and "about half", not as rates.
+The shape is deliberate: forgiving at the start, and from Frostbite Falls on a
+sloppy player needs to improve, level up, or eat before the game. (The Graveyard
+Shift's "8 of 8" was measured one notch either side of the shipped setting.)
+
 Handy URL parameters: `?area=<id>&preset=<start|team|ch2|fair|frost|neon|all>`
 jumps into the world at that point in the story, `?battle=<team>&kind=match`
 starts a game, `?mg=<id>` launches a minigame, `?gallery=team|foes|town|anim`
@@ -217,6 +235,7 @@ the QA tool.)
 Things the pitch gestures at that this build does not do: more than one save
 slot, rebinding controls, a second layer of stadium upgrades beyond the two
 shown (vendors and new residents are described rather than simulated), online
-anything. Balance was tuned against an autopilot plus a handful of scripted
-runs, not a room full of playtesters — the difficulty curve is the part most
-likely to want adjusting.
+anything. Balance was tuned against a button-pressing bot (table above), not a
+room full of playtesters, and the sound has only ever been heard by a headless
+browser — the difficulty curve and the music mix are the two things most likely
+to want a human ear.
