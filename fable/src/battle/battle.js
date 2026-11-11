@@ -81,6 +81,8 @@ export class Battle extends Mode {
     const idx = cfg.cpuIdx || [0, 1, 2, 3, 4];
     this.foes = idx.map((i) => { const m = this.team.squad[i]; const e = this._ent(CPU, `cpu${i}`, m.name, m.spec, m.stats); e.slot = i; return e; });
     this.iq = this.team.iq;
+    const lvs = [...new Set([...sq[0], ...sq[1]])].map((id) => charState(id).lv);
+    this.mateIq = 0.68 + Math.min(0.24, (lvs.reduce((a, b) => a + b, 0) / lvs.length - 1) * 0.034);
 
     // ball + catch rings + first-down marker
     this.ballMesh = buildFootball(1.5);
@@ -308,6 +310,7 @@ export class Battle extends Mode {
       if (this.auto) {
         const p = this.autoPlay(plays, side);
         for (const c of chips) if (c.can && chance(0.35)) this.armed.add(c.charId);
+        if (side === 'off' && this.down === 4 && !this.cfg.blitz && this.ltg - this.los > 2 && this.kickDist() <= 40) return { kick: 'fg' };
         if (side === 'off' && this.down === 4 && this.kind === 'match' && this.los < this.L - 26 && this.ltg - this.los > 3) return { kick: 'punt' };
         return side === 'off' ? { off: p.play, offId: p.id, def: cpuCall } : { off: cpuCall, def: p.play, defId: p.id };
       }
@@ -515,7 +518,7 @@ export class Battle extends Mode {
     if (this.size < 5) { for (const e of this.def) if (e.job === 'rush') e.rushDelay = this.cfg.rushDelay ?? 2.2; }
   }
   /** IQ of whoever is on defence: the CPU's, or a fixed value for your AI teammates. */
-  defIq() { return this.poss === YOU ? this.iq : 0.72; }
+  defIq() { return this.poss === YOU ? this.iq : this.mateIq; }
   offIq() { return this.poss === CPU ? this.iq : 0.62; }
 
   // ---------------------------------------------------------------- snap
@@ -1251,15 +1254,15 @@ export class Battle extends Mode {
     // the tackler's team may rub off a status
     const ts = d.team === CPU ? this.team.tackleStatus : null;
     if (ts && chance(ts[1])) this.give(c, ts[0], 2);
-    // strip / fumble
-    let strip = d.snatch ? 0.45 : (d.userCtl && dive ? 0.08 : 0);
+    const ret = c.team !== (this.poss === YOU ? YOU : CPU);
+    // strip / fumble (not on a return: that ball has changed hands once already)
+    const strip = ret ? 0 : d.snatch ? 0.45 : (d.userCtl && dive ? 0.08 : 0);
     if (d.snatch) d.snatch = false;
     if (strip && chance(strip) && !sack) {
       this.pop(d, 'STRIPPED!', 'big', 1.2);
       this.endPlay({ type: 'fumble', x: clamp(c.x, 1, this.L - 1), by: d });
       return;
     }
-    const ret = c.team !== (this.poss === YOU ? YOU : CPU);
     if (ret) this.endPlay({ type: 'int', x: clamp(c.x, 1, this.L - 1), by: c });
     else this.endPlay({ type: sack ? 'sack' : 'tackle', x: c.x, carrier: c, by: d });
   }
@@ -1361,6 +1364,17 @@ export class Battle extends Mode {
     b.x = lerp(b.from.x, b.to.x, k); b.z = lerp(b.from.z, b.to.z, k);
     b.y = lerp(b.from.y, 1.5, k) + Math.sin(k * Math.PI) * b.arc;
     if (k < 1) return;
+    // A press slightly AFTER the ball gets there still counts (as "late"): hold the
+    // resolution open for the length of the timing window before calling it.
+    if (!b.lateral && b.target && !this.auto) {
+      const late = b.t - b.T;
+      if (b.passer.team === YOU) {
+        if (this.catchPress === null && late < this.catchWindow(b.target).good) return;
+      } else {
+        const u = this.userEnt;
+        if (this.pickPress === null && u && u.team === YOU && this.free(u) && dist(u.x, u.z, b.to.x, b.to.z) < 2.3 && late < 0.17) return;
+      }
+    }
     // ---- arrival
     if (b.lateral) {
       const { from, to, risk, ladder } = b.lateral;
@@ -1451,7 +1465,7 @@ export class Battle extends Mode {
     this.ball.vy = 3; this.ball.bx = (at.x - this.ball.from.x) * 0.3; this.ball.bz = (at.z - this.ball.from.z) * 0.3;
     if (text) G.ui.pop(text, { x: this.wx(at.x), y: 2.4, z: this.wz(at.z) }, 'white', 1.0);
     void r;
-    this.endPlay({ type: 'inc' });
+    this.endPlay({ type: 'inc', why: text });
   }
 
   interception(d, byUser) {
@@ -1501,7 +1515,7 @@ export class Battle extends Mode {
   // ---------------------------------------------------------------- after the whistle
   async afterPlay(res, one) {
     this.stats.plays++;
-    if (G.debug.test) (G.debug.plays = G.debug.plays || []).push({ poss: this.poss, play: this.play.name, def: this.dplay.name, type: res.type, gain: res.x !== undefined ? +(res.x - this.los).toFixed(1) : 0, t: +this.playT.toFixed(1), down: this.down, snap: this.snapGrade });
+    if (G.debug.test) (G.debug.plays = G.debug.plays || []).push({ poss: this.poss, play: this.play.name, def: this.dplay.name, type: res.type, why: res.why, gain: res.x !== undefined ? +(res.x - this.los).toFixed(1) : 0, t: +this.playT.toFixed(1), down: this.down, snap: this.snapGrade });
     const youOff = this.poss === YOU;
     const offName = youOff ? G.S.team.name : this.team.short;
     // fatigue + bench recovery + status countdown
@@ -1516,7 +1530,7 @@ export class Battle extends Mode {
 
     if (res.type === 'td') {
       this.score[this.poss] += 6;
-      if (youOff) this.stats.tds++;
+      if (youOff) { this.stats.tds++; this.stats.yards += Math.round(this.L - this.los); }
       G.audio.sfx('td');
       this.field.cheer(true);
       for (const e of this.off) { if (e.downT <= 0) { e.ch.play('celebrate'); e.ch.setExpr('happy', 2); } }
@@ -1759,8 +1773,8 @@ export class Battle extends Mode {
   // ================================================================ tutorials (Coach Hollow talks you through it)
   async tutor(stage, res) {
     const T = this.cfg.tutorial;
-    this.tut = this.tut || {};
-    const once = (k) => { if (this.tut[k]) return false; this.tut[k] = true; return true; };
+    const seen = (G.session.tut = G.session.tut || {});
+    const once = (k) => { const key = `${T}:${k}`; if (seen[key]) return false; seen[key] = true; return true; };
     const say = (text) => G.ui.say('hollow', text);
     const k = (a) => G.input.glyph(a);
     if (T === 'offense') {

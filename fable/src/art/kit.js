@@ -137,7 +137,7 @@ export function disposeTree(root) {
     if (o.geometry && !cachedGeos.has(o.geometry)) o.geometry.dispose();
     const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
     for (const m of mats) {
-      if (cachedMats.has(m)) continue;
+      if (cachedMats.has(m) || m.userData.shared) continue;
       if (m.map && !m.map.userData.shared) m.map.dispose();
       m.dispose();
     }
@@ -283,8 +283,12 @@ export function glowSprite(color, size = 2, opacity = 0.6) {
 // can't be baked: textured, emissive, transparent or double-sided bits).
 let _vcMat = null, _vcMatDouble = null;
 export function vertexToon(double = false) {
-  if (double) return _vcMatDouble || (_vcMatDouble = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: GRADIENT, side: THREE.DoubleSide }));
-  return _vcMat || (_vcMat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: GRADIENT }));
+  if (double) {
+    if (!_vcMatDouble) { _vcMatDouble = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: GRADIENT, side: THREE.DoubleSide }); _vcMatDouble.userData.shared = true; }
+    return _vcMatDouble;
+  }
+  if (!_vcMat) { _vcMat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: GRADIENT }); _vcMat.userData.shared = true; }
+  return _vcMat;
 }
 const nonIndexed = new WeakMap();
 const _nm = new THREE.Matrix3();

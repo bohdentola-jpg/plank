@@ -152,7 +152,8 @@ coins and spare parts to projects on the notice board:
 - **Diner** — game-day meals that buff the whole team through your next match;
 - **Practice field** — the Route Lab (draw up your own pass plays) and free
   practice drives;
-- **Arcade** — replay any minigame, try hard modes, claim prizes;
+- **Arcade** — replay any minigame, try hard modes, claim prizes, and enter the
+  Hollow Cup (three random machines back to back);
 - **Stadium** — first the gate (exhibition games against teams you've beaten,
   and something to chase after dark), then the lights.
 
@@ -197,7 +198,9 @@ node tools/fable-qa.cjs --q "area=borough&preset=team" --steps 30 --shot borough
 node tools/fable-qa.cjs --script tools/fable-scenarios/chapter1.cjs     # opening → first match → scoreboard → bus
 node tools/fable-qa.cjs --script tools/fable-scenarios/chapters.cjs     # regions 2–4 and the finale (battles skipped)
 node tools/fable-qa.cjs --script tools/fable-scenarios/puzzles.cjs      # ice river, corn maze, breakers — with real stick input
-node tools/fable-qa.cjs --script tools/fable-scenarios/battle.cjs --team gnomes --kind match --n 5 --log
+node tools/fable-qa.cjs --script tools/fable-scenarios/battle.cjs --team gnomes --kind match --n 5 --log   # built-in autopilot
+node tools/fable-qa.cjs --script tools/fable-scenarios/battle-manual.cjs --team gnomes --n 5 --skill 0.5   # a bot pressing the real buttons
+bash tools/fable-scenarios/run-all.sh                                   # everything, with a pass/fail table
 node tools/fable-qa.cjs --script tools/fable-scenarios/realtime.cjs     # un-stepped: title → new game → walking
 node tools/fable-qa.cjs --script tools/fable-scenarios/docs.cjs         # regenerate docs/*.jpg
 ```

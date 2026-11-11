@@ -3,7 +3,7 @@
 // animal, ghost, gnome, scarecrow, snowman, robot or the lantern mascot, and
 // animated by a small pose-blending animator (no keyframe data).
 import * as THREE from 'three';
-import { toon, flat, lit, sphere, cyl, cone, capsule, torus, box, rbox, circle, M, group, canvasTex, textTex, glowSprite, shade } from './kit.js';
+import { toon, flat, lit, sphere, cyl, cone, capsule, torus, box, rbox, circle, M, group, canvasTex, textTex, glowSprite, shade, bake } from './kit.js';
 import { TAU, clamp, lerp, damp, rand, wrapAngle } from '../core/util.js';
 
 const BUILDS = {
@@ -97,7 +97,7 @@ const numCache = new Map();
 function numberMat(n, color, stroke) {
   const k = `${n}:${color}:${stroke}`;
   let m = numCache.get(k);
-  if (!m) { m = new THREE.MeshBasicMaterial({ map: numberTex(n, color, stroke), transparent: true, depthWrite: false }); numCache.set(k, m); }
+  if (!m) { m = new THREE.MeshBasicMaterial({ map: numberTex(n, color, stroke), transparent: true, depthWrite: false }); m.userData.shared = true; m.map.userData.shared = true; numCache.set(k, m); }
   return m;
 }
 
@@ -302,6 +302,7 @@ function addAccessories(ch, spec, B) {
     } else if (a === 'key') {
       body.add(M(cyl(0.03, 0.03, 0.2, 6), toon(0xd9a441), 0, 0.7, -0.4 * B.tz, { rx: Math.PI / 2 }));
       const k = M(torus(0.11, 0.03, 5, 12), toon(0xd9a441), 0, 0.7, -0.52 * B.tz);
+      k.userData.keep = true;
       body.add(k);
       ch.windKey = k;
     }
@@ -353,6 +354,7 @@ export class Character {
     else this._buildBiped(spec, B, sp, kind);
 
     addAccessories(this, spec, B);
+    this._bakeStatic();
 
     // animation state
     this.base = this.floaty ? 'float' : 'move';
@@ -755,6 +757,29 @@ export class Character {
     this.glow = gl;
   }
 
+  /**
+   * Collapse everything that never moves on its own (helmet, face, torso,
+   * each limb) into a handful of merged meshes — a character goes from ~40
+   * draw calls to ~15. Eyes, floppy ears, tails and wings stay separate.
+   */
+  _bakeStatic() {
+    const moving = new Set([this.head, this.armL, this.armR, this.legL, this.legR, this.tail, ...this.wings].filter(Boolean));
+    for (const limb of [this.armL, this.armR, this.legL, this.legR]) {
+      const end = limb && limb.userData.end;
+      if (!end || end === limb) continue;
+      // keep an attachment point where the hand / foot was (lanterns, rods…)
+      const anchor = new THREE.Group();
+      anchor.position.copy(end.position);
+      anchor.userData.keep = true;
+      limb.add(anchor);
+      limb.userData.end = anchor;
+      bake(limb);
+    }
+    bake(this.body, { skip: (o) => moving.has(o) });
+    if (this.hc) bake(this.hc, { skip: (o) => (o.userData.eye !== undefined && o !== this.hc) || !!o.userData.flop });
+    if (this.windKey) this.windKey.userData.keep = true;
+  }
+
   // ------------------------------------------------------------ animation API
   /** Set the looping base state: move | carry | block | float | sit | down | dead | talk | cheer | sad | fish | hold */
   setBase(name) { if (this.base !== name) { this.base = name; } return this; }
@@ -954,6 +979,7 @@ export class Character {
   }
 
   dispose() {
+    this.root.traverse((o) => { if (o.userData.baked && o.geometry) o.geometry.dispose(); });
     this.root.removeFromParent();
   }
 }

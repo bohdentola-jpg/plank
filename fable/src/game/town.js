@@ -318,7 +318,36 @@ const PRIZES = [
   { need: 9, item: ['cocoa', 3], text: '9 medals: three Thermoses of Cocoa' },
   { need: 12, decor: 'dummy', text: '12 medals: a Tackling Dummy' },
 ];
+/** The arcade's local tournament: three random machines back to back, medals add up. */
+async function hollowCup(w) {
+  const names = { snack: 'Snack Shack Rush', golf: 'Field Goal Golf', mascot: 'Mascot Mayhem', lights: 'Midnight Maintenance', dash: 'Lawn Dash' };
+  const pool = Object.keys(names).sort(() => Math.random() - 0.5).slice(0, 3);
+  await say(w, 'dot', `Tonight's bracket: *${pool.map((id) => names[id]).join('*, *')}*. One try each, medals add up. Seven or better takes the Cup.`);
+  let total = 0;
+  for (const id of pool) {
+    const r = await G.hooks.minigame(id, { noRetry: true });
+    if (!r || r.quit) { await say(w, 'dot', 'Walking out mid-bracket is a forfeit. House rules. Also my rules.'); return; }
+    total += r.medal || 0;
+  }
+  S().seen.cupBest = Math.max(S().seen.cupBest || 0, total);
+  if (total >= 7) {
+    await say(w, 'dot', `*${total} medal points!* That's the Cup. I've been polishing it for years with nobody to hand it to.`);
+    if (!flag('cup_won')) { setFlag('cup_won'); addDecor('trophy_cup'); }
+    addCoins(120);
+  } else if (total >= 4) {
+    await say(w, 'dot', `${total} medal points. Podium finish! The Cup wants seven.`);
+    addCoins(50);
+  } else {
+    await say(w, 'dot', `${total} medal points. The machines send their regards.`);
+    addCoins(10);
+  }
+  save();
+}
+
 export async function prizes(w) {
+  const pick0 = await G.ui.choose('dot', 'Prize counter! Also tournament desk. Also lost and found.', ['Claim prizes', 'Enter the Hollow Cup', 'Just looking'], { cancel: 2 });
+  if (pick0 === 2) return;
+  if (pick0 === 1) { await hollowCup(w); return; }
   let medals = 0;
   for (const id of Object.keys(MINIGAMES)) { const m = (S().best[id] || {}).medal || 0; medals += Math.min(3, m) + Math.max(0, m - 3); }
   await say(w, 'dot', `Prize counter! You've earned *${medals} medal points* across my machines. Hard-mode medals count double-ish.`);

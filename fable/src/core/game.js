@@ -15,6 +15,7 @@ import * as THREE from 'three';
 import { Input } from './input.js';
 import { AudioSys } from './audio.js';
 import { clamp, ease, el } from './util.js';
+import { disposeTree } from '../art/kit.js';
 
 /** Timers and tweens driven by game time (so pause, hit-stop and the QA harness all work). */
 export class Sched {
@@ -138,6 +139,7 @@ G.pop = function pop(result) {
   if (!m) return;
   m.active = false;
   try { m.exit(); } catch (e) { console.error(e); }
+  try { disposeTree(m.scene); } catch (e) { console.error(e); }   // free whatever GPU memory the mode still holds
   m.sched.clear();
   m.hud.remove();
   const top = G.top();

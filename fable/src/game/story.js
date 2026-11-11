@@ -314,6 +314,14 @@ export async function stadiumApproach(w) {
     await say(w, 'hollow', 'Sometimes you hear things under the bleachers. Raccoons, probably. Ambitious ones.');
     return;
   }
+  if (!S().wins.gnomes) {
+    // you scored (so the board is on) but haven't won the lawn yet
+    if (flag('stadium_tease')) return;
+    setFlag('stadium_tease');
+    await narr('The scoreboard is on. Nobody turned it on.');
+    await say(w, 'hollow', 'I see it. I do. One thing at a time, Captain — beat the Gnomes first. Then we find out who that board is talking to.');
+    return;
+  }
   if (flag('seen_scoreboard')) return;
   setFlag('seen_scoreboard');
   G.ui.cine(true);

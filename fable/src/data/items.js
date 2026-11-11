@@ -22,6 +22,7 @@ export const DECOR = {
   trophy_frost: { name: 'Icicle Trophy', icon: '🏆', prop: 'trophy', opts: { color: 0xbfe6f5 } },
   trophy_neon: { name: 'Neon Trophy', icon: '🏆', prop: 'trophy', opts: { color: 0xff5ad0 } },
   trophy_bowl: { name: 'The Midnight Bowl', icon: '🌙', prop: 'trophy', opts: { color: 0xcfd8ff } },
+  trophy_cup: { name: 'The Hollow Cup', icon: '🕹️', prop: 'trophy', opts: { color: 0xb07aff } },
   pumpkin: { name: 'Prize Pumpkin', icon: '🎃', prop: 'pumpkin', opts: { s: 1.4 }, price: 20 },
   dummy: { name: 'Tackling Dummy', icon: '🥊', prop: 'tackleDummy', opts: {}, price: 70 },
   gnome: { name: 'Captured Garden Gnome', icon: '🧙', prop: 'gnomeStatue', opts: {} },

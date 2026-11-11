@@ -2,7 +2,7 @@
 # Runs every Fourth & Fable QA scenario and prints a pass/fail table.
 #   bash tools/fable-scenarios/run-all.sh [quick]
 cd "$(dirname "$0")/../.." || exit 1
-list="chapter1 chapters puzzles encounter realtime mg-blitz"
+list="chapter1 chapters puzzles encounter realtime mg-blitz battle-manual"
 [ "$1" = "quick" ] || list="$list mg-snack mg-dash mg-golf mg-fishing mg-mascot mg-lights"
 fail=0
 for s in $list; do

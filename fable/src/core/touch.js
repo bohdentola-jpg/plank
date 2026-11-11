@@ -17,6 +17,7 @@ const CSS = `
 #touch .tb.y { right:44px; bottom:222px; }
 #touch .tb.x { right:138px; bottom:176px; }
 #touch .tb.m { right:14px; top:64px; width:54px; height:54px; line-height:46px; font-size:20px; }
+#touch.modal .pad, #touch.modal .tb.x, #touch.modal .tb.y, #touch.modal .tb.m { display:none; }
 #touch .lab { position:absolute; left:50%; top:100%; transform:translateX(-50%); font:800 11px/1.2 var(--font); color:#fff4dc; text-shadow:0 1px 0 #2b1a33; white-space:nowrap; margin-top:2px; }
 `;
 
@@ -63,6 +64,11 @@ export function installTouch() {
   }, { passive: false });
   for (const ev of ['touchend', 'touchcancel']) pad.addEventListener(ev, (e) => { for (const t of e.changedTouches) if (t.identifier === id) end(); }, { passive: false });
 
+  // menus and dialogue are tapped directly: get the stick out of their way
+  setInterval(() => {
+    const modal = !!(G.ui && (G.ui.layers.length || G.ui.dialogOpen));
+    if (modal !== root.classList.contains('modal')) { root.classList.toggle('modal', modal); if (modal) end(); }
+  }, 120);
   // show the controls the first time a finger lands anywhere
   window.addEventListener('touchstart', () => { root.classList.add('on'); G.input.device = 'touch'; }, { once: true, passive: true });
   // running is automatic on touch once the stick is pushed most of the way

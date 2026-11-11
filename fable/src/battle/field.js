@@ -2,7 +2,7 @@
 // plus that region's on-field hazard. World coordinates:
 //   x: 0 = your goal line … L = theirs (you attack +x); z: −HW (top) … +HW (bottom).
 import * as THREE from 'three';
-import { toon, lit, M, rbox, box, cyl, sphere, circle, lightRig, bake, glowSprite, FONT, canvasTex, roundRect } from '../art/kit.js';
+import { toon, lit, M, rbox, box, cyl, sphere, circle, lightRig, bake, glowSprite, FONT, canvasTex, roundRect, disposeTree } from '../art/kit.js';
 import { PROPS, fence as fenceProp, bunting } from '../art/props.js';
 import { Character } from '../art/characters.js';
 import { NPCS } from '../data/npcs.js';
@@ -207,7 +207,7 @@ export function buildField(scene, o) {
       const fw = root.userData.spin; void fw;
     },
     cheer(on) { for (const c of crowd) { if (on) c.play('celebrate', 1.2 + Math.random()); } },
-    dispose() { scene.remove(root); scene.remove(rig.sun, rig.sun.target, rig.hemi); },
+    dispose() { disposeTree(root); scene.remove(root); scene.remove(rig.sun, rig.sun.target, rig.hemi); },
   };
 }
 

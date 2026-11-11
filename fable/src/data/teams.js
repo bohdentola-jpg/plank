@@ -108,14 +108,14 @@ export const TEAMS = {
     squad: squad(8.2, [{ name: 'COIN-OP', spec: robot(8) }, { name: 'TILT', spec: robot(74, 0xffd45a, 'big') }, { name: 'PIXEL', spec: robot(82, 0xb6f08a) }, { name: 'SPRITE', spec: robot(86, 0xb6f08a) }, { name: 'JOYSTICK', spec: robot(31) }]),
   },
   buzzers: {
-    name: 'Boardwalk Buzzers', short: 'BUZZ', color: '#4a3ad6', level: 9, iq: 0.8, xp: 150, coins: 0, rival: true,
+    name: 'Boardwalk Buzzers', short: 'BUZZ', color: '#4a3ad6', level: 9, iq: 0.74, xp: 150, coins: 0, rival: true,
     hazard: 'flicker', tackleStatus: ['glitch', 0.3],
     off: { pass: ['cpu_outs', 'cpu_deep', 'cpu_cross', 'cpu_slants'], run: ['cpu_dive', 'cpu_sweep'], runRate: 0.42 }, def: ['man_lock', 'zone_blanket', 'double_trouble', 'blitz_party', 'fence_line'],
     squad: squad(9, [{ name: 'HI-SCORE', spec: { kind: 'robot', build: 'big', neon: 0xff5ad0, jersey: 0x4a3ad6, number: 1 }, plus: { arm: 1.4 } }, { name: 'TILT', spec: { kind: 'robot', build: 'huge', neon: 0xffd45a, jersey: 0x4a3ad6, number: 74 }, plus: { str: 1.5 } }, { name: 'TURBO', spec: { kind: 'robot', neon: 0x58e6ff, jersey: 0x4a3ad6, number: 80 }, plus: { spd: 1.2 } }, { name: 'COMBO', spec: { kind: 'robot', neon: 0x58e6ff, jersey: 0x4a3ad6, number: 88 } }, { name: 'BOSS', spec: { kind: 'robot', neon: 0xb6f08a, jersey: 0x4a3ad6, number: 32 }, plus: { str: 1 } }]),
   },
   // ---------------------------------------------------------------- the Midnight Bowl
   graveyard: {
-    name: 'The Graveyard Shift', short: 'SHIFT', color: '#6a5a9a', level: 11, iq: 0.9, xp: 250, coins: 0, rival: true,
+    name: 'The Graveyard Shift', short: 'SHIFT', color: '#6a5a9a', level: 11, iq: 0.84, xp: 250, coins: 0, rival: true,
     hazard: 'fog', tackleStatus: ['spook', 0.3],
     off: { pass: ['cpu_outs', 'cpu_deep', 'cpu_cross', 'cpu_slants'], run: ['cpu_dive', 'cpu_sweep'], runRate: 0.42 }, def: ['man_lock', 'zone_blanket', 'double_trouble', 'blitz_party', 'fence_line'],
     squad: squad(10.6, [{ name: 'The Captain Before', spec: ghost(1, 0xc9b6f2), plus: { arm: 1 } }, { name: 'Tombstone', spec: { ...ghost(78, 0xb6c9f2), scale: 1.25 }, plus: { str: 2 } }, { name: 'Wisp', spec: ghost(80, 0xd9c6ff), plus: { spd: 1 } }, { name: 'Shiver', spec: ghost(87, 0xd9c6ff) }, { name: 'Moan', spec: ghost(35, 0xc9b6f2) }]),
