@@ -4,9 +4,9 @@ cd /d "%~dp0"
 
 rem ---- find a Python that actually runs (test by executing, not by PATH lookup)
 set PY=
-py -V >/dev/null 2>/dev/null && set PY=py
-if not defined PY python -V >/dev/null 2>/dev/null && set PY=python
-if not defined PY python3 -V >/dev/null 2>/dev/null && set PY=python3
+py -V >nul 2>nul && set PY=py
+if not defined PY python -V >nul 2>nul && set PY=python
+if not defined PY python3 -V >nul 2>nul && set PY=python3
 
 if not defined PY (
   echo.
