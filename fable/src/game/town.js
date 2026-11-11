@@ -154,6 +154,7 @@ export async function bed(w) {
   const tod = free ? [S().tod, 'day', 'dusk', 'night'][p] : S().tod;
   await G.fadeOut();
   restAll();
+  G.session.beaten.clear();        // a night's sleep brings the roaming teams back out
   S().tod = tod;
   G.audio.sfx('item');
   w.rebuild();
@@ -244,6 +245,7 @@ export async function travel(w) {
   if (d.id === 'fair' && questActive('welcome_back')) { finishQuest('welcome_back'); startQuest('fair'); }
   if (d.id === 'frost' && !S().quests.frost) startQuest('frost');
   if (d.id === 'neon' && !S().quests.neon) startQuest('neon');
+  G.session.beaten.clear();        // and so does a bus ride
   await w.goto(d.id, d.at ? d.at[0] : undefined, d.at ? d.at[1] : undefined, { sfx: 'door' });
 }
 

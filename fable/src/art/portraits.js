@@ -59,7 +59,7 @@ export function portrait(key, spec, expr = 'open') {
     r.readRenderTargetPixels(rt, 0, 0, SIZE, SIZE, px);
     r.setRenderTarget(prevRT);
     r.setClearColor(prevColor, prevAlpha);
-    scene.remove(ch.root);
+    ch.dispose();
     const ctx = canvas.getContext('2d');
     const img = ctx.createImageData(SIZE, SIZE);
     for (let y = 0; y < SIZE; y++) {

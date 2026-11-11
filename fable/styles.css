@@ -214,3 +214,6 @@ p { margin: 0.3em 0; line-height: 1.35; font-weight: 600; }
 .party-strip .pm { width: 2.7em; }
 .party-strip img { width: 2.5em; height: 2.5em; border-radius: 50%; background: var(--gold); border: 0.14em solid var(--ink); display: block; margin: 0 auto; box-shadow: 0 0.14em 0 rgba(27,16,36,0.45); }
 .party-strip .bar { height: 0.46em; margin-top: 0.16em; background: rgba(27,16,36,0.55); }
+
+/* letterboxed scenes: put the HUD away */
+.cine-on .quest-box, .cine-on .wallet, .cine-on .party-strip, .cine-on .help-tag, .cine-on #prompt { display: none !important; }

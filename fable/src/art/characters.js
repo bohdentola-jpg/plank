@@ -3,7 +3,7 @@
 // animal, ghost, gnome, scarecrow, snowman, robot or the lantern mascot, and
 // animated by a small pose-blending animator (no keyframe data).
 import * as THREE from 'three';
-import { toon, flat, lit, sphere, cyl, cone, capsule, torus, box, rbox, circle, M, group, canvasTex, textTex, glowSprite, shade, bake } from './kit.js';
+import { toon, flat, lit, sphere, cyl, cone, capsule, torus, box, rbox, circle, plane, M, group, canvasTex, textTex, glowSprite, shade, bake, disposeTree } from './kit.js';
 import { TAU, clamp, lerp, damp, rand, wrapAngle } from '../core/util.js';
 
 const BUILDS = {
@@ -44,7 +44,7 @@ export const SPECIES = {
 
 const HC = 0.36; // head centre above the neck pivot
 const geoCache = new Map();
-const tubeArc = (key, make) => { let g = geoCache.get(key); if (!g) { g = make(); geoCache.set(key, g); } return g; };
+const tubeArc = (key, make) => { let g = geoCache.get(key); if (!g) { g = make(); g.userData.shared = true; geoCache.set(key, g); } return g; };
 
 function maskBar(y, rx, rz, t0, t1, r = 0.022) {
   return tubeArc(`mb:${y}:${rx}:${rz}:${t0}:${t1}:${r}`, () => {
@@ -399,9 +399,9 @@ export class Character {
       body.add(hip);
       if (spec.number !== undefined) {
         const nm = numberMat(spec.number, spec.numC || '#fff4dc', spec.numS || '#2b1a33');
-        const back = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.34), nm);
+        const back = new THREE.Mesh(plane(0.34, 0.34), nm);
         back.position.set(0, 0.7 * B.ty, -0.31 * B.tz); back.rotation.y = Math.PI;
-        const front = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.28), nm);
+        const front = new THREE.Mesh(plane(0.28, 0.28), nm);
         front.position.set(0, 0.68 * B.ty, 0.31 * B.tz);
         body.add(back, front);
       }
@@ -598,7 +598,7 @@ export class Character {
       body.add(band);
       if (spec.number !== undefined) {
         const nm = numberMat(spec.number, '#fff4dc', '#2b1a33');
-        const p = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.22), nm); p.position.set(0, 0.74, 0.45); body.add(p);
+        const p = new THREE.Mesh(plane(0.22, 0.22), nm); p.position.set(0, 0.74, 0.45); body.add(p);
       }
     }
     const mk = (s) => {
@@ -632,7 +632,7 @@ export class Character {
     body.add(torso); this.torso = torso;
     if (spec.jersey) {
       body.add(M(cyl(0.345, 0.36, 0.3, 16, true), toon(spec.jersey, { side: THREE.DoubleSide }), 0, 0.98, 0));
-      if (spec.number !== undefined) { const p = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.22), numberMat(spec.number, '#fff4dc', '#2b1a33')); p.position.set(0, 0.98, 0.36); body.add(p); }
+      if (spec.number !== undefined) { const p = new THREE.Mesh(plane(0.22, 0.22), numberMat(spec.number, '#fff4dc', '#2b1a33')); p.position.set(0, 0.98, 0.36); body.add(p); }
     }
     for (let i = 0; i < 2; i++) body.add(M(sphere(0.04, 6, 5), toon(0x2b2b36), 0, 0.5 + i * 0.2, 0.42 - i * 0.03, { shadow: false }));
     const mk = (s) => {
@@ -667,7 +667,7 @@ export class Character {
     body.add(torso); this.torso = torso;
     body.add(M(box(0.67 * B.tx, 0.07, 0.47 * B.tz), neonM, 0, 0.5 * B.ty, 0, { shadow: false }));
     if (spec.jersey) body.add(M(rbox(0.68 * B.tx, 0.3 * B.ty, 0.48 * B.tz, 0.08), toon(spec.jersey), 0, 0.8 * B.ty, 0));
-    if (spec.number !== undefined) { const p = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.24), numberMat(spec.number, '#ffffff', '#1b1024')); p.position.set(0, 0.8 * B.ty, 0.245 * B.tz); body.add(p); }
+    if (spec.number !== undefined) { const p = new THREE.Mesh(plane(0.24, 0.24), numberMat(spec.number, '#ffffff', '#1b1024')); p.position.set(0, 0.8 * B.ty, 0.245 * B.tz); body.add(p); }
     const mk = (s) => {
       const arm = new THREE.Group();
       arm.add(M(cyl(0.065, 0.065, 0.3, 8), shell, 0, -0.16, 0));
@@ -692,7 +692,7 @@ export class Character {
     const head = new THREE.Group(); head.position.y = 1.02 * B.ty; body.add(head); this.head = head;
     const hc = group(0, 0.34, 0); head.add(hc); this.hc = hc;
     hc.add(M(rbox(0.8, 0.62, 0.6, 0.12), shell));
-    const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.44), new THREE.MeshBasicMaterial({ map: robotFace(neon, 'open'), toneMapped: false }));
+    const screen = new THREE.Mesh(plane(0.62, 0.44), new THREE.MeshBasicMaterial({ map: robotFace(neon, 'open'), toneMapped: false }));
     screen.position.set(0, 0, 0.305);
     hc.add(screen);
     this.screen = screen; this.neon = neon;
@@ -979,7 +979,7 @@ export class Character {
   }
 
   dispose() {
-    this.root.traverse((o) => { if (o.userData.baked && o.geometry) o.geometry.dispose(); });
+    disposeTree(this.root);          // baked meshes and one-off materials; shared geometry is left alone
     this.root.removeFromParent();
   }
 }

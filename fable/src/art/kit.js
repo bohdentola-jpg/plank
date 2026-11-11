@@ -134,7 +134,7 @@ export function disposeTree(root) {
   const cachedGeos = new Set(geoCache.values());
   const cachedMats = new Set(matCache.values());
   root.traverse((o) => {
-    if (o.geometry && !cachedGeos.has(o.geometry)) o.geometry.dispose();
+    if (o.geometry && !cachedGeos.has(o.geometry) && !o.geometry.userData.shared) o.geometry.dispose();
     const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
     for (const m of mats) {
       if (cachedMats.has(m) || m.userData.shared) continue;

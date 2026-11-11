@@ -55,7 +55,8 @@ targets to hit switches from a distance — or at an opponent, to stun them. Wal
 your lineman up to anything heavy to **shove** it. Holes in fences are for your
 **smallest teammate**: you steer them alone on the far side.
 
-**Opponents are visible.** Slip past them, or pick a fight on your terms:
+**Opponents are visible.** Slip past them, or pick a fight on your terms (beaten
+teams stay beaten until you sleep or take the bus):
 
 - touch one from behind, or after bonking it with the ball → **Blindside** (you get
   the ball and your blockers get a head start);

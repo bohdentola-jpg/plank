@@ -82,7 +82,7 @@ export class Battle extends Mode {
     this.foes = idx.map((i) => { const m = this.team.squad[i]; const e = this._ent(CPU, `cpu${i}`, m.name, m.spec, m.stats); e.slot = i; return e; });
     this.iq = this.team.iq;
     const lvs = [...new Set([...sq[0], ...sq[1]])].map((id) => charState(id).lv);
-    this.mateIq = 0.68 + Math.min(0.24, (lvs.reduce((a, b) => a + b, 0) / lvs.length - 1) * 0.034);
+    this.mateIq = 0.68 + Math.min(0.2, (lvs.reduce((a, b) => a + b, 0) / lvs.length - 1) * 0.034);
 
     // ball + catch rings + first-down marker
     this.ballMesh = buildFootball(1.5);
@@ -470,7 +470,8 @@ export class Battle extends Mode {
       this.userEnt = play.type === 'run' && play.carrier !== 'QB' ? byRole(this.off, play.carrier) : qb;
       this.userMode = 'pre';
     } else {
-      this.userEnt = byRole(this.def, dplay.S === 'robber' ? 'S' : 'S') || this.def[this.def.length - 1];
+      // you start as the linebacker — in the middle of things, with the safety still deep behind you
+      this.userEnt = byRole(this.def, 'LB') || byRole(this.def, 'S') || this.def[this.def.length - 1];
       if (this.size < 5) this.userEnt = this.def[this.def.length - 1];
       this.userMode = 'defender';
     }
@@ -1426,11 +1427,12 @@ export class Battle extends Mode {
     }
     if (this.auto && u && u.team === YOU && dist(u.x, u.z, b.to.x, b.to.z) < 1.8 && chance(0.3)) { this.interception(u, true); return; }
     // AI coverage contests it
-    let pCatch = 0.95 - Math.max(0, 1.7 - dDef) * 0.36 - off * 0.12 + (r.stats.hnd - 5) * 0.03;
+    let pCatch = 0.95 - Math.max(0, 1.7 - dDef) * 0.36 - off * 0.12 + (r.stats.hnd - 5) * 0.03 + (this.iq - 0.5) * 0.2;
     if (this.lightsOut > 0) pCatch -= 0.12;
     pCatch = clamp(pCatch, 0.2, 0.97);
     if (chance(pCatch)) { this.completed(r, 'cpu'); return; }
-    if (nd && dDef < 1.3 && nd.e.team === YOU && chance(0.22 + nd.e.stats.hnd * 0.03)) { this.interception(nd.e, false); return; }
+    // a teammate in tight coverage sometimes comes down with it (your own timed picks are the reliable way)
+    if (nd && dDef < 1.3 && nd.e.team === YOU && chance(0.07 + nd.e.stats.hnd * 0.015)) { this.interception(nd.e, false); return; }
     if (nd && dDef < 1.6) { nd.e.ch.play('catch'); this.pop(nd.e, 'BROKEN UP!', 'cool'); }
     this.incomplete('INCOMPLETE', b.to, r);
   }

@@ -360,7 +360,7 @@ export class UI {
   }
 
   /** Cinematic letterbox bars. */
-  cine(on) { this.cineEl.classList.toggle('on', !!on); }
+  cine(on) { this.cineEl.classList.toggle('on', !!on); this.root.classList.toggle('cine-on', !!on); }
 
   /** Floating text anchored to a world position (or screen centre if pos is null). */
   pop(text, pos, cls = '', life = 1.1) {

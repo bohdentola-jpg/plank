@@ -7,7 +7,7 @@ import { toon, flat, lit, sphere, cyl, cone, box, rbox, torus, circle, capsule, 
 import { TAU, rand, makeRng } from '../core/util.js';
 
 const geoCache = new Map();
-const cg = (key, make) => { let g = geoCache.get(key); if (!g) { g = make(); geoCache.set(key, g); } return g; };
+const cg = (key, make) => { let g = geoCache.get(key); if (!g) { g = make(); g.userData.shared = true; geoCache.set(key, g); } return g; };
 
 /** Gabled roof prism: ridge along x. */
 export function roofPrism(L, W, H) {
@@ -687,7 +687,7 @@ export function cornBlock(o = {}) {
   const nx = Math.max(1, Math.round(w / gap)), nz = Math.max(1, Math.round(d / gap));
   for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
     const x = -w / 2 + (i + 0.5) * (w / nx) + r.range(-0.15, 0.15), z = -d / 2 + (j + 0.5) * (d / nz) + r.range(-0.15, 0.15);
-    const h = r.range(2.0, 2.6);
+    const h = 2.0 + Math.floor(r() * 4) * 0.2;
     g.add(M(cyl(0.05, 0.08, h, 5), toon(0x7fae4a), x, h / 2, z));
     g.add(M(cone(0.42, 1.3, 5), toon(0x9fc45a), x, h * 0.6, z, { shadow: false }));
     g.add(M(sphere(0.1, 5, 4), toon(0xf2c23c), x + 0.16, h * 0.62, z, { rz: -0.5, sy: 2.2, shadow: false }));
