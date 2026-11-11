@@ -51,10 +51,10 @@ export const TEAMS = {
     squad: squad(2, [{ name: 'Spade', spec: gnome(0x8a5aa8, 0x2a6f77, 'small', 3) }, { name: 'Boulder', spec: gnome(0x8a5aa8, 0x2a6f77, 'big', 66) }, { name: 'Twig', spec: gnome(0x8a5aa8, 0x2a6f77, 'small', 84) }, { name: 'Burr', spec: gnome(0x8a5aa8, 0x2a6f77, 'small', 85) }, { name: 'Clod', spec: gnome(0x8a5aa8, 0x2a6f77, 'normal', 30) }]),
   },
   gnomes: {
-    name: 'Cul-de-Sac Gnomes', short: 'GNOMES', color: '#c8452d', level: 3, iq: 0.45, xp: 60, coins: 0, rival: true,
+    name: 'Cul-de-Sac Gnomes', short: 'GNOMES', color: '#c8452d', level: 3, iq: 0.36, xp: 60, coins: 0, rival: true,
     hazard: 'sprinklers',
     off: { pass: ['cpu_slants', 'cpu_outs', 'cpu_cross', 'cpu_deep'], run: ['cpu_dive', 'cpu_sweep'], runRate: 0.42 }, def: ['man_lock', 'zone_blanket', 'blitz_party'],
-    squad: squad(2.6, [{ name: 'Big Terracotta', spec: gnome(0x3f6fb5, 0xc8452d, 'big', 1), plus: { arm: 1, str: 2 } }, { name: 'Flagstone', spec: gnome(0x3f6fb5, 0xc8452d, 'big', 77), plus: { str: 1 } }, { name: 'Clover', spec: gnome(0x3f6fb5, 0xc8452d, 'small', 80), plus: { spd: 0.6 } }, { name: 'Thistle', spec: gnome(0x3f6fb5, 0xc8452d, 'small', 88) }, { name: 'Gerald Jr.', spec: gnome(0x3f6fb5, 0xc8452d, 'normal', 22) }]),
+    squad: squad(1.8, [{ name: 'Big Terracotta', spec: gnome(0x3f6fb5, 0xc8452d, 'big', 1), plus: { arm: 1, str: 2 } }, { name: 'Flagstone', spec: gnome(0x3f6fb5, 0xc8452d, 'big', 77), plus: { str: 1 } }, { name: 'Clover', spec: gnome(0x3f6fb5, 0xc8452d, 'small', 80), plus: { spd: 0.4 } }, { name: 'Thistle', spec: gnome(0x3f6fb5, 0xc8452d, 'small', 88) }, { name: 'Gerald Jr.', spec: gnome(0x3f6fb5, 0xc8452d, 'normal', 22) }]),
   },
   // ---------------------------------------------------------------- Harvest Fairgrounds
   crows: {
@@ -115,10 +115,10 @@ export const TEAMS = {
   },
   // ---------------------------------------------------------------- the Midnight Bowl
   graveyard: {
-    name: 'The Graveyard Shift', short: 'SHIFT', color: '#6a5a9a', level: 11, iq: 0.84, xp: 250, coins: 0, rival: true,
+    name: 'The Graveyard Shift', short: 'SHIFT', color: '#6a5a9a', level: 11, iq: 0.83, xp: 250, coins: 0, rival: true,
     hazard: 'fog', tackleStatus: ['spook', 0.3],
     off: { pass: ['cpu_outs', 'cpu_deep', 'cpu_cross', 'cpu_slants'], run: ['cpu_dive', 'cpu_sweep'], runRate: 0.42 }, def: ['man_lock', 'zone_blanket', 'double_trouble', 'blitz_party', 'fence_line'],
-    squad: squad(10.6, [{ name: 'The Captain Before', spec: ghost(1, 0xc9b6f2), plus: { arm: 1 } }, { name: 'Tombstone', spec: { ...ghost(78, 0xb6c9f2), scale: 1.25 }, plus: { str: 2 } }, { name: 'Wisp', spec: ghost(80, 0xd9c6ff), plus: { spd: 1 } }, { name: 'Shiver', spec: ghost(87, 0xd9c6ff) }, { name: 'Moan', spec: ghost(35, 0xc9b6f2) }]),
+    squad: squad(10.3, [{ name: 'The Captain Before', spec: ghost(1, 0xc9b6f2), plus: { arm: 1 } }, { name: 'Tombstone', spec: { ...ghost(78, 0xb6c9f2), scale: 1.25 }, plus: { str: 2 } }, { name: 'Wisp', spec: ghost(80, 0xd9c6ff), plus: { spd: 1 } }, { name: 'Shiver', spec: ghost(87, 0xd9c6ff) }, { name: 'Moan', spec: ghost(35, 0xc9b6f2) }]),
   },
   // ---------------------------------------------------------------- Backyard Blitz (2 on 2)
   acorns: {

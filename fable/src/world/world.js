@@ -10,6 +10,7 @@ import { toon, flat, M, lightRig, bake, disposeTree, sphere, cyl, cone, circle, 
 import { clamp, damp, lerp, dist, circleBoxPush, circleCirclePush, pointInBox, segBox, rand, TAU, wrapAngle, el, makeRng, ease } from '../core/util.js';
 import { CAST, teamSpec, displayName, charState, maxStamina } from '../data/cast.js';
 import { AREAS } from '../areas/index.js';
+import { portrait } from '../art/portraits.js';
 import { flag, setFlag, flagVal, addCoins, addItem, addParts, restAll, save, trackedQuest } from '../game/state.js';
 
 const PPU = 18;                    // ground texture pixels per world unit
@@ -1094,11 +1095,13 @@ export class World extends Mode {
     this.hQuest = el('div.quest-box.hidden', el('div.q-title'), el('div.q-text'));
     this.hWallet = el('div.wallet');
     this.hHelp = el('div.help-tag');
-    this.hud.append(this.hQuest, this.hWallet, this.hHelp);
+    this.hParty = el('div.party-strip');
+    this.hud.append(this.hQuest, this.hWallet, this.hHelp, this.hParty);
   }
   _updateHud() {
     const S = G.S;
-    const sig = `${S.coins}|${S.parts}|${G.input.device}|${S.questLog.length}|${JSON.stringify(S.quests)}|${S.roster.length}|${this.solo ? 1 : 0}|${flag('has_ball')}|${G.ui.busy}`;
+    const st = this.party.map((p) => `${p.id}${Math.round(charState(p.id).st / 4)}`).join();
+    const sig = `${S.coins}|${S.parts}|${G.input.device}|${S.questLog.length}|${JSON.stringify(S.quests)}|${S.roster.length}|${this.solo ? 1 : 0}|${flag('has_ball')}|${G.ui.busy}|${st}`;
     if (sig === this._hudSig && !this._hudDirty) return;
     this._hudSig = sig; this._hudDirty = false;
     const q = trackedQuest();
@@ -1108,6 +1111,14 @@ export class World extends Mode {
       this.hQuest.children[1].textContent = q.text;
     } else this.hQuest.classList.add('hidden');
     this.hWallet.innerHTML = S.chapter > 0 || S.coins || S.parts ? `<div class="chip">🪙 ${S.coins}</div><div class="chip">🔩 ${S.parts}</div>` : '';
+    // who's walking with you, and how winded they are
+    if (S.roster.length > 1 && !G.ui.busy && G.input.device !== 'touch') {
+      this.hParty.style.display = '';
+      this.hParty.innerHTML = this.party.map((p) => {
+        const mx = maxStamina(p.id), k = clamp(charState(p.id).st / mx, 0, 1);
+        return `<div class="pm"><img src="${portrait(`cast:${p.id}:b`, teamSpec(p.id))}"><div class="bar${k < 0.2 ? ' low' : k < 0.5 ? ' mid' : ''}"><i style="width:${k * 100}%"></i></div></div>`;
+      }).join('');
+    } else this.hParty.style.display = 'none';
     const k = (a) => G.ui.key(a);
     this.hHelp.style.visibility = G.ui.busy ? 'hidden' : '';
     const bits = [`${k('move')} move`, `${k('b')} run`, `${k('a')} talk`];

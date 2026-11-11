@@ -1353,7 +1353,7 @@ export class Battle extends Mode {
     if (this.has(r, 'butter')) f *= 0.62;
     if (this.has(r, 'hyped')) f *= 1.15;
     if (this.tired(r)) f *= 0.8;
-    return { perfect: 0.075 * f, good: 0.17 * f };
+    return { perfect: 0.08 * f, good: 0.19 * f };
   }
 
   ballUpdate(dt) {
@@ -1411,7 +1411,7 @@ export class Battle extends Mode {
         if (nd && dDef < 1.2 && chance(0.1 + nd.e.stats.hnd * 0.02)) { this.interception(nd.e); return; }
         r.ch.play('flinch'); r.ch.setExpr('wide', 1);
         G.audio.sfx('bonk');
-        this.incomplete(this.catchPress === null ? 'BONK! (press to catch)' : early ? 'TOO EARLY!' : 'TOO LATE!', b.to, r);
+        this.incomplete(this.catchPress === null ? `BONK! (${G.input.glyph('a')} as the rings meet)` : early ? 'TOO EARLY!' : 'TOO LATE!', b.to, r);
       }
       return;
     }

@@ -208,3 +208,9 @@ p { margin: 0.3em 0; line-height: 1.35; font-weight: 600; }
 .meter > i { position: absolute; top: 0; bottom: 0; left: 0; background: var(--gold); }
 .meter > b { position: absolute; top: -0.2em; bottom: -0.2em; width: 0.3em; background: var(--cream); border: 0.1em solid var(--ink); border-radius: 0.2em; }
 .meter > em { position: absolute; top: 0; bottom: 0; background: rgba(106,168,79,0.9); }
+
+/* overworld: who's with you and how tired they are */
+.party-strip { position: absolute; left: 0.9em; bottom: 0.8em; display: flex; gap: 0.35em; }
+.party-strip .pm { width: 2.7em; }
+.party-strip img { width: 2.5em; height: 2.5em; border-radius: 50%; background: var(--gold); border: 0.14em solid var(--ink); display: block; margin: 0 auto; box-shadow: 0 0.14em 0 rgba(27,16,36,0.45); }
+.party-strip .bar { height: 0.46em; margin-top: 0.16em; background: rgba(27,16,36,0.55); }
