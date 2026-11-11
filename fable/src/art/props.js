@@ -683,13 +683,14 @@ export function cornBlock(o = {}) {
   const w = o.w ?? 2, d = o.d ?? 2;
   const g = new THREE.Group();
   const r = makeRng(Math.round(w * 31 + d * 17 + (o.seed || 0)));
-  const nx = Math.max(1, Math.round(w / 0.9)), nz = Math.max(1, Math.round(d / 0.9));
+  const gap = o.gap ?? 0.9;
+  const nx = Math.max(1, Math.round(w / gap)), nz = Math.max(1, Math.round(d / gap));
   for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
     const x = -w / 2 + (i + 0.5) * (w / nx) + r.range(-0.15, 0.15), z = -d / 2 + (j + 0.5) * (d / nz) + r.range(-0.15, 0.15);
     const h = r.range(2.0, 2.6);
     g.add(M(cyl(0.05, 0.08, h, 5), toon(0x7fae4a), x, h / 2, z));
     g.add(M(cone(0.42, 1.3, 5), toon(0x9fc45a), x, h * 0.6, z, { shadow: false }));
-    g.add(M(capsule(0.09, 0.26), toon(0xf2c23c), x + 0.16, h * 0.62, z, { rz: -0.5, shadow: false }));
+    g.add(M(sphere(0.1, 5, 4), toon(0xf2c23c), x + 0.16, h * 0.62, z, { rz: -0.5, sy: 2.2, shadow: false }));
   }
   g.userData.tall = true;
   g.userData.light = true;

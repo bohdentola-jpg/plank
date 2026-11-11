@@ -85,10 +85,10 @@ export default {
       w.add(b);
     }
     w.solid(39, 4, 70, 8);
-    const sb = w.put('scoreboard', 39, 3.4, { w: 11, h: 4.4, on: flag('scoreboard_on'), lines: flag('scoreboard_on') ? story.scoreboardLines() : [], solid: false, noFade: true });
-    sb.position.y = 3.2;
+    const sb = w.put('scoreboard', 39, 6.2, { w: 8.8, h: 4.2, on: flag('scoreboard_on'), lines: flag('scoreboard_on') ? story.scoreboardLines() : [], solid: false, noFade: true });
+    sb.position.y = 2.4;
     w.named.scoreboard = sb;
-    if (flag('scoreboard_on') && night) { const gl = glowSprite(0xffb53c, 16, 0.4); gl.position.set(39, 9.6, 4.4); w.add(gl, true); }
+    if (flag('scoreboard_on') && night) { const gl = glowSprite(0xffb53c, 16, 0.4); gl.position.set(39, 8.6, 7); w.add(gl, true); }
     for (const x of [8.5, 69.5]) w.put('lightTower', x, 7.2, { on: town.stadium >= 1 && night, h: 10, noFade: true });
     // the gate
     const gateOpen = town.stadium >= 1 || flag('gate_open');
@@ -109,6 +109,7 @@ export default {
     w.add(M(box(0.5, 0.12, 0.05), toon(0xffd45a), 48.5, 1.8, 9.52));
     w.interact(48.5, 10.6, { r: 1.6, label: 'Check the fuse box', fn: () => story.fuseBox(w) });
     w.trigger(39, 14, 20, 3, () => story.stadiumApproach(w));
+    w.vista(39, 16.5, 34, 13, { dz: -9, zoom: 1.24 });
 
     // ---------------- practice field + pond
     w.put('goalpost', 6.6, 22.2, { w: 4, ry: Math.PI / 2, crooked: town.field ? 0 : 0.08 });

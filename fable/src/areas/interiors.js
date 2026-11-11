@@ -70,8 +70,11 @@ export const clubhouse = {
   },
 };
 
+const arguing = (S) => !!S.town.diner && S.roster.includes('pip') && S.roster.includes('zip') && !S.plays.includes('no_look');
+
 export const diner = {
   id: 'diner', name: 'The Diner', indoor: true, noCheckpoint: true,
+  away: (S) => (arguing(S) ? ['pip', 'zip'] : []),
   w: RW, d: RD, spawn: [4, 9.2], fixedCam: [8, 5.6], zoom: 0.66, music: 'indoors',
   ground: '#f2f2ea', edge: 0x4a4a58, lip: 0x8f9aa6,
   paint(g, S) {
@@ -100,7 +103,11 @@ export const diner = {
     } else {
       w.npc('maple', 9, 1.9, { ...NPCS.maple, face: 0, r: 3.7, label: fixed ? 'Order a game-day meal' : 'Talk to Maple', talk: () => story.maple(w) });
     }
-    w.interact(13.6, 7.9, { r: 1.6, label: 'Sit and chat with a teammate', cond: () => !!S.town.diner && S.roster.length > 1, fn: () => (G.hooks.chat ? G.hooks.chat(w) : null) });
+    if (arguing(S)) {
+      w.npc('pip', 12.3, 6.5, { spec: teamSpec('pip'), name: 'Pip', face: 1.2, mark: '!', base: 'panic', r: 2.2, label: 'Break up the argument', talk: () => (G.hooks.argument ? G.hooks.argument(w) : null) });
+      w.npc('zip', 14.9, 6.5, { spec: teamSpec('zip'), name: 'Zip', face: -1.2, base: 'talk', r: 2.2, label: 'Break up the argument', talk: () => (G.hooks.argument ? G.hooks.argument(w) : null) });
+    }
+    w.interact(13.6, 9.4, { r: 1.5, label: 'Sit and chat with a teammate', cond: () => !!S.town.diner && S.roster.length > 1 && !arguing(S), fn: () => (G.hooks.chat ? G.hooks.chat(w) : null) });
     w.exit(4, RD - 0.5, 3, 0.9, 'hollow', 61.9, 23.6, { dir: Math.PI, arrow: false });
   },
 };

@@ -209,7 +209,14 @@ export class BattleHud {
 
   /** World-anchored throw bubbles. list: [{ pos:{x,y,z}, label, cls, sub }] */
   targets(list, camera) {
-    while (this.tgEls.length < list.length) { const n = el('div.tgt'); this.tg.appendChild(n); this.tgEls.push(n); }
+    while (this.tgEls.length < list.length) {
+      const n = el('div.tgt');
+      const idx = this.tgEls.length;
+      n.style.pointerEvents = 'auto';
+      n.addEventListener('pointerdown', (e) => { e.preventDefault(); const t = this._tgList && this._tgList[idx]; if (t && t.key !== undefined) G.input.press(`t${t.key + 1}`); });
+      this.tg.appendChild(n); this.tgEls.push(n);
+    }
+    this._tgList = list;
     this.tgEls.forEach((n, i) => {
       const t = list[i];
       if (!t) { n.style.display = 'none'; return; }
@@ -305,6 +312,7 @@ export class BattleHud {
         abRow, desc, extras);
       layer = G.ui.pushLayer({ el: box, blocking: true, focus: '.first', onUpdate: () => {
         for (let i = 0; i < Math.min(6, o.plays.length); i++) if (G.input.hit(`t${i + 1}`)) { G.audio.sfx('ok'); done({ play: o.plays[i].id }); return; }
+        if (G.input.take('l') && (o.extras || []).some((x) => x.value === 'swap')) { done({ extra: 'swap' }); }
       } });
       const first = box.querySelector('.play.first') || box.querySelector('.play');
       if (first) { layer.refocus(first); const p = o.plays.find((x) => x.id === o.defaultId) || o.plays[0]; setDesc(p.play.desc || ''); }

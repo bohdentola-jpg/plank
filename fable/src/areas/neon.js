@@ -83,13 +83,13 @@ export default {
     if (!b(2)) w.interact(66.4, 6.6, { r: 1.5, solo: true, label: 'Flip the breaker', fn: () => st.breaker(w, 2, 'The cage breaker thunks down. The utility fans spin up with a groan.') });
     w.put('signPost', 57.4, 12.6, { text: 'DANGER\nVERY SMALL\nVENT', w: 2, h: 1.5 });
 
-    // ---------------- breaker 3: behind a dead arcade cabinet in the alley
+    // ---------------- breaker 3: a dead arcade cabinet is shoved up against it
     w.add(M(rbox(8, 4.2, 6, 0.2), toon(0x3a2f6e), 76, 2.1, 6)); w.solid(76, 6, 8, 6);
-    w.add(M(rbox(1.0, 1.6, 0.5, 0.08), toon(0x6a7480), 74, 0.9, 9.4));
-    w.add(M(box(0.3, 0.5, 0.1), b(3) ? lit(0xb6f08a, 0xb6f08a, 1.5) : toon(0xd4502f), 74, 1.2, 9.7), true);
-    w.pushable('arcadeCabinet', 74, 11.4, { id: 'neon_cab', step: 2, color: 0x2b2438, neon: 0x555066 });
-    w.solid(72.4, 10.6, 0.4, 3.4); w.solid(71, 12.6, 0.6, 0.6);
-    if (!b(3)) w.interact(74, 10.4, { r: 1.1, label: 'Flip the breaker', fn: () => st.breaker(w, 3, 'Sparks, then a hum. The alley breaker is live.') });
+    w.add(M(rbox(1.0, 1.5, 0.3, 0.06), toon(0x6a7480), 74, 1.1, 9.1));
+    w.add(M(box(0.3, 0.5, 0.1), b(3) ? lit(0xb6f08a, 0xb6f08a, 1.5) : toon(0xd4502f), 74, 1.3, 9.3), true);
+    w.pushable('arcadeCabinet', 74, 9.65, { id: 'neon_cab', step: 2, color: 0x2b2438, neon: 0x555066 });
+    if (!b(3)) w.interact(74, 9.5, { r: 0.8, label: 'Flip the breaker', fn: () => st.breaker(w, 3, 'Sparks, then a hum. The alley breaker is live.') });
+    w.put('signPost', 77.4, 12, { text: 'OUT OF\nORDER', w: 1.8, h: 1.1 });
 
     // ---------------- the Buzzer Dome
     w.put('arenaFront', 88, 8.6, { text: 'BUZZER DOME', lit: lit3 >= 3 });

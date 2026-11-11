@@ -67,7 +67,7 @@ export const QUESTS = {
   },
   // ---- side quests
   rebuild: { title: 'Fixer-Upper', steps: ['Use the notice board in the town square to rebuild Huddle Hollow.'] },
-  argue: { title: 'Settle It On The Field', steps: ['Pip and Zip are arguing at the diner. Hear them out.', 'Run a clean route with both of them at the practice field.', 'Done — the No-Look Pass is in the playbook.'] },
+  argue: { title: 'Settle It Off The Field', steps: ['Pip and Zip are arguing in the diner booth. Go hear them out.'] },
   lights: { title: 'Midnight Maintenance', steps: ['After dark, fix the stadium lights (talk to the fuse box by the stadium gate).'] },
   blitz: { title: 'Backyard Blitz', steps: ['Challenge the Acorn twins to Backyard Blitz in the Borough.'] },
   fishing: { title: 'Gone Fishin\'', steps: ['Old Croaker by the pond might lend you a rod.'] },

@@ -271,14 +271,26 @@ export function applyPreset(name) {
   S.decor.owned.push('trophy_borough', 'gnome');
   if (name === 'ch2') return;
   if (name === 'rich') { S.coins = 5000; S.parts = 99; return; }
-  if (name === 'all') {
-    all(['cheese', 'slush', 'sal']);
-    S.coins = 5000; S.parts = 99; S.chapter = 5;
-    S.town = { diner: 1, arcade: 1, field: 1, stadium: 2 };
-    S.wins = { gnomes: 1, haymakers: 1, flurries: 1, buzzers: 1 };
-    Object.assign(S.flags, { bus_frost: true, bus_neon: true, has_rod: true });
-    for (const id of S.roster) { charState(id).lv = 8; charState(id).st = maxStamina(id); }
-  }
+  const q = (id, stage, done) => { S.quests[id] = { stage, done: !!done }; if (!S.questLog.includes(id)) S.questLog.push(id); };
+  const lv = (n) => { for (const id of S.roster) { charState(id).lv = n; charState(id).st = maxStamina(id); } };
+  // at the fairgrounds
+  q('welcome_back', 3, true); q('fair', 0); S.flags.fair_seen = S.flags.fair_seen_t = true; lv(3);
+  if (name === 'fair') return;
+  // Frostbite Falls
+  all(['cheese']); S.wins.haymakers = 1; S.chapter = 3; S.defPlays.push('fence_line');
+  q('fair', 2, true); q('frost', 0); Object.assign(S.flags, { stitch_met: true, bus_frost: true, frost_seen: true, frost_seen_t: true }); lv(5);
+  if (name === 'frost') return;
+  // Neon Boardwalk
+  all(['slush']); S.wins.flurries = 1; S.chapter = 4; S.defPlays.push('double_trouble');
+  q('frost', 2, true); q('neon', 0); Object.assign(S.flags, { flurry_met: true, slush_free: true, frost_bridge: true, bus_neon: true, neon_seen: true, neon_seen_t: true }); lv(7);
+  if (name === 'neon') return;
+  // everything but the finale
+  all(['sal']); S.wins.buzzers = 1; S.chapter = 5;
+  q('neon', 2, true); q('bowl', 1); q('rebuild', 0, true);
+  Object.assign(S.flags, { buzz_met: true, neon_b1: true, neon_b2: true, neon_b3: true, sal_1: true, sal_2: true, sal_3: true, has_rod: true, clubhouse_fixed: true });
+  S.coins = 5000; S.parts = 99;
+  S.town = { diner: 1, arcade: 1, field: 1, stadium: 2 };
+  lv(9);
 }
 
 export { Title, writeSave, SPECIES, TAU };

@@ -17,6 +17,7 @@ async function boot() {
     G.debug.fastDialog = !params.has('dialog');
   }
   exposeDebug();
+  import('./core/touch.js').then((m) => m.installTouch()).catch(() => {});
 
   if (params.has('gallery')) {
     const { Gallery } = await import('./dev/gallery.js');

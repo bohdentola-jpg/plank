@@ -6,7 +6,9 @@
   "scripts": {
     "start": "python3 serve.py",
     "shot": "node tools/shot.mjs",
-    "smoke": "node tools/smoke.mjs"
+    "smoke": "node tools/smoke.mjs",
+    "fable": "python3 serve.py --open=fable/",
+    "fable:qa": "node tools/fable-qa.cjs"
   },
   "dependencies": {
     "three": "^0.160.0"

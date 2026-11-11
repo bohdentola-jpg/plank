@@ -1,3 +1,11 @@
+> **Also in this repo: [Fourth & Fable](fable/README.md)** — a football RPG where your
+> teammates are also your neighbors. Explore Huddle Hollow, recruit a team of
+> oddballs, and play football drives as timed-action battles. It lives in
+> [`fable/`](fable/) and shares the vendored three.js:
+> `python3 serve.py --open=fable/` (or double-click `play-fable.bat`).
+>
+> [![Fourth & Fable](fable/docs/title.jpg)](fable/README.md)
+
 # VARSITY 27 🏈
 
 *Sunday has Madden. Saturday has NCAA. Friday is yours.*

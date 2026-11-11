@@ -8,7 +8,7 @@ import { PROPS, fence as fenceProp, bunting as buntingProp } from '../art/props.
 import { Character, buildFootball } from '../art/characters.js';
 import { toon, flat, M, lightRig, bake, disposeTree, sphere, cyl, cone, circle, ring, torus, roundRect, FONT, glowSprite } from '../art/kit.js';
 import { clamp, damp, lerp, dist, circleBoxPush, circleCirclePush, pointInBox, segBox, rand, TAU, wrapAngle, el, makeRng, ease } from '../core/util.js';
-import { teamSpec, displayName, charState, maxStamina } from '../data/cast.js';
+import { CAST, teamSpec, displayName, charState, maxStamina } from '../data/cast.js';
 import { AREAS } from '../areas/index.js';
 import { flag, setFlag, flagVal, addCoins, addItem, addParts, restAll, save, trackedQuest } from '../game/state.js';
 
@@ -176,7 +176,7 @@ export class World extends Mode {
     this.dynRoot = new THREE.Group(); this.root.add(this.dynRoot);
     this.solids = []; this.rounds = []; this.actors = []; this.interacts = []; this.triggers = [];
     this.targets = []; this.pushables = []; this.enemies = []; this.zones = []; this.occluders = [];
-    this.pickups = []; this.updaters = []; this.named = {}; this._occQueue = []; this._lights = 0;
+    this.pickups = []; this.updaters = []; this.named = {}; this._occQueue = []; this._lights = 0; this.vistas = [];
     this.camZoom = area.zoom || 1;
     this._buildGround(area);
     area.build(this, S);
@@ -462,6 +462,9 @@ export class World extends Mode {
     return l;
   }
 
+  /** While the player stands in this box, nudge/zoom the camera (to show off something big). */
+  vista(x, z, w, d, o) { (this.vistas = this.vistas || []).push({ x, z, w, d, ...o }); }
+
   /** Per-frame callback for area-specific animation. */
   onUpdate(fn) { this.updaters.push(fn); }
 
@@ -518,7 +521,9 @@ export class World extends Mode {
   _partyIds() {
     const S = G.S;
     const ids = ['captain'];
-    for (const id of [...S.squads[0], ...S.squads[1], ...S.roster]) if (!ids.includes(id) && S.roster.includes(id) && ids.length < 5) ids.push(id);
+    const away = this.area && this.area.away ? this.area.away(S) : [];
+    // teammates a puzzle needed come along first, then squad 1, squad 2, everyone else
+    for (const id of [...(G.session.pins || []), ...S.squads[0], ...S.squads[1], ...S.roster]) if (!ids.includes(id) && !away.includes(id) && S.roster.includes(id) && ids.length < 5) ids.push(id);
     return ids;
   }
 
@@ -546,6 +551,19 @@ export class World extends Mode {
     this.party.forEach((p, i) => { p.x = x; p.z = z + i * 1.17; p.vx = p.vz = 0; p.ch.setPos(p.x, p.z); });
     for (const t of this.triggers) t.inside = Math.abs(x - t.x) < t.w / 2 && Math.abs(z - t.z) < t.d / 2;
     this._snapCamera();
+  }
+
+  /** Make sure someone who can do a field job is walking with you (they jog over from the bench). */
+  callIn(pred) {
+    let m = this.party.find((p) => p !== this.leader && pred(p));
+    if (m) return m;
+    const id = G.S.roster.find((r) => r !== 'captain' && !this.party.some((p) => p.id === r) && pred({ id: r, small: ['small', 'tiny'].includes(CAST[r].spec.build) }));
+    if (!id) return null;
+    G.session.pins = [id, ...(G.session.pins || []).filter((x) => x !== id)].slice(0, 3);
+    this.refreshParty(true);
+    m = this.party.find((p) => p.id === id);
+    if (m) { this.fx.burst('puff', { x: m.x, y: 1, z: m.z }, 8, { speed: 2, up: 1.5, life: 0.4, s0: 0.5, g: 0 }); G.ui.toast(`<b>${displayName(id)}</b> hustles over to help.`); }
+    return m || null;
   }
 
   has(id) { return this.party.some((p) => p.id === id); }
@@ -694,7 +712,7 @@ export class World extends Mode {
 
   /** The lineman shoves a heavy object one step away from the player. */
   async shove(p) {
-    const w = this.member('waffle');
+    const w = this.callIn((p) => p.id === 'waffle');
     if (!w) { G.audio.sfx('deny'); await G.ui.say(null, 'It won\'t budge. You\'d need someone refrigerator-sized to shove this.'); return; }
     const me = this.ctrl;
     let dx = p.s.x - me.x, dz = p.s.z - me.z;
@@ -739,7 +757,7 @@ export class World extends Mode {
 
   /** Hand control to the smallest teammate on the far side of a gap. */
   async squeeze(g) {
-    const small = this.party.find((p) => p.small && p !== this.leader);
+    const small = this.callIn((p) => p.small);
     if (!small) { G.audio.sfx('deny'); await G.ui.say(null, 'Too tight for you. Someone much smaller could squeeze through.'); return; }
     await this.run(async () => {
       G.audio.sfx('squeak');
@@ -815,7 +833,8 @@ export class World extends Mode {
       // on ice you keep sliding in a straight line until something stops you
       if (!c.slide) {
         const mx = Math.abs(ax.x) > Math.abs(ax.y) ? Math.sign(ax.x) : 0, mz = mx ? 0 : Math.sign(ax.y);
-        if (mx || mz) { c.slide = { x: mx, z: mz }; G.audio.sfx('juke'); }
+        const blocked = c.bumped && c.bumped.x === mx && c.bumped.z === mz;
+        if ((mx || mz) && !blocked) { c.slide = { x: mx, z: mz }; c.bumped = null; G.audio.sfx('juke'); }
         else if (Math.hypot(c.vx, c.vz) > 1) { c.slide = Math.abs(c.vx) > Math.abs(c.vz) ? { x: Math.sign(c.vx), z: 0 } : { x: 0, z: Math.sign(c.vz) }; }
       }
       if (c.slide) {
@@ -828,12 +847,12 @@ export class World extends Mode {
         this.moveCircle(c, c.slide.x * sp * dt, c.slide.z * sp * dt, c.r, c.small);
         const moved = Math.hypot(c.x - px, c.z - pz);
         c.vx = c.slide.x * sp; c.vz = c.slide.z * sp;
-        if (moved < sp * dt * 0.4) { c.slide = null; c.vx = c.vz = 0; G.audio.sfx('thud'); this.fx.dust(c.x, c.z, 0xffffff); }
+        if (moved < sp * dt * 0.4) { c.bumped = c.slide; c.slide = null; c.vx = c.vz = 0; G.audio.sfx('thud'); this.fx.dust(c.x, c.z, 0xffffff); }
         c.ch.face(Math.atan2(c.vx || 0.001, c.vz), dt);
         c.sp = 2;
         return;
       }
-    } else c.slide = null;
+    } else { c.slide = null; c.bumped = null; }
 
     c.vx = damp(c.vx, ax.x * max, 16, dt);
     c.vz = damp(c.vz, ax.y * max, 16, dt);
@@ -1052,6 +1071,7 @@ export class World extends Mode {
       if (a.fixedCam) { tx = a.fixedCam[0]; tz = a.fixedCam[1]; } else {
         tx = clamp(tx, mx, this.W - mx);
         tz = clamp(tz, mz - 1.5, this.D - mz + 2.5);
+        for (const v of this.vistas || []) if (Math.abs(c.x - v.x) < v.w / 2 && Math.abs(c.z - v.z) < v.d / 2) { tz += v.dz || 0; tx += v.dx || 0; zoom *= v.zoom || 1; }
       }
     }
     return { tx, tz, zoom };

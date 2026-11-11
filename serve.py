@@ -15,6 +15,8 @@ import webbrowser
 
 args = [a for a in sys.argv[1:] if a.isdigit()]
 START_PORT = int(args[0]) if args else 8000
+# --open=fable/ opens that page instead of the root game (Fourth & Fable lives in fable/)
+OPEN_PATH = next((a.split('=', 1)[1] for a in sys.argv[1:] if a.startswith('--open=')), '').lstrip('/')
 
 
 class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
@@ -42,9 +44,9 @@ def main():
         input('Press Enter to close...')
         return
 
-    url = f'http://localhost:{port}'
+    url = f'http://localhost:{port}/{OPEN_PATH}' if OPEN_PATH else f'http://localhost:{port}'
     print()
-    print('  VARSITY 27')
+    print('  FOURTH & FABLE' if OPEN_PATH.startswith('fable') else '  VARSITY 27')
     print(f'  Game is live at  {url}')
     if port != START_PORT:
         print(f'  (port {START_PORT} was busy — an old window may still be running)')

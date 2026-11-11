@@ -79,9 +79,9 @@ export default {
     if (!flag('fair_seen')) w.trigger(10, 31, 5, 6, () => st.fairArrive(w), { once: 'fair_seen_t' });
 
     // ---------------- corn everywhere that isn't path
-    w.put('cornBlock', MX + 13 * CELL / 2, 9.5, { w: 13 * CELL, d: 15, seed: 3 });
-    w.put('cornBlock', MX + 13 * CELL / 2, 50, { w: 13 * CELL, d: 17, seed: 4 });
-    w.put('cornBlock', 37, 10, { w: 1.6, d: 34 - 16, seed: 5 }); w.put('cornBlock', 37, 45, { w: 1.6, d: 26, seed: 6 });
+    w.put('cornBlock', MX + 13 * CELL / 2, 9, { w: 13 * CELL, d: 18, seed: 3, gap: 1.25 });
+    w.put('cornBlock', MX + 13 * CELL / 2, 50.7, { w: 13 * CELL, d: 18.6, seed: 4, gap: 1.25 });
+    w.put('cornBlock', 37, 9.5, { w: 1.6, d: 19, seed: 5 }); w.put('cornBlock', 37, 46, { w: 1.6, d: 28, seed: 6 });
     MAZE.forEach((row, rr) => {
       let run = -1;
       for (let c = 0; c <= row.length; c++) {

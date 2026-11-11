@@ -40,6 +40,7 @@ const PAD_GLYPH = {
   a: '✕', b: '◯', x: '□', y: '△', l: 'L1', r: 'R1', start: 'OPTIONS', menu: 'SHARE', back: '◯',
   t1: '□', t2: '△', t3: '◯', move: 'L-STICK', mute: 'M',
 };
+const TOUCH_GLYPH = { a: 'A', b: 'B', x: 'X', y: 'Y', menu: '☰', start: '☰', move: 'STICK', t1: 'TAP', t2: 'TAP', t3: 'TAP', back: 'B', mute: 'M' };
 const PREVENT = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab']);
 const DEADZONE = 0.22;
 
@@ -181,8 +182,8 @@ export class Input {
   }
   consume(...actions) { for (const a of actions) this.consumed.add(a); }
 
-  /** Held "run" — SHIFT on keys, R2/◯ on pad. */
-  running() { return this.down('b') || this.down('run'); }
+  /** Held "run" — SHIFT on keys, R2/◯ on pad; on touch, pushing the stick all the way. */
+  running() { return this.down('b') || this.down('run') || (this.device === 'touch' && Math.hypot(this.vAxis.x, this.vAxis.y) > 0.86); }
 
   /** One menu-navigation step this frame, or null. */
   nav() { return this.enabled ? this._nav.fired : null; }
@@ -195,6 +196,7 @@ export class Input {
   }
 
   glyph(action) {
+    if (this.device === 'touch') return TOUCH_GLYPH[action] || (KEY_GLYPH[action] || action.toUpperCase());
     return (this.device === 'pad' ? PAD_GLYPH[action] : KEY_GLYPH[action]) || action.toUpperCase();
   }
 

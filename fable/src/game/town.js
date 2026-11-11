@@ -74,6 +74,7 @@ export async function noticeBoard(w) {
     await narr(lines[built]);
     const all = S().town.diner + S().town.arcade + S().town.field + S().town.stadium;
     if (all >= 1) finishQuest('rebuild');
+    if (built === 'diner' && S().roster.includes('pip') && S().roster.includes('zip') && !S().plays.includes('no_look')) { startQuest('argue'); await say(w, 'hollow', 'Do you hear shouting? That\'s Pip. And that\'s Zip, louder. They\'ve found the diner booth.'); }
     if (built === 'stadium' && S().town.stadium === 1 && !questActive('lights')) startQuest('lights');
     if (built === 'stadium' && S().town.stadium >= 2 && S().quests.bowl) setQuestStage('bowl', 1);
     save();
@@ -438,6 +439,20 @@ const PAIRS = [
   } },
 ];
 
+/** The diner scene from the pitch: settle Pip and Zip's argument, get the No-Look Pass. */
+export async function argument(w) {
+  const pr = PAIRS[0];
+  G.ui.cine(true);
+  await pr.scene(w);
+  G.ui.cine(false);
+  unlockPlay(pr.play);
+  for (const x of pr.ids) charState(x).bond = Math.min(3, charState(x).bond + 1);
+  if (!S().quests.argue) startQuest('argue');
+  finishQuest('argue');
+  save();
+  w.rebuild();
+}
+
 export async function hangout(w, id) {
   const cs = charState(id);
   const lines = HANG[id] || [[id, '...']];
@@ -497,7 +512,7 @@ export function install() {
   const H = G.hooks;
   H.board = noticeBoard; H.shop = shop; H.diner = dinerMenu; H.bed = bed; H.uniforms = uniforms; H.decorate = decorate;
   H.travel = travel; H.practice = practice; H.arcadeGame = arcadeGame; H.prizes = prizes; H.blitzTwins = blitzTwins;
-  H.stadiumGate = stadiumGate; H.fuseBox = fuseBox; H.loungers = loungers; H.chat = chatWithParty;
+  H.stadiumGate = stadiumGate; H.fuseBox = fuseBox; H.loungers = loungers; H.chat = chatWithParty; H.argument = argument;
   H.fish = (w) => G.hooks.minigame('fishing', { night: G.S.tod === 'night' }).then(() => save());
 }
 

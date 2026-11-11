@@ -1281,7 +1281,7 @@ export class Battle extends Mode {
       const k = (this.clock % 7.5);
       this.darkNow = k > 5.6;
       this.hudUI.setDark(this.darkNow ? 0.82 : 0);
-    } else if (this.lightsOut > 0) { this.hudUI.setDark(0.55); } else this.hudUI.setDark(0);
+    } else if (this.lightsOut > 0) { this.hudUI.setDark(0.55); } else this.hudUI.setDark(hz.type === 'fog' ? 0.4 : 0);
   }
 
   // ---------------------------------------------------------------- the ball
@@ -1980,7 +1980,7 @@ export class Battle extends Mode {
         if (r.keyIdx < 0) continue;
         const o = this.openness(r);
         const far = this.field.hz.type === 'fog' && r.x - this.los > 9;
-        list.push({ pos: this.wpos(r, r.ch.height + 0.9), label: G.input.device === 'pad' ? ['□', '△', '◯'][r.keyIdx] : String(r.keyIdx + 1), cls: hidden || far ? 'unk' : o > 2.5 ? '' : o > 1.5 ? 'mid' : 'bad', sub: displayName(r.key) });
+        list.push({ key: r.keyIdx, pos: this.wpos(r, r.ch.height + 0.9), label: G.input.device === 'pad' ? ['□', '△', '◯'][r.keyIdx] : String(r.keyIdx + 1), cls: hidden || far ? 'unk' : o > 2.5 ? '' : o > 1.5 ? 'mid' : 'bad', sub: displayName(r.key) });
       }
       this.hudUI.targets(list, this.camera);
       if (!this._hintSet) this.hudUI.setHint(`${G.ui.key('move')} move · ${G.ui.key('t1')}${G.ui.key('t2')}${G.ui.key('t3')} throw · ${G.ui.key('a')} dodge · cross the blue line to scramble`);

@@ -45,9 +45,17 @@ module.exports = async (h, args) => {
     console.log('match try', tries, 'chapter', st.chapter, 'tod', st.tod);
     if (st.chapter >= 2) break;
   }
-  await ev(() => window.__fable.G.world.goto('hollow', 39, 16)); await h.step(30);
-  await ev(() => window.__fable.G.world.tp(39, 14)); await h.step(80);
+  // walk up to the stadium gate: the scoreboard scene
+  await ev(() => window.__fable.G.world.goto('hollow', 39, 18)); await h.step(30);
+  await ev(() => window.__fable.axis(0, -1)); await h.step(50); await ev(() => window.__fable.axis(0, 0)); await h.step(60);
   s = await state();
-  console.log('end', JSON.stringify({ chapter: s.chapter, tod: s.tod, quests: s.quests, roster: s.roster }));
+  console.log('after scoreboard', JSON.stringify({ chapter: s.chapter, tod: s.tod, quests: s.quests }));
   await h.shot('ch1-scoreboard.png');
+  if (!s.quests.welcome_back) throw new Error('scoreboard scene did not run');
+  // Gus → the bus → Harvest Fairgrounds
+  await act(67.6, 32.6, 80);
+  s = await state();
+  console.log('end', JSON.stringify({ area: s.area, quests: s.quests }));
+  if (s.area !== 'fair' || !s.quests.fair) throw new Error('bus to the fairgrounds failed');
+  console.log('CHAPTER 1 OK');
 };
