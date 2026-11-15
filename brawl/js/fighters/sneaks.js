@@ -459,7 +459,7 @@ const moves = {
     frames: 50, charge: { at: 8, max: 60 }, sfx: { 12: 'swishL' }, vel: [[11, 3.4, null]],
     pose: K([0, {}], [7, { hR: at(-6, 44), prop: -2.35, lean: -0.24, by: 2, fR: at(10, 0), tail: -0.5 }], [8, { hR: at(-6, 44), prop: -2.35, lean: -0.24, by: 2, fR: at(10, 0), tail: -0.5 }],
       [14, { hR: at(22, 13), prop: 0.56, lean: 0.4, by: 5, fR: at(13, 0), sy: 0.96, tail: 0.8 }, 'in3'], [22, { hR: at(21, 12), prop: 0.6, lean: 0.36, by: 5, fR: at(13, 0), tail: 0.6 }], [50, {}]),
-    hits: [hit([13, 17], 'prop', 13, 17, 42, 32, 100, { to: 'hR', sfx: 'whop' })],
+    hits: [hit([13, 17], 'prop', 13, 16, 42, 31, 100, { to: 'hR', sfx: 'whop' })],
     events: { 14: (f, m) => { m.fx.dust(f.x + f.facing * 40, f.y, 3); } },
   },
   usmash: {
@@ -630,7 +630,7 @@ const moves = {
 export default {
   id: 'sneaks', name: 'SNEAKS', from: 'Midnight Snack Heist', superName: 'Lights Out',
   blurb: 'The raccoon behind the cafeteria dumpster. Twirls a flashlight, carries a zapper, and was never here.',
-  stats: { weight: 95, walk: 2.5, dash: 6.0, run: 5.6, jump: 10.9, hop: 6.8, djump: 10, gravity: 0.37, fall: 7.6, airSpeed: 3.8, w: 30, h: 58 },
+  stats: { weight: 92, walk: 2.5, dash: 6.0, run: 5.6, jump: 10.9, hop: 6.8, djump: 10, gravity: 0.37, fall: 7.6, airSpeed: 3.8, w: 30, h: 58 },
   portrait: { x: 3, y: -43, s: 1.16 },
   costumes: costumes(BASE, [
     ['Dumpster Diver', {}],
