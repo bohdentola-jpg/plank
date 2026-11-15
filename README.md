@@ -40,6 +40,9 @@ training camp; the playbook has 17 plays plus whatever you draw up yourself.
 | ![School builder](docs/school-builder.png) | ![Uniform lab](docs/uniform-lab.png) |
 | ![Touchdown celebration](docs/touchdown.png) | ![Defense](docs/defense.png) |
 
+> **Also in this repo:** [Computer Lab Brawl](brawl/README.md), an original
+> Flash-style platform fighter. Double-click `brawl.bat` to play it.
+
 ## Run it
 
 **Windows:** double-click **`play.bat`** — it finds Python, starts the server,
