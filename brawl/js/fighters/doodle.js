@@ -221,6 +221,7 @@ class Quiz extends Entity {
     const f = this.f;
     if (this.shake > 0) this.shake--;
     if (f.out || f.state !== 'move' || f.moveId !== 'super' || m.state === 'over' || this.t > 500) { this.end(m); return; }
+    m.cam.focus = { x: f.x + f.facing * 60, y: f.y - 168, zoom: 0.95, t: 3 };     // keep the fight in view underneath the paper
     for (let i = this.victims.length - 1; i >= 0; i--) {
       const v = this.victims[i];
       if (v.out || v.state !== 'trapped') { this.victims.splice(i, 1); continue; }
@@ -368,11 +369,11 @@ const moves = {
     hits: [hit([5, 10], 'mouth', 15, 10, 55, 56, 62, { sfx: 'crunch' }), hit([11, 17], 'mouth', 13, 7, 60, 40, 50, { sfx: 'snip' })],
   },
   fsmash: {     // the big clamp: rears right back first
-    frames: 54, charge: { at: 10, max: 60 }, vel: [[16, 5.4, null]], fric: 0.5, sfx: { 15: 'swishL' },
-    pose: K([0, {}], [9, { jaw: 1.3, ox: -10, rot: -0.42, sx: 0.86, sy: 1.1 }], [10, { jaw: 1.3, ox: -10, rot: -0.42, sx: 0.86, sy: 1.1 }],
-      [18, { jaw: 0, ox: 14, rot: 0.16, sx: 1.24, sy: 0.9 }, 'in3'], [27, { jaw: 0, ox: 10, rot: 0.1 }], [54, {}]),
-    hits: [hit([17, 21], 'mouth', 17, 18, 40, 34, 102, { to: 'far', sfx: 'crunch' })],
-    events: { 18: (f, m) => { m.fx.dust(f.x + f.facing * 30, f.y, 3); } },
+    frames: 58, charge: { at: 12, max: 60 }, vel: [[19, 3.8, null]], fric: 0.5, sfx: { 18: 'swishL' },
+    pose: K([0, {}], [11, { jaw: 1.3, ox: -10, rot: -0.42, sx: 0.86, sy: 1.1 }], [12, { jaw: 1.3, ox: -10, rot: -0.42, sx: 0.86, sy: 1.1 }], [17, { jaw: 1.3, ox: -11, rot: -0.46, sx: 0.84, sy: 1.12 }],
+      [22, { jaw: 0, ox: 13, rot: 0.16, sx: 1.24, sy: 0.9 }, 'in3'], [31, { jaw: 0, ox: 9, rot: 0.1 }], [58, {}]),
+    hits: [hit([21, 24], 'mouth', 17, 17, 40, 34, 100, { sfx: 'crunch' })],
+    events: { 22: (f, m) => { m.fx.dust(f.x + f.facing * 30, f.y, 3); } },
   },
   usmash: {     // snaps straight up
     frames: 48, charge: { at: 7, max: 60 }, sfx: { 10: 'swishL' },
@@ -408,22 +409,22 @@ const moves = {
   dair: air({   // jaws-first plunge
     frames: 50, drift: 0.3, fallCap: 12.5, vel: [[4, 0, -2.5], [14, 0, 12.5]], sfx: { 13: 'swishL' },
     pose: K([0, {}], [12, { jaw: 1.1, rot: -UP * 0.8 }, 'out'], [15, { jaw: 0.9, rot: -UP, sy: 1.16, sx: 0.9 }], [50, { jaw: 0.9, rot: -UP, sy: 1.16, sx: 0.9 }]),
-    hits: [hit([14, 20], 'mouth', 15, 12, 270, 20, 84, { sfx: 'crunch' }), hit([21, 48], 'mouth', 15, 9, 60, 30, 70, { group: 1, sfx: 'crunch' })],
+    hits: [hit([14, 20], 'mouth', 14, 11, 270, 20, 84, { sfx: 'crunch' }), hit([21, 48], 'mouth', 14, 8, 60, 30, 70, { group: 1, sfx: 'crunch' })],
     onLand: (f, m) => { m.fx.dust(f.x, f.y, 6); m.shake(4); m.sfx('thud'); },
   }, 20, [10, 50]),
 
   // --- specials ---
   nspecial: {   // spits a staple
-    kind: 'special', frames: 36, drift: 0.6, sfx: { 9: 'spit' },
+    kind: 'special', frames: 40, drift: 0.6, sfx: { 9: 'spit' },
     can: (f, m) => countMine(f, m, 'staple') < 2,
-    pose: K([0, {}], [7, { jaw: 0.1, sx: 0.88, ox: -4, rot: -0.1 }], [10, { jaw: 0.9, sx: 1.14, ox: 5 }, 'in'], [17, { jaw: 0.5, ox: 2 }], [36, {}]),
+    pose: K([0, {}], [7, { jaw: 0.1, sx: 0.88, ox: -4, rot: -0.1 }], [10, { jaw: 0.9, sx: 1.14, ox: 5 }, 'in'], [17, { jaw: 0.5, ox: 2 }], [40, {}]),
     events: { 10: (f, m) => {
-      shoot(f, m, { tag: 'staple', x: 26, y: 13, vx: 11.5, vy: 0, r: 7, life: 32, drawFn: stapleArt,
+      shoot(f, m, { tag: 'staple', x: 26, y: 13, vx: 11.5, vy: 0, r: 7, life: 26, drawFn: stapleArt,
         hit: { dmg: 5, ang: 361, bk: 14, kg: 34, sfx: 'tink' }, onDie: (p, m2) => { m2.fx.spark(p.x, p.y, 4, '#ffffff'); } });
     } },
   },
   sspecial: {   // pounce: leaps in an arc; whoever the jaws close on gets chewed
-    kind: 'special', frames: 52, airOK: true, slideOff: true, drift: 0.2, vel: [[8, 6.8, -6.2]], sfx: { 7: 'growl' },
+    kind: 'special', frames: 58, airOK: true, slideOff: true, drift: 0.2, vel: [[8, 6.8, -6.2]], sfx: { 7: 'growl' },
     start: (f) => { f.v.caught = null; },
     tick: (f, m) => {
       const t = f.v.caught;
@@ -431,8 +432,8 @@ const moves = {
       f.v.caught = null;
       if (!t.out && t.state !== 'dead' && t.state !== 'respawn' && t.state !== 'trapped') { f.v.prey = t; f.startMove('chew', true); }
     },
-    pose: K([0, {}], [7, { sy: 0.72, sx: 1.22, jaw: 0.3 }], [11, { jaw: 1.15, rot: -0.4, sy: 1.1 }, 'out'], [24, { jaw: 1.15, rot: 0.25 }], [30, { jaw: 0, rot: 0.3 }, 'in'], [40, { jaw: 0, sy: 0.9 }], [52, {}]),
-    hits: [hit([12, 30], 'mouth', 15, 3, 80, 0, 0, { set: 1, unblockable: true, sfx: 'crunch',
+    pose: K([0, {}], [7, { sy: 0.72, sx: 1.22, jaw: 0.3 }], [11, { jaw: 1.15, rot: -0.4, sy: 1.1 }, 'out'], [24, { jaw: 1.15, rot: 0.25 }], [30, { jaw: 0, rot: 0.3 }, 'in'], [44, { jaw: 0, sy: 0.9 }], [58, {}]),
+    hits: [hit([15, 28], 'mouth', 12, 3, 80, 0, 0, { set: 1, unblockable: true, sfx: 'crunch',
       onHit: (o, t) => { if (o && !o.v.caught && !t.def.noGrab) o.v.caught = t; } })],
   },
   chew: {       // only reached from a pounce that caught someone: three chews, then spits them out
@@ -442,13 +443,14 @@ const moves = {
     tick: (f, m, fr) => {
       const t = f.v.prey;
       if (!t || t.out || t.state !== 'trapped') { f.v.prey = null; if (fr < 46) f.mf = 46; return; }
-      t.x = f.x + f.facing * 27; t.y = f.y - 11 + t.h * t.scale * 0.5; t.vx = t.vy = t.kx = t.ky = 0; t.intangible = true; t.facing = -f.facing;
+      t.x = f.x + f.facing * 27; t.y = f.y; t.vx = t.vy = t.kx = t.ky = 0; t.intangible = true; t.facing = -f.facing;       // feet level with ours, so they are never left inside a floor
+      t.grounded = f.grounded; t.ground = f.grounded ? f.ground : null;
       if (fr === 10 || fr === 22 || fr === 34) {
         t.pct = Math.min(999, t.pct + 2); t.stats.taken += 2; f.stats.dealt += 2; t.flash = 5; t.flashColor = '#ffffff';
         t.lastHitBy = f.slot; t.lastHitFrame = m.frame;
         m.sfx('crunch', { vol: 0.8 }); m.fx.hit(t.x, t.y - t.h * 0.5, 'slash', 0.4); m.shake(2);
       }
-      if (fr === 44) { f.v.prey = null; t.intangible = false; m.blast(f, t, { dmg: 5, ang: 38, bk: 62, kg: 62, dir: f.facing, x: f.x, force: true, sfx: 'spit' }); }
+      if (fr === 44) { f.v.prey = null; t.intangible = false; m.blast(f, t, { dmg: 4, ang: 38, bk: 60, kg: 58, dir: f.facing, x: f.x, force: true, sfx: 'spit' }); }
     },
     pose: K([0, { jaw: 0.55 }], [10, { jaw: 0.2, sx: 1.06 }, 'in'], [16, { jaw: 0.6 }], [22, { jaw: 0.2, sx: 1.06 }, 'in'], [28, { jaw: 0.6 }], [34, { jaw: 0.2, sx: 1.06 }, 'in'],
       [41, { jaw: 0.25, ox: -7, sx: 0.88 }], [44, { jaw: 1.1, ox: 8, sx: 1.16 }, 'in'], [50, { jaw: 0.4, ox: 3 }], [58, {}]),
@@ -471,7 +473,7 @@ const moves = {
     tick: (f, m, fr) => { if (fr >= 9 && fr < 36 && fr % 3 === 0) { m.fx.confetti(f.x + f.facing * 24, f.y - 6, 2); if (f.grounded) m.fx.dust(f.x + f.facing * 18, f.y, 1); } },
     pose: (f, fr) => fr >= 8 && fr < 36 ? { jaw: 0.15 + Math.abs(Math.sin(fr * 0.9)) * 0.6, rot: 0.3, ox: 4 + Math.sin(fr * 1.8) * 1.5, sy: 0.92 }
       : K([0, {}], [8, { jaw: 0.6, rot: 0.3, ox: 4, sy: 0.92 }], [36, { jaw: 0.6, rot: 0.3, ox: 4, sy: 0.92 }], [39, { jaw: 0, rot: 0.1, ox: 10, sx: 1.14 }, 'in'], [44, { jaw: 0, ox: 6 }], [52, {}]),
-    hits: [box([10, 34], [34, 13], 50, 28, 1.5, 20, 0, 0, { set: 12, rehit: 6, hl: 0.4, sfx: 'paper', fx: 'slash' }),
+    hits: [box([10, 34], [34, 13], 50, 28, 1.2, 20, 0, 0, { set: 12, rehit: 6, hl: 0.4, sfx: 'paper', fx: 'slash' }),
       hit([38, 41], 'mouth', 17, 4, 55, 52, 60, { group: 1, sfx: 'rip', off: [6, 0] })],
   },
 
@@ -521,7 +523,7 @@ const moves = {
 export default {
   id: 'doodle', name: 'DOODLE & CHOMPS', from: 'Margin of Error', superName: 'Fill In The Blank',
   blurb: 'A margin doodle and the staple remover he rides. Chomps does the biting. Doodle holds the balloon and takes the credit.',
-  stats: { weight: 104, walk: 2.0, dash: 5.2, run: 4.6, jump: 9.8, hop: 6.2, djump: 8.4, djumpDecay: 0.9, airJumps: 3, gravity: 0.3, fall: 6.4, airSpeed: 3.3, w: 36, h: 52 },
+  stats: { weight: 98, walk: 2.0, dash: 5.2, run: 4.6, jump: 9.8, hop: 6.2, djump: 8.4, djumpDecay: 0.9, airJumps: 3, gravity: 0.3, fall: 6.4, airSpeed: 3.3, w: 36, h: 52 },
   portrait: { x: 4, y: -40, s: 0.98 },
   costumes: costumes(BASE, [
     ['Blue Pen', {}],
@@ -556,8 +558,8 @@ export default {
     },
   },
   ai: {
-    nspecial: { range: [120, 330], dy: 26, w: 0.7 },
-    sspecial: { range: [70, 150], dy: 44, w: 0.8 },
+    nspecial: { range: [150, 290], dy: 24, w: 0.3 },
+    sspecial: { range: [70, 140], dy: 40, w: 0.5 },
     super: { range: 118, dy: 60 },
     recovery: { up: 235 },
   },

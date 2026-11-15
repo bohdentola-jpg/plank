@@ -8,7 +8,7 @@ const loaded = await Promise.allSettled(IDS.map((id) => import(`./${id}.js`)));
 export const FIGHTERS = [];
 // Fighters that have been checked and are offered on the select screen. Anything
 // else still loads (so it can be tested by id) but is kept out of the menus.
-export const READY = ['lunchlady', 'sneaks', 'globert', 'campkids', 'allowance'];
+export const READY = ['lunchlady', 'zoomie', 'sneaks', 'soup', 'globert', 'crumbs', 'campkids', 'doodle', 'eraser', 'allowance', 'honk', 'dale'];
 
 loaded.forEach((r, i) => {
   if (r.status === 'fulfilled' && r.value.default) { const d = r.value.default; if (!READY.includes(d.id)) d.stub = true; FIGHTERS.push(d); }

@@ -7,7 +7,10 @@ import { TAU, ease } from '../core/util.js';
 import { mkSolid } from '../game/physics.js';
 import { OUT, rr, vgrad, circle, ellipse, rrect, polygon, line, rgba, lighten, darken } from '../core/gfx.js';
 
-const T = 36, TOP = -270, CY = TOP / 2;        // tube wall thickness; underside of the ceiling; the point the tunnel turns about
+const T = 32, TOP = -270, CY = TOP / 2;        // tube wall thickness; underside of the ceiling; the point the tunnel turns about
+// Only the top of a floor tube is solid. With the full thickness nobody (least of
+// all a CPU) could reach a hole's edge from underneath: they bumped the underside first.
+const TREAD = 14;
 const PERIOD = 1800, WARN = 120, TURN = 60;
 const RUNS_A = [[-340, -132], [-52, 52], [132, 340]];       // tube wall between the holes: the floor you start on...
 const RUNS_B = [[-340, -270], [-190, -40], [40, 340]];      // ...and the ceiling, which is the floor once the tunnel has turned over
@@ -122,7 +125,7 @@ export default {
     // Floors: only the centre run can be grabbed at the holes (the outer runs keep
     // their outside corners), so every hole has one edge to hang from and a CPU
     // that falls or hops into one is always drawn back toward the middle.
-    const mk = (runs, floor, set) => runs.map(([a, b], i) => mkSolid(a, floor ? 0 : TOP - T, b - a, T, {
+    const mk = (runs, floor, set) => runs.map(([a, b], i) => mkSolid(a, floor ? 0 : TOP - T, b - a, floor ? TREAD : T, {
       id: (floor ? 'floor' : 'ceil') + set + '_' + i, on: set === 0,
       ledge: floor ? (i === 0 ? 'l' : i === runs.length - 1 ? 'r' : 'lr') : '',
     }));

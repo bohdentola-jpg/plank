@@ -6,7 +6,7 @@ const IDS = ['pizza', 'greenhouse', 'habitat', 'afterhours', 'newgym', 'popquiz'
 const loaded = await Promise.allSettled(IDS.map((id) => import(`./${id}.js`)));
 export const STAGES = [];
 // Stages that have been checked and are offered on the select screen.
-export const READY = ['pizza', 'greenhouse', 'loading'];
+export const READY = ['pizza', 'greenhouse', 'habitat', 'afterhours', 'loading', 'gridpaper'];
 
 loaded.forEach((r, i) => {
   if (r.status === 'fulfilled' && r.value.default) { const d = r.value.default; if (!READY.includes(d.id)) d.stub = true; STAGES.push(d); }
