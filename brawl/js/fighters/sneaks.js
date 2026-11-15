@@ -628,6 +628,7 @@ const moves = {
 };
 
 export default {
+  tune: { dmg: 0.96 },      // balance dial: scales all damage this fighter deals
   id: 'sneaks', name: 'SNEAKS', from: 'Midnight Snack Heist', superName: 'Lights Out',
   blurb: 'The raccoon behind the cafeteria dumpster. Twirls a flashlight, carries a zapper, and was never here.',
   stats: { weight: 92, walk: 2.5, dash: 6.0, run: 5.6, jump: 10.9, hop: 6.8, djump: 10, gravity: 0.37, fall: 7.6, airSpeed: 3.8, w: 30, h: 58 },

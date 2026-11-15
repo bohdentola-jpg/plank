@@ -434,6 +434,7 @@ const moves = {
 };
 
 export default {
+  tune: { dmg: 0.94 },      // balance dial: scales all damage this fighter deals
   id: 'soup', name: 'SOUP', from: 'Shell Out', superName: 'Blast Off',
   blurb: 'The class hermit crab. Slow, heavy, lives in a soup can, and has a jet in the bottom of it for some reason.',
   stats: { weight: 118, walk: 1.5, dash: 3.6, run: 3.4, traction: 0.5, jump: 8.8, hop: 5.6, djump: 8.2, gravity: 0.4, fall: 8.2, fastFall: 12, airSpeed: 2.9, airAccel: 0.22, w: 40, h: 48 },

@@ -521,6 +521,7 @@ const moves = {
 };
 
 export default {
+  tune: { dmg: 1.06 },      // balance dial: scales all damage this fighter deals
   id: 'doodle', name: 'DOODLE & CHOMPS', from: 'Margin of Error', superName: 'Fill In The Blank',
   blurb: 'A margin doodle and the staple remover he rides. Chomps does the biting. Doodle holds the balloon and takes the credit.',
   stats: { weight: 98, walk: 2.0, dash: 5.2, run: 4.6, jump: 9.8, hop: 6.2, djump: 8.4, djumpDecay: 0.9, airJumps: 3, gravity: 0.3, fall: 6.4, airSpeed: 3.3, w: 36, h: 52 },

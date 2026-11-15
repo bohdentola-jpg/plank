@@ -454,9 +454,10 @@ function aiRecover(f, m, cpu) {
 }
 
 export default {
+  tune: { dmg: 1.12 },      // balance dial: scales all damage this fighter deals
   id: 'zoomie', name: 'ZOOMIE', from: 'Hamster Dash', superName: 'Wheel of Misfortune',
   blurb: 'The class hamster. Fastest feet in the lab and no second jump, so he packs a ball, a tube and a wheel that turns the room over.',
-  stats: { weight: 82, walk: 2.8, dash: 7.0, run: 6.6, traction: 0.5, airSpeed: 3.9, airAccel: 0.3, gravity: 0.42, fall: 8.2, fastFall: 12, jump: 11.2, hop: 7, airJumps: 0, jumpSquat: 3, dashFrames: 9, w: 34, h: 46 },
+  stats: { weight: 90, walk: 2.8, dash: 7.0, run: 6.6, traction: 0.5, airSpeed: 3.9, airAccel: 0.3, gravity: 0.42, fall: 8.2, fastFall: 12, jump: 11.2, hop: 7, airJumps: 0, jumpSquat: 3, dashFrames: 9, w: 34, h: 46 },
   portrait: { x: 4, y: -29, s: 1.25 },
   costumes: costumes(BASE, [
     ['Golden', {}],

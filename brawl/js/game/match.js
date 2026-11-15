@@ -285,6 +285,7 @@ export class Match {
     if (t.invuln > 0 && !hb.grab) return false;
     if (t.invuln > 0 && hb.grab) return false;
     let dmg = (hb.dmg || 0) * (src.mul || 1);
+    if (owner && owner.def.tune && owner.def.tune.dmg) dmg *= owner.def.tune.dmg;      // per-fighter balance dial
     const hx = at ? (at.r !== undefined ? at.x : at.x + at.w / 2) : t.x;
     const hy = at ? (at.r !== undefined ? at.y : at.y + at.h / 2) : t.cy;
     const px = clamp(hx, t.x - t.w / 2, t.x + t.w / 2), py = clamp(hy, t.y - t.h * t.scale, t.y);
