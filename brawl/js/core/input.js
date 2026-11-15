@@ -291,6 +291,10 @@ export class InputManager {
     const rp = this.rawPressed;
     if (rp.includes('Enter') || rp.includes('NumpadEnter')) { out.ok = true; out.dev = out.dev || this.kbA; }
     if (rp.includes('Escape') || rp.includes('Backspace')) { out.back = true; out.dev = out.dev || this.kbA; }
+    if (rp.includes('ArrowUp')) out.up = true;
+    if (rp.includes('ArrowDown')) out.down = true;
+    if (rp.includes('ArrowLeft')) out.left = true;
+    if (rp.includes('ArrowRight')) out.right = true;
     return out;
   }
 
