@@ -15,6 +15,9 @@ import webbrowser
 
 args = [a for a in sys.argv[1:] if a.isdigit()]
 START_PORT = int(args[0]) if args else 8000
+# --path=brawl/ opens a game that lives in a sub-folder; --title="..." names it in this window
+OPEN_PATH = next((a.split('=', 1)[1] for a in sys.argv[1:] if a.startswith('--path=')), '')
+TITLE = next((a.split('=', 1)[1] for a in sys.argv[1:] if a.startswith('--title=')), 'VARSITY 27')
 
 
 class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
@@ -42,9 +45,9 @@ def main():
         input('Press Enter to close...')
         return
 
-    url = f'http://localhost:{port}'
+    url = f'http://localhost:{port}/{OPEN_PATH}'
     print()
-    print('  VARSITY 27')
+    print(f'  {TITLE}')
     print(f'  Game is live at  {url}')
     if port != START_PORT:
         print(f'  (port {START_PORT} was busy — an old window may still be running)')

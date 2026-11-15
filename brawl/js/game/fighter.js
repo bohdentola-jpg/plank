@@ -517,6 +517,8 @@ export class Fighter {
     if (this.platformDrop()) return;
     this.cycle += Math.abs(this.vx);
     if (this.sf > 1 && inp.x * this.facing < -0.5 && (inp.digital || inp.tapX)) { this.facing = -this.facing; this.setState('dash'); return; }
+    // let go early and the dash is cut short, so a quick tap is a small step
+    if (this.sf >= 3 && Math.abs(inp.x) < 0.3) { this.vx *= 0.55; this.setState('brake'); return; }
     if (this.sf >= st.dashFrames) {
       if (inp.x * this.facing > 0.5) this.setState('run'); else this.setState('brake');
     }
@@ -854,9 +856,11 @@ export class Fighter {
     if (this.sf < 6) { this._lk = dk; return; }
     const fresh = dk !== this._lk; this._lk = dk;
     const toward = inp.x * -L.dir;      // + = pressing toward the stage
-    if (this.pressed('jump') || (this.pressed('tapjump', 2) && this.ctl && this.ctl.tapJump && inp.tapY < 0)) {
-      this.eat('jump'); this.eat('tapjump'); this.ledgeCD = G.ledgeCooldown; this.ledge = null;
-      this.setState('air'); this.vy = -this.st.jump * 1.02; this.vx = -L.dir * 1.6; this.invuln = Math.max(this.invuln, 10);
+    // Up climbs; only the jump button hops off the ledge
+    this.eat('tapjump');
+    if (this.pressed('jump')) {
+      this.eat('jump'); this.ledgeCD = G.ledgeCooldown; this.ledge = null;
+      this.setState('air'); this.vy = -this.st.jump * 1.02; this.vx = -L.dir * 2.4; this.invuln = Math.max(this.invuln, 10);
       m.sfx('jump'); return;
     }
     if (this.pressed('attack') || this.pressed('strong')) { this.eat('attack'); this.eat('strong'); this.v.ledgeThen = 'attack'; this.setState('ledgeclimb'); this.ledge = L; return; }
