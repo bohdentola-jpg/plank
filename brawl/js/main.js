@@ -3,6 +3,7 @@
 import { W, H, FPS, VERSION } from './core/config.js';
 import { InputManager } from './core/input.js';
 import { AudioSys } from './core/audio.js';
+import { Music } from './core/music.js';
 import { clamp, ease, TAU } from './core/util.js';
 import { OUT } from './core/gfx.js';
 import { loadSettings, saveSettings } from './core/storage.js';
@@ -20,6 +21,7 @@ input.importConfig(settings.input);
 input.attach(window, canvas);
 const audio = new AudioSys();
 audio.volSfx = settings.volSfx; audio.volMusic = settings.volMusic; audio.muted = settings.muted;
+audio.music = new Music(audio);
 
 const app = {
   canvas, ctx, input, audio, settings, version: VERSION,

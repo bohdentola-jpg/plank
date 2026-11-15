@@ -34,6 +34,7 @@ export class AudioSys {
     }
     if (this.ctx.state === 'suspended') this.ctx.resume();
     this.ready = true;
+    if (this.music) this.music.resume();
   }
 
   applyVolumes() {
