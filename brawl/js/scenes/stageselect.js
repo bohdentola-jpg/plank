@@ -69,7 +69,6 @@ export class StageScene {
       if (mn.ok) this.bump(this.rule, 1);
       if (mn.alt) this.bump(this.rule, -1);
       if (mn.down) { this.area = 'grid'; app.audio.sfx('ui_move'); }
-      if (mn.start) this.go();
     }
     if (mn.back) { this.back(); return; }
     for (let i = 0; i < 4; i++) { const [x, y, w, h] = this.ruleRect(i); if (clicked(app, x, y, w, h)) { this.rule = i; this.bump(i, 1); } }

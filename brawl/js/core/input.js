@@ -114,7 +114,8 @@ class KeyboardDevice extends Device {
     this.order = { left: 0, right: 0, up: 0, down: 0 };
   }
   table() { return this.mgr.keys[this.tableName]; }
-  any(list) { const k = this.mgr.down; for (const c of list) if (k.has(c)) return true; return false; }
+  // held now, or pressed-and-released since the last frame (so the quickest tap still counts)
+  any(list) { const k = this.mgr.down, f = this.mgr.fresh; for (const c of list) if (k.has(c) || f.has(c)) return true; return false; }
   poll() {
     const t = this.table(), s = this.snap, mgr = this.mgr;
     const L = this.any(t.left), R = this.any(t.right), U = this.any(t.up), D = this.any(t.down);
@@ -211,6 +212,7 @@ export class InputManager {
   constructor(settings) {
     this.settings = settings;
     this.down = new Set();
+    this.fresh = new Set();        // keys that went down since the last poll
     this.clock = 0;
     this.keys = JSON.parse(JSON.stringify(DEFAULT_KEYS));
     this.padPreset = 'brawl';
@@ -234,7 +236,7 @@ export class InputManager {
     target.addEventListener('keydown', (e) => {
       if (e.repeat) { if (game.has(e.code)) e.preventDefault(); return; }
       if (e.ctrlKey || e.metaKey) return;
-      this.down.add(e.code); this._queue.push(e.code);
+      this.down.add(e.code); this.fresh.add(e.code); this._queue.push(e.code);
       if (game.has(e.code)) e.preventDefault();
       this._gesture();
     });
@@ -267,6 +269,7 @@ export class InputManager {
     this.mouse.pressed = this._mp; this._mp = false; this.mouse.moved++;
     this.kbA.poll();
     this.kbB.poll();
+    this.fresh.clear();
     let gps = [];
     if (typeof navigator !== 'undefined' && navigator.getGamepads) { try { gps = navigator.getGamepads() || []; } catch (e) { gps = []; } }
     for (const p of this.pads) p.poll(gps[p.index]);
