@@ -124,18 +124,18 @@ const moves = {
   jab: {
     frames: 18, sfx: { 4: 'swishS' },
     pose: K([0, {}], [3, { ox: -5, sx: 0.9, sy: 1.08 }], [6, { ox: 13, sx: 1.14, sy: 0.9 }, 'out'], [10, { ox: 8 }], [18, {}]),
-    hits: [hit([5, 8], 'front', 15, 4, 70, 16, 30, { sfx: 'rubber' })],
+    hits: [hit([4, 8], 'front', 18, 5, 70, 16, 30, { sfx: 'rubber' })],
     cancel: [{ to: 'jab', f: [11, 17], on: 'attack' }],
   },
   ftilt: {
     frames: 30, sfx: { 6: 'swishM' }, vel: [[7, 4.6, null]],
     pose: K([0, {}], [5, { ox: -7, sx: 0.86, sy: 1.12, rot: -0.2 }], [9, { ox: 11, sx: 1.2, sy: 0.86, rot: 0.3 }, 'in'], [15, { ox: 6, rot: 0.15 }], [30, {}]),
-    hits: [hit([8, 13], 'front', 17, 9, 361, 24, 90, { sfx: 'rubber' })],
+    hits: [hit([7, 13], 'front', 20, 10, 361, 24, 92, { sfx: 'rubber' })],
   },
   utilt: {
     frames: 28, sfx: { 5: 'boing' },
     pose: K([0, {}], [4, { sy: 0.7, sx: 1.24 }], [8, { sy: 1.32, sx: 0.84, oy: -16 }, 'out'], [13, { sy: 1.1, oy: -6 }], [28, {}]),
-    hits: [hit([6, 11], 'top', 16, 7, 88, 30, 100, { sfx: 'rubber' })],
+    hits: [hit([6, 11], 'top', 19, 8, 88, 30, 100, { sfx: 'rubber' })],
   },
   dtilt: {
     frames: 24, sfx: { 4: 'swishS' },
@@ -145,17 +145,17 @@ const moves = {
   dash: {
     frames: 40, vel: [[0, 7.4, null]], fric: 0.24, sfx: { 2: 'swishM' },
     pose: K([0, { rot: 0 }], [24, { rot: TAU * 3, sx: 1.08, sy: 0.94 }, 'out'], [40, { rot: TAU * 3 }]),
-    hits: [hit([4, 12], 'body', 21, 10, 55, 58, 62, { sfx: 'rubber' }), hit([13, 22], 'body', 20, 7, 60, 40, 50, { group: 1 })],
+    hits: [hit([4, 12], 'body', 24, 11, 55, 58, 62, { sfx: 'rubber' }), hit([13, 22], 'body', 22, 8, 60, 40, 50, { group: 1 })],
   },
   fsmash: {
     frames: 52, charge: { at: 9, max: 60 }, vel: [[13, 10.8, null]], fric: 0.34, sfx: { 12: 'swishL' },
     pose: K([0, {}], [8, { ox: -8, sx: 0.78, sy: 1.22, rot: -0.3 }], [9, { ox: -8, sx: 0.78, sy: 1.22, rot: -0.3 }], [14, { ox: 6, sx: 1.32, sy: 0.8 }, 'in3'], [24, { sx: 1.1, sy: 0.94 }], [52, {}]),
-    hits: [hit([13, 20], 'front', 20, 17, 40, 34, 100, { sfx: 'whop' })],
+    hits: [hit([13, 20], 'front', 23, 18, 40, 34, 101, { sfx: 'whop' })],
   },
   usmash: {
     frames: 48, charge: { at: 7, max: 60 }, sfx: { 10: 'boing' },
     pose: K([0, {}], [6, { sy: 0.55, sx: 1.42 }], [7, { sy: 0.55, sx: 1.42 }], [12, { sy: 1.5, sx: 0.74, oy: -26 }, 'in3'], [18, { sy: 1.15, oy: -8 }], [48, {}]),
-    hits: [hit([11, 16], 'top', 19, 14, 90, 34, 104, { sfx: 'whop' })],
+    hits: [hit([10, 16], 'top', 21, 15, 90, 34, 104, { sfx: 'whop' })],
   },
   dsmash: {
     frames: 50, charge: { at: 6, max: 60 }, sfx: { 8: 'swishM', 14: 'swishM' },
@@ -164,12 +164,12 @@ const moves = {
   },
   nair: air({
     frames: 40, sfx: { 3: 'swishM' }, pose: spin(2, 26),
-    hits: [hit([4, 12], 'body', 24, 9, 361, 20, 85, { sfx: 'rubber' }), hit([13, 24], 'body', 22, 5, 361, 14, 70, { group: 1 })],
+    hits: [hit([4, 12], 'body', 26, 10, 361, 20, 86, { sfx: 'rubber' }), hit([13, 24], 'body', 24, 6, 361, 14, 70, { group: 1 })],
   }, 9, [3, 28]),
   fair: air({
     frames: 38, sfx: { 7: 'swishM' },
     pose: K([0, {}], [6, { ox: -6, sx: 0.84, sy: 1.14 }], [10, { ox: 13, sx: 1.26, sy: 0.84 }, 'in'], [16, { ox: 6 }], [38, {}]),
-    hits: [hit([9, 14], 'front', 18, 11, 361, 24, 92, { sfx: 'rubber' })],
+    hits: [hit([8, 14], 'front', 21, 12, 361, 24, 93, { sfx: 'rubber' })],
   }, 12, [6, 26]),
   bair: air({
     frames: 34, sfx: { 5: 'swishM' },
@@ -270,7 +270,7 @@ const moves = {
 export default {
   id: 'globert', name: 'GLOBERT', from: 'Roll Call', superName: 'Dodgeball!',
   blurb: 'The classroom globe, off his stand and out of patience. Fast, slippery, and five jumps deep.',
-  stats: { weight: 94, walk: 2.6, dash: 6.2, run: 5.8, traction: 0.24, jump: 10.2, hop: 6.4, djump: 8.8, djumpDecay: 0.9, airJumps: 4, gravity: 0.37, fall: 7.6, airSpeed: 3.7, w: 38, h: 44, landLag: 3 },
+  stats: { weight: 97, walk: 2.6, dash: 6.2, run: 6.0, traction: 0.3, jump: 10.2, hop: 6.4, djump: 8.8, djumpDecay: 0.9, airJumps: 4, gravity: 0.37, fall: 7.6, airSpeed: 3.7, w: 38, h: 44, landLag: 3 },
   portrait: { x: 3, y: -22, s: 0.86 },
   costumes: costumes(BASE, [
     ['Classroom', {}],
