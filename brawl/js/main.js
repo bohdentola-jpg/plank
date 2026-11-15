@@ -117,7 +117,7 @@ if (qs.get('battle')) {
   const cfg = {
     stage: qs.get('stage') || 'loading', skipIntro: qs.get('intro') === '0', seed: +qs.get('seed') || undefined,
     rules: { stocks: +qs.get('stocks') || 3, time: +qs.get('time') || 0, items: qs.get('items') !== '0', hazards: true },
-    players: ids.map((id, i) => ({ fighter: id, costume: i, type: i === 0 && human ? 'human' : 'cpu', device: 'kbA', level: +qs.get('cpu') || 5 })),
+    players: ids.map((id, i) => ({ fighter: id, costume: i, type: i === 0 && human ? 'human' : qs.get('dummy') ? 'none' : 'cpu', device: 'kbA', level: +qs.get('cpu') || 5 })),
     // testing aids: &super=1 everyone starts with a Gold Star (2 = re-granted every 8s, or a slot number 11..14 for one player),
     // &helper=<id> summons that helper for player 1, &pct=80 starting damage
     debug: { super: +qs.get('super') || 0, helper: qs.get('helper'), pct: +qs.get('pct') || 0 },
