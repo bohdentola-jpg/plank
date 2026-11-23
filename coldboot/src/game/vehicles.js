@@ -316,8 +316,9 @@ export class Vehicles {
         w.rotation.set(v.spin, w.userData.front ? v.steer : 0, 0, 'YXZ');
       }
     }
-    // the plough route
+    // the plough route, riders
     if (this.route) this._route(dt);
+    if (this.riders?.size) this._riders();
   }
 
   enter(v) {
@@ -464,6 +465,46 @@ export class Vehicles {
     }
     const k = Math.sin(this.t * 9) > 0.7 ? 1 : 0.15;
     v.model.strobe.material.color.setRGB(k * 2.4, k * 2.6, k * 3);
+  }
+
+  // ---------------------------------------------------------------- races
+  /** Bring your snowmobile to a start line and put you on it. */
+  lendSled(at, yaw = 0) {
+    const v = this.sled;
+    if (this.driving && this.driving !== v) this.exit();
+    if (v.box) v.box.disabled = true;
+    v.pos.set(at.x, groundY(at.x, at.z), at.z);
+    v.yaw = v.heading = yaw;
+    v.speed = 0;
+    v.place();
+    if (this.driving !== v) this.enter(v);
+    return v;
+  }
+
+  /** Put a named NPC on a snowmobile of their own (Tommy in a race), or take it away. */
+  npcRide(id, on = true) {
+    this.riders = this.riders || new Map();
+    const old = this.riders.get(id);
+    if (old && !on) { this.scene.remove(old.group); this.riders.delete(id); const n = this.G.npcs.get(id); n?.anim?.setPosture('stand'); return; }
+    if (!old && on) {
+      const m = makeProp('snowmobile', { color: '#1a4a9a', seed: 9 });
+      this.scene.add(m);
+      this.riders.set(id, { group: m });
+    }
+  }
+
+  _riders() {
+    for (const [id, r] of this.riders || []) {
+      const n = this.G.npcs.get(id);
+      if (!n?.ch) { r.group.visible = false; continue; }
+      r.group.visible = true;
+      r.group.position.set(n.pos.x, this.G.world.groundAt(n.pos.x, n.pos.z, n.pos.y + 1), n.pos.z);
+      r.group.rotation.y = n.yaw;
+      const seat = new THREE.Vector3(0, 0.42, -0.55).applyAxisAngle(V(0, 1, 0), n.yaw).add(r.group.position);
+      n.ch.group.position.copy(seat);
+      n.ch.group.rotation.y = n.yaw;
+      n.anim.setPosture('drive');
+    }
   }
 
   // ---------------------------------------------------------------- the plough route

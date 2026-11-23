@@ -43,6 +43,8 @@ export class Missions {
     const r = this.running.get(id);
     if (!r) return;
     r.m.cancelled = true;
+    this.G.hud.objectives?.delete(id);
+    if (this.G.hud.objective?.mission === id) this.G.hud.objective = null;
     this.running.delete(id);
     delete this.G.state.missions.active[id];
   }
@@ -83,9 +85,18 @@ export class Missions {
         const target = self.where(where);
         m._obj = { text, sub, target, mission: id };
         G.hud.objective = m._obj;
+        (G.hud.objectives ||= new Map()).set(id, m._obj);
         s.objective = { text, sub, target };
       },
-      clear() { if (G.hud.objective === m._obj) G.hud.objective = null; s.objective = null; },
+      clear() {
+        G.hud.objectives?.delete(id);
+        if (G.hud.objective === m._obj) {
+          // fall back to another open objective (main story first)
+          const rest = [...(G.hud.objectives?.values() || [])];
+          G.hud.objective = rest.find((o) => ALL_MISSIONS[o.mission]?.main) || rest[rest.length - 1] || null;
+        }
+        s.objective = G.hud.objective ? { text: G.hud.objective.text, sub: G.hud.objective.sub, target: G.hud.objective.target } : null;
+      },
       until(test, interval = 0) {
         return new Promise((resolve, reject) => {
           self.waiters.push({ test: () => { if (m.cancelled) { reject('cancelled'); return true; } return test(); }, resolve, interval });

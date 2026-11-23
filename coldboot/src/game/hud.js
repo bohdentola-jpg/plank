@@ -52,6 +52,14 @@ export class HUD {
       text(ctx, o.text + dist, 54, 116, { size: 16, weight: 700, color: '#fff' });
       if (o.sub) text(ctx, o.sub, 54, 136, { size: 13, weight: 600, color: C.dim });
     }
+    // other open objectives, smaller
+    let oy = this.objective ? (this.objective.sub ? 160 : 140) : 116;
+    let shown = 0;
+    for (const o of this.objectives?.values?.() || []) {
+      if (o === this.objective || shown >= 2) continue;
+      text(ctx, '◇  ' + o.text, 36, oy, { size: 13, weight: 700, color: 'rgba(200,215,230,0.7)' });
+      oy += 20; shown++;
+    }
     // ---------------------------------------------------- radar
     this._radar(ctx, g);
     // ---------------------------------------------------- attention eye

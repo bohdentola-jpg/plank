@@ -7,8 +7,14 @@
 import { audio } from './audio.js';
 import {
   TAU, clamp, rng, hash, Biquad, modal, ping, burst, pinkGen, wanderGen,
-  alloc, normalize, fadeEdges, loopify, toBuffer, setSmooth, rotStereo, krate,
+  alloc, normalize, fadeEdges, loopify, toBuffer, setSmooth, rotStereo, krate, smoothstep,
 } from './synthkit.js';
+import {
+  rGun, rExplosion, rMissile, rFlare, rBell, rStep, rRollDoor, rKey, rRegister, rShutter, rBuzz, rEar,
+  rKnock, rThud, rIce, rCreak, seriesOf, bladeShape, engineShape,
+} from './sfx_cb.js';
+import { bank } from './music/render.js';
+import { music } from './music.js';
 
 // ===========================================================================
 // One-shot renderers: (sr, R, variantIndex) → [Float32Array, …] (1–2 channels)
@@ -845,6 +851,39 @@ const SHOTS = {
   foghorn: [1, rFoghorn, 4],
   hawk: [1, rHawk],
   pa: [1, rPa, 2],
+  // COLD BOOT
+  gun: [4, rGun],
+  explosion: [2, rExplosion],
+  missile: [1, rMissile],
+  flare: [2, rFlare],
+  'bell:big': [1, (sr, R) => rBell(sr, R, 98, { len: 9, decay: 1.25 }), 2],
+  'bell:mid': [2, (sr, R, i) => rBell(sr, R, [196, 233.1][i], { len: 5.5, decay: 0.8 }), 2],
+  'bell:small': [4, (sr, R, i) => rBell(sr, R, [466.2, 523.3, 587.3, 698.5][i], { len: 2.8, decay: 0.42, bright: 0.85 }), 2],
+  'step:snow': [6, (sr, R, i) => rStep(sr, R, 'snow', i)],
+  'step:wood': [5, (sr, R, i) => rStep(sr, R, 'wood', i)],
+  'step:concrete': [5, (sr, R, i) => rStep(sr, R, 'concrete', i)],
+  'door:open': [1, (sr, R) => rRollDoor(sr, R, true)],
+  'door:close': [1, (sr, R) => rRollDoor(sr, R, false)],
+  key: [6, (sr, R) => rKey(sr, R, false)],
+  'key:big': [2, (sr, R) => rKey(sr, R, true)],
+  register: [1, rRegister],
+  shutter: [1, (sr, R) => rShutter(sr, R, false)],
+  'shutter:wind': [1, (sr, R) => rShutter(sr, R, true)],
+  buzz: [1, rBuzz, 2],
+  'ear:on': [1, (sr, R) => rEar(sr, R, true)],
+  'ear:off': [1, (sr, R) => rEar(sr, R, false)],
+  knock: [4, rKnock],
+  thud: [3, rThud, 2],
+  ice: [3, rIce],
+  creak: [4, (sr, R, i) => rCreak(sr, R, i), 2],
+};
+
+// vehicle engines: rpm range, strokes per cycle (4-stroke = 2 revolutions), exhaust-pulse shape,
+// harmonics, tone filters, levels. truck = old V8 pickup, snowmobile = two-stroke twin, suv = quiet V6.
+const ENGINES = {
+  truck: { idle: 650, max: 4600, stroke: 2, pulses: 8, width: 0.011, jitter: 0.02, ampVar: 0.4, K: 96, lp0: 220, lpR: 900, lpL: 1400, bodyF: 110, bodyG: 6, level: 0.36, noise: 0.06, nf0: 700, nfR: 1600 },
+  snowmobile: { idle: 1900, max: 8200, stroke: 1, pulses: 2, width: 0.03, jitter: 0.01, ampVar: 0.18, K: 64, lp0: 900, lpR: 3500, lpL: 2500, bodyF: 1300, bodyG: 8, pipe: 2600, level: 0.24, noise: 0.09, nf0: 1500, nfR: 3000 },
+  suv: { idle: 720, max: 5800, stroke: 2, pulses: 6, width: 0.025, jitter: 0.004, ampVar: 0.06, K: 64, lp0: 160, lpR: 500, lpL: 600, bodyF: 90, bodyG: 4, level: 0.22, noise: 0.035, nf0: 500, nfR: 1500 },
 };
 
 // warm-up order: menu sounds first, then race essentials, then beds
@@ -853,6 +892,10 @@ const WARM_ORDER = [
   'beep', 'go', 'shift', 'squeal', 'gravel', 'impact:car', 'impact:wall', 'impact:object', 'glass', 'whoosh', 'landing',
   'grind', 'nitroStart', 'nitroPuff', 'checkpoint', 'horn:car', 'horn:truck', 'rain', 'crowd', 'water', 'siren', 'foghorn',
   'hawk', 'pa', 'engineStart', 'airWrench', 'spray',
+  // COLD BOOT (cheap, frequent ones first; the bells last)
+  'key', 'key:big', 'ear:on', 'ear:off', 'step:snow', 'step:wood', 'step:concrete', 'buzz', 'shutter', 'shutter:wind',
+  'knock', 'thud', 'register', 'creak', 'ice', 'gun', 'flare', 'missile', 'explosion', 'door:open', 'door:close',
+  'bell:small', 'bell:mid', 'bell:big',
 ];
 
 const SURF = {
@@ -899,6 +942,10 @@ class Sfx {
     this._lastImpact = -1;
     this._lastImpactS = 0;
     this._lastKnob = -1;
+    this._lastStep = -1;
+    this._waves = new Map();
+    this._sting = null;
+    if (this._watchT) { clearInterval(this._watchT); this._watchT = null; }
     this._warmIdx = 0;
     // offline (test) contexts don't background-warm; realtime ones fill the cache when idle
     if (typeof ctx.startRendering !== 'function' && typeof setTimeout === 'function') {
@@ -1054,6 +1101,8 @@ class Sfx {
     for (const s of L.srcs) {
       try { s.stop(end); } catch { /* not started */ }
     }
+    if (L.pending) for (const s of L.pending) { try { s.stop(end); } catch { /* */ } } // scheduled events
+    if (L.rev) { L.rev.gain.cancelScheduledValues(t); L.rev.gain.setTargetAtTime(0, t, fade / 5); }
     const done = () => { for (const n of L.nodes) n.disconnect(); };
     if (L.srcs.length) L.srcs[0].onended = done;
     else done();

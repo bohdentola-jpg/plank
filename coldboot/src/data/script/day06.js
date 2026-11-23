@@ -287,7 +287,11 @@ export const MISSIONS = {
 async function shootout(m) {
   const G = m.G, s = G.state;
   const t0 = s.stats.playSeconds;
-  const tommyTime = LEN / TOMMY;
+  // on sleds when there are sleds: yours, and Tommy's blue one
+  const sled = G.vehicles?.lendSled?.(START, yawTo(START, FLAGS[0]));
+  const pace = sled ? 12.5 : TOMMY;
+  if (sled) G.vehicles.npcRide?.('tommy', true);
+  const tommyTime = LEN / pace;
   let leg = 0, cheer = false, lastObj = -9;
   const next = () => (leg < FLAGS.length ? FLAGS[leg] : START);
   await m.until(() => {
@@ -295,11 +299,18 @@ async function shootout(m) {
     // Tommy, on his sled
     const n = G.npcs?.get?.('tommy');
     if (n?.pos) {
-      const v = along(Math.min(LEN, t * TOMMY));
-      const ahead = along(Math.min(LEN, t * TOMMY + 4));
-      n.scripted = true; n.hidden = false; n.run = t * TOMMY < LEN;
-      n.goal = { x: ahead.x, z: ahead.z, activity: 'stand' };
-      if (Math.hypot(n.pos.x - v.x, n.pos.z - v.z) > 18) { n.pos.x = v.x; n.pos.z = v.z; }
+      const v = along(Math.min(LEN, t * pace));
+      const ahead = along(Math.min(LEN, t * pace + 4));
+      n.scripted = true; n.hidden = false; n.run = t * pace < LEN;
+      if (sled) {
+        // he rides the line exactly
+        n.goal = null;
+        n.pos.x = v.x; n.pos.z = v.z;
+        if (Math.hypot(ahead.x - v.x, ahead.z - v.z) > 0.5) n.yaw = Math.atan2(ahead.x - v.x, ahead.z - v.z);
+      } else {
+        n.goal = { x: ahead.x, z: ahead.z, activity: 'stand' };
+        if (Math.hypot(n.pos.x - v.x, n.pos.z - v.z) > 18) { n.pos.x = v.x; n.pos.z = v.z; }
+      }
     }
     if (!cheer && t > 25) { cheer = true; m.ear('d6.gr.race'); }
     const g = next();
@@ -314,6 +325,7 @@ async function shootout(m) {
     }
     return false;
   });
+  if (sled) G.vehicles.npcRide?.('tommy', false);
   return s.stats.playSeconds - t0 < tommyTime;
 }
 

@@ -53,7 +53,7 @@ function buildScene() {
     p.setY(i, noise.fbm(x * 0.01, z * 0.01, 3) * 0.8 + (z < -900 ? 0 : 0));
   }
   seaG.computeVertexNormals();
-  const ice = new THREE.Mesh(seaG, new THREE.MeshStandardMaterial({ color: 0x8fa6b8, roughness: 0.35, metalness: 0.0 }));
+  const ice = new THREE.Mesh(seaG, new THREE.MeshStandardMaterial({ color: 0x5a6a78, roughness: 0.42, metalness: 0.0 }));
   scene.add(ice);
 
   // hills on the far shore
