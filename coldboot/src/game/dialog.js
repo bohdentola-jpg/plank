@@ -8,6 +8,7 @@ import { addRel, relLevel, REL_NAMES } from './state.js';
 import { CAST } from '../data/cast.js';
 import { voice } from '../audio/voice.js';
 import { game } from '../main.js';
+import { WU } from '../world/worldUniforms.js';
 
 export class Dialog {
   constructor(G) {
@@ -106,6 +107,8 @@ export class Dialog {
     this._shot = npc.id;
     game.renderer.tweakPost({ letterbox: 1 });
     G.hud.prompt = null;
+    // a soft key from near the lens so faces read even against a bright window or the sky
+    d.setFill(WU.night.value > 0.5 ? 0.9 : 0.6, 0xffe8d0, 3.6);
     // ease from the gameplay camera into the first shot
     d.cam({ ...d.overShoulder('player', npc.id, { side: this.side, fov: 30 }), dur: 0.55 });
     try {
@@ -119,6 +122,7 @@ export class Dialog {
     G.player.locked = false;
     G.cinematic = false;
     d.release();
+    d.setFill(0);
     game.renderer.tweakPost({ letterbox: 0 });
     G.orbit?.snapBehind(P);
     this.active = null;

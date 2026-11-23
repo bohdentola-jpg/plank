@@ -301,6 +301,7 @@ registerScreen('town', () => {
     G.cinematic = true;
     G.player.locked = true;
     game.renderer.tweakPost({ letterbox: 1 });
+    d.setFill(WU.night.value > 0.5 ? 0.9 : 0.6, 0xffe8d0, 3.6);
     d.addActor('player', G.player.ch, G.player.anim, { external: true });
     const brought = [];
     d.bring = async (id, where, o = {}) => {
@@ -347,6 +348,7 @@ registerScreen('town', () => {
     G.player.anim.setPosture('stand');
     game.renderer.tweakPost({ letterbox: 0 });
     d.release();
+    d.setFill(0);
     orbit.snapBehind(G.player);
     G.cinematic = false;
     G.player.locked = false;
