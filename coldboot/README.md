@@ -125,6 +125,10 @@ coldboot/
   headless screenshots into `qa/` (`ff=1` lets slow software rendering keep up;
   `&day=8` starts a story day, `&free=1` skips the arrival,
   `screen=finale&phase=jail&auto=1` jumps into the finale's scenes).
+- `--eval "import('/coldboot/tools/autopilot.js').then((m) => m.run(600))"` on a
+  `screen=town&ff=1&day=N` shot — an autopilot that plays the current
+  objectives (teleports, talks, answers, skips, waits) and logs the chain, so a
+  broken story step shows up as an objective that never changes.
 - `tools/build_humans.py` — bakes the MakeHuman data (needs the MakeHuman 1.x
   `data` folder). `tools/export_lines.mjs` + `tools/build_voice.py` — render
   voice lines (Silero, Piper, rubberband, ffmpeg; `--qa` runs Whisper).
