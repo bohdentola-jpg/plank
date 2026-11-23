@@ -29,6 +29,8 @@ import { Attention } from '../game/attention.js';
 import { Minigames } from '../game/minigames.js';
 import { streetPoints } from '../world/roads.js';
 import { sfx } from '../audio/sfx.js';
+import { music } from '../audio/music.js';
+import { WU } from '../world/worldUniforms.js';
 import { DAY_START } from '../data/script/days.js';
 import { NEWDAY_HOOKS } from '../data/script/index.js';
 import { Economy } from '../game/economy.js';
@@ -63,6 +65,7 @@ registerScreen('town', () => {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(58, 16 / 9, 0.1, 6000);
   let ready = false, progress = 0, paused = false, pauseSel = 0, opts = null;
+  let musicT = 0, theme = null, stepK = 0;
   let env, sky, snow, pool, world, orbit, hud;
   let saveT = 0, occT = 0;
 
@@ -120,6 +123,7 @@ registerScreen('town', () => {
     G.minigames = new Minigames(G);
     G.economy = new Economy(G);
     G.phone = new Phone(G);
+    G.music = (id) => { G.musicOverride = id || null; };
     G.director.you = async (t) => { G.dialog.youLine = { s: t, t: 0 }; await G.director.wait(Math.min(3.2, 0.9 + t.length / 28)); };
     G.setOutfit = async (kind = 'outdoor') => {
       const old = G.player.ch;
@@ -339,7 +343,10 @@ registerScreen('town', () => {
       await setup(params);
       ready = true;
     },
-    exit() { input.wantPointerLock = false; input.releasePointer(); voice.stopAll(); },
+    exit() {
+      input.wantPointerLock = false; input.releasePointer(); voice.stopAll();
+      try { sfx.ambienceArctic(0, 0); sfx.engine?.(0, 0); sfx.engineStop?.(); } catch { /* */ }
+    },
     update(dt) {
       if (!ready) return;
       const s = G.state;
@@ -402,6 +409,21 @@ registerScreen('town', () => {
       pool.update(dt, P.pos, r.night);
       G.town.update?.(dt);
       G.chimneys?.update(dt, game.renderer.targets.h);
+      // sound: wind over the snow, steps, and a score that follows the day and the danger
+      try { sfx.ambienceArctic(indoors ? 0.25 : 0.8, WU.night.value); } catch { /* */ }
+      if (!P.vehicle && P.speed > 0.4 && P.onGround !== false) {
+        const k = Math.floor(P.anim.phase * 2);
+        if (k !== stepK) { stepK = k; try { sfx.footstep(indoors ? 'wood' : 'snow', Math.min(1, 0.25 + P.speed / 5)); } catch { /* */ } }
+      }
+      musicT -= dt;
+      if (musicT <= 0) {
+        musicT = 1.5;
+        const A = G.attention;
+        const tense = s.attention > 55 || (A?.watched > 0.5 && A?.suspicious > 0) || A?.burning || s.flags.alarm;
+        const want = G.musicOverride || (tense ? 'cb_tension' : WU.night.value > 0.55 ? 'cb_night' : 'cb_town');
+        if (want !== theme) { theme = want; try { music.play(want, { fade: 3 }); } catch { /* */ } }
+        if (want === 'cb_tension') try { music.setIntensity(Math.max(0.25, Math.min(1, s.attention / 100 + (A?.suspicious > 0 ? 0.3 : 0)))); } catch { /* */ }
+      }
       hud.update(dt);
       saveT += dt;
       if (saveT > 60) { saveT = 0; s.pos = { x: P.pos.x, z: P.pos.z, yaw: P.yaw }; saveGame(); }

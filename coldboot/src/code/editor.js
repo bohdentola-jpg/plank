@@ -50,6 +50,7 @@ export class CodeEditor {
     this.box = { x: 0, y: 0, w: 600, h: 400 };
     this._onKey = (e) => {
       if (!this.focused) return;
+      if (!e.repeat && (e.key.length === 1 || e.key === 'Enter' || e.key === 'Backspace')) this.onKeySound?.(e.key === 'Enter');
       const ta = this.ta;
       if (e.key === 'Tab') {
         e.preventDefault();

@@ -66,9 +66,11 @@ function hairMaterial(color, opts = {}) {
         float a = mix(strand, cover, smoothstep(0.35, 0.9, px));
         if (vT < 0.02) a = 1.0;                         // the innermost shell is solid
         // feathered hairline: strands thin out toward the edge of the growth area
-        float edge = smoothstep(0.0, 0.75, vCov + (r3 - 0.5) * 0.35);
+        // (fine-grained noise, so beard and hairline edges fade instead of tearing in chunks)
+        float rn = hh(floor(vRest * uCell * 3.0) + 7.0);
+        float edge = smoothstep(0.0, 0.8, vCov + (rn - 0.5) * 0.22);
         a *= uDensity * mix(edge, 1.0, step(0.98, vCov));
-        if (vT < 0.02) a *= smoothstep(0.15, 0.6, vCov);
+        if (vT < 0.02) a *= smoothstep(0.25, 0.75, vCov + (rn - 0.5) * 0.15);
         if (a < 0.02) discard;
         diffuseColor.a = a;
         vec3 col = mix(diffuseColor.rgb * 0.55, uTip, smoothstep(0.1, 1.0, vT) * 0.6);
@@ -77,7 +79,7 @@ function hairMaterial(color, opts = {}) {
       }`)
       .replace('#include <alphatest_fragment>', '');
   };
-  mat.customProgramCacheKey = () => 'cb-hair-v1';
+  mat.customProgramCacheKey = () => 'cb-hair-v2';
   mat.userData.uniforms = uniforms;
   return mat;
 }
@@ -347,7 +349,7 @@ function beardCover(f, style) {
   const ax = Math.abs(f.x);
   if (f.z < -3.4) return 0;
   const front = sm(f.z, -3.4, -1.6);
-  const lower = sm(-f.y, 1.55, 1.95) * (1 - sm(-f.y, 4.3, 4.8));
+  const lower = sm(-f.y, 1.55, 1.95) * (1 - sm(-f.y, 3.7, 4.2));   // stops under the chin, clear of collars
   const cheekLine = -1.35 - (ax - 0.9) * 0.55;
   const cheek = sm(ax, 0.9, 1.25) * sm(-f.y, -cheekLine - 0.25, -cheekLine + 0.2);
   const side = sm(ax, 2.05, 2.35) * sm(-f.y, -0.35, 0.2) * sm(f.z, -3.2, -2.4) * (1 - sm(f.z, -1.2, -0.6));
@@ -389,7 +391,9 @@ export function buildBeard(ch, style, color) {
     const v = patch.ids[k];
     const f = face(v);
     const c = cov(v);
-    const len = len0 * Math.pow(c, 0.7) * (style === 'full' ? 1 + 0.5 * sm(-f.y, 3.0, 4.2) : 1) * (0.75 + 0.5 * Math.random());
+    // shorter right at the lip line, so the moustache doesn't hang over the mouth in spikes
+    const nearLip = Math.min(1, lipOf(v) / 0.12);
+    const len = len0 * Math.pow(c, 0.7) * (style === 'full' ? 1 + 0.35 * sm(-f.y, 3.0, 3.8) : 1) * (1 - 0.55 * nearLip) * (0.8 + 0.4 * Math.random());
     const n = new THREE.Vector3(nrm[v * 3], nrm[v * 3 + 1], nrm[v * 3 + 2]);
     const down = new THREE.Vector3(0, -1, 0).addScaledVector(n, n.y).normalize();
     for (let i = 0; i <= N; i++) {

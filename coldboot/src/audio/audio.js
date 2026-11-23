@@ -102,9 +102,16 @@ class AudioCore {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     this.master.gain.setTargetAtTime(this.volumes.master, t, 0.03);
-    this.musicBus.gain.setTargetAtTime(this.volumes.music, t, 0.03);
+    this.musicBus.gain.setTargetAtTime(this.volumes.music * (this._talk ? 0.45 : 1), t, 0.03);
     this.sfxBus.gain.setTargetAtTime(this.volumes.sfx, t, 0.03);
     this.uiBus.gain.setTargetAtTime(Math.min(1, this.volumes.sfx * 0.9 + 0.1), t, 0.03);
+  }
+
+  /** Music dips while someone is talking. */
+  talkDuck(on) {
+    if (!this.ctx || !!on === !!this._talk) return;
+    this._talk = !!on;
+    this.musicBus.gain.setTargetAtTime(this.volumes.music * (on ? 0.45 : 1), this.ctx.currentTime, on ? 0.08 : 0.5);
   }
 
   /** Muffle music + sfx (pause menu, crash daze). amount 0 = clear, 1 = heavily muffled. */

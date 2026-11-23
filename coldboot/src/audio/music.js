@@ -86,7 +86,10 @@ class Music {
       pluck: [62, 88], brass: [50, 80], organ: [58, 77], bell: [69, 90], square: [66, 96], mallet: [67, 84], saw3: [55, 76],
       reed: [53, 84], celesta: [62, 100], glass: [74, 100],
     };
-    for (const k of MS_KINDS()) {
+    // COLD BOOT's instruments first, then the rest of the inherited palette
+    const first = ['piano', 'strings', 'pad', 'reed', 'celesta', 'glass', 'choir', 'brass', 'pluck'];
+    const kinds = first.filter((k) => MS_KINDS().includes(k)).concat(MS_KINDS().filter((k) => !first.includes(k)));
+    for (const k of kinds) {
       const [lo, hi] = ranges[k] || [60, 72];
       const seen = new Set();
       for (let m = lo; m <= hi; m++) {
@@ -181,10 +184,14 @@ class Music {
 
   _lookahead() {
     if (typeof document !== 'undefined' && document.hidden) return 1.1;
-    return LOOKAHEAD;
+    // after main-thread stalls (scene builds, heavy frames) schedule further ahead for a while
+    return clamp((this._gap || 0) * 1.5, LOOKAHEAD, 1.1);
   }
 
   _tick() {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (this._lastTick != null) this._gap = Math.max((now - this._lastTick) / 1000, (this._gap || 0) * 0.995);
+    this._lastTick = now;
     if (this.ctx && this.ctx.state === 'running') this._schedule();
   }
 

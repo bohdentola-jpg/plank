@@ -482,7 +482,7 @@ export function rCreak(sr, R, v) {
 // ---- periodic waves for the loops --------------------------------------------------------------
 
 /** Fourier series of one period of shape(φ), φ ∈ [0, 1) → { real, imag } for createPeriodicWave. */
-export function seriesOf(shape, K = 48, N = 4096) {
+export function seriesOf(shape, K = 48, N = Math.max(512, 8 * K)) {
   const x = new Float32Array(N);
   for (let i = 0; i < N; i++) x[i] = shape(i / N);
   const real = new Float32Array(K + 1), imag = new Float32Array(K + 1);

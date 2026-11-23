@@ -9,6 +9,7 @@ import { createSky } from '../world/sky.js';
 import { createSnow } from '../world/snow.js';
 import { store } from '../core/settings.js';
 import { sfx } from '../audio/sfx.js';
+import { music } from '../audio/music.js';
 import { makeNoise2D, clamp, easeOutCubic } from '../core/util.js';
 
 const POST = [
@@ -123,6 +124,7 @@ registerScreen('title', () => {
       if (!params.intro) logoT = 3;
       game.renderer.setPost({ exposure: 1.15, bloomStrength: 0.9, vignette: 0.6, saturation: 1.05, lift: [0.0, 0.005, 0.012] }, true);
       sel = hasSave ? 1 : 0;
+      try { music.play('cb_title', { fade: 2 }); } catch { /* */ }
     },
     exit() {
       world?.scene.traverse((o) => { o.geometry?.dispose?.(); o.material?.dispose?.(); });

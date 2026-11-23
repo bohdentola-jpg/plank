@@ -429,13 +429,14 @@ export function buildWarehouse() {
   const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 10), M.bulb);
   bulb.position.y = -0.06;
   lampG.add(bulb);
-  const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, Hh - 2.1, 6), M.plastic);
-  cord.position.y = (Hh - 2.1) / 2 + 0.1;
+  const LY = 2.3; // lamp height: high enough that a seated face isn't a foot from the bulb
+  const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, Hh - LY - 0.1, 6), M.plastic);
+  cord.position.y = (Hh - LY - 0.1) / 2 + 0.1;
   lampG.add(cord);
-  lampG.position.set(0, 1.95, 0);
+  lampG.position.set(0, LY, 0);
   group.add(lampG);
-  const lamp = new THREE.SpotLight(0xffc98a, 16, 9, 1.05, 0.6, 1.6);
-  lamp.position.set(0, 1.88, 0);
+  const lamp = new THREE.SpotLight(0xffc98a, 8.5, 9, 1.0, 0.65, 1.6);
+  lamp.position.set(0, LY - 0.07, 0);
   lamp.target.position.set(0, 0, 0);
   lamp.castShadow = true;
   lamp.shadow.mapSize.set(2048, 2048);
@@ -443,8 +444,8 @@ export function buildWarehouse() {
   lamp.shadow.normalBias = 0.02;
   lamp.shadow.camera.near = 0.2;
   group.add(lamp, lamp.target);
-  const lampFill = new THREE.PointLight(0xffb070, 2.2, 6, 2);
-  lampFill.position.set(0, 1.7, 0);
+  const lampFill = new THREE.PointLight(0xffb070, 1.3, 6, 2);
+  lampFill.position.set(0, LY - 0.25, 0);
   group.add(lampFill);
   // the visible cone of light (dust in the beam)
   const beamMat = new THREE.ShaderMaterial({
@@ -457,8 +458,8 @@ export function buildWarehouse() {
         float dust = 0.7 + 0.3 * sin(vP.x*9.0 + time*0.3) * sin(vP.z*7.0 - time*0.2);
         gl_FragColor = vec4(vec3(1.0, 0.72, 0.42) * edge * (1.0 - t) * 0.11 * dust, 1.0); }`,
   });
-  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 1.5, 1.85, 40, 1, true), beamMat);
-  beam.position.set(0, 1.0, 0);
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 1.5, LY - 0.76, 40, 1, true), beamMat);
+  beam.position.set(0, 0.76 + (LY - 0.76) / 2, 0);
   group.add(beam);
 
   // window moonlight + aurora tint, heater, ambient

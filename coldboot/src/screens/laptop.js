@@ -44,6 +44,7 @@ export function openLaptop(G, opts = {}) {
   return new Promise((resolve) => {
     const s = G.state;
     const ed = new CodeEditor();
+    ed.onKeySound = (big) => G.sfx?.keyClick?.(big);
     const ui = {
       mode: opts.challenge ? 'ex' : 'menu', sel: 0, lesson: null, page: 0, ex: 0,
       out: [], err: null, passed: false, hints: 0, t: 0, timer: null, challenge: null, msg: '',

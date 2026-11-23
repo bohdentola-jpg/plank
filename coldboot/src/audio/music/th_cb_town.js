@@ -94,11 +94,12 @@ export class CBTown extends CBSong {
   setup() {
     this.dlyTime = this.beatDur * 0.75;
     this.dlyFb = 0.25;
+    this.dialogEQ(-4);
     const trem = 1 / (this.stepDur / 2); // 32nd-note tremolo
-    this.gtr = new Plucker(this, 'gtr', { variant: 'folk', level: 0.55, lp: 6000, pan: -0.12 });
+    this.gtr = new Plucker(this, 'gtr', { variant: 'folk', level: 0.58, lp: 4300, pan: -0.12 });
     this.ub = new Pluck(this, 'bass', { level: 0.7 });
-    this.bala = new Plucker(this, 'lead', { variant: 'bala', level: 0.4, trem, tremMin: 0.42, lp: 7000, pan: 0.12 });
-    this.balaH = new Plucker(this, 'arp', { variant: 'bala', level: 0.26, trem, tremMin: 0.42, lp: 5200, pan: 0.35 });
+    this.bala = new Plucker(this, 'lead', { variant: 'bala', level: 0.42, trem, tremMin: 0.42, lp: 5400, pan: 0.12 });
+    this.balaH = new Plucker(this, 'arp', { variant: 'bala', level: 0.26, trem, tremMin: 0.42, lp: 4400, pan: 0.35 });
     this.accLead = new Accordion(this, 'lead', { level: 0.3, atk: 0.035, rel: 0.12, cut: 3400, bellows: 0.05 });
     this.acc = new Accordion(this, 'chords', { level: 0.22, atk: 0.25, rel: 0.5, cut: 2300, bellows: 0.08, pan: -0.2 });
     this.accSt = new Accordion(this, 'chords', { level: 0.24, atk: 0.012, rel: 0.08, cut: 2600, bellows: 0, pan: -0.2 });
@@ -199,7 +200,7 @@ export class CBNight extends CBSong {
       pad: { v: 0.4, rev: 0.5 }, chords: { v: 0.16, rev: 0.6 }, gtr: { v: 0.22, rev: 0.4 },
       arp: { v: 0.32, rev: 0.6, dly: 0.42 }, bass: { v: 0.2, rev: 0.2 }, fx: { v: 0.5 },
     };
-    this.trim = 0.9;
+    this.trim = 0.92;
   }
 
   setup() {

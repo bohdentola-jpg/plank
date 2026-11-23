@@ -9,6 +9,7 @@ import { buildCharacter } from '../human/character.js';
 import { Animator } from '../human/anim.js';
 import { CAST } from '../data/cast.js';
 import { Director } from './director.js';
+import { music } from '../audio/music.js';
 import { createSky } from '../world/sky.js';
 import { voice } from '../audio/voice.js';
 import { getEnvMap } from '../core/envmap.js';
@@ -283,6 +284,7 @@ registerScreen('plane', () => {
       }
       scene.add(new THREE.HemisphereLight(0x3a4a5a, 0x101418, 0.4));
       d = new Director(scene, camera);
+      try { music.play('cb_night', { fade: 3, intensity: 0.3 }); } catch { /* */ }
       // passengers
       const seatOf = (row, side) => cab.seats.find((s) => s.row === row && s.side === side);
       const people = [['player', playerDNA(), seatOf(4, 1)], ['okafor', CAST.okafor.dna, seatOf(3, -1)],

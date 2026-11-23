@@ -29,6 +29,18 @@ export class Director {
     this.subsOn = true;
     this.camShake = 0;
     this._skipHeld = 0;
+    this.fillLight = null;
+  }
+
+  /** A soft light riding just above the camera (cinematographer's fill). 0 turns it off. */
+  setFill(intensity = 0.6, color = 0xffe4c8, distance = 3.2) {
+    if (!this.fillLight) {
+      this.fillLight = new THREE.PointLight(color, 0, distance, 2);
+      this.scene.add(this.fillLight);
+    }
+    this.fillLight.color.set(color);
+    this.fillLight.distance = distance;
+    this.fillLight.intensity = intensity;
   }
 
   addActor(id, ch, anim, opts = {}) {
@@ -98,7 +110,8 @@ export class Director {
 
   /** Close-up on an actor's face from a side (+1 their left, −1 their right). */
   closeUp(id, o = {}) {
-    const side = o.side ?? 1, dist = o.dist ?? 0.75, h = o.h ?? 0.02, fov = o.fov ?? 26;
+    // head-and-shoulders, never a nose-to-lens extreme close-up
+    const side = o.side ?? 1, dist = Math.max(1.0, (o.dist ?? 0.75) * 1.35), h = o.h ?? 0.03, fov = Math.max(28, o.fov ?? 28);
     return {
       pos: () => {
         const a = this.actors[id];
@@ -247,6 +260,7 @@ export class Director {
   update(dt) {
     this.t += dt;
     voice.update(dt);
+    if (this.fillLight) this.fillLight.position.copy(this.camera.position).add(new THREE.Vector3(0, 0.25, 0));
     if (this.shot) {
       this.shot.t += dt;
       const k = this.shot.dur ? this.shot.t / this.shot.dur : 1;

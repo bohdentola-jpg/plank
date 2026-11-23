@@ -4,6 +4,8 @@
 // time, honest work and church bring it down. At 100 you're BURNED: the
 // current mission fails back to its checkpoint.
 
+const s0 = (G) => G.state.attention;
+
 export class Attention {
   constructor(G) {
     this.G = G;
@@ -63,7 +65,9 @@ export class Attention {
       const k = this._sees({ x: n.pos.x, y: n.pos.y + 1.6, z: n.pos.z, yaw: n.yaw, fov: 2.0, range: 16 }, P, eye);
       if (k > best) { best = k; by = { kind: 'person', id }; }
     }
+    const was = this.watched;
     this.watched += ((best > 0.05 ? 1 : 0) - this.watched) * Math.min(1, dt * 6);
+    if (was < 0.5 && this.watched >= 0.5 && (this.suspicious > 0 || s0(G) > 30)) G.sfx?.sting?.('spotted');
     this.seenBy = by;
     G.hud.watched = this.watched;
     const s = G.state;
@@ -82,6 +86,7 @@ export class Attention {
   _burn() {
     const G = this.G;
     this.burning = true;
+    this.G.sfx?.sting?.('fail');
     G.hud.toast('BURNED', 'Northstar has you. Back to the last checkpoint.', '#ff4048');
     setTimeout(() => {
       G.state.attention = 55;

@@ -7,6 +7,7 @@ import { buildCharacter } from '../human/character.js';
 import { Animator } from '../human/anim.js';
 import { CAST } from '../data/cast.js';
 import { Director } from './director.js';
+import { music } from '../audio/music.js';
 import { buildWarehouse } from './warehouseSet.js';
 import { createSnow } from '../world/snow.js';
 import { voice } from '../audio/voice.js';
@@ -132,6 +133,8 @@ registerScreen('warehouse', () => {
       snow = createSnow({ count: 900, box: 26, height: 8 });
       snow.points.position.set(0, 0, 0);
       d = new Director(scene, camera);
+      d.setFill(0.55);
+      try { music.play('cb_warehouse', { fade: 3 }); } catch { /* */ }
       const cast = { dmitri: CAST.dmitri.dna, nadia: CAST.nadia.dna, lyosha: CAST.lyosha.dna, grisha: CAST.grisha.dna, valya: CAST.valya.dna, ivan: CAST.ivan.dna, player: playerDNA() };
       for (const [id, dna] of Object.entries(cast)) {
         const ch = await buildCharacter(dna);

@@ -76,10 +76,14 @@ class Voice {
     this.subtitle = { who: L.who, name: L.name, en: L.en || '', ru: L.ru || '', t: 0, dur, radio: !!opts.radio };
     let resolveDone;
     h.done = new Promise((r) => { resolveDone = r; });
+    audio.talkDuck(true);
+    if (opts.radio) this._click?.(true);
     const finish = () => {
       if (!h.playing) return;
       h.playing = false;
       this.active.delete(h);
+      if (!this.active.size) audio.talkDuck(false);
+      if (opts.radio) this._click?.(false);
       if (this.subtitle && this.subtitle.who === L.who && this.subtitle.en === (L.en || '')) this.subtitle.fading = true;
       resolveDone();
     };
@@ -182,3 +186,5 @@ class Voice {
 }
 
 export const voice = new Voice();
+// earpiece clicks come from sfx (loaded lazily so voice.js stays light)
+import('./sfx.js').then((m) => { voice._click = (on) => { try { m.sfx.earClick?.(on); } catch { /* */ } }; }).catch(() => {});

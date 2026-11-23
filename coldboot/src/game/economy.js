@@ -54,7 +54,7 @@ export class Economy {
           s.inv[item] = (s.inv[item] || 0) + 1;
           msg = `Bought ${ITEMS[item] || item}.`;
           flash = 1;
-          G.sfx?.ui?.('buy');
+          (G.sfx?.register ? G.sfx.register() : G.sfx?.ui?.('buy'));
           if (def.watched) G.attention.add(1.5); // Northstar keeps a record
         }
       },

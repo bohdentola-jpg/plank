@@ -196,6 +196,14 @@ export class CBSong extends Song {
       (o.vel ?? 0.8) * (acc ? 1 : 0.84), { accent: acc, ...(o.nopts || null) });
   }
 
+  /** Dialogue pocket: a broad dip around 2.7 kHz on the whole deck, where speech consonants live. */
+  dialogEQ(db = -3.5, f = 2700) {
+    const pk = this.filter('peaking', f, 0.7, null, db);
+    this.post.disconnect();
+    this.post.connect(pk);
+    pk.connect(this.hpF);
+  }
+
   /** Tape warmth: wow + flutter (modulated delay), soft saturation, head bump, top roll-off, hiss. */
   tapeFx(o = {}) {
     const d = this.delayNode(0.012, 0.05);

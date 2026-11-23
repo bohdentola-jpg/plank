@@ -853,9 +853,9 @@ const SHOTS = {
   pa: [1, rPa, 2],
   // COLD BOOT
   gun: [4, rGun],
-  explosion: [2, rExplosion],
-  missile: [1, rMissile],
-  flare: [2, rFlare],
+  explosion: [2, rExplosion, 2],
+  missile: [1, rMissile, 2],
+  flare: [2, rFlare, 2],
   'bell:big': [1, (sr, R) => rBell(sr, R, 98, { len: 9, decay: 1.25 }), 2],
   'bell:mid': [2, (sr, R, i) => rBell(sr, R, [196, 233.1][i], { len: 5.5, decay: 0.8 }), 2],
   'bell:small': [4, (sr, R, i) => rBell(sr, R, [466.2, 523.3, 587.3, 698.5][i], { len: 2.8, decay: 0.42, bright: 0.85 }), 2],
@@ -877,6 +877,8 @@ const SHOTS = {
   ice: [3, rIce],
   creak: [4, (sr, R, i) => rCreak(sr, R, i), 2],
 };
+
+const SERIES = new Map(); // PeriodicWave coefficients by key (rotor blade, engines)
 
 // vehicle engines: rpm range, strokes per cycle (4-stroke = 2 revolutions), exhaust-pulse shape,
 // harmonics, tone filters, levels. truck = old V8 pickup, snowmobile = two-stroke twin, suv = quiet V6.
@@ -1600,8 +1602,9 @@ class Sfx {
   _wave(key, make) {
     let w = this._waves.get(key);
     if (!w) {
-      const { real, imag } = make();
-      w = this._ctx.createPeriodicWave(real, imag);
+      let ser = SERIES.get(key); // the Fourier series is context-free: compute it once per session
+      if (!ser) SERIES.set(key, (ser = make()));
+      w = this._ctx.createPeriodicWave(ser.real, ser.imag);
       this._waves.set(key, w);
     }
     return w;

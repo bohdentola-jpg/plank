@@ -32,6 +32,7 @@ import { CAST } from '../data/cast.js';
 import { playerDNA } from './warehouse.js';
 import { voice } from '../audio/voice.js';
 import { music } from '../audio/music.js';
+import { sfx } from '../audio/sfx.js';
 import { getEnvMap } from '../core/envmap.js';
 import { makeNoise2D, makeRng, smoothstep, wrapAngle, clamp } from '../core/util.js';
 import { openLaptop } from '../screens/laptop.js';
@@ -586,6 +587,7 @@ registerScreen('finale', () => {
 
   // ---------------------------------------------------------------- sets
   function show(which) {
+    d.setFill(which === 'inside' ? 0.5 : which === 'jail' ? 0.25 : 0);
     outside.visible = which === 'outside';
     inside.visible = which === 'inside';
     jail.group.visible = which === 'jail';
@@ -629,6 +631,7 @@ registerScreen('finale', () => {
   }
 
   function fireBurst(aim, spread = 1) {
+    try { sfx.gunfire(12, Math.min(1, them.group.position.distanceTo(pos) / 160)); } catch { /* */ }
     for (let i = 0; i < 12; i++) {
       const target = aim.clone().add(V((Math.random() - 0.5) * 14 * spread, (Math.random() - 0.5) * 8 * spread, (Math.random() - 0.5) * 10));
       tracers.push({ p: them.group.position.clone().add(V(0, 0.6, 0)), v: target.sub(them.group.position).normalize().multiplyScalar(430), life: 1.3, delay: i * 0.06 });
@@ -641,6 +644,8 @@ registerScreen('finale', () => {
     game.fx.flash = 0.4;
     game.fx.flashColor = new THREE.Color(1, 0.35, 0.1);
     for (let i = 0; i < 10; i++) fire.emit(pos.clone().add(V(0, 1.4, 0)), { v: V((Math.random() - 0.5) * 18, Math.random() * 12, (Math.random() - 0.5) * 18), life: 0.6, s0: 0.6, s1: 0.2, a: 1, g: 20, color: new THREE.Color(6, 2.6, 0.6) });
+    try { sfx.impact(0.8, 'car'); } catch { /* */ }
+    input.rumble?.(1, 0.8, 350);
     radio('f.g.hit');
     if (hits >= MAX_HITS && !crashing) crash();
   }
@@ -730,6 +735,7 @@ registerScreen('finale', () => {
       if (missile.t >= missile.eta) {
         for (let i = 0; i < 16; i++) fire.emit(missile.p, { v: V((Math.random() - 0.5) * 30, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 30), life: 0.8, s0: 3, s1: 7, a: 1, color: new THREE.Color(7, 3, 0.8) });
         game.fx.flash = Math.max(game.fx.flash, missile.flare ? 0.15 : 0.4);
+        try { sfx.explosion(missile.flare ? 0.5 : 0.9); } catch { /* */ }
         missile.mesh.removeFromParent();
         missile = null;
       }
@@ -751,6 +757,7 @@ registerScreen('finale', () => {
           const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.6, 6).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x9aa0a8 }));
           outside.add(mesh);
           missile = { p: them.group.position.clone(), t: 0, eta: qte.window + 0.25, mesh, flare: null };
+          try { sfx.missile(); } catch { /* */ }
         }
       } else if (e.kind === 'land') {
         phase = 'landing';
@@ -777,6 +784,7 @@ registerScreen('finale', () => {
           if (i === 2 && missile) missile.flare = f;
         }
         if (missile) missile.eta = missile.t + 0.7;
+        try { sfx.flare(6); } catch { /* */ }
       }
       if (qte.ok) { qte = null; if (Math.random() < 0.6) radio('f.g.good'); }
       else if (qte.t > qte.window) {
@@ -885,6 +893,7 @@ registerScreen('finale', () => {
       d.cam({ pos: V(-2.6, 1.5, -2.2), look: V(11, 1.4, 2.6), fov: 40, dof: false });
       await wait(0.8);
       doorOpen = 0.001;
+      try { sfx.rollDoor(true); } catch { /* */ }
       await wait(1.0);
       P.ch.group.visible = true;
       await wait(0.6);
@@ -938,9 +947,10 @@ registerScreen('finale', () => {
       briefing = { t: 0, text: CHALLENGES.final.briefing };
       await waitPress('interact', 'Plug in the drive — the clock starts');
       briefing = null;
+      try { music.play('cb_tension', { fade: 2, intensity: 0.65 }); } catch { /* */ }
       let res = AUTO ? { pass: true, received: [['send', 'AURORA-ABORT-0415']], left: 312 } : null;
       while (!res?.pass) {
-        const G = { state: S, hud: { toast() {} }, player: { locked: false }, overlay: null, sfx: null };
+        const G = { state: S, hud: { toast() {} }, player: { locked: false }, overlay: null, sfx };
         codeG = G;
         res = await openLaptop(G, { challenge: 'final', code: lastCode });
         codeG = null;
@@ -961,6 +971,7 @@ registerScreen('finale', () => {
       phase = 'uplink';
       if (from === 'uplink') { show('inside'); postFor('inside'); sent = 'AURORA-ABORT-0415'; leftAt = 200; }
       uplink = { t: 0, lines: [] };
+      try { music.stop(2.5); sfx.sting('success'); } catch { /* */ }
       await wait(9.5);
       uplink = null;
       // outside: the dish turns toward home; 06:00 comes; the lights stay on
@@ -998,6 +1009,7 @@ registerScreen('finale', () => {
       d.cam({ pos: V(-1.6, 1.35, -1.9), look: V(10, 1.3, 2.5), fov: 36, dof: false });
       await wait(1.2);
       doorOpen = 0.001;
+      try { sfx.rollDoor(true); sfx.sting('spotted'); } catch { /* */ }
       await wait(0.9);
       torches.forEach((l) => { l.visible = true; });
       game.fx.flash = 0.25;
@@ -1209,6 +1221,7 @@ registerScreen('finale', () => {
     },
     exit() {
       voice.stopAll();
+      try { sfx.rotor(0, 0, 'main'); sfx.rotor(0, 0, 'them'); } catch { /* */ }
       game.renderer.dof = null;
       game.fx.flash = 0;
       game.fx.flashColor = null;
@@ -1236,6 +1249,12 @@ registerScreen('finale', () => {
       if (phase === 'flight') flightUpdate(dt);
       else if (phase === 'landing') landingUpdate(dt);
       else if (outside?.visible) { rotor = Math.max(0, rotor - dt * 0.15); me.update(dt, rotor); }
+      try {
+        const flying = phase === 'flight' || phase === 'landing';
+        sfx.rotor(flying ? 1 : outside?.visible ? rotor : 0, flying ? 1 : outside?.visible ? rotor * 0.8 : 0, 'main');
+        const dThem = them?.group.visible ? them.group.position.distanceTo(camera.position) : 9999;
+        sfx.rotor(flying && dThem < 600 ? 0.95 : 0, flying ? Math.max(0, 1 - dThem / 600) * 0.8 : 0, 'them');
+      } catch { /* */ }
       wh?.update(dt, pt);
       if (doorOpen > 0 && doorOpen < 1) {
         doorOpen = Math.min(1, doorOpen + dt / 1.6);
