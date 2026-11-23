@@ -139,8 +139,9 @@ registerScreen('buildlab', () => {
   function flushLights(focus) {
     // keep the strongest few lights near the focus point as real PointLights
     dynLights.sort((a, b) => a.pos.distanceTo(focus) / a.intensity - b.pos.distanceTo(focus) / b.intensity);
+    const k = params.time === 'day' ? 0.8 : 4.0;
     for (const l of dynLights.slice(0, LIGHT_BUDGET)) {
-      const pl = new THREE.PointLight(l.color, l.intensity * 4.0, l.distance * 1.6, 1.4);
+      const pl = new THREE.PointLight(l.color, l.intensity * k, l.distance * 1.6, 1.4);
       pl.position.copy(l.pos);
       root.add(pl);
     }
@@ -160,16 +161,20 @@ registerScreen('buildlab', () => {
       { pos: [c.x + 2.5, 1.65, box.max.z + 5.5], look: [c.x, 1.6, box.max.z - 1], fov: 50 },
     ];
     if (interiorBox) {
+      // interior cameras from the gameplay points: from the door looking in, then
+      // standing behind each point looking along its facing direction
+      const pts = res ? res.points : {};
       const ic = interiorBox.getCenter(new THREE.Vector3());
-      const is = interiorBox.getSize(new THREE.Vector3());
-      const eye = 1.62;
-      const y0 = interiorBox.min.y;
-      list.unshift(
-        { pos: [ic.x + is.x * 0.32, y0 + eye, ic.z + is.z * 0.38], look: [ic.x - is.x * 0.2, y0 + 1.2, ic.z - is.z * 0.3], fov: 70 },
-        { pos: [ic.x - is.x * 0.35, y0 + eye, ic.z - is.z * 0.35], look: [ic.x + is.x * 0.2, y0 + 1.2, ic.z + is.z * 0.3], fov: 70 },
-        { pos: [ic.x - is.x * 0.38, y0 + eye + 0.2, ic.z + is.z * 0.4], look: [ic.x + is.x * 0.3, y0 + 1.0, ic.z - is.z * 0.3], fov: 70 },
-        { pos: [ic.x + is.x * 0.38, y0 + eye, ic.z - is.z * 0.4], look: [ic.x - is.x * 0.3, y0 + 1.1, ic.z + is.z * 0.3], fov: 70 },
-      );
+      const ins = [];
+      const din = pts.door_in;
+      if (din) ins.push({ pos: [din.x - Math.sin(din.rot) * 0.6, din.y + 1.65, din.z - Math.cos(din.rot) * 0.6], look: [ic.x, din.y + 1.2, ic.z], fov: 72 });
+      for (const [name, p] of Object.entries(pts)) {
+        if (/^door|ladderTop|belfry|bells|domeTop|relay|steps|oilTank|yard|gate$/.test(name)) continue;
+        if (p.y < interiorBox.min.y - 0.5) continue;
+        const fx = Math.sin(p.rot), fz = Math.cos(p.rot);
+        ins.push({ name, pos: [p.x - fx * 2.2, p.y + 1.7, p.z - fz * 2.2], look: [p.x + fx * 1.2, p.y + 1.0, p.z + fz * 1.2], fov: 68 });
+      }
+      list.unshift(...ins);
     }
     return list;
   }
@@ -355,7 +360,7 @@ registerScreen('buildlab', () => {
     draw(ctx) {
       text(ctx, info, 30, 664, { size: 14, color: '#d8e8f0' });
       text(ctx, info2, 30, 686, { size: 12, color: C.dim });
-      text(ctx, `cam ${camIdx}/${Math.max(0, presets.length - 1)}  ·  ${game.fps ? game.fps.toFixed(0) + ' fps' : ''}`, 1250, 686, { size: 12, color: C.dim, align: 'right' });
+      text(ctx, `cam ${camIdx}/${Math.max(0, presets.length - 1)}${presets[camIdx]?.name ? ' ' + presets[camIdx].name : ''}  ·  ${game.fps ? game.fps.toFixed(0) + ' fps' : ''}`, 1250, 686, { size: 12, color: C.dim, align: 'right' });
       if (labels.length) {
         for (const l of labels) {
           const v = l.pos.clone().project(camera);

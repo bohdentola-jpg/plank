@@ -1430,6 +1430,87 @@ T('global and nested global', String.raw`
   print(reader(), newname)
 `);
 // ---------------------------------------------------------------------------
+// 17. remaining method surface
+// ---------------------------------------------------------------------------
+T('str methods misc', String.raw`
+  print('Straße'.casefold(), '١٢'.isdecimal(), '½'.isnumeric(), 'var_1'.isidentifier(), '1var'.isidentifier(), 'tab\t'.isprintable(), 'abc'.isascii(), 'Рыбка'.isascii())
+  print('Port Zarya'.istitle(), 'Port zarya'.istitle(), 'prefix_name'.removeprefix('prefix_'), 'file.py'.removesuffix('.py'), 'abcabc'.rindex('b'))
+  print('a,b,c,d'.rsplit(',', 2), 'a\tb\tc'.expandtabs(4) + '|', '{name}-{n}'.format_map({'name': 'cam', 'n': 7}))
+  table = str.maketrans('abc', 'xyz')
+  print('aabbcc'.translate(table), 'hello'.translate({ord('l'): None, ord('o'): '0'}))
+  print('mississippi'.count('s', 3), 'mississippi'.count('s', 3, 5), 'abc'.find('c', -1), 'abc'.find('a', -1), 'photo.JPG'.lower().endswith(('.jpg', '.png')))
+  print('one two'.partition(' '), 'no-space'.partition(' '), ' x '.center(7, '-'), 'A'.zfill(3), '{:{}}|'.format(3, 5), '{0:>{1}}|'.format('a', 4))
+`);
+T('int float methods', String.raw`
+  print((255).bit_length(), (0).bit_length(), (-8).bit_length(), (13).bit_count(), (2 ** 100).bit_length())
+  print((3.0).is_integer(), (3.5).is_integer(), (0.75).as_integer_ratio(), (8).as_integer_ratio(), (5).real, (5).imag, (2.5).real)
+  print(int.__name__, float('3').is_integer(), (10).conjugate(), True.real)
+`);
+T('set methods full', String.raw`
+  a = {1, 2, 3}
+  b = {3, 4}
+  print(a.issubset({1, 2, 3, 4}), a.issuperset({1, 2}), a.isdisjoint(b), a.isdisjoint({9}))
+  c = a.copy()
+  c.update([4, 5], (6,))
+  print(sorted(c), sorted(a))
+  c.intersection_update({4, 5, 6, 7})
+  print(sorted(c))
+  c.difference_update({5})
+  print(sorted(c))
+  c.symmetric_difference_update({6, 8})
+  print(sorted(c))
+  f = frozenset([3, 1])
+  print(sorted(f | {9}), sorted(f & {1}), 1 in f, len(f), sorted(a.union(b, {10})), sorted(a.intersection(b, {3, 99})))
+  c.clear()
+  print(c, len(c), set('aab') == {'a', 'b'})
+`);
+T('zip strict and more builtins', String.raw`
+  print(list(zip([1, 2], 'ab', strict=True)))
+  try:
+      list(zip([1, 2, 3], 'ab', strict=True))
+  except ValueError as e:
+      print(e)
+  print(list(map(pow, [2, 3], [3, 2])), list(reversed((1, 2, 3))), list(reversed({'a': 1, 'b': 2})), max('abc', key=ord))
+  print(hex(2 ** 70), oct(-9), bin(2 ** 40), int(' 0x1F ', 16), float('1_000'), str(1e16), divmod(-7.5, 2), abs(-2 ** 70))
+  print(round(-2.5), round(-3.5), round(0.5 + 1e-9), round(1234.5678, 2), round(-1234.5678, -2), pow(5, -2, 13))
+  print(min((3, 'b'), (3, 'a')), sorted([(1, 'b'), (1, 'a'), (0, 'z')]), sum([[1], [2]], []), any('') , all(''))
+`);
+T('sys module', String.raw`
+  import sys
+  sys.stdout.write("written directly\n")
+  n = sys.stdout.write("x")
+  print()
+  print(n, sys.maxsize, sys.getrecursionlimit() > 0)
+  print("bye")
+  sys.exit()
+  print("never printed")
+`);
+T('unbound methods and type calls', String.raw`
+  print(str.upper('abc'), str.join('-', ['a', 'b']), list.count([1, 1, 2], 1), dict.get({'a': 1}, 'a'), str.split('a b'))
+  print(list(map(str.strip, [' a ', 'b '])), sorted(['b', 'A', 'c'], key=str.casefold), dict.fromkeys('ab'))
+  print(int('7') + float('0.5'), str(type('x')), bool('False'), list(range(3)) == [0, 1, 2], tuple('ab') + (1,))
+`);
+// ---------------------------------------------------------------------------
+// 18. int set ordering (CPython hash-table order)
+// ---------------------------------------------------------------------------
+T('int set printing', String.raw`
+  print({3, 1, 2}, set([5, 3, 5, 1]), {x % 7 for x in range(20)}, {10, 20, 30, 9, 1}, set(range(20, 0, -3)))
+  print({-1, -2, 5}, {9, 1, 17, 25}, {True, 2, 0}, set([100, 4, 36, 68]), {x * x for x in range(-5, 6)})
+  s = set()
+  for n in [42, 7, 1000, 8, 15, 16, 23, 4, 108, 64, 3, 2, 99]:
+      s.add(n)
+  print(s, len(s))
+  for x in {8, 16, 0, 24}:
+      print(x, end=' ')
+  print()
+  print(list({5, 2, 9}), sorted({5, 2, 9}), {1, 2} | {9, 3}, {1, 2, 3, 4} - {2})
+  t = set(range(30, 0, -1))
+  print(t)
+  t.discard(5)
+  print(t.pop(), t.pop(), len(t))
+  print(set([3, 3, 3]), set(), frozenset([2, 1]))
+`);
+// ---------------------------------------------------------------------------
 // run differential cases
 // ---------------------------------------------------------------------------
 let pass = 0, fail = 0;

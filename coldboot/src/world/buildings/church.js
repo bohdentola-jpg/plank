@@ -122,7 +122,7 @@ export function build(opts = {}) {
     }
   }
   for (const u of [1.15, NW - 1.15]) sides[0].push({ kind: 'win', u, y: fy + 2.2, w: 0.7, h: 1.4, style: 'grid', gx: 2, gy: 3, light: glassLight(0.5), cell: 2, cond: windowCond(ctx, -0.2) });
-  if (ctx.wantInterior) sides[0].push({ kind: 'door', u: NW / 2, y: fy, w: 1.6, h: 2.6, style: 'double', color: '#6a4a2a', casing: 0 });
+  if (ctx.wantInterior) sides[0].push({ kind: 'door', u: NW / 2, y: fy, w: 1.6, h: 2.6, open: true, casing: 0 });
   walls(ctx, {
     W: NW, D: ND, cz: ncz, y0: fy - 0.05, y1: wallTop, key: sidingKey, color: white, trim, sides,
     gable: { axis: 'z', yRidge }, thick: 0.25, corner: 0.22, recess: 0.1,
@@ -201,6 +201,7 @@ export function build(opts = {}) {
   b.box('concrete', 0, 0, tz, TW + 0.3, fy, TW + 0.3, { color: '#9a9a94', skip: 't' });
   b.box('concrete', 0, 0, acz, AW + 0.3, fy, AD + 0.3, { color: '#9a9a94', skip: 't' });
   const stp = steps(ctx, 0, tz + TW / 2 + 0.02, 0, { rise: fy, w: 2.6, solid: true, key: 'concrete', color: '#a8a8a2' });
+  ctx.floor(0, tz + TW / 2 + 0.1, 2.6, 0.25, fy);
   railing(ctx, [[-1.4, tz + TW / 2 + stp.run], [-1.4, tz + TW / 2]], 0.0, { key: 'metal', color: '#2a2a2a', h: 0.95 + fy * 0.5 });
   railing(ctx, [[1.4, tz + TW / 2 + stp.run], [1.4, tz + TW / 2]], 0.0, { key: 'metal', color: '#2a2a2a', h: 0.95 + fy * 0.5 });
   ctx.col(0, tz, TW, TW, tTop);
@@ -208,6 +209,8 @@ export function build(opts = {}) {
   // belfry: open stage with posts, balustrade, arcade, bells
   const bY = tTop; // platform level
   b.box('wood_raw', 0, bY - 0.2, tz, TW + 0.3, 0.22, TW + 0.3, { color: '#8a7a66' });
+  ctx.floor(0, tz, TW - 0.5, TW - 0.5, bY + 0.02);
+
   b.box('paint', 0, bY - 0.35, tz, TW + 0.45, 0.18, TW + 0.45, { color: trim });
   const bTop = bY + 3.3;
   for (const [px, pz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) b.box('paint', px * (TW / 2 - 0.18), bY, tz + pz * (TW / 2 - 0.18), 0.36, bTop - bY, 0.36, { color: white });
@@ -368,7 +371,11 @@ function interior(ctx, d) {
   ceiling(ctx, 0, tz, TW - 0.5, TW - 0.5, fy + 3.4, 'plaster', '#d8d2c4');
   // gold stars on the blue vault
   for (let i = 0; i < 40; i++) b.box('i:gold', (r() - 0.5) * (NW - 1), wallTop - 0.012, ncz + (r() - 0.5) * (ND - 1), 0.07, 0.01, 0.07, { color: '#ffd27a', ry: r() });
-  // narthex: inner partition already = nave front wall (with passage); the ladder up the tower
+  // narthex: plaster over the nave's front wall inside the tower (with the open passage)
+  b.push().translate(-TW / 2 + 0.25, 0, nz1 + 0.012);
+  wallFace(b, 'i:plaster', [[0, fy], [TW - 0.5, fy], [TW - 0.5, fy + 3.4], [0, fy + 3.4]], [{ x0: TW / 2 - 0.25 - 0.8, x1: TW / 2 - 0.25 + 0.8, y0: fy, y1: fy + 2.6 }], 0, { color: '#e2ded4' });
+  b.pop();
+  // the ladder up the tower
   const lx = -TW / 2 + 0.55, lz = tz - TW / 2 + 0.45;
   ladder(ctx, lx, fy, lz, fy + 3.4 + 0.05, 0);
   // hatch in the narthex ceiling and a second ladder up to the belfry inside the tower

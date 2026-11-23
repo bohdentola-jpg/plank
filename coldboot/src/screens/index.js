@@ -6,3 +6,5 @@ import './buildlab.js';
 import '../scenes/warehouse.js';
 import './creator.js';
 import '../scenes/plane.js';
+import './townview.js';
+import './town.js';

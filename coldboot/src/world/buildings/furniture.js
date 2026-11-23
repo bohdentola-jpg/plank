@@ -15,6 +15,7 @@ function at(ctx, x, y, z, rot = 0) { ctx.b.push().translate(x, y, z).rotateY(rot
 /** Floor slab top at y over a W×D rect centred (cx, cz). */
 export function floor(ctx, cx, cz, W, D, y, key = 'floor_wood', color = '#ffffff') {
   ctx.b.box('i:' + key, cx, y - 0.05, cz, W, 0.05, D, { color, skip: 'b' });
+  ctx.floorLocal(cx, cz, W, D, y);
 }
 
 /** Ceiling (facing down) at height y. */

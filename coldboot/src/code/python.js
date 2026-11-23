@@ -61,13 +61,72 @@ export class PyDict {
 }
 
 export class PySet {
-  constructor(frozen = false) { this.m = new Map(); this.frozen = frozen; } // hkey -> value
-  add(v) { const h = hkey(v); if (!this.m.has(h)) this.m.set(h, v); }
+  constructor(frozen = false) { this.m = new Map(); this.frozen = frozen; this.order = null; } // hkey -> value
+  add(v) { const h = hkey(v); if (!this.m.has(h)) { this.m.set(h, v); this.order = null; } }
   has(v) { return this.m.has(hkey(v)); }
-  delete(v) { return this.m.delete(hkey(v)); }
+  delete(v) { const ok = this.m.delete(hkey(v)); if (ok && this.order) this.order = this.order.filter((x) => this.m.has(hkey(x))); return ok; }
   get size() { return this.m.size; }
-  vals() { return Array.from(this.m.values()); }
+  // Iteration order. Sets of small ints follow CPython's hash-table layout (deterministic there);
+  // anything else (strings hash randomly in CPython anyway) iterates in insertion order.
+  vals() {
+    if (this.order && this.order.length === this.m.size) return this.order.slice();
+    const vals = Array.from(this.m.values());
+    if (vals.length > 1 && vals.length <= 100000 && vals.every((v) => (typeof v === 'number' && v <= 2305843009213693950 && v >= -2305843009213693950) || typeof v === 'boolean')) {
+      return cpythonIntSetOrder(vals).order;
+    }
+    return vals;
+  }
   get cls() { return this.frozen ? T_frozenset : T_set; }
+}
+
+// Simulates CPython's setobject.c (sequential set_add_entry + set_table_resize) for int keys,
+// so print({3, 1, 2}) shows {1, 2, 3} like real Python.
+const intSetHash = (v) => { const x = typeof v === 'boolean' ? (v ? 1 : 0) : v; return x === -1 ? -2 : x; };
+function cpythonIntSetOrder(vals, insertCleanSize = 0) {
+  const hashOf = intSetHash;
+  const place = (tbl, v) => {
+    const h = hashOf(v), size = tbl.length, mask = size - 1;
+    let i = ((h % size) + size) % size;
+    let perturb = null;
+    for (;;) {
+      if (tbl[i] === undefined) { tbl[i] = v; return; }
+      if (i + 9 <= mask) for (let j = 1; j <= 9; j++) if (tbl[i + j] === undefined) { tbl[i + j] = v; return; }
+      if (perturb === null) perturb = BigInt.asUintN(64, BigInt(h));
+      perturb >>= 5n;
+      i = Number((BigInt(i) * 5n + 1n + perturb) & BigInt(mask));
+    }
+  };
+  if (insertCleanSize) { // set_insert_clean into a fresh table of a given size (no resizing)
+    const t = new Array(insertCleanSize);
+    for (const v of vals) place(t, v);
+    return { order: t.filter((x) => x !== undefined), size: insertCleanSize };
+  }
+  let table = new Array(8);
+  let fill = 0;
+  for (const v of vals) {
+    place(table, v);
+    fill++;
+    if (fill * 5 >= (table.length - 1) * 3) {
+      const minused = fill > 50000 ? fill * 2 : fill * 4;
+      let ns = 8;
+      while (ns <= minused) ns *= 2;
+      const old = table;
+      table = new Array(ns);
+      for (const x of old) if (x !== undefined) place(table, x);
+    }
+  }
+  return { order: table.filter((x) => x !== undefined), size: table.length };
+}
+// A constant set literal like {3, 1, 2} is compiled by CPython into a frozenset constant
+// (built once, rebuilt when constants are merged) that is then merged into a new empty set.
+function cpythonLiteralSetOrder(vals) {
+  const l1 = cpythonIntSetOrder(vals);
+  const l2 = cpythonIntSetOrder(l1.order);
+  const n = vals.length;
+  let size = 8;
+  if (n * 5 >= 7 * 3) { size = 8; while (size <= 2 * n) size *= 2; }
+  if (size === l2.size) return l2.order;
+  return cpythonIntSetOrder(l2.order, size).order;
 }
 
 class PyRange {
@@ -850,8 +909,8 @@ function formatValue(v, spec) {
 }
 
 // str.format(*args, **kw)
-function strFormat(fmt, args, kw) {
-  let out = '', auto = 0, mode = null; // mode: 'auto' | 'manual'
+function strFormat(fmt, args, kw, st = { auto: 0, mode: null }) {
+  let out = '';
   let i = 0;
   const n = fmt.length;
   while (i < n) {
@@ -879,18 +938,18 @@ function strFormat(fmt, args, kw) {
         k += 2;
       }
       if (field[k] === ':') spec = field.slice(k + 1);
-      if (spec.includes('{')) spec = strFormat(spec, args, kw);
-      // resolve the value
+      // resolve the value (field number first, then any nested fields in the spec, like CPython)
       const m = /^([^.[]*)(.*)$/.exec(name);
       let first = m[1], rest = m[2], val;
       if (first === '') {
-        if (mode === 'manual') throw ValueErr('cannot switch from manual field specification to automatic field numbering');
-        mode = 'auto';
-        first = String(auto++);
+        if (st.mode === 'manual') throw ValueErr('cannot switch from manual field specification to automatic field numbering');
+        st.mode = 'auto';
+        first = String(st.auto++);
       } else if (/^\d+$/.test(first)) {
-        if (mode === 'auto') throw ValueErr('cannot switch from automatic field numbering to manual field specification');
-        mode = 'manual';
+        if (st.mode === 'auto') throw ValueErr('cannot switch from automatic field numbering to manual field specification');
+        st.mode = 'manual';
       }
+      if (spec.includes('{')) spec = strFormat(spec, args, kw, st);
       if (/^\d+$/.test(first)) {
         const idx = parseInt(first, 10);
         if (idx >= args.length) throw IndexErr(`Replacement index ${idx} out of range for positional args tuple`);
@@ -1267,11 +1326,12 @@ function binop(op, a, b, inplace = false) {
   }
   if (a instanceof PySet && b instanceof PySet) {
     const out = new PySet(a.frozen);
+    const av = a.vals(), bv = b.vals();
     switch (op) {
-      case 'or': for (const [h, v] of a.m) out.m.set(h, v); for (const [h, v] of b.m) if (!out.m.has(h)) out.m.set(h, v); return out;
-      case 'and': for (const [h, v] of a.m) if (b.m.has(h)) out.m.set(h, v); return out;
-      case 'sub': for (const [h, v] of a.m) if (!b.m.has(h)) out.m.set(h, v); return out;
-      case 'xor': for (const [h, v] of a.m) if (!b.m.has(h)) out.m.set(h, v); for (const [h, v] of b.m) if (!a.m.has(h)) out.m.set(h, v); return out;
+      case 'or': for (const v of av) out.add(v); for (const v of bv) out.add(v); return out;
+      case 'and': for (const v of av) if (b.has(v)) out.add(v); return out;
+      case 'sub': for (const v of av) if (!b.has(v)) out.add(v); return out;
+      case 'xor': for (const v of av) if (!b.has(v)) out.add(v); for (const v of bv) if (!a.has(v)) out.add(v); return out;
     }
   }
   if (a instanceof PyDict && b instanceof PyDict && op === 'or') {
@@ -1385,7 +1445,7 @@ class GenIter extends PyIterator { // wraps a JS generator (generator expression
   }
 }
 
-const pickKey = (e) => e[0], pickVal = (e) => e[1], pickItem = (e) => new PyTuple([e[0], e[1]]), pickSet = (v) => v;
+const pickKey = (e) => e[0], pickVal = (e) => e[1], pickItem = (e) => new PyTuple([e[0], e[1]]);
 
 function getIter(o) {
   if (Array.isArray(o)) return new ListIter(o);
@@ -1393,7 +1453,15 @@ function getIter(o) {
   if (o instanceof PyRange) return new RangeIter(o);
   if (o instanceof PyTuple) return new ListIter(o.items, ITER_T.tuple_iterator);
   if (o instanceof PyDict) return new MapIter(o, ITER_T.dict_keyiterator, pickKey);
-  if (o instanceof PySet) return new MapIter(o, ITER_T.set_iterator, pickSet);
+  if (o instanceof PySet) {
+    const snap = o.vals(), size = o.size;
+    let i = 0;
+    const it = new FnIter(ITER_T.set_iterator, () => {
+      if (o.size !== size) throw exc('RuntimeError', 'Set changed size during iteration');
+      return i < snap.length ? snap[i++] : STOP;
+    });
+    return it;
+  }
   if (o instanceof PyIterator) return o;
   if (o instanceof PyDictView) {
     const k = o.kind;
@@ -1486,7 +1554,8 @@ function getItem(o, k) {
       throw IndexErr('list index out of range');
     }
     if (k instanceof PySlice) return sliceSeq(o, k);
-    if (typeof k === 'boolean' || typeof k === 'bigint') return getItem(o, k === true ? 1 : k === false ? 0 : (k > 0n ? MAX_SAFE : -MAX_SAFE));
+    if (typeof k === 'boolean') return getItem(o, k ? 1 : 0);
+    if (typeof k === 'bigint') throw IndexErr("cannot fit 'int' into an index-sized integer");
     throw TypeErr(`list indices must be integers or slices, not ${tname(k)}`);
   }
   if (o instanceof PyDict) {
@@ -1501,7 +1570,8 @@ function getItem(o, k) {
       throw IndexErr('string index out of range');
     }
     if (k instanceof PySlice) return sliceSeq(o, k);
-    if (typeof k === 'boolean' || typeof k === 'bigint') return getItem(o, k === true ? 1 : k === false ? 0 : (k > 0n ? MAX_SAFE : -MAX_SAFE));
+    if (typeof k === 'boolean') return getItem(o, k ? 1 : 0);
+    if (typeof k === 'bigint') throw IndexErr("cannot fit 'int' into an index-sized integer");
     throw TypeErr(`string indices must be integers, not '${tname(k)}'`);
   }
   if (o instanceof PyTuple) {
@@ -2938,8 +3008,8 @@ STM.remove = (s, a) => { checkArgs('set.remove', a, 1, 1, 'O'); if (!s.delete(a[
 STM.discard = (s, a) => { checkArgs('set.discard', a, 1, 1, 'O'); s.delete(a[0]); return null; };
 STM.pop = noArgs('set.pop', (s) => {
   if (!s.size) throw KeyErr('pop from an empty set');
-  const [h, v] = s.m.entries().next().value;
-  s.m.delete(h);
+  const v = s.vals()[0];
+  s.delete(v);
   return v;
 });
 STM.clear = noArgs('set.clear', (s) => { s.m.clear(); return null; });
@@ -3238,7 +3308,30 @@ function makeTime() {
   }, undefined, null, 'time.sleep'));
   return new PyModule('time', m);
 }
-const MODULE_MAKERS = { math: makeMath, random: makeRandom, string: makeString, time: makeTime };
+function makeSys(vm) {
+  const m = new Map();
+  const stream = (name) => new PyModule(name, new Map([
+    ['write', new PyBuiltin('write', (a) => { checkArgs('write', a, 1, 1); const s = strArg(a[0], `write() argument must be str, not ${tname(a[0])}`); CUR.write(s); return s.length; }, undefined, null, `${name}.write`)],
+    ['flush', new PyBuiltin('flush', () => null, undefined, null, `${name}.flush`)],
+  ]), false);
+  m.set('argv', ['']);
+  m.set('maxsize', normBig(9223372036854775807n));
+  m.set('version', '3.13 (Night School)');
+  m.set('platform', 'nightschool');
+  m.set('stdout', stream('stdout'));
+  m.set('stderr', stream('stderr'));
+  m.set('exit', new PyBuiltin('exit', exitFn, undefined, null, 'sys.exit'));
+  m.set('getrecursionlimit', new PyBuiltin('getrecursionlimit', () => vm.maxDepth, undefined, null, 'sys.getrecursionlimit'));
+  m.set('setrecursionlimit', new PyBuiltin('setrecursionlimit', (a) => {
+    checkArgs('setrecursionlimit', a, 1, 1);
+    const n = Number(needInt(a[0]));
+    if (n < 1) throw ValueErr('recursion limit must be greater or equal than 1');
+    vm.maxDepth = Math.min(n, 1000);
+    return null;
+  }, undefined, null, 'sys.setrecursionlimit'));
+  return new PyModule('sys', m);
+}
+const MODULE_MAKERS = { math: makeMath, random: makeRandom, string: makeString, time: makeTime, sys: makeSys };
 
 // ===========================================================================
 // 19. Tokenizer
@@ -3841,7 +3934,17 @@ class Parser {
       }
     }
     if (t.type === 'op' && t.v === '@') throw this.notSupported(t, 'decorators');
+    if (t.type === 'name' && t.v === 'match' && this.looksLikeMatch()) throw this.notSupported(t, "'match' statements");
     return this.parseSimpleStmts();
+  }
+  looksLikeMatch() {
+    const nx = this.peek();
+    if (nx.type === 'op' && !'([{-~*'.includes(nx.v)) return false;
+    if (nx.type === 'nl' || nx.type === 'eof') return false;
+    let j = this.i + 1;
+    while (j < this.t.length && this.t[j].type !== 'nl' && this.t[j].type !== 'eof') j++;
+    const last = this.t[j - 1];
+    return last.type === 'op' && last.v === ':' && this.t[j + 1] && this.t[j + 1].type === 'indent';
   }
   parseSimpleStmts() {
     const out = [this.parseSimpleStmt()];
@@ -5518,10 +5621,12 @@ class Compiler {
       : (f) => { const out = new Array(n); for (let i = 0; i < n; i++) out[i] = items[i].fn(f); return out; };
     if (e.type === 'List') return build;
     if (e.type === 'Tuple') return n === 0 ? () => EMPTY_TUPLE : (f) => new PyTuple(build(f));
+    const constInts = n > 2 && e.elts.every((x) => x.type === 'Const' && (typeof x.value === 'boolean' || (typeof x.value === 'number' && Math.abs(x.value) < 2305843009213693950)));
     return (f) => {
       const s = new PySet();
       const vals = build(f);
       try { for (const v of vals) s.add(v); } catch (x) { throw locate(x, e, where); }
+      if (constInts && s.size > 1) s.order = cpythonLiteralSetOrder(Array.from(s.m.values()));
       return s;
     };
   }
@@ -5877,7 +5982,7 @@ const HINTS = [
   ['EOFError', /./, "There's no keyboard on this mission, so input() can't work. Put the value straight into a variable instead."],
   ['MemoryError', /./, "That's too big for this laptop. Lyosha bought it used in 2011. Try something smaller."],
   ['OverflowError', /./, "That number is too big to fit. Try smaller numbers, or ints instead of floats."],
-  ['ModuleNotFoundError', /./, "That module isn't installed on this laptop. Night School has math, random, string and time."],
+  ['ModuleNotFoundError', /./, "That module isn't installed on this laptop. Night School has math, random, string, time and sys."],
   ['ImportError', /./, "That name isn't in the module. Check the spelling."],
   ['StopIteration', /./, "The iterator ran out of items. next(it, default) gives a default instead of crashing."],
   ['NotImplementedError', /not supported in Night School/, "Night School's Python skips this feature. There's always another way, usually a plain function and a loop."],
@@ -6066,6 +6171,11 @@ export class PyVM {
   }
 
   _run(body) {
+    if (this.running) {
+      const e = exc('RuntimeError', 'this PyVM is already running (load/call cannot be nested inside a native)');
+      return { ok: false, error: this.errorInfo(e), value: undefined, output: [], stdout: '', steps: 0 };
+    }
+    this.running = true;
     const prev = CUR;
     CUR = this;
     this.steps = 0;
@@ -6076,7 +6186,7 @@ export class PyVM {
     this.stdoutText = '';
     this.truncated = false;
     let error = null, value;
-    try { value = body(); } catch (e) { error = e; } finally { this.flush(); CUR = prev; }
+    try { value = body(); } catch (e) { error = e; } finally { this.flush(); CUR = prev; this.running = false; }
     const base = { output: this.out, stdout: this.stdoutText, steps: this.steps };
     if (this.truncated) base.truncated = true;
     if (error !== null) {

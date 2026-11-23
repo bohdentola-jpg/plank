@@ -53,7 +53,7 @@ export function makeCtx(type, opts = {}) {
     name: o.name || '',
     wantInterior: !!o.interior,
     b: new GeoBuilder(),
-    doors: [], colliders: [], points: {}, lights: [], cameras: [],
+    doors: [], colliders: [], points: {}, lights: [], cameras: [], floors: [], ramps: [],
     leaves: [], // door leaves kept as separate meshes {key, hinge:[x,z]}
     extra: [], // extra Object3Ds for the exterior (e.g. animated bits)
     footprint: { w: 10, d: 10 },
@@ -64,6 +64,19 @@ export function makeCtx(type, opts = {}) {
   ctx.colLocal = (x, z, w, d, h = 3, y = 0) => {
     const p = ctx.b.P(x, y, z);
     ctx.colliders.push({ x: p[0], z: p[2], w, d, rot: ctx.b.yaw(), h });
+  };
+  /** walkable flat surface (building frame): centre, size, top height */
+  ctx.floor = (x, z, w, d, y, rot = 0) => { ctx.floors.push({ x, z, w, d, rot, y }); };
+  ctx.floorLocal = (x, z, w, d, y) => {
+    const p = ctx.b.P(x, y, z);
+    ctx.floors.push({ x: p[0], z: p[2], w, d, rot: ctx.b.yaw(), y: p[1] });
+  };
+  /** steps/stairs as a slope rising along the ramp's local +Z from y0 to y1 (building frame) */
+  ctx.ramp = (x, z, w, d, y0, y1, rot = 0) => { ctx.ramps.push({ x, z, w, d, rot, y0, y1 }); };
+  /** ramp in the current local frame; rising along local +Z (or −Z with down = true) */
+  ctx.rampLocal = (x, z, w, d, y0, y1, towardMinusZ = false) => {
+    const p0 = ctx.b.P(x, y0, z), p1 = ctx.b.P(x, y1, z);
+    ctx.ramps.push({ x: p0[0], z: p0[2], w, d, rot: ctx.b.yaw() + (towardMinusZ ? PI : 0), y0: p0[1], y1: p1[1] });
   };
   ctx.point = (name, x, y, z, rot = 0) => { ctx.points[name] = { x, y, z, rot }; };
   ctx.pointLocal = (name, x, y, z, rot = 0) => {
@@ -116,6 +129,8 @@ export function finish(ctx) {
     interior: interior || null,
     lights: ctx.lights,
     cameras: ctx.cameras,
+    floors: ctx.floors,
+    ramps: ctx.ramps,
   };
 }
 
@@ -326,6 +341,7 @@ export function doorUnit(ctx, op, wall) {
     b.boxMinMax(ik, u1, y0, -T - 0.016, u1 + 0.08, y1 + 0.08, -T, { color: ic, skip: 'f' });
     b.boxMinMax(ik, u0, y1, -T - 0.016, u1, y1 + 0.08, -T, { color: ic, skip: 'f' });
   }
+  if (op.open) return; // open passage: jambs only
   const style = op.style || 'panel';
   const leafKey = op.leaf || null;
   const lk = (k) => (leafKey ? leafKey : k);
@@ -705,6 +721,7 @@ export function steps(ctx, x, z, rot, o = {}) {
   const rr = rise / n, run = 0.28;
   const key = o.key || 'wood_raw', col = o.color || '#9a8466';
   b.push().translate(x, 0, z).rotateY(rot);
+  ctx.rampLocal(0, (n * run) / 2, w, n * run, 0, rise, true);
   // treads: step i top at (i+1)*rr, from z = (n-1-i)*run .. (n-i)*run measured outward from the landing
   for (let i = 0; i < n; i++) {
     const zc = (n - 1 - i) * run + run / 2;
@@ -761,6 +778,7 @@ export function porch(ctx, x, z, W, D, y, o = {}) {
   const wear = o.wear || 0;
   const key = o.key || 'wood_weathered', col = o.color || '#8a7c6a';
   b.push().translate(x, 0, z);
+  ctx.floorLocal(0, 0, W, D, y);
   const sag = wear > 0.6 ? (wear - 0.6) * 0.25 : 0;
   // deck boards
   const nb = Math.round(W / 0.15);
@@ -815,6 +833,7 @@ export function arcticEntry(ctx, x, z, o = {}) {
     sides, skip: [false, false, true, false], thick: 0.12, gable: o.gable ? { axis: 'z', yRidge: fy + h + (w / 2) * 0.6 } : null,
   });
   b.box('wood_raw', 0, fy - 0.3, 0, w, 0.3, d, { color: '#7a6a56', skip: 't' });
+  ctx.floorLocal(0, 0, w - 0.2, d - 0.2, fy);
   if (o.gable) {
     roofGable(ctx, { W: w, D: d, yEave: fy + h, pitch: 0.6, axis: 'z', eave: 0.25, rake: 0.25, key: o.roofKey || 'metal_corr', color: o.roofColor || '#7a7e80', trim: o.trim || '#e8e2d4', cap: true, cz: 0.08, icicles: o.icicles });
   } else {
