@@ -9,9 +9,10 @@
 // the ground, front door facing +Z, metres. Exterior meshes are merged per
 // material (one draw call each); the interior (when asked for) is a separate group.
 import { build as house } from './house.js';
+import { build as church } from './church.js';
 
 const GEN = {
-  house,
+  house, church,
 };
 
 /** Register a generator (used by the per-type modules below). */

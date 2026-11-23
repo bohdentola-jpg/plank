@@ -188,7 +188,7 @@ export class Animator {
       }
       pose[`lowerarm01.${side}`] = { aim: fdir, tw: s * (-15 + g * 40) };
       pose[`wrist.${side}`] = { e: [6 + g * 10, 0, -s * (6 + g * 8)] };
-      handCurl(pose, side, lerp(0.3, 0.7, runK) - g * 0.2 + this.armsCrossed * 0.2, 0.3);
+      handCurl(pose, side, lerp(0.16, 0.6, runK) - g * 0.1 + this.armsCrossed * 0.25, 0.18);
     };
     arm('L', this.phase);
     arm('R', (this.phase + 0.5) % 1);

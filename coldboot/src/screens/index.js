@@ -4,3 +4,5 @@ import './title.js';
 import './humanlab.js';
 import './buildlab.js';
 import '../scenes/warehouse.js';
+import './creator.js';
+import '../scenes/plane.js';

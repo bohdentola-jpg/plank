@@ -25,6 +25,9 @@ export const TRIM_COLORS = ['#f2efe6', '#efe9d8', '#ffffff', '#2c2a28', '#d8d2c2
 export const ROOF_COLORS = ['#5c2420', '#2e3f33', '#2a3440', '#6a6e70', '#3c3c3e', '#7a3a24', '#4a5648', '#8a8e90'];
 export const DOOR_COLORS = ['#7a1f1a', '#2c3e50', '#3a5a40', '#c08a2a', '#ece6d6', '#4a3020', '#8a8a86', '#1e2a2a'];
 
+// residential "room behind the glass" atlas cells (4 = shop shelves, 7 = office)
+export const RES_CELLS = [0, 1, 2, 3, 5, 6];
+
 // window light colours (multiplied by the glass emissive)
 export const LIGHT = {
   warm: [1.0, 0.86, 0.66],
@@ -76,7 +79,7 @@ export function makeCtx(type, opts = {}) {
     ctx.cameras.push({ x: p[0], y: p[1], z: p[2], yaw: local ? yaw + ctx.b.yaw() : yaw, pitch, fov, range });
   };
   /** pick lit/dark for a window (public buildings pass a higher p). */
-  ctx.lit = (p = 0.55) => (rng() < p * (0.35 + 0.65 * state) ? (rng() < 0.12 ? LIGHT.tv : rng() < 0.3 ? LIGHT.soft : LIGHT.warm) : LIGHT.off);
+  ctx.lit = (p = 0.55) => (rng() < Math.min(0.95, p * 1.3) * (0.4 + 0.6 * state) ? (rng() < 0.12 ? LIGHT.tv : rng() < 0.3 ? LIGHT.soft : LIGHT.warm) : LIGHT.off);
   return ctx;
 }
 
@@ -168,7 +171,7 @@ export function wallFace(b, key, outline, holes, z, o = {}) {
     let poly = [[ra, ya], [rb, ya], [rb, yb], [ra, yb]];
     if (!rectOutline) poly = clipConvex(poly, outline);
     if (poly.length < 3) continue;
-    b.poly(key, poly.map(([u, y]) => [u, y, z]), { color: o.color, want: [0, 0, o.inward ? -1 : 1], uvOff: o.uvOff });
+    b.poly(key, poly.map(([u, y]) => [u, y, z]), { color: o.color, want: [0, 0, o.inward ? -1 : 1], uvOff: o.uvOff, vgrad: o.vgrad });
   }
 }
 function isAxisRect(pts) {
@@ -211,7 +214,7 @@ export function windowUnit(ctx, op, wall) {
   }
   // glass with the room behind it
   const light = cond === 'ok' ? (op.light || LIGHT.off) : LIGHT.off;
-  const cell = op.cell ?? (ctx.rng() * 6) | 0;
+  const cell = op.cell ?? RES_CELLS[(ctx.rng() * RES_CELLS.length) | 0];
   const [cu0, cv0, cu1, cv1] = windowCellUV(cell);
   const gk = op.glass || wall.glass || 'glass_warm';
   if (cond !== 'gone') {
@@ -425,7 +428,10 @@ export function walls(ctx, spec) {
     if (spec.shed && s === 0) outline = [[0, spec.y0], [len, spec.y0], [len, spec.shed.yFront], [0, spec.shed.yFront]];
     if (spec.shed && s === 2) outline = [[0, spec.y0], [len, spec.y0], [len, spec.shed.yBack], [0, spec.shed.yBack]];
     const sc = spec.sideColor ? spec.sideColor[s] : spec.color;
-    wallFace(b, spec.key, outline, holes, 0, { color: sc });
+    // grime: darker toward the base (splash, snow melt), slightly under the eaves
+    const g = spec.grime ?? 0.18;
+    const yTopW = Math.max(...outline.map((p) => p[1]));
+    wallFace(b, spec.key, outline, holes, 0, { color: sc, vgrad: g > 0 ? [spec.y0, Math.min(spec.y0 + 2.2, yTopW), 1 - g, 1] : null });
     if (spec.inner) {
       const iy0 = spec.inner.y0 ?? spec.y0, iy1 = spec.inner.y1 ?? spec.y1;
       const inl = [[T, iy0], [len - T, iy0], [len - T, iy1], [T, iy1]];

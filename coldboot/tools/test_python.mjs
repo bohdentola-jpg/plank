@@ -1171,6 +1171,265 @@ SYN('import nothing', `import\n`);
 SYN('syntax error after valid lines', `print('a')\nprint('b')\nfor x in range(3) print(x)\n`);
 
 // ---------------------------------------------------------------------------
+// 16. trickier semantics
+// ---------------------------------------------------------------------------
+T('late binding closures', String.raw`
+  fs = [lambda: i for i in range(3)]
+  print([f() for f in fs])
+  gs = [lambda i=i: i for i in range(3)]
+  print([g() for g in gs])
+  def make():
+      out = []
+      for k in range(3):
+          def show():
+              return k * 10
+          out.append(show)
+      return out
+  print([h() for h in make()])
+`);
+T('generator laziness', String.raw`
+  def noisy(x):
+      print('visit', x)
+      return x
+  g = (noisy(x) for x in range(3))
+  print('created')
+  print(next(g))
+  print(any(noisy(x) > 0 for x in range(5)))
+  print(all(noisy(x) < 1 for x in range(5)))
+  print(list(zip([1, 2, 3], 'ab')), list(zip('abc', range(10), [True, False, None])))
+`);
+T('mutation during iteration', String.raw`
+  xs = [1, 2, 3, 4, 5, 6]
+  for x in xs:
+      if x % 2 == 0:
+          xs.remove(x)
+  print(xs)
+  ys = [1, 2]
+  for y in ys:
+      if len(ys) < 5:
+          ys.append(y * 10)
+  print(ys)
+  d = {'a': 1, 'b': 2}
+  for k in d:
+      d[k] *= 10
+  print(d)
+  for k in list(d):
+      if d[k] > 10:
+          del d[k]
+  print(d)
+`);
+T('try finally control flow', String.raw`
+  def f():
+      for i in range(5):
+          try:
+              if i == 2:
+                  return 'returned at 2'
+          finally:
+              print('cleanup', i)
+  print(f())
+  def g():
+      try:
+          return 'try'
+      finally:
+          return 'finally wins'
+  print(g())
+  for i in range(3):
+      try:
+          if i == 1:
+              break
+      finally:
+          print('loop finally', i)
+  try:
+      try:
+          raise ValueError('inner')
+      finally:
+          print('inner finally')
+  except ValueError as e:
+      print('outer caught', e)
+  def h():
+      try:
+          1 / 0
+      except ZeroDivisionError:
+          return 'handled'
+      finally:
+          print('h finally')
+  print(h())
+`);
+T('exception variable scope', String.raw`
+  try:
+      raise ValueError('x')
+  except ValueError as err:
+      saved = err
+  print(saved, type(saved).__name__)
+  try:
+      print(err)
+  except NameError as e:
+      print('NameError:', e)
+`);
+T('more float formatting', String.raw`
+  print(1e-7, 123456789.123456789, 1e15 + 0.3, 2 ** 0.5 * 2 ** 0.5, 0.1 + 0.7, 1.1 * 1.1, 1e400, -1e400)
+  print('%.0f' % 0.5, '%.0f' % 1.5, '%.2f' % 2.675, '%.3f' % 1.0005, '%10.4f|' % 3.14159, '%-10.2e|' % 1234.5)
+  print(f'{1e100:.2f}'[:12], f'{-1:b}', f'{10:#o}', f'{1000000:_}', f'{0xffffff:_x}', f'{3.14159:10.3f}|', f'{12.5:08.2f}', f'{-12.5:08.2f}')
+  print(f'{1.23e-10:g}', f'{123456789:g}', f'{0.000012345:.3g}', f'{0.5:.0%}', f'{0.125:.1%}', '{:%}'.format(0.5), f'{2.5:g}', f'{1e16:g}', f'{123.456:.10g}')
+  print(f'{"left":<10}|{"right":>10}|{"mid":^9}|', f'{3:>{5}}|', f'{"x"!r:>5}', f'{3.0:.0f}', f'{-0.4:.0f}', f'{0.0001:.2e}', f'{99.995:.2f}')
+  print(round(0.1 + 0.2, 10), round(2.5e-8, 9), round(1e-20, 5), round(-1.005, 2), round(123.456, -1), round(5e15 + 0.5))
+`);
+T('int formatting and conversion edge', String.raw`
+  print(int('١٢'), int('0'), int('-0'), int('000'), int(' +42\n'), int('1_0', 0) if False else int('10', 0), int(True) + int(False))
+  print(int(1e20), int(-2.5), int(2.999999), float(10 ** 20), float('  -0  '), float('1E3'), float('.5'), float('5.'))
+  print(str(10 ** 25), str(-(10 ** 25)), 10 ** 25 // 10 ** 24, (10 ** 25) % 7, -(10 ** 25) // 3)
+  print(abs(-10 ** 20), max(10 ** 20, 10 ** 19), sum([10 ** 18] * 10), 2 ** 62 + 2 ** 62, 3 ** 40)
+`);
+T('nested functions and recursion with lists', String.raw`
+  def flatten(xs):
+      out = []
+      for x in xs:
+          if isinstance(x, list):
+              out.extend(flatten(x))
+          else:
+              out.append(x)
+      return out
+  print(flatten([1, [2, [3, [4, 5]], 6], [[7]]]))
+  def perms(s):
+      if len(s) <= 1:
+          return [s]
+      res = []
+      for i, c in enumerate(s):
+          for p in perms(s[:i] + s[i + 1:]):
+              res.append(c + p)
+      return res
+  print(perms('abc'))
+  def binsearch(xs, t):
+      lo, hi = 0, len(xs) - 1
+      while lo <= hi:
+          mid = (lo + hi) // 2
+          if xs[mid] == t:
+              return mid
+          elif xs[mid] < t:
+              lo = mid + 1
+          else:
+              hi = mid - 1
+      return -1
+  print(binsearch(list(range(0, 100, 3)), 42), binsearch([1, 2], 5))
+`);
+T('string building patterns', String.raw`
+  rows = [('Cod', 4.5, 12), ('King crab', 31.25, 2), ('Halibut', 15, 4)]
+  print(f"{'Item':<10}{'Price':>8}{'Qty':>5}")
+  print('-' * 23)
+  total = 0
+  for name, price, qty in rows:
+      line_total = price * qty
+      total += line_total
+      print(f"{name:<10}{price:>8.2f}{qty:>5}")
+  print(f"{'TOTAL':<10}{total:>13.2f}")
+  print("|".join(f"{n:^5}" for n in range(3)))
+  print("\n".join(["a", "b"]))
+  report = ""
+  for i in range(3):
+      report += str(i) + ","
+  print(report[:-1], report.rstrip(','), report.count(','))
+`);
+T('dict views and sorting', String.raw`
+  stock = {'cod': 12, 'crab': 3, 'eel': 7, 'char': 7}
+  print(sorted(stock), sorted(stock.values()), sorted(stock.items(), key=lambda kv: kv[1]))
+  print(sorted(stock, key=stock.get, reverse=True), max(stock.items(), key=lambda kv: kv[1]))
+  ks = stock.keys()
+  stock['tuna'] = 1
+  print(len(ks), 'tuna' in ks, list(ks)[-1])
+  inverted = {}
+  for k, v in stock.items():
+      inverted.setdefault(v, []).append(k)
+  print(inverted)
+  print(dict(sorted(stock.items())), list(reversed(stock)), {k: v for k, v in stock.items() if v > 5})
+`);
+T('list of dicts filter sort', String.raw`
+  ledger = [
+      {'payer': 'Northstar Dynamics', 'payee': 'Lyle Pruitt', 'amount': 5000, 'memo': 'consulting'},
+      {'payer': 'Northstar Dynamics', 'payee': 'Gideon Shaw', 'amount': 800, 'memo': 'lunch'},
+      {'payer': 'Dolly Finch', 'payee': 'Hank Brubaker', 'amount': 1200, 'memo': 'propane'},
+      {'payer': 'Northstar Dynamics', 'payee': 'Lyle Pruitt', 'amount': 2500, 'memo': 'retainer'},
+      {'payer': 'Northstar Dynamics', 'payee': 'Gideon Shaw', 'amount': 4100, 'memo': 'advisory'},
+  ]
+  big = [r for r in ledger if r['payer'] == 'Northstar Dynamics' and r['amount'] > 1000]
+  totals = {}
+  for r in big:
+      totals[r['payee']] = totals.get(r['payee'], 0) + r['amount']
+  print(totals)
+  for r in sorted(ledger, key=lambda r: (-r['amount'], r['payee'])):
+      print(r['amount'], r['payee'], r['memo'])
+`);
+T('unicode and ord tables', String.raw`
+  word = "ПОЛЫНЬ"
+  print(word, len(word), word.lower(), word[::-1], [ord(c) for c in word[:2]])
+  print(sorted("Zarya"), sorted("Zarya", key=str.lower), "zarya".capitalize(), "PORT zarya".swapcase())
+  print(" ".join(w[::-1] for w in "Baba Valya knits".split()))
+`);
+T('integer division table', String.raw`
+  for a in [7, -7, 0]:
+      for b in [2, -2, 3]:
+          print(a, b, a // b, a % b, divmod(a, b), a / b)
+`);
+T('float division table', String.raw`
+  for a in [7.5, -7.5, 0.0]:
+      for b in [2, -2.0, 0.3]:
+          print(a, b, a // b, a % b, round(a / b, 6))
+`);
+T('scope comprehension uses enclosing', String.raw`
+  def f(xs, k):
+      return [x * k for x in xs if x != k]
+  print(f([1, 2, 3], 2))
+  base = 100
+  print([base + i for i in range(3)], {i: base for i in range(2)}, sum(base for _ in range(3)))
+  def g():
+      total = 0
+      vals = [total + v for v in range(3)]
+      return vals
+  print(g())
+`);
+T('while with complex conditions', String.raw`
+  fish = [3, 8, 2, 9, 1]
+  i = 0
+  while i < len(fish) and fish[i] != 9:
+      i += 1
+  print('found 9 at', i)
+  n = 27
+  steps = 0
+  while n != 1:
+      n = n // 2 if n % 2 == 0 else 3 * n + 1
+      steps += 1
+  print(steps)
+`);
+T('printing many types', String.raw`
+  print(1, 1.0, 'x', [1], (1,), {1: 1}, {1}, None, True, range(2), 'no bytes', ..., print is print)
+  print([1.0, -0.0, 1e20, float('inf')], (None, True), {'a': (1, [2])}, [[], [[]]], ((),))
+  print(str(['a\nb']), repr("tab\there"), [repr('q')], {'k': "it's"})
+`);
+T('sorted stability and reverse', String.raw`
+  data = [('b', 1), ('a', 2), ('c', 1), ('d', 2), ('e', 0)]
+  print(sorted(data, key=lambda t: t[1]))
+  print(sorted(data, key=lambda t: t[1], reverse=True))
+  print(sorted([3, 1, 2, 3, 1], reverse=True), sorted('banana'), sorted([[2, 1], [1, 2], [1]]))
+  print(sorted([0.5, -1, 3, 2.25, True]), min('b', 'a', 'c'), max([1, 3, 2], key=lambda x: -x))
+`);
+T('global and nested global', String.raw`
+  level = 1
+  def outer():
+      def inner():
+          global level
+          level += 10
+      inner()
+      return level
+  print(outer(), level)
+  def reader():
+      return level * 2
+  def writer():
+      global level, newname
+      level = 0
+      newname = 'made inside'
+  writer()
+  print(reader(), newname)
+`);
+// ---------------------------------------------------------------------------
 // run differential cases
 // ---------------------------------------------------------------------------
 let pass = 0, fail = 0;

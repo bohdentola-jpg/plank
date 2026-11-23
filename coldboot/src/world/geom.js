@@ -160,11 +160,17 @@ export class GeoBuilder {
     }
     const su = o.uvScale ? o.uvScale[0] : 1, sv = o.uvScale ? o.uvScale[1] : 1;
     const ou = o.uvOff ? o.uvOff[0] : 0, ov = o.uvOff ? o.uvOff[1] : 0;
+    const vg = o.vgrad; // [yA, yB, kA, kB] colour multiplier by building-space height
     const base = B.n;
     for (let i = 0; i < n; i++) {
       const p = P[i];
       B.pos.push(p[0], p[1], p[2]);
       B.nrm.push(nx, ny, nz);
+      if (vg) {
+        const t = Math.max(0, Math.min(1, (p[1] - vg[0]) / (vg[1] - vg[0])));
+        const k = vg[2] + (vg[3] - vg[2]) * t;
+        B.col.push(col[0] * k, col[1] * k, col[2] * k);
+      } else B.col.push(col[0], col[1], col[2]);
       let u, v;
       if (tg.rm) { u = tg.rm[0]; v = tg.rm[1]; } else if (uvs) { u = uvs[i][0]; v = uvs[i][1]; } else {
         u = (p[0] * tx + p[1] * ty + p[2] * tz) * su + ou;
@@ -172,7 +178,6 @@ export class GeoBuilder {
         if (o.uvRot) { const t = u; u = v; v = -t; }
       }
       B.uv.push(u, v);
-      B.col.push(col[0], col[1], col[2]);
     }
     for (let i = 1; i < n - 1; i++) B.idx.push(base, base + i, base + i + 1);
     B.n += n;
