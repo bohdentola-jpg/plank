@@ -29,7 +29,7 @@ export class Interactions {
       if (y !== undefined && Math.abs(y - P.pos.y) > 2.2) return;
       const facing = d > 0.4 ? (dx * fx + dz * fz) / d : 1;
       if (facing < -0.2) return;
-      const score = d - facing * 0.8;
+      const score = d - facing * 0.8 + (it.low ? 0.7 : 0);   // ladders yield to mission spots
       if (score < bestScore) { bestScore = score; best = it; }
     };
     for (const it of this.items.values()) {

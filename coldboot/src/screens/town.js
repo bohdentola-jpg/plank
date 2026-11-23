@@ -149,6 +149,7 @@ registerScreen('town', () => {
     // the end of day 14: across the strait (scenes/finale.js)
     G.finale = async () => { saveGame(); go('finale', {}, { transition: 'black' }); await new Promise(() => {}); };
     cabinSpots();
+    ladderSpots();
     for (const id of ['hardware', 'koshkin', 'northstar', 'diner']) {
       const p = G.missions.where(`${id}.counter`) || G.missions.where(id);
       if (p) G.interact.add('shop:' + id, { x: p.x, z: p.z, y: p.y, r: 2.6, prompt: id === 'diner' ? 'Order something' : 'Browse the shelves', action: () => G.economy.shop(id) });
@@ -171,6 +172,26 @@ registerScreen('town', () => {
         G.missions.start('d1.arrival');
       }
     } else G.missions.resumeAll();
+  }
+
+  /** Ladders and masts: E at the bottom climbs up, E at the top climbs down (a quick fade). */
+  function ladderSpots() {
+    const pairs = [['ladderBottom', 'ladderTop', 'Climb the ladder', 'Climb down'], ['mastBase', 'mastTop', 'Climb the mast', 'Climb down']];
+    const climb = async (p) => {
+      G.player.locked = true;
+      await fade(1, 0.35);
+      G.player.place(p.x, p.z, p.rot ?? G.player.yaw, p.y);
+      await fade(0, 0.35);
+      G.player.locked = false;
+    };
+    for (const id of Object.keys(G.town.buildings)) {
+      for (const [lo, hi, up, down] of pairs) {
+        const a = G.town.points[`${id}.${lo}`], b = G.town.points[`${id}.${hi}`];
+        if (!a || !b) continue;
+        G.interact.add(`ladder:${id}:${lo}`, { ...a, r: 1.6, prompt: up, low: true, action: () => climb(b) });
+        G.interact.add(`ladder:${id}:${hi}`, { ...b, r: 1.6, prompt: down, low: true, action: () => climb(a) });
+      }
+    }
   }
 
   function cabinSpots() {
