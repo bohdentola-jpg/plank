@@ -160,9 +160,25 @@ export class Director {
         if (!p.visible || p.userData?.noBlock || (p.name && p.name.startsWith('person'))) { skip = true; break; }
       }
       if (skip) continue;
+      // bars, rails, poles and wires are shot through, not around
+      if (this._thin(ob)) continue;
       return h.distance;
     }
     return len;
+  }
+
+  /** Is this mesh thin in two dimensions (under 12 cm), like a bar or a pole? (cached) */
+  _thin(ob) {
+    if (ob.userData._thin !== undefined) return ob.userData._thin;
+    const g = ob.geometry;
+    let thin = false;
+    if (g) {
+      if (!g.boundingBox) g.computeBoundingBox();
+      const sz = g.boundingBox.getSize(new THREE.Vector3()).multiply(ob.getWorldScale(new THREE.Vector3()));
+      thin = [sz.x, sz.y, sz.z].filter((v) => Math.abs(v) < 0.12).length >= 2;
+    }
+    ob.userData._thin = thin;
+    return thin;
   }
 
   /** Close-up on an actor's face from a side (+1 their left, −1 their right). */

@@ -178,11 +178,11 @@ function dish(r = 2.4) {
   feed.rotation.x = Math.PI / 2;
   feed.position.z = -r * 0.85 + r * 0.55;
   head.add(feed);
-  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.3, 1.2, 0.8) }));
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.9, 1.1, 1.25) }));
   tip.position.z = -r * 0.85 + r;
   head.add(tip);
   const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 9, 900, 20, 1, true).rotateX(Math.PI / 2).translate(0, 0, 450),
-    new THREE.MeshBasicMaterial({ color: new THREE.Color(0.3, 1.6, 0.9), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(0.55, 0.68, 0.8), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
   beam.position.z = tip.position.z;
   head.add(beam);
   g.add(head);
