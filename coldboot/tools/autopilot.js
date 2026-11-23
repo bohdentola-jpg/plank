@@ -13,7 +13,8 @@ export async function run(seconds = 300, o = {}) {
   const { LESSONS } = await import('../src/code/lessons.js');
   const log = [];
   const t0 = performance.now();
-  let last = '', same = 0, lastDay = G.state.day;
+  let last = '', same = 0, lastDay = G.state.day, focus = null, ticks = 0;
+  const tried = new Set();
   const key = (code) => input._pendingKeys.push(code);
   const note = (s) => { log.push(`${((performance.now() - t0) / 1000).toFixed(0)}s d${G.state.day} ${G.state.hour.toFixed(1)}h  ${s}`); };
   const errs = [];
@@ -21,6 +22,11 @@ export async function run(seconds = 300, o = {}) {
   while (performance.now() - t0 < seconds * 1000) {
     await sleep(350);
     const s = G.state, d = G.director;
+    ticks++;
+    if (ticks % 60 === 0) {
+      const tg0 = G.hud.objective?.target, P0 = G.player.pos;
+      note(`  · state: locked=${G.player.locked} cin=${!!G.cinematic} overlay=${!!G.overlay} mg=${!!G.minigames?.cur} dlg=${!!G.dialog.active} choice=${!!d.choice} line=${!!d.lineHandle} prompt=${G.hud.prompt?.text || '-'} dist=${tg0 ? Math.hypot(P0.x - tg0.x, P0.z - tg0.z).toFixed(1) : '-'} y=${P0.y.toFixed(1)}/${tg0?.y?.toFixed?.(1) ?? '-'} busy=${G.interact.busy}`);
+    }
     if (s.day !== lastDay) { note(`=== DAY ${s.day} ===`); lastDay = s.day; }
     if (o.stopDay && s.day >= o.stopDay) break;
     if (d.choice) { const c = d.choice; d.choice = null; c.r(0); continue; }
@@ -36,20 +42,37 @@ export async function run(seconds = 300, o = {}) {
     if (G.cinematic || G.player.locked) continue;
     const obj = G.hud.objective;
     const text = obj ? obj.text : '(none)';
-    if (text !== last) { note('◆ ' + text); last = text; same = 0; } else same++;
-    const tg = obj?.target;
+    if (text !== last) { note('◆ ' + text); last = text; same = 0; focus = null; } else same++;
+    // stalled with no prompt: go talk to the nearest person who has something to say
+    if (same > 3 && same % 3 === 0 && !G.hud.prompt) {
+      const at = obj?.target || G.player.pos;
+      let best = null, bd = 30;
+      for (const [id, npc] of G.npcs.list) {
+        if (npc.def.folk || npc.hidden || !G.dialog.has?.(id) || tried.has(text + '|' + id)) continue;
+        const dd = Math.hypot(npc.pos.x - at.x, npc.pos.z - at.z);
+        if (dd < bd) { bd = dd; best = npc; }
+      }
+      if (best) { tried.add(text + '|' + best.id); focus = best; note('  → talk to ' + best.id); }
+    }
+    const tg = focus ? { x: focus.pos.x, z: focus.pos.z, y: focus.pos.y } : obj?.target;
     if (tg) {
       const P = G.player.pos;
       const dist = Math.hypot(P.x - tg.x, P.z - tg.z);
-      if (dist > 2.2) {
+      if (dist > (focus ? 1.8 : 2.2)) {
         const a = Math.atan2(P.x - tg.x, P.z - tg.z);
-        const off = tg.y !== undefined ? 0.5 : 1.3;
+        const off = focus ? 1.1 : tg.y !== undefined ? 0.5 : 1.3;
         const x = tg.x + Math.sin(a) * off, z = tg.z + Math.cos(a) * off;
         G.player.place(x, z, Math.atan2(tg.x - x, tg.z - z), tg.y);
         continue;
       }
     }
-    if (G.hud.prompt && G.hud.prompt.action === 'interact') { key('KeyE'); continue; }
+    if (G.hud.prompt && G.hud.prompt.action === 'interact') {
+      // generic things (sleep, shops, ladders) only when the objective is about them
+      const cur = G.interact.current;
+      const wanted = /sleep|laptop|lesson|night school|buy|shop|climb/i.test(text);
+      if (!cur?.low || wanted) { key('KeyE'); focus = null; continue; }
+      if (tg) { G.player.place(tg.x + 0.25, tg.z + 0.25, Math.atan2(-0.25, -0.25), tg.y); continue; }
+    }
     // nothing to do here: let the clock run (missions that wait for an hour)
     if (same > 6) {
       s.hour = Math.min(23.4, s.hour + 0.5);

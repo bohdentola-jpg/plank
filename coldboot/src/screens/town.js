@@ -152,7 +152,7 @@ registerScreen('town', () => {
     ladderSpots();
     for (const id of ['hardware', 'koshkin', 'northstar', 'diner']) {
       const p = G.missions.where(`${id}.counter`) || G.missions.where(id);
-      if (p) G.interact.add('shop:' + id, { x: p.x, z: p.z, y: p.y, r: 2.6, prompt: id === 'diner' ? 'Order something' : 'Browse the shelves', action: () => G.economy.shop(id) });
+      if (p) G.interact.add('shop:' + id, { x: p.x, z: p.z, y: p.y, r: 2.6, low: true, prompt: id === 'diner' ? 'Order something' : 'Browse the shelves', action: () => G.economy.shop(id) });
     }
     progress = 1;
     input.wantPointerLock = true;
@@ -198,9 +198,9 @@ registerScreen('town', () => {
     const cab = G.town.buildings.cabin;
     const pt = (name, dx, dz) => G.town.points['cabin.' + name] || { x: cab.x + dx, z: cab.z + dz, y: cab.y };
     const bed = pt('bed', -1.5, -1);
-    G.interact.add('cabin.bed', { ...bed, r: 2, prompt: 'Sleep', enabled: () => !!G.state.flags.hasCabin, action: () => G.sleep() });
+    G.interact.add('cabin.bed', { ...bed, r: 2, prompt: 'Sleep', low: true, enabled: () => !!G.state.flags.hasCabin, action: () => G.sleep() });
     const lap = pt('laptop', 1.2, -1.4);
-    G.interact.add('cabin.laptop', { ...lap, r: 2, prompt: "Lyosha's Night School", enabled: () => !!G.state.flags.hasCabin, action: () => openLaptop() });
+    G.interact.add('cabin.laptop', { ...lap, r: 2, prompt: "Lyosha's Night School", low: true, enabled: () => !!G.state.flags.hasCabin, action: () => openLaptop() });
   }
 
   async function openLaptop() {
