@@ -29,6 +29,6401 @@
 "h": "bdc30f47a574",
 "who": "wade"
 },
+"d1.d.bye": {
+"d": 4.306,
+"h": "b3d06f567162",
+"who": "dolly"
+},
+"d1.d.council": {
+"d": 6.806,
+"h": "be897b71c5cc",
+"who": "dolly"
+},
+"d1.d.gossip": {
+"d": 6.607,
+"h": "f31bfefdc7fd",
+"who": "dolly"
+},
+"d1.d.hello": {
+"d": 6.207,
+"h": "8220b2538144",
+"who": "dolly"
+},
+"d1.e.hello": {
+"d": 4.307,
+"h": "f6ee8fd3d850",
+"who": "evan"
+},
+"d1.e.name": {
+"d": 4.606,
+"h": "04c1092628d8",
+"who": "evan"
+},
+"d1.e.no": {
+"d": 2.921,
+"h": "ec99d9a62a8d",
+"who": "evan"
+},
+"d1.e.yes": {
+"d": 4.707,
+"h": "2872a17e6c32",
+"who": "evan"
+},
+"d1.g.again": {
+"d": 4.106,
+"h": "241ccaefe036",
+"who": "gabriel"
+},
+"d1.g.fix": {
+"d": 6.106,
+"h": "3287abb9a3ca",
+"who": "gabriel"
+},
+"d1.g.hello": {
+"d": 6.907,
+"h": "0775088d7450",
+"who": "gabriel"
+},
+"d1.g.thanks": {
+"d": 5.006,
+"h": "853dff1e5bec",
+"who": "gabriel"
+},
+"d1.g.tower": {
+"d": 7.106,
+"h": "7bd3ea840961",
+"who": "gabriel"
+},
+"d1.h.again": {
+"d": 3.906,
+"h": "dbf02b69398f",
+"who": "hank"
+},
+"d1.h.broke": {
+"d": 2.642,
+"h": "07b327e69a8a",
+"who": "hank"
+},
+"d1.h.hello": {
+"d": 3.307,
+"h": "a1a159b8a43e",
+"who": "hank"
+},
+"d1.h.rope": {
+"d": 6.106,
+"h": "1b156a928f1c",
+"who": "hank"
+},
+"d1.h.sold": {
+"d": 4.407,
+"h": "f1ee776af493",
+"who": "hank"
+},
+"d1.k.again": {
+"d": 6.106,
+"h": "17bcf725b01d",
+"who": "koshkin"
+},
+"d1.k.bye": {
+"d": 4.407,
+"h": "06e926b5cf4b",
+"who": "koshkin"
+},
+"d1.k.cabin": {
+"d": 9.107,
+"h": "028c90de71e4",
+"who": "koshkin"
+},
+"d1.k.deal": {
+"d": 7.407,
+"h": "f895b61dced2",
+"who": "koshkin"
+},
+"d1.k.haggle": {
+"d": 5.807,
+"h": "6ba7488a9c1c",
+"who": "koshkin"
+},
+"d1.k.hello": {
+"d": 3.607,
+"h": "47045efc0806",
+"who": "koshkin"
+},
+"d1.k.northstar": {
+"d": 10.507,
+"h": "d80189dbd27d",
+"who": "koshkin"
+},
+"d1.k.spasibo": {
+"d": 29.306,
+"h": "6b69c6679e4e",
+"who": "koshkin"
+},
+"d1.k.who": {
+"d": 7.207,
+"h": "44a2630cf915",
+"who": "koshkin"
+},
+"d1.l.online": {
+"d": 3.607,
+"h": "c23f35c5ca23",
+"who": "lyosha"
+},
+"d1.l.relay": {
+"d": 6.407,
+"h": "b1e35df82776",
+"who": "lyosha"
+},
+"d1.n.cabin": {
+"d": 6.106,
+"h": "16bb7a942d5e",
+"who": "nadia"
+},
+"d1.n.climb": {
+"d": 6.207,
+"h": "8bc96ff13497",
+"who": "nadia"
+},
+"d1.n.evan": {
+"d": 4.407,
+"h": "a133351308ae",
+"who": "nadia"
+},
+"d1.n.evan2": {
+"d": 4.106,
+"h": "88a6b9540801",
+"who": "nadia"
+},
+"d1.n.hank": {
+"d": 5.506,
+"h": "4911addf99e1",
+"who": "nadia"
+},
+"d1.n.koshkin": {
+"d": 6.506,
+"h": "8b4c52c8507c",
+"who": "nadia"
+},
+"d1.n.lesson": {
+"d": 5.606,
+"h": "e89d1db1e21e",
+"who": "nadia"
+},
+"d1.n.notyet": {
+"d": 2.557,
+"h": "837636b06549",
+"who": "nadia"
+},
+"d1.n.priest": {
+"d": 5.506,
+"h": "e14ea881f389",
+"who": "nadia"
+},
+"d1.n.relay": {
+"d": 8.207,
+"h": "3bcee19325f4",
+"who": "nadia"
+},
+"d1.n.ride": {
+"d": 4.707,
+"h": "eaa804cc7ec3",
+"who": "nadia"
+},
+"d1.n.rope": {
+"d": 4.806,
+"h": "97079e4cb73d",
+"who": "nadia"
+},
+"d1.n.sleep": {
+"d": 6.806,
+"h": "b65d6f205625",
+"who": "nadia"
+},
+"d1.n.terminal": {
+"d": 4.207,
+"h": "8d937681b151",
+"who": "nadia"
+},
+"d1.n.walk": {
+"d": 6.207,
+"h": "04336fd9db4f",
+"who": "nadia"
+},
+"d1.w.again": {
+"d": 4.606,
+"h": "ae43db429792",
+"who": "wade"
+},
+"d1.w.drive": {
+"d": 4.606,
+"h": "132d343bc7c8",
+"who": "wade"
+},
+"d1.w.drive2": {
+"d": 5.307,
+"h": "392a7265c96f",
+"who": "wade"
+},
+"d1.w.walk": {
+"d": 5.407,
+"h": "f907e4dbd356",
+"who": "wade"
+},
+"d10.d.chat": {
+"d": 7.006,
+"h": "09a05fefaccd",
+"who": "dolly"
+},
+"d10.dm.calm": {
+"d": 8.906,
+"h": "bd615141aed3",
+"who": "dmitri"
+},
+"d10.dm.deal": {
+"d": 6.606,
+"h": "16de90110b90",
+"who": "dmitri"
+},
+"d10.dm.hostile": {
+"d": 4.506,
+"h": "36a08b163be7",
+"who": "dmitri"
+},
+"d10.e.chat": {
+"d": 6.006,
+"h": "ee78f713b8aa",
+"who": "ellen"
+},
+"d10.ev.chat": {
+"d": 4.707,
+"h": "6f57aae987b2",
+"who": "evan"
+},
+"d10.g.chat": {
+"d": 4.606,
+"h": "36fc3b5f33b9",
+"who": "gabriel"
+},
+"d10.g.deal": {
+"d": 4.507,
+"h": "3edd0002c75f",
+"who": "grisha"
+},
+"d10.gi.chat": {
+"d": 5.207,
+"h": "66dd4855d2c9",
+"who": "gideon"
+},
+"d10.h.chat": {
+"d": 5.407,
+"h": "4a5a7e28dbfe",
+"who": "hank"
+},
+"d10.i.no": {
+"d": 0.718,
+"h": "d9b1c756e781",
+"who": "ivan"
+},
+"d10.i.papers": {
+"d": 2.609,
+"h": "735a8388c16a",
+"who": "ivan"
+},
+"d10.l.after": {
+"d": 4.106,
+"h": "f45c93ab5bfa",
+"who": "lyosha"
+},
+"d10.l.hostile": {
+"d": 3.607,
+"h": "81a153185306",
+"who": "lyosha"
+},
+"d10.l.plans": {
+"d": 2.978,
+"h": "61a1a9e7e9b7",
+"who": "lyosha"
+},
+"d10.l.query": {
+"d": 4.707,
+"h": "54833f35cda4",
+"who": "lyosha"
+},
+"d10.lo.chat": {
+"d": 5.306,
+"h": "86013d80fd50",
+"who": "lou"
+},
+"d10.ly.chat": {
+"d": 2.948,
+"h": "d0009eeec852",
+"who": "lyle"
+},
+"d10.m.arrest": {
+"d": 3.807,
+"h": "1f8290bf4217",
+"who": "marta"
+},
+"d10.m.bingo": {
+"d": 0.784,
+"h": "ee07303b24ae",
+"who": "marta"
+},
+"d10.m.coffee": {
+"d": 2.004,
+"h": "2479b23728ef",
+"who": "marta"
+},
+"d10.m.come": {
+"d": 3.107,
+"h": "1ba350cd6170",
+"who": "marta"
+},
+"d10.m.deal": {
+"d": 3.207,
+"h": "fa956dba67db",
+"who": "marta"
+},
+"d10.m.dealchat": {
+"d": 3.307,
+"h": "5f92f2b11930",
+"who": "marta"
+},
+"d10.m.good": {
+"d": 1.876,
+"h": "c2e5c11b09ba",
+"who": "marta"
+},
+"d10.m.hostile": {
+"d": 3.107,
+"h": "4a33d4d7428d",
+"who": "marta"
+},
+"d10.m.hostilechat": {
+"d": 1.911,
+"h": "09cc71c08b9a",
+"who": "marta"
+},
+"d10.m.nottold": {
+"d": 6.106,
+"h": "e03bf6fc6c0b",
+"who": "marta"
+},
+"d10.m.told": {
+"d": 4.307,
+"h": "6cdece0159b0",
+"who": "marta"
+},
+"d10.m.warrant": {
+"d": 3.207,
+"h": "af57713faade",
+"who": "marta"
+},
+"d10.n.breathe": {
+"d": 3.906,
+"h": "cc0cf1254e6a",
+"who": "nadia"
+},
+"d10.n.lesson": {
+"d": 4.207,
+"h": "d15af1644764",
+"who": "nadia"
+},
+"d10.n.marta": {
+"d": 4.506,
+"h": "ea56c345d3b2",
+"who": "nadia"
+},
+"d10.n.morning": {
+"d": 3.506,
+"h": "8632ef45548a",
+"who": "nadia"
+},
+"d10.n.night": {
+"d": 5.707,
+"h": "2db3e2373aa0",
+"who": "nadia"
+},
+"d10.n.radio": {
+"d": 6.506,
+"h": "3ca0cd24754a",
+"who": "nadia"
+},
+"d10.n.tea": {
+"d": 6.707,
+"h": "8777a5991fa7",
+"who": "nadia"
+},
+"d10.n.work": {
+"d": 4.806,
+"h": "3afb3f524970",
+"who": "nadia"
+},
+"d10.ni.after": {
+"d": 3.707,
+"h": "2c8b9c0f6705",
+"who": "nina"
+},
+"d10.ni.both": {
+"d": 1.781,
+"h": "f9becfba1d9d",
+"who": "nina"
+},
+"d10.ni.chat": {
+"d": 4.306,
+"h": "f8237a91c15f",
+"who": "nina"
+},
+"d10.ni.end": {
+"d": 5.606,
+"h": "1c78c8db0ea2",
+"who": "nina"
+},
+"d10.ni.history": {
+"d": 2.975,
+"h": "99d41ab0fb4b",
+"who": "nina"
+},
+"d10.ni.honest": {
+"d": 3.906,
+"h": "25959aa2c94f",
+"who": "nina"
+},
+"d10.ni.jobs": {
+"d": 1.474,
+"h": "af9bfc1fc31c",
+"who": "nina"
+},
+"d10.ni.koshkin": {
+"d": 3.707,
+"h": "e7b8fb7f57cf",
+"who": "nina"
+},
+"d10.ni.onair": {
+"d": 5.407,
+"h": "adf37eb78398",
+"who": "nina"
+},
+"d10.ni.payroll": {
+"d": 1.737,
+"h": "ff48f105e58e",
+"who": "nina"
+},
+"d10.ni.q1": {
+"d": 3.807,
+"h": "eafd80b033e4",
+"who": "nina"
+},
+"d10.ni.q2": {
+"d": 2.35,
+"h": "89577b0b4c19",
+"who": "nina"
+},
+"d10.ni.q3": {
+"d": 3.707,
+"h": "4736d0be0d34",
+"who": "nina"
+},
+"d10.ni.really": {
+"d": 3.506,
+"h": "3b99de4e3b8b",
+"who": "nina"
+},
+"d10.ni.roofs": {
+"d": 2.995,
+"h": "97d0ef82f5d0",
+"who": "nina"
+},
+"d10.o.bugs": {
+"d": 8.207,
+"h": "c6521efcd382",
+"who": "okafor"
+},
+"d10.o.cards": {
+"d": 7.407,
+"h": "eb08088cde43",
+"who": "okafor"
+},
+"d10.o.deal": {
+"d": 5.707,
+"h": "678aa0a71d51",
+"who": "okafor"
+},
+"d10.o.deal2": {
+"d": 6.207,
+"h": "bbb985d19dfe",
+"who": "okafor"
+},
+"d10.o.file": {
+"d": 8.507,
+"h": "0529870648d8",
+"who": "okafor"
+},
+"d10.o.file2": {
+"d": 11.507,
+"h": "d72e8510b32b",
+"who": "okafor"
+},
+"d10.o.hostile": {
+"d": 5.407,
+"h": "20cc49647411",
+"who": "okafor"
+},
+"d10.o.intro": {
+"d": 11.007,
+"h": "d4986d5caa74",
+"who": "okafor"
+},
+"d10.o.lie1": {
+"d": 6.407,
+"h": "99362467668c",
+"who": "okafor"
+},
+"d10.o.lie2": {
+"d": 1.899,
+"h": "b4a1f2fbef45",
+"who": "okafor"
+},
+"d10.o.lie3": {
+"d": 1.098,
+"h": "d61f7787b742",
+"who": "okafor"
+},
+"d10.o.mine": {
+"d": 8.306,
+"h": "8e1f8b30b5f9",
+"who": "okafor"
+},
+"d10.o.mine2": {
+"d": 9.007,
+"h": "6327e819961a",
+"who": "okafor"
+},
+"d10.o.mine3": {
+"d": 5.707,
+"h": "8b8747f72689",
+"who": "okafor"
+},
+"d10.o.partial1": {
+"d": 5.606,
+"h": "bb2fab93eb15",
+"who": "okafor"
+},
+"d10.o.partial2": {
+"d": 6.207,
+"h": "bfeea0efcf1a",
+"who": "okafor"
+},
+"d10.o.proof": {
+"d": 3.307,
+"h": "fd8e6eb70bdb",
+"who": "okafor"
+},
+"d10.o.q1": {
+"d": 5.007,
+"h": "5ee4c37a4615",
+"who": "okafor"
+},
+"d10.o.q2": {
+"d": 2.329,
+"h": "9c9b1904a940",
+"who": "okafor"
+},
+"d10.o.shifts": {
+"d": 6.606,
+"h": "311be9189475",
+"who": "okafor"
+},
+"d10.o.truth": {
+"d": 7.407,
+"h": "0423d0c27751",
+"who": "okafor"
+},
+"d10.p.chat": {
+"d": 4.506,
+"h": "cb729b183a42",
+"who": "pearl"
+},
+"d10.r.husband": {
+"d": 7.907,
+"h": "2269a08fe667",
+"who": "ruth"
+},
+"d10.r.plans": {
+"d": 8.107,
+"h": "55ebf08b52d1",
+"who": "ruth"
+},
+"d10.r.tea": {
+"d": 6.407,
+"h": "baa93ba465e1",
+"who": "ruth"
+},
+"d10.r.welcome": {
+"d": 5.507,
+"h": "9159d04a5ed6",
+"who": "ruth"
+},
+"d10.r.why": {
+"d": 5.707,
+"h": "7828c37835d1",
+"who": "ruth"
+},
+"d10.ry.chat": {
+"d": 4.506,
+"h": "d795e3a5891a",
+"who": "ray"
+},
+"d10.ry.locker": {
+"d": 6.207,
+"h": "26c3bd14ffda",
+"who": "ray"
+},
+"d10.ry.pin": {
+"d": 5.106,
+"h": "783c05461a88",
+"who": "ray"
+},
+"d10.ry.shift": {
+"d": 3.406,
+"h": "869338a1a886",
+"who": "ray"
+},
+"d10.ry.thanks": {
+"d": 2.793,
+"h": "0c7bf25ee923",
+"who": "ray"
+},
+"d10.t.chat": {
+"d": 2.451,
+"h": "3bb1d5f5ad67",
+"who": "tommy"
+},
+"d10.v.radio": {
+"d": 4.806,
+"h": "cb61519af4dd",
+"who": "valya"
+},
+"d10.w.chat": {
+"d": 4.207,
+"h": "3cc9fbbe01de",
+"who": "walt"
+},
+"d10.wa.chat": {
+"d": 5.306,
+"h": "7f5a4dc773e5",
+"who": "wade"
+},
+"d11.d.chat": {
+"d": 7.707,
+"h": "35d927e022c7",
+"who": "dolly"
+},
+"d11.dm.copied": {
+"d": 4.806,
+"h": "82110b210d3f",
+"who": "dmitri"
+},
+"d11.dm.given": {
+"d": 5.806,
+"h": "ec36337fcea6",
+"who": "dmitri"
+},
+"d11.dm.key": {
+"d": 7.006,
+"h": "80f8711ec2b0",
+"who": "dmitri"
+},
+"d11.e.chat": {
+"d": 5.807,
+"h": "ebcee21be055",
+"who": "ellen"
+},
+"d11.ev.chat": {
+"d": 4.106,
+"h": "106ab97de7ca",
+"who": "evan"
+},
+"d11.g.blank": {
+"d": 5.707,
+"h": "1abf9e1288c7",
+"who": "grisha"
+},
+"d11.g.box": {
+"d": 6.707,
+"h": "1bd0734ee3df",
+"who": "grisha"
+},
+"d11.g.candle": {
+"d": 5.806,
+"h": "d38df6b1584b",
+"who": "gabriel"
+},
+"d11.g.copied": {
+"d": 3.906,
+"h": "895fbc364850",
+"who": "grisha"
+},
+"d11.g.donor": {
+"d": 6.306,
+"h": "bf18a111bdbc",
+"who": "gabriel"
+},
+"d11.g.june": {
+"d": 5.707,
+"h": "846981274cb7",
+"who": "gabriel"
+},
+"d11.g.smudge": {
+"d": 2.838,
+"h": "c1bfa1f0bc92",
+"who": "grisha"
+},
+"d11.gi.chat": {
+"d": 3.406,
+"h": "a831c3dbfb62",
+"who": "gideon"
+},
+"d11.gi.over1": {
+"d": 5.506,
+"h": "8b39a64b586e",
+"who": "gideon"
+},
+"d11.gi.over2": {
+"d": 2.886,
+"h": "555997803f12",
+"who": "gideon"
+},
+"d11.h.ad": {
+"d": 7.306,
+"h": "3d04139e3a2a",
+"who": "halloran"
+},
+"d11.h.blank": {
+"d": 5.207,
+"h": "a1307de539e6",
+"who": "hank"
+},
+"d11.h.glue": {
+"d": 4.806,
+"h": "e173a5395cca",
+"who": "hank"
+},
+"d11.i.copied": {
+"d": 2.666,
+"h": "3be549bdbab5",
+"who": "ivan"
+},
+"d11.i.given": {
+"d": 2.336,
+"h": "5a579a8f1c82",
+"who": "ivan"
+},
+"d11.k.chat": {
+"d": 5.707,
+"h": "ebde7a8c525a",
+"who": "koshkin"
+},
+"d11.l.ad": {
+"d": 2.672,
+"h": "811a84818b6c",
+"who": "lyosha"
+},
+"d11.l.after": {
+"d": 6.106,
+"h": "f37a1a321e2f",
+"who": "lyosha"
+},
+"d11.l.box": {
+"d": 6.207,
+"h": "56906ff4aeaf",
+"who": "lyosha"
+},
+"d11.l.boxes": {
+"d": 4.907,
+"h": "2a8e1457cd8f",
+"who": "lyosha"
+},
+"d11.l.key": {
+"d": 7.707,
+"h": "b19f83dfc514",
+"who": "lyosha"
+},
+"d11.lo.chat": {
+"d": 5.207,
+"h": "45f94b017c49",
+"who": "lou"
+},
+"d11.ly.chat": {
+"d": 2.407,
+"h": "36cc8126b7ce",
+"who": "lyle"
+},
+"d11.ly.over1": {
+"d": 4.407,
+"h": "2367a2992159",
+"who": "lyle"
+},
+"d11.ly.over2": {
+"d": 3.107,
+"h": "1d9c629d2d94",
+"who": "lyle"
+},
+"d11.m.deal": {
+"d": 5.006,
+"h": "62206ebf035d",
+"who": "marta"
+},
+"d11.m.hostile": {
+"d": 3.807,
+"h": "5223ca5c6a8a",
+"who": "marta"
+},
+"d11.n.candle": {
+"d": 4.207,
+"h": "c190ccf75faa",
+"who": "nadia"
+},
+"d11.n.copied": {
+"d": 3.707,
+"h": "b076125f7c63",
+"who": "nadia"
+},
+"d11.n.debt": {
+"d": 5.106,
+"h": "5577237cf224",
+"who": "nadia"
+},
+"d11.n.gala": {
+"d": 6.006,
+"h": "f184c25e9f48",
+"who": "nadia"
+},
+"d11.n.given": {
+"d": 4.707,
+"h": "b77fbbda4406",
+"who": "nadia"
+},
+"d11.n.lesson": {
+"d": 2.248,
+"h": "e62c296f3248",
+"who": "nadia"
+},
+"d11.n.morning": {
+"d": 2.394,
+"h": "e0d99d65256b",
+"who": "nadia"
+},
+"d11.n.night": {
+"d": 5.806,
+"h": "6c4f899a8e63",
+"who": "nadia"
+},
+"d11.n.over": {
+"d": 6.407,
+"h": "40a443a6f5b9",
+"who": "nadia"
+},
+"d11.n.wax": {
+"d": 7.106,
+"h": "5696ed1c2351",
+"who": "nadia"
+},
+"d11.n.ways": {
+"d": 8.906,
+"h": "03b644f8e156",
+"who": "nadia"
+},
+"d11.n.window": {
+"d": 3.406,
+"h": "2e4c63ba3929",
+"who": "nadia"
+},
+"d11.ni.chat": {
+"d": 4.307,
+"h": "47b7262e4084",
+"who": "nina"
+},
+"d11.p.chat": {
+"d": 4.806,
+"h": "35fde22f19f3",
+"who": "pearl"
+},
+"d11.r.prep": {
+"d": 7.607,
+"h": "e34f2f453d26",
+"who": "ruth"
+},
+"d11.r.prep2": {
+"d": 7.207,
+"h": "3fd6f0d75af1",
+"who": "ruth"
+},
+"d11.r.prep3": {
+"d": 6.806,
+"h": "6c8f2f6e6ce0",
+"who": "ruth"
+},
+"d11.ry.chat": {
+"d": 3.906,
+"h": "e5a63d93a490",
+"who": "ray"
+},
+"d11.t.chat": {
+"d": 3.607,
+"h": "e8eee661179f",
+"who": "tommy"
+},
+"d11.v.key": {
+"d": 8.507,
+"h": "00134867ef85",
+"who": "valya"
+},
+"d11.v.waltz": {
+"d": 6.707,
+"h": "ea096c254346",
+"who": "valya"
+},
+"d11.w.after": {
+"d": 4.907,
+"h": "be470819fd65",
+"who": "walt"
+},
+"d11.w.afterCopy": {
+"d": 4.506,
+"h": "f15afe8e3cc5",
+"who": "walt"
+},
+"d11.w.anybody": {
+"d": 3.807,
+"h": "818cc127c575",
+"who": "walt"
+},
+"d11.w.box": {
+"d": 6.606,
+"h": "0a52808d9abd",
+"who": "walt"
+},
+"d11.w.cant": {
+"d": 4.506,
+"h": "9f585ebed5e2",
+"who": "walt"
+},
+"d11.w.chat": {
+"d": 4.506,
+"h": "8ad6fe91142d",
+"who": "walt"
+},
+"d11.w.debt": {
+"d": 6.106,
+"h": "70bcbdc743e7",
+"who": "walt"
+},
+"d11.w.debt2": {
+"d": 6.806,
+"h": "32c83409452d",
+"who": "walt"
+},
+"d11.w.fix": {
+"d": 6.606,
+"h": "7b8d66a454e5",
+"who": "walt"
+},
+"d11.w.gala": {
+"d": 6.207,
+"h": "cf03aa2a6826",
+"who": "walt"
+},
+"d11.w.give": {
+"d": 3.607,
+"h": "6d070f17e77c",
+"who": "walt"
+},
+"d11.w.give2": {
+"d": 5.507,
+"h": "5c135051433b",
+"who": "walt"
+},
+"d11.w.june": {
+"d": 6.006,
+"h": "9adbdb78b779",
+"who": "walt"
+},
+"d11.w.key": {
+"d": 8.306,
+"h": "dc85dd0bf202",
+"who": "walt"
+},
+"d11.w.plays": {
+"d": 5.407,
+"h": "6b6caeb3036e",
+"who": "walt"
+},
+"d11.w.quiet": {
+"d": 3.207,
+"h": "67aa75dd12cd",
+"who": "walt"
+},
+"d11.w.sorry": {
+"d": 4.306,
+"h": "cfb6855e5b73",
+"who": "walt"
+},
+"d11.w.stop": {
+"d": 4.707,
+"h": "6704c82f6170",
+"who": "walt"
+},
+"d11.w.thanks": {
+"d": 5.207,
+"h": "cd5dd426d01d",
+"who": "walt"
+},
+"d11.wa.chat": {
+"d": 4.807,
+"h": "8561d165596e",
+"who": "wade"
+},
+"d11.wa.flown": {
+"d": 5.106,
+"h": "89acc1ec4e07",
+"who": "wade"
+},
+"d12.d.after": {
+"d": 4.207,
+"h": "35232a1ab9bd",
+"who": "dolly"
+},
+"d12.d.gasp": {
+"d": 3.807,
+"h": "a27c1a3ed919",
+"who": "dolly"
+},
+"d12.d.laugh": {
+"d": 1.713,
+"h": "e5a394883f0b",
+"who": "dolly"
+},
+"d12.d.pre": {
+"d": 5.306,
+"h": "8b2b2c31f9db",
+"who": "dolly"
+},
+"d12.dm.choice": {
+"d": 4.006,
+"h": "b73779a690d3",
+"who": "dmitri"
+},
+"d12.dm.ledger": {
+"d": 7.407,
+"h": "c2bbdec36b99",
+"who": "dmitri"
+},
+"d12.dm.words": {
+"d": 3.807,
+"h": "b75611098baa",
+"who": "dmitri"
+},
+"d12.e.pre": {
+"d": 5.107,
+"h": "1fa07601bf8c",
+"who": "ellen"
+},
+"d12.ev.pre": {
+"d": 2.967,
+"h": "5f9675e2faa2",
+"who": "evan"
+},
+"d12.g.close": {
+"d": 1.938,
+"h": "283557b324fd",
+"who": "gabriel"
+},
+"d12.g.open": {
+"d": 6.106,
+"h": "6f6e4ad73f4a",
+"who": "gabriel"
+},
+"d12.g.pre": {
+"d": 3.307,
+"h": "972d98fd143b",
+"who": "gabriel"
+},
+"d12.g.q1": {
+"d": 1.84,
+"h": "f8597096aa11",
+"who": "gabriel"
+},
+"d12.g.q2": {
+"d": 5.407,
+"h": "64e650bde263",
+"who": "gabriel"
+},
+"d12.g.q3": {
+"d": 5.106,
+"h": "f25326543ac4",
+"who": "gabriel"
+},
+"d12.g.rules": {
+"d": 6.207,
+"h": "c4c2294c0786",
+"who": "gabriel"
+},
+"d12.g.screen": {
+"d": 3.707,
+"h": "ce435f561eec",
+"who": "gabriel"
+},
+"d12.g.swim": {
+"d": 4.707,
+"h": "409b6c7b15d4",
+"who": "grisha"
+},
+"d12.g.thanks": {
+"d": 5.207,
+"h": "c9f436ee5cd5",
+"who": "gabriel"
+},
+"d12.gi.pre": {
+"d": 1.876,
+"h": "18d70848187d",
+"who": "gideon"
+},
+"d12.gi.smile": {
+"d": 2.747,
+"h": "487010b901b0",
+"who": "gideon"
+},
+"d12.gi.stare": {
+"d": 2.387,
+"h": "72b6156e987f",
+"who": "gideon"
+},
+"d12.gi.threat1": {
+"d": 4.606,
+"h": "8bfc425f08e1",
+"who": "gideon"
+},
+"d12.gi.threat2": {
+"d": 5.106,
+"h": "f42d2d7e3497",
+"who": "gideon"
+},
+"d12.gi.threat3": {
+"d": 6.707,
+"h": "e1187de2348e",
+"who": "gideon"
+},
+"d12.gi.threat4": {
+"d": 1.435,
+"h": "e13de2550c15",
+"who": "gideon"
+},
+"d12.h.fair": {
+"d": 2.271,
+"h": "0867248b6f5f",
+"who": "hank"
+},
+"d12.h.pre": {
+"d": 3.407,
+"h": "838211bf9c98",
+"who": "hank"
+},
+"d12.i.photos": {
+"d": 3.307,
+"h": "8bb375499ac5",
+"who": "ivan"
+},
+"d12.k.after": {
+"d": 4.606,
+"h": "b6a27b31ec21",
+"who": "koshkin"
+},
+"d12.k.debate": {
+"d": 5.907,
+"h": "9b07477ec02b",
+"who": "koshkin"
+},
+"d12.k.home": {
+"d": 6.606,
+"h": "66ee3e7dbe2f",
+"who": "koshkin"
+},
+"d12.k.store": {
+"d": 5.707,
+"h": "45f25cf22a00",
+"who": "koshkin"
+},
+"d12.l.ledger": {
+"d": 8.607,
+"h": "18dc45c4da67",
+"who": "lyosha"
+},
+"d12.l.now": {
+"d": 2.448,
+"h": "d837f068c356",
+"who": "lyosha"
+},
+"d12.l.projector": {
+"d": 5.707,
+"h": "c4e17922bbe1",
+"who": "lyosha"
+},
+"d12.l.yourlock": {
+"d": 3.506,
+"h": "987793f2fd3f",
+"who": "lyosha"
+},
+"d12.lo.broom": {
+"d": 1.644,
+"h": "f869a8c38005",
+"who": "lou"
+},
+"d12.lo.pre": {
+"d": 4.207,
+"h": "966d3fe923fc",
+"who": "lou"
+},
+"d12.ly.a1": {
+"d": 6.606,
+"h": "abfe2a87f631",
+"who": "lyle"
+},
+"d12.ly.a2": {
+"d": 4.907,
+"h": "7f007817c610",
+"who": "lyle"
+},
+"d12.ly.a3": {
+"d": 5.006,
+"h": "3377933c157c",
+"who": "lyle"
+},
+"d12.ly.after": {
+"d": 4.207,
+"h": "a4394c4fd807",
+"who": "lyle"
+},
+"d12.ly.afterFree": {
+"d": 4.306,
+"h": "7444b5687bfb",
+"who": "lyle"
+},
+"d12.ly.afterHurt": {
+"d": 4.606,
+"h": "f00cfda298c8",
+"who": "lyle"
+},
+"d12.ly.caught": {
+"d": 3.607,
+"h": "a6b78b12b44b",
+"who": "lyle"
+},
+"d12.ly.close": {
+"d": 5.106,
+"h": "cb93456f3733",
+"who": "lyle"
+},
+"d12.ly.confirm": {
+"d": 3.607,
+"h": "9b80f2c0a3ff",
+"who": "lyle"
+},
+"d12.ly.copy": {
+"d": 5.707,
+"h": "4fd1962f2319",
+"who": "lyle"
+},
+"d12.ly.copy2": {
+"d": 4.407,
+"h": "a7f54ef3a308",
+"who": "lyle"
+},
+"d12.ly.free1": {
+"d": 2.275,
+"h": "9225742a6260",
+"who": "lyle"
+},
+"d12.ly.free2": {
+"d": 5.207,
+"h": "173592aba832",
+"who": "lyle"
+},
+"d12.ly.pre": {
+"d": 4.807,
+"h": "d1c58bfb1b3d",
+"who": "lyle"
+},
+"d12.ly.smoke": {
+"d": 5.207,
+"h": "eb66cb95bc2a",
+"who": "lyle"
+},
+"d12.ly.stumble": {
+"d": 3.407,
+"h": "1441e2ba8052",
+"who": "lyle"
+},
+"d12.m.confirm": {
+"d": 3.707,
+"h": "a8c8b93adf46",
+"who": "marta"
+},
+"d12.m.pre": {
+"d": 3.506,
+"h": "cb4b90c9e16c",
+"who": "marta"
+},
+"d12.n.ask": {
+"d": 5.506,
+"h": "de1d1c5f9c0c",
+"who": "nadia"
+},
+"d12.n.home": {
+"d": 2.744,
+"h": "5bd10a755812",
+"who": "nadia"
+},
+"d12.n.morning": {
+"d": 6.806,
+"h": "76f90d9f3955",
+"who": "nadia"
+},
+"d12.n.night": {
+"d": 5.907,
+"h": "bb3e3eba38eb",
+"who": "nadia"
+},
+"d12.n.office": {
+"d": 8.107,
+"h": "c4603faab96d",
+"who": "nadia"
+},
+"d12.n.okay": {
+"d": 7.306,
+"h": "f7971d5ef39a",
+"who": "nadia"
+},
+"d12.ni.live": {
+"d": 2.088,
+"h": "297c5ad059f4",
+"who": "nina"
+},
+"d12.ni.pa": {
+"d": 5.407,
+"h": "69aebb70d1fb",
+"who": "nina"
+},
+"d12.ni.pafixed": {
+"d": 3.207,
+"h": "19b66ba4e1f0",
+"who": "nina"
+},
+"d12.p.pre": {
+"d": 4.807,
+"h": "daad9d0f8eee",
+"who": "pearl"
+},
+"d12.r.after": {
+"d": 2.691,
+"h": "c9847b5616e7",
+"who": "ruth"
+},
+"d12.r.pre": {
+"d": 3.207,
+"h": "6e8ba356cf42",
+"who": "ruth"
+},
+"d12.r.whose": {
+"d": 1.294,
+"h": "9c1db3367767",
+"who": "ruth"
+},
+"d12.ry.after": {
+"d": 4.207,
+"h": "6d5a81965456",
+"who": "ray"
+},
+"d12.ry.cheer": {
+"d": 0.68,
+"h": "0b7c3de24ae8",
+"who": "ray"
+},
+"d12.ry.dad": {
+"d": 3.906,
+"h": "b0afb756669c",
+"who": "ray"
+},
+"d12.ry.pre": {
+"d": 3.506,
+"h": "cadb3a073d4f",
+"who": "ray"
+},
+"d12.ry.sit": {
+"d": 0.819,
+"h": "2d57376ed759",
+"who": "ray"
+},
+"d12.t.pre": {
+"d": 4.106,
+"h": "6914c5ed88f6",
+"who": "tommy"
+},
+"d12.t.whoop": {
+"d": 0.913,
+"h": "0b04797ad134",
+"who": "tommy"
+},
+"d12.v.after": {
+"d": 6.207,
+"h": "3a23eb0db8d4",
+"who": "valya"
+},
+"d12.v.lesson": {
+"d": 5.306,
+"h": "817bdbebbb15",
+"who": "valya"
+},
+"d12.w.after": {
+"d": 3.807,
+"h": "11826ebfad50",
+"who": "walt"
+},
+"d12.w.afterCopied": {
+"d": 4.807,
+"h": "7429bc353fa8",
+"who": "walt"
+},
+"d12.w.exposed": {
+"d": 5.106,
+"h": "89600cdaa777",
+"who": "walt"
+},
+"d12.w.hurt": {
+"d": 4.806,
+"h": "29884fcb6faf",
+"who": "walt"
+},
+"d12.w.pre": {
+"d": 4.407,
+"h": "2cfa44735dfb",
+"who": "walt"
+},
+"d12.wa.home": {
+"d": 3.307,
+"h": "50bf7e5c2678",
+"who": "wade"
+},
+"d13.d.after": {
+"d": 4.806,
+"h": "7e169ec9cab4",
+"who": "dolly"
+},
+"d13.d.card": {
+"d": 5.907,
+"h": "b3d619444ca6",
+"who": "dolly"
+},
+"d13.d.chat": {
+"d": 3.207,
+"h": "15f344dcf256",
+"who": "dolly"
+},
+"d13.d.cheer": {
+"d": 2.805,
+"h": "7d5b62e55755",
+"who": "dolly"
+},
+"d13.dm.halloran": {
+"d": 5.907,
+"h": "11aa6cad3e22",
+"who": "dmitri"
+},
+"d13.dm.vote": {
+"d": 9.707,
+"h": "03c8ce7a8c3e",
+"who": "dmitri"
+},
+"d13.e.chat": {
+"d": 4.006,
+"h": "cf137f5b2cfd",
+"who": "ellen"
+},
+"d13.ev.boxes": {
+"d": 4.306,
+"h": "369ee60434f0",
+"who": "evan"
+},
+"d13.ev.boxes2": {
+"d": 3.506,
+"h": "4d0100a2e0fe",
+"who": "evan"
+},
+"d13.ev.chat": {
+"d": 4.106,
+"h": "b8a490236a52",
+"who": "evan"
+},
+"d13.f.ivanoff": {
+"d": 3.506,
+"h": "39924fb4df1d",
+"who": "f5"
+},
+"d13.f.petrov": {
+"d": 4.107,
+"h": "fc6d03d83b67",
+"who": "f3"
+},
+"d13.g.chat": {
+"d": 2.805,
+"h": "f4007cddb1a8",
+"who": "gabriel"
+},
+"d13.g.night": {
+"d": 3.107,
+"h": "b71ed26ecdc4",
+"who": "grisha"
+},
+"d13.g.win": {
+"d": 3.707,
+"h": "c62f7f92adaa",
+"who": "grisha"
+},
+"d13.gi.chat": {
+"d": 2.259,
+"h": "3749717b1d72",
+"who": "gideon"
+},
+"d13.gi.halloran": {
+"d": 6.307,
+"h": "c2d38437466b",
+"who": "gideon"
+},
+"d13.gi.invite": {
+"d": 7.107,
+"h": "3decf6bb33cb",
+"who": "gideon"
+},
+"d13.gi.invite2": {
+"d": 4.307,
+"h": "01c23ef60773",
+"who": "gideon"
+},
+"d13.gi.objects": {
+"d": 1.493,
+"h": "3b77f9b120dd",
+"who": "gideon"
+},
+"d13.gi.recount": {
+"d": 3.906,
+"h": "21b5bdfd831a",
+"who": "gideon"
+},
+"d13.gi.smirk": {
+"d": 1.655,
+"h": "a211806ecab1",
+"who": "gideon"
+},
+"d13.h.card": {
+"d": 5.207,
+"h": "7877ae2593f7",
+"who": "hank"
+},
+"d13.h.chat": {
+"d": 3.207,
+"h": "2adc48503b1a",
+"who": "hank"
+},
+"d13.k.after": {
+"d": 6.106,
+"h": "cef732a00266",
+"who": "koshkin"
+},
+"d13.k.chat": {
+"d": 7.407,
+"h": "9288667a61bd",
+"who": "koshkin"
+},
+"d13.l.after": {
+"d": 4.806,
+"h": "83a728812957",
+"who": "lyosha"
+},
+"d13.l.card": {
+"d": 4.006,
+"h": "e2ccbc889392",
+"who": "lyosha"
+},
+"d13.l.cards": {
+"d": 3.506,
+"h": "0f029cdd2f06",
+"who": "lyosha"
+},
+"d13.l.enough": {
+"d": 3.307,
+"h": "11d8d5406d38",
+"who": "lyosha"
+},
+"d13.l.gala": {
+"d": 4.606,
+"h": "eeb4079aeb3b",
+"who": "lyosha"
+},
+"d13.l.ready": {
+"d": 2.092,
+"h": "c7625653ac5c",
+"who": "lyosha"
+},
+"d13.l.rehearsal": {
+"d": 5.407,
+"h": "b8f3a57bb55e",
+"who": "lyosha"
+},
+"d13.l.retry": {
+"d": 3.607,
+"h": "71383cc3a4c1",
+"who": "lyosha"
+},
+"d13.l.wait": {
+"d": 3.607,
+"h": "2cb040c08d0c",
+"who": "lyosha"
+},
+"d13.lo.chat": {
+"d": 3.507,
+"h": "271a364e4a02",
+"who": "lou"
+},
+"d13.ly.card": {
+"d": 3.807,
+"h": "8273eed5ce73",
+"who": "lyle"
+},
+"d13.ly.chat": {
+"d": 3.607,
+"h": "5efcca452369",
+"who": "lyle"
+},
+"d13.ly.chatFree": {
+"d": 2.716,
+"h": "a5d79e53241c",
+"who": "lyle"
+},
+"d13.ly.lose": {
+"d": 3.406,
+"h": "c3a3d62b2184",
+"who": "lyle"
+},
+"d13.ly.loseFree": {
+"d": 4.007,
+"h": "f699cde4ad76",
+"who": "lyle"
+},
+"d13.ly.nocard": {
+"d": 3.607,
+"h": "16c4abb30d11",
+"who": "lyle"
+},
+"d13.m.boxes": {
+"d": 2.793,
+"h": "7f958a0ef67d",
+"who": "marta"
+},
+"d13.m.chat": {
+"d": 4.707,
+"h": "a63f81369bd3",
+"who": "marta"
+},
+"d13.m.denied": {
+"d": 3.807,
+"h": "22cd3db52a13",
+"who": "marta"
+},
+"d13.m.kaplan": {
+"d": 4.606,
+"h": "6ebc1f64faa5",
+"who": "m6"
+},
+"d13.n.appointed": {
+"d": 5.806,
+"h": "ae91f01f4dd5",
+"who": "nadia"
+},
+"d13.n.boxes": {
+"d": 6.407,
+"h": "396ec6f12b4b",
+"who": "nadia"
+},
+"d13.n.halloran": {
+"d": 4.207,
+"h": "f979d2e75068",
+"who": "nadia"
+},
+"d13.n.lesson": {
+"d": 6.106,
+"h": "a6b9a8e817e9",
+"who": "nadia"
+},
+"d13.n.morning": {
+"d": 5.306,
+"h": "a48bb336b10b",
+"who": "nadia"
+},
+"d13.n.night": {
+"d": 5.907,
+"h": "2dd144ecc19a",
+"who": "nadia"
+},
+"d13.n.short": {
+"d": 6.207,
+"h": "91f258193bf4",
+"who": "nadia"
+},
+"d13.n.win": {
+"d": 6.306,
+"h": "119ac1d82148",
+"who": "nadia"
+},
+"d13.ni.chat": {
+"d": 5.506,
+"h": "2fe121d9fe44",
+"who": "nina"
+},
+"d13.p.ballot": {
+"d": 5.506,
+"h": "d17f959ddf71",
+"who": "pearl"
+},
+"d13.p.chat": {
+"d": 1.831,
+"h": "f6bafbe00c86",
+"who": "pearl"
+},
+"d13.p.count": {
+"d": 6.407,
+"h": "548778fb1cda",
+"who": "pearl"
+},
+"d13.p.lyle": {
+"d": 3.607,
+"h": "229100b39361",
+"who": "pearl"
+},
+"d13.p.self": {
+"d": 4.407,
+"h": "8bd7e70fe1e3",
+"who": "pearl"
+},
+"d13.r.card": {
+"d": 5.907,
+"h": "b8b2d5bc3338",
+"who": "ruth"
+},
+"d13.r.close": {
+"d": 3.107,
+"h": "65449355c18d",
+"who": "ruth"
+},
+"d13.r.denied": {
+"d": 4.106,
+"h": "0689a4f5f0ba",
+"who": "ruth"
+},
+"d13.r.gotv": {
+"d": 8.806,
+"h": "452e17d7d45e",
+"who": "ruth"
+},
+"d13.r.gotvDone": {
+"d": 5.606,
+"h": "d01c0b3f26db",
+"who": "ruth"
+},
+"d13.r.sit": {
+"d": 5.407,
+"h": "39cbdefdd21b",
+"who": "ruth"
+},
+"d13.ry.card": {
+"d": 5.606,
+"h": "5c8e968483bf",
+"who": "ray"
+},
+"d13.ry.chat": {
+"d": 4.407,
+"h": "bcabae5c5f0b",
+"who": "ray"
+},
+"d13.ry.seat": {
+"d": 1.945,
+"h": "fed978fddb75",
+"who": "ray"
+},
+"d13.t.chat": {
+"d": 3.207,
+"h": "7bbf54d38050",
+"who": "tommy"
+},
+"d13.v.numbers": {
+"d": 5.306,
+"h": "df488819a5e5",
+"who": "valya"
+},
+"d13.v.three": {
+"d": 3.506,
+"h": "38aba7dcf997",
+"who": "valya"
+},
+"d13.v.win": {
+"d": 2.84,
+"h": "e0d0244fc07e",
+"who": "valya"
+},
+"d13.w.appoint": {
+"d": 6.606,
+"h": "6f636b4e446e",
+"who": "walt"
+},
+"d13.w.charter": {
+"d": 2.546,
+"h": "f9ac8c0da02e",
+"who": "walt"
+},
+"d13.w.chat": {
+"d": 4.007,
+"h": "58b1daa64e5d",
+"who": "walt"
+},
+"d13.w.lose": {
+"d": 4.707,
+"h": "2b5cb764ad3c",
+"who": "walt"
+},
+"d13.w.read": {
+"d": 4.106,
+"h": "eaa2e5bf6106",
+"who": "walt"
+},
+"d13.w.win": {
+"d": 6.806,
+"h": "c5f6c058be17",
+"who": "walt"
+},
+"d13.wa.chat": {
+"d": 4.506,
+"h": "327ebb198739",
+"who": "wade"
+},
+"d14.d.bye": {
+"d": 6.007,
+"h": "c654a24f7160",
+"who": "dolly"
+},
+"d14.d.suit": {
+"d": 7.606,
+"h": "d7076f23cbd1",
+"who": "dolly"
+},
+"d14.dm.fly": {
+"d": 2.374,
+"h": "d68667884f7b",
+"who": "dmitri"
+},
+"d14.dm.morning": {
+"d": 7.806,
+"h": "3cd37eccd241",
+"who": "dmitri"
+},
+"d14.e.bye": {
+"d": 5.507,
+"h": "f0a141fd9c6a",
+"who": "ellen"
+},
+"d14.ev.bye": {
+"d": 3.506,
+"h": "fb1e97d2129a",
+"who": "evan"
+},
+"d14.ev.champagne": {
+"d": 3.607,
+"h": "15669785248c",
+"who": "evan"
+},
+"d14.ev.toast": {
+"d": 1.028,
+"h": "547f58601b5c",
+"who": "evan"
+},
+"d14.g.bless": {
+"d": 7.007,
+"h": "85bec69bb682",
+"who": "gabriel"
+},
+"d14.g.copy": {
+"d": 2.767,
+"h": "b826d9011dba",
+"who": "grisha"
+},
+"d14.g.fly": {
+"d": 6.006,
+"h": "ed4a8535e2e7",
+"who": "grisha"
+},
+"d14.g.key": {
+"d": 3.207,
+"h": "7e7957ea569c",
+"who": "grisha"
+},
+"d14.g.morning": {
+"d": 5.106,
+"h": "4872a1f9b661",
+"who": "grisha"
+},
+"d14.g.plan": {
+"d": 6.707,
+"h": "088482bdd56d",
+"who": "grisha"
+},
+"d14.g.road": {
+"d": 3.807,
+"h": "355ab24c3318",
+"who": "grisha"
+},
+"d14.g.run": {
+"d": 3.406,
+"h": "3dafb56ecb58",
+"who": "grisha"
+},
+"d14.gi.bye": {
+"d": 0.529,
+"h": "a2883aed4ee2",
+"who": "gideon"
+},
+"d14.gi.radio": {
+"d": 3.607,
+"h": "d4cdb420fd19",
+"who": "gideon"
+},
+"d14.gi.toast": {
+"d": 0.808,
+"h": "4666eb2e6e25",
+"who": "gideon"
+},
+"d14.gi.welcome": {
+"d": 5.506,
+"h": "64fb5316444d",
+"who": "gideon"
+},
+"d14.gi.wine": {
+"d": 2.63,
+"h": "6a4d306f3c39",
+"who": "gideon"
+},
+"d14.h.ask": {
+"d": 3.406,
+"h": "e478da8ac681",
+"who": "halloran"
+},
+"d14.h.bye": {
+"d": 5.907,
+"h": "2c23e66dd0f7",
+"who": "hank"
+},
+"d14.h.call": {
+"d": 6.006,
+"h": "f0bda346aa6d",
+"who": "halloran"
+},
+"d14.h.call2": {
+"d": 3.906,
+"h": "56a2f786744d",
+"who": "halloran"
+},
+"d14.h.cold": {
+"d": 4.207,
+"h": "ff1dab4b5134",
+"who": "halloran"
+},
+"d14.h.councillor": {
+"d": 4.806,
+"h": "d52d0b8f3fd0",
+"who": "halloran"
+},
+"d14.h.house": {
+"d": 5.506,
+"h": "0e29b1b36bf0",
+"who": "halloran"
+},
+"d14.h.inside": {
+"d": 4.306,
+"h": "8f30d326915a",
+"who": "halloran"
+},
+"d14.h.invited": {
+"d": 4.106,
+"h": "63b25ea51fa8",
+"who": "halloran"
+},
+"d14.h.ledger": {
+"d": 5.507,
+"h": "eee11f33d261",
+"who": "halloran"
+},
+"d14.h.meet": {
+"d": 4.306,
+"h": "708ea1d0e749",
+"who": "halloran"
+},
+"d14.h.pa": {
+"d": 4.106,
+"h": "dbe584108220",
+"who": "halloran"
+},
+"d14.h.patch": {
+"d": 5.107,
+"h": "7847a8727a4a",
+"who": "halloran"
+},
+"d14.h.s1": {
+"d": 4.907,
+"h": "bc87511173f8",
+"who": "halloran"
+},
+"d14.h.s10": {
+"d": 5.506,
+"h": "3d253dc030a9",
+"who": "halloran"
+},
+"d14.h.s11": {
+"d": 0.554,
+"h": "c9eae1b8e7c0",
+"who": "halloran"
+},
+"d14.h.s2": {
+"d": 6.707,
+"h": "65a1e3dfc127",
+"who": "halloran"
+},
+"d14.h.s3": {
+"d": 6.606,
+"h": "dd9b030b2e1a",
+"who": "halloran"
+},
+"d14.h.s4": {
+"d": 4.507,
+"h": "b920c139f91f",
+"who": "halloran"
+},
+"d14.h.s5": {
+"d": 5.506,
+"h": "d723f432cda6",
+"who": "halloran"
+},
+"d14.h.s6": {
+"d": 6.106,
+"h": "b27cacef95ab",
+"who": "halloran"
+},
+"d14.h.s7": {
+"d": 4.707,
+"h": "f272f599cea5",
+"who": "halloran"
+},
+"d14.h.s8": {
+"d": 6.006,
+"h": "8a434dbc843c",
+"who": "halloran"
+},
+"d14.h.s9": {
+"d": 5.606,
+"h": "9a3efcebe6b6",
+"who": "halloran"
+},
+"d14.i.morning": {
+"d": 1.101,
+"h": "a55fdd5f53fe",
+"who": "ivan"
+},
+"d14.k.bye": {
+"d": 7.707,
+"h": "e4281f76d401",
+"who": "koshkin"
+},
+"d14.k.bye2": {
+"d": 4.407,
+"h": "e94e6b8bf8ad",
+"who": "koshkin"
+},
+"d14.k.suit": {
+"d": 8.507,
+"h": "0887f4006c1c",
+"who": "koshkin"
+},
+"d14.k.suit2": {
+"d": 8.806,
+"h": "d0e7e31c32f9",
+"who": "koshkin"
+},
+"d14.l.door": {
+"d": 5.106,
+"h": "85ffed7d08d5",
+"who": "lyosha"
+},
+"d14.l.lie": {
+"d": 2.991,
+"h": "a619abf40396",
+"who": "lyosha"
+},
+"d14.l.morning": {
+"d": 7.907,
+"h": "0000514661a1",
+"who": "lyosha"
+},
+"d14.l.panel": {
+"d": 3.406,
+"h": "bc485f8a5313",
+"who": "lyosha"
+},
+"d14.l.radio": {
+"d": 1.842,
+"h": "3f0de917be53",
+"who": "lyosha"
+},
+"d14.l.retry": {
+"d": 3.607,
+"h": "68e1b5d4dd87",
+"who": "lyosha"
+},
+"d14.l.shifts": {
+"d": 3.906,
+"h": "d3ccda0e1195",
+"who": "lyosha"
+},
+"d14.l.tunnel": {
+"d": 4.006,
+"h": "35ccd675793a",
+"who": "lyosha"
+},
+"d14.l.welcome": {
+"d": 4.407,
+"h": "6a14edd6cf1b",
+"who": "lyosha"
+},
+"d14.lo.bye": {
+"d": 5.707,
+"h": "d842b7419b8d",
+"who": "lou"
+},
+"d14.ly.bye": {
+"d": 3.907,
+"h": "0360f1d9118f",
+"who": "lyle"
+},
+"d14.ly.bye2": {
+"d": 1.871,
+"h": "91f53778f7bc",
+"who": "lyle"
+},
+"d14.ly.toast": {
+"d": 1.079,
+"h": "698bccf620d2",
+"who": "lyle"
+},
+"d14.m.bye": {
+"d": 5.506,
+"h": "6961cbc9ab53",
+"who": "marta"
+},
+"d14.m.bye2": {
+"d": 2.503,
+"h": "dba25e2ff54b",
+"who": "marta"
+},
+"d14.m2.guard": {
+"d": 2.805,
+"h": "2370950b04d5",
+"who": "m2"
+},
+"d14.m2.rest": {
+"d": 5.007,
+"h": "7e6630513567",
+"who": "m2"
+},
+"d14.m4.door": {
+"d": 4.006,
+"h": "81687006132e",
+"who": "m4"
+},
+"d14.n.alarm": {
+"d": 2.757,
+"h": "b537919694b8",
+"who": "nadia"
+},
+"d14.n.dress": {
+"d": 3.406,
+"h": "ade682c2bed0",
+"who": "nadia"
+},
+"d14.n.drive": {
+"d": 1.692,
+"h": "32cad6cc48cf",
+"who": "nadia"
+},
+"d14.n.fly": {
+"d": 1.357,
+"h": "8a3746eb762e",
+"who": "nadia"
+},
+"d14.n.goodbyes": {
+"d": 3.307,
+"h": "07f79f1beb2f",
+"who": "nadia"
+},
+"d14.n.grey": {
+"d": 1.819,
+"h": "a78ca3ba558b",
+"who": "nadia"
+},
+"d14.n.inside": {
+"d": 5.707,
+"h": "7e3622e7298a",
+"who": "nadia"
+},
+"d14.n.morning": {
+"d": 7.306,
+"h": "aa6ee2935532",
+"who": "nadia"
+},
+"d14.n.now": {
+"d": 2.455,
+"h": "57d7ca4820c1",
+"who": "nadia"
+},
+"d14.n.seven": {
+"d": 3.406,
+"h": "4af32d3eb6d9",
+"who": "nadia"
+},
+"d14.n.waltkey": {
+"d": 2.569,
+"h": "db279975286e",
+"who": "nadia"
+},
+"d14.ni.bye": {
+"d": 4.907,
+"h": "a059173f5916",
+"who": "nina"
+},
+"d14.o.blind": {
+"d": 1.725,
+"h": "3c3091d1e0a4",
+"who": "okafor"
+},
+"d14.o.blind2": {
+"d": 4.707,
+"h": "8d60a39d32f2",
+"who": "okafor"
+},
+"d14.o.deal": {
+"d": 4.506,
+"h": "360fca14018a",
+"who": "okafor"
+},
+"d14.o.go": {
+"d": 5.606,
+"h": "119c48362934",
+"who": "okafor"
+},
+"d14.o.hostile": {
+"d": 5.407,
+"h": "2e20b44e1cc1",
+"who": "okafor"
+},
+"d14.o.listen": {
+"d": 4.507,
+"h": "cd0a5ba999d2",
+"who": "okafor"
+},
+"d14.o.lower": {
+"d": 3.207,
+"h": "aa20366af94b",
+"who": "okafor"
+},
+"d14.o.stop": {
+"d": 4.806,
+"h": "b2f6f5ddfdd3",
+"who": "okafor"
+},
+"d14.o.wine": {
+"d": 2.956,
+"h": "a63d4e6f840c",
+"who": "okafor"
+},
+"d14.p.bye": {
+"d": 5.707,
+"h": "b71cafa5ba41",
+"who": "pearl"
+},
+"d14.r.church": {
+"d": 5.006,
+"h": "a559590c39d9",
+"who": "ruth"
+},
+"d14.ry.bye": {
+"d": 4.506,
+"h": "32b521fcfdfd",
+"who": "ray"
+},
+"d14.t.bye": {
+"d": 4.606,
+"h": "3bbc35736056",
+"who": "tommy"
+},
+"d14.v.fly": {
+"d": 1.909,
+"h": "a9974b499432",
+"who": "valya"
+},
+"d14.v.morning": {
+"d": 4.606,
+"h": "913019654fe6",
+"who": "valya"
+},
+"d14.v.vault": {
+"d": 8.107,
+"h": "66a758650c65",
+"who": "valya"
+},
+"d14.w.drive": {
+"d": 5.207,
+"h": "4225dfbb9c69",
+"who": "walt"
+},
+"d14.w.exposed": {
+"d": 4.806,
+"h": "80312fbce92b",
+"who": "walt"
+},
+"d14.w.key": {
+"d": 4.606,
+"h": "ff4c5614e9b2",
+"who": "walt"
+},
+"d14.w.pickup": {
+"d": 5.306,
+"h": "69c4bc8ee22f",
+"who": "walt"
+},
+"d14.w.toast": {
+"d": 5.606,
+"h": "bba581d025d2",
+"who": "walt"
+},
+"d14.wa.ask": {
+"d": 1.864,
+"h": "fb424717c41b",
+"who": "wade"
+},
+"d14.wa.no": {
+"d": 6.207,
+"h": "897b3bc153c5",
+"who": "wade"
+},
+"d14.wa.yes": {
+"d": 7.207,
+"h": "1988fb8f9b74",
+"who": "wade"
+},
+"d2.c.close": {
+"d": 3.506,
+"h": "b3b51b477789",
+"who": "walt"
+},
+"d2.c.dolly": {
+"d": 5.907,
+"h": "9be96896a91a",
+"who": "dolly"
+},
+"d2.c.hank": {
+"d": 2.236,
+"h": "5e1b4c75b0dc",
+"who": "hank"
+},
+"d2.c.hank2": {
+"d": 4.507,
+"h": "2cddcb16c0d4",
+"who": "gideon"
+},
+"d2.c.item": {
+"d": 3.807,
+"h": "3069c65d05b6",
+"who": "walt"
+},
+"d2.c.lyle": {
+"d": 5.007,
+"h": "39f25b275598",
+"who": "lyle"
+},
+"d2.c.nina": {
+"d": 4.006,
+"h": "51668308fca4",
+"who": "nina"
+},
+"d2.c.open": {
+"d": 5.607,
+"h": "614a5b9009cc",
+"who": "walt"
+},
+"d2.c.patient": {
+"d": 2.561,
+"h": "5befa25994d4",
+"who": "gideon"
+},
+"d2.c.pitch1": {
+"d": 6.207,
+"h": "edc7ff798078",
+"who": "gideon"
+},
+"d2.c.pitch2": {
+"d": 7.106,
+"h": "0a6ec272e7bb",
+"who": "gideon"
+},
+"d2.c.pitch3": {
+"d": 5.606,
+"h": "7d462941e026",
+"who": "gideon"
+},
+"d2.c.public": {
+"d": 3.307,
+"h": "6e906a0aa569",
+"who": "walt"
+},
+"d2.c.r.cams": {
+"d": 6.907,
+"h": "ddc649f2f8a1",
+"who": "gideon"
+},
+"d2.c.r.fix": {
+"d": 5.506,
+"h": "1253717f012e",
+"who": "hank"
+},
+"d2.c.r.fix2": {
+"d": 2.282,
+"h": "7600153c8fe6",
+"who": "gideon"
+},
+"d2.c.r.fix3": {
+"d": 1.806,
+"h": "58ee38790c2f",
+"who": "hank"
+},
+"d2.c.r.none": {
+"d": 1.784,
+"h": "043d77919f87",
+"who": "walt"
+},
+"d2.c.r.yes": {
+"d": 3.607,
+"h": "ae5083a21060",
+"who": "lyle"
+},
+"d2.c.ray": {
+"d": 2.191,
+"h": "8f4d056f6c34",
+"who": "walt"
+},
+"d2.c.ray2": {
+"d": 2.549,
+"h": "7ec42f8c93a0",
+"who": "dolly"
+},
+"d2.c.ray3": {
+"d": 6.606,
+"h": "997dacae2b64",
+"who": "ray"
+},
+"d2.c.ruth1": {
+"d": 6.606,
+"h": "b6004fa219fb",
+"who": "ruth"
+},
+"d2.c.ruth2": {
+"d": 4.506,
+"h": "e96c2484a3eb",
+"who": "gideon"
+},
+"d2.c.ruth3": {
+"d": 8.207,
+"h": "2758c7202766",
+"who": "ruth"
+},
+"d2.c.second": {
+"d": 1.887,
+"h": "a0ac25deaa5d",
+"who": "ray"
+},
+"d2.c.table": {
+"d": 7.407,
+"h": "5c7cf095775e",
+"who": "ruth"
+},
+"d2.c.vote": {
+"d": 6.707,
+"h": "adf0105b1f4d",
+"who": "walt"
+},
+"d2.d.after": {
+"d": 5.006,
+"h": "4547003c4c7c",
+"who": "dolly"
+},
+"d2.d.agenda": {
+"d": 7.707,
+"h": "23c25785b578",
+"who": "dolly"
+},
+"d2.d.gideon": {
+"d": 7.207,
+"h": "427c7325bc18",
+"who": "dolly"
+},
+"d2.d.hello": {
+"d": 6.306,
+"h": "900a89626e75",
+"who": "dolly"
+},
+"d2.d.idle": {
+"d": 3.307,
+"h": "1070dbf4ca83",
+"who": "dolly"
+},
+"d2.e.hello": {
+"d": 6.207,
+"h": "7f5b648cbead",
+"who": "evan"
+},
+"d2.e.how": {
+"d": 3.906,
+"h": "2a790c8eebd9",
+"who": "evan"
+},
+"d2.e.idle": {
+"d": 1.841,
+"h": "396229cd3425",
+"who": "evan"
+},
+"d2.el.hello": {
+"d": 6.207,
+"h": "9e5511291a44",
+"who": "ellen"
+},
+"d2.el.idle": {
+"d": 4.307,
+"h": "bab0d0361544",
+"who": "ellen"
+},
+"d2.g.chess": {
+"d": 4.106,
+"h": "067d85dc0d0c",
+"who": "gabriel"
+},
+"d2.g.hello": {
+"d": 6.506,
+"h": "a4b5141f52e7",
+"who": "gabriel"
+},
+"d2.gi.hello": {
+"d": 6.106,
+"h": "6098322b40f6",
+"who": "gideon"
+},
+"d2.gi.idle": {
+"d": 3.507,
+"h": "b78530fef3df",
+"who": "gideon"
+},
+"d2.h.hello": {
+"d": 5.006,
+"h": "0aa0e9b397a3",
+"who": "hank"
+},
+"d2.h.idle": {
+"d": 3.506,
+"h": "cbb25dec4254",
+"who": "hank"
+},
+"d2.k.after": {
+"d": 5.806,
+"h": "d3e0ab254dcd",
+"who": "koshkin"
+},
+"d2.k.doc": {
+"d": 5.506,
+"h": "71a64d4e6394",
+"who": "koshkin"
+},
+"d2.k.grandpa": {
+"d": 8.306,
+"h": "41f2397d6261",
+"who": "koshkin"
+},
+"d2.k.hat": {
+"d": 5.707,
+"h": "4f629bb21ac5",
+"who": "koshkin"
+},
+"d2.k.heart": {
+"d": 6.907,
+"h": "17c455f3423f",
+"who": "koshkin"
+},
+"d2.k.idle": {
+"d": 5.506,
+"h": "2f9277c9b4ff",
+"who": "koshkin"
+},
+"d2.k.morning": {
+"d": 7.306,
+"h": "48a25b412445",
+"who": "koshkin"
+},
+"d2.k.night": {
+"d": 5.407,
+"h": "a2a9cfe18071",
+"who": "koshkin"
+},
+"d2.k.roof": {
+"d": 5.807,
+"h": "821efb096292",
+"who": "koshkin"
+},
+"d2.k.roofOffer": {
+"d": 6.707,
+"h": "8cfedb08607e",
+"who": "koshkin"
+},
+"d2.k.store": {
+"d": 9.707,
+"h": "5003e0266e2e",
+"who": "koshkin"
+},
+"d2.k.till": {
+"d": 5.907,
+"h": "d290e72516b2",
+"who": "koshkin"
+},
+"d2.k.yuri": {
+"d": 6.407,
+"h": "777c85aa8049",
+"who": "koshkin"
+},
+"d2.l.four": {
+"d": 3.607,
+"h": "85bda272bd12",
+"who": "lyosha"
+},
+"d2.l.hack": {
+"d": 4.806,
+"h": "8e6bc47ad2ee",
+"who": "lyosha"
+},
+"d2.l.lesson": {
+"d": 3.207,
+"h": "2d0d74fa56ca",
+"who": "lyosha"
+},
+"d2.l.morning": {
+"d": 5.407,
+"h": "676114ef21c7",
+"who": "lyosha"
+},
+"d2.l.photo": {
+"d": 4.407,
+"h": "ff87493e4db4",
+"who": "lyosha"
+},
+"d2.l.retry": {
+"d": 4.207,
+"h": "2857df68a70f",
+"who": "lyosha"
+},
+"d2.l.walk": {
+"d": 4.006,
+"h": "11cc903cfa27",
+"who": "lyosha"
+},
+"d2.lo.hello": {
+"d": 3.406,
+"h": "1988ae99bbbc",
+"who": "lou"
+},
+"d2.lo.idle": {
+"d": 2.851,
+"h": "9c60c067b26b",
+"who": "lou"
+},
+"d2.ly.card": {
+"d": 6.106,
+"h": "8c65e60f5e30",
+"who": "lyle"
+},
+"d2.ly.hello": {
+"d": 6.707,
+"h": "2bc204ab8b5f",
+"who": "lyle"
+},
+"d2.ly.idle": {
+"d": 3.207,
+"h": "ca1c645059e0",
+"who": "lyle"
+},
+"d2.m.bye": {
+"d": 3.506,
+"h": "72afa5db4a35",
+"who": "marta"
+},
+"d2.m.desk": {
+"d": 5.307,
+"h": "41a0fcd1703d",
+"who": "marta"
+},
+"d2.m.idle": {
+"d": 3.507,
+"h": "232ea157cbba",
+"who": "marta"
+},
+"d2.m.mother": {
+"d": 3.506,
+"h": "feaf0d8b99c9",
+"who": "marta"
+},
+"d2.m.notes": {
+"d": 3.307,
+"h": "1a6be9c36090",
+"who": "marta"
+},
+"d2.m.phone": {
+"d": 2.572,
+"h": "2ae681605fe5",
+"who": "marta"
+},
+"d2.m.public": {
+"d": 5.707,
+"h": "ff8e9793da9c",
+"who": "marta"
+},
+"d2.m.stop": {
+"d": 3.607,
+"h": "e6095b3b0f14",
+"who": "marta"
+},
+"d2.n.council": {
+"d": 8.007,
+"h": "42b7eb8fc96c",
+"who": "nadia"
+},
+"d2.n.early": {
+"d": 3.307,
+"h": "d70fa1b4c05d",
+"who": "nadia"
+},
+"d2.n.evan": {
+"d": 5.207,
+"h": "8cca7e4ec7f6",
+"who": "nadia"
+},
+"d2.n.four": {
+"d": 4.407,
+"h": "ff72b9a3929d",
+"who": "nadia"
+},
+"d2.n.gideon": {
+"d": 6.506,
+"h": "3f481646bf01",
+"who": "nadia"
+},
+"d2.n.late": {
+"d": 6.006,
+"h": "d12cfcff479a",
+"who": "nadia"
+},
+"d2.n.lesson": {
+"d": 6.106,
+"h": "b46bdb1d462c",
+"who": "nadia"
+},
+"d2.n.marta": {
+"d": 4.907,
+"h": "08ff6c51f332",
+"who": "nadia"
+},
+"d2.n.morning": {
+"d": 7.806,
+"h": "e83f0c1b9202",
+"who": "nadia"
+},
+"d2.n.night": {
+"d": 2.619,
+"h": "c62ebd320ffb",
+"who": "nadia"
+},
+"d2.n.nowphoto": {
+"d": 3.807,
+"h": "370cd0c3f65a",
+"who": "nadia"
+},
+"d2.n.ray": {
+"d": 5.506,
+"h": "d8622e9932c2",
+"who": "nadia"
+},
+"d2.n.roof": {
+"d": 4.106,
+"h": "c714559652cf",
+"who": "nadia"
+},
+"d2.n.seen": {
+"d": 4.306,
+"h": "58d77ef325c2",
+"who": "nadia"
+},
+"d2.n.shift": {
+"d": 6.006,
+"h": "ec1a73d179f9",
+"who": "nadia"
+},
+"d2.n.soon": {
+"d": 2.519,
+"h": "510d7775d676",
+"who": "nadia"
+},
+"d2.n.speech.cams": {
+"d": 5.606,
+"h": "17396f29f650",
+"who": "nadia"
+},
+"d2.n.speech.fix": {
+"d": 3.807,
+"h": "c264f2c362ce",
+"who": "nadia"
+},
+"d2.n.speech.yes": {
+"d": 2.744,
+"h": "e94d4fd1912d",
+"who": "nadia"
+},
+"d2.n.wait": {
+"d": 4.106,
+"h": "3437113de105",
+"who": "nadia"
+},
+"d2.ni.hello": {
+"d": 4.806,
+"h": "f69c9a577c6f",
+"who": "nina"
+},
+"d2.p.hello": {
+"d": 5.806,
+"h": "d9f93b97d842",
+"who": "pearl"
+},
+"d2.p.tonight": {
+"d": 4.407,
+"h": "c3b4b024e12f",
+"who": "pearl"
+},
+"d2.r.hello": {
+"d": 8.507,
+"h": "5ec5b6aa221b",
+"who": "ruth"
+},
+"d2.r.idle": {
+"d": 4.207,
+"h": "073d29689f42",
+"who": "ruth"
+},
+"d2.r.manners": {
+"d": 5.207,
+"h": "f2adb8a3644d",
+"who": "ruth"
+},
+"d2.r.northstar": {
+"d": 6.806,
+"h": "4529d3d45789",
+"who": "ruth"
+},
+"d2.ra.cannery": {
+"d": 3.002,
+"h": "b1f3e557faf3",
+"who": "ray"
+},
+"d2.ra.drink": {
+"d": 4.207,
+"h": "07a481a61e04",
+"who": "ray"
+},
+"d2.ra.hello": {
+"d": 3.307,
+"h": "ce3c3d5fef42",
+"who": "ray"
+},
+"d2.ra.idle": {
+"d": 2.979,
+"h": "721be08bc801",
+"who": "ray"
+},
+"d2.ra.late": {
+"d": 6.306,
+"h": "9bd816245c6f",
+"who": "ray"
+},
+"d2.ra.quit": {
+"d": 5.306,
+"h": "ceb15326d700",
+"who": "ray"
+},
+"d2.t.hello": {
+"d": 3.607,
+"h": "f4e146e7cad7",
+"who": "tommy"
+},
+"d2.wd.hello": {
+"d": 7.106,
+"h": "6cdbf01bac4e",
+"who": "wade"
+},
+"d2.wt.bell": {
+"d": 4.306,
+"h": "140d3fc5951b",
+"who": "walt"
+},
+"d2.wt.hello": {
+"d": 6.106,
+"h": "6f0cc5bb2359",
+"who": "walt"
+},
+"d2.wt.idle": {
+"d": 3.407,
+"h": "2adefd29bc40",
+"who": "walt"
+},
+"d3.d.hello": {
+"d": 6.106,
+"h": "0fbc5049e9b0",
+"who": "dolly"
+},
+"d3.d.idle": {
+"d": 3.607,
+"h": "1f68632f4b0c",
+"who": "dolly"
+},
+"d3.d.vote": {
+"d": 5.407,
+"h": "43443044f134",
+"who": "dolly"
+},
+"d3.e.hello": {
+"d": 4.606,
+"h": "4c8c98322767",
+"who": "evan"
+},
+"d3.el.idle": {
+"d": 3.906,
+"h": "39a6dde87c0b",
+"who": "ellen"
+},
+"d3.el.koshkin": {
+"d": 5.207,
+"h": "27045fb6ab0e",
+"who": "ellen"
+},
+"d3.g.hello": {
+"d": 4.006,
+"h": "0dec02e03305",
+"who": "gabriel"
+},
+"d3.gi.cams": {
+"d": 4.207,
+"h": "d67be07ed1da",
+"who": "gideon"
+},
+"d3.gi.gate1": {
+"d": 4.606,
+"h": "f7fb8251bfc8",
+"who": "gideon"
+},
+"d3.gi.gate2": {
+"d": 2.735,
+"h": "3507305554f8",
+"who": "gideon"
+},
+"d3.gi.gate3": {
+"d": 4.707,
+"h": "83703467fd45",
+"who": "gideon"
+},
+"d3.gi.gate4": {
+"d": 3.807,
+"h": "eb2f1244d913",
+"who": "gideon"
+},
+"d3.gi.hello": {
+"d": 4.907,
+"h": "364ea2da31ce",
+"who": "gideon"
+},
+"d3.h.fix": {
+"d": 6.407,
+"h": "75cabb956b42",
+"who": "hank"
+},
+"d3.h.idle": {
+"d": 2.34,
+"h": "f4f34507f321",
+"who": "hank"
+},
+"d3.h.jobs": {
+"d": 4.106,
+"h": "b10782858ae9",
+"who": "hank"
+},
+"d3.k.cams": {
+"d": 5.607,
+"h": "b83961be4540",
+"who": "koshkin"
+},
+"d3.k.fix": {
+"d": 5.707,
+"h": "9e95a75a8637",
+"who": "koshkin"
+},
+"d3.k.idle": {
+"d": 5.407,
+"h": "cb1a25c67aca",
+"who": "koshkin"
+},
+"d3.k.none": {
+"d": 4.306,
+"h": "c12aa69acfba",
+"who": "koshkin"
+},
+"d3.k.yes": {
+"d": 6.506,
+"h": "8e47c08aaffa",
+"who": "koshkin"
+},
+"d3.l.crouch": {
+"d": 5.006,
+"h": "de1ce78c698c",
+"who": "lyosha"
+},
+"d3.l.early": {
+"d": 3.807,
+"h": "47085e9a3eaf",
+"who": "lyosha"
+},
+"d3.l.grey": {
+"d": 3.406,
+"h": "30d861dfa26b",
+"who": "lyosha"
+},
+"d3.l.lesson": {
+"d": 4.907,
+"h": "11c1c47740bf",
+"who": "lyosha"
+},
+"d3.l.mic": {
+"d": 3.607,
+"h": "47bfb695642c",
+"who": "lyosha"
+},
+"d3.l.morning": {
+"d": 5.606,
+"h": "818cdb7c0a4d",
+"who": "lyosha"
+},
+"d3.lo.early": {
+"d": 3.107,
+"h": "326384dcce9e",
+"who": "lou"
+},
+"d3.lo.idle": {
+"d": 4.006,
+"h": "5abb3cb91eb8",
+"who": "lou"
+},
+"d3.lo.lastcall": {
+"d": 3.307,
+"h": "e083dc52b2a0",
+"who": "lou"
+},
+"d3.lo.ok": {
+"d": 3.307,
+"h": "8ef5bbab743e",
+"who": "lou"
+},
+"d3.lo.over": {
+"d": 3.307,
+"h": "56801161bd19",
+"who": "lou"
+},
+"d3.lo.q0": {
+"d": 6.106,
+"h": "1bc36637b671",
+"who": "lou"
+},
+"d3.lo.q1": {
+"d": 2.236,
+"h": "ba795b5d6758",
+"who": "lou"
+},
+"d3.lo.q2": {
+"d": 3.207,
+"h": "29dc8010ee95",
+"who": "lou"
+},
+"d3.lo.q3": {
+"d": 3.807,
+"h": "975866f28b90",
+"who": "lou"
+},
+"d3.lo.q4": {
+"d": 3.607,
+"h": "6017637c81c2",
+"who": "lou"
+},
+"d3.lo.right": {
+"d": 1.795,
+"h": "7acf42875411",
+"who": "lou"
+},
+"d3.lo.trivia": {
+"d": 5.606,
+"h": "889bfe8e57c3",
+"who": "lou"
+},
+"d3.lo.win": {
+"d": 3.307,
+"h": "3ad842c8915c",
+"who": "lou"
+},
+"d3.lo.wrong": {
+"d": 2.816,
+"h": "90bf14ffe549",
+"who": "lou"
+},
+"d3.ly.cold": {
+"d": 4.107,
+"h": "2a7c0a0ba043",
+"who": "lyle"
+},
+"d3.ly.idle": {
+"d": 4.407,
+"h": "aa4ac318bef7",
+"who": "lyle"
+},
+"d3.ly.yes": {
+"d": 3.107,
+"h": "678f31272760",
+"who": "lyle"
+},
+"d3.m.hello": {
+"d": 4.207,
+"h": "fab9dbb7eec1",
+"who": "marta"
+},
+"d3.n.close": {
+"d": 2.682,
+"h": "6f9741baff12",
+"who": "nadia"
+},
+"d3.n.crouch": {
+"d": 2.444,
+"h": "049f9c1da655",
+"who": "nadia"
+},
+"d3.n.far": {
+"d": 1.632,
+"h": "c094767d2d15",
+"who": "nadia"
+},
+"d3.n.glance": {
+"d": 2.044,
+"h": "f3888075645e",
+"who": "nadia"
+},
+"d3.n.grey1": {
+"d": 6.407,
+"h": "7b2f45b876a1",
+"who": "nadia"
+},
+"d3.n.grey2": {
+"d": 5.506,
+"h": "30f019b16777",
+"who": "nadia"
+},
+"d3.n.grey3": {
+"d": 5.407,
+"h": "21523bb5bd30",
+"who": "nadia"
+},
+"d3.n.grey4": {
+"d": 4.806,
+"h": "0b07d75489be",
+"who": "nadia"
+},
+"d3.n.heard": {
+"d": 6.207,
+"h": "d3303ed8ca77",
+"who": "nadia"
+},
+"d3.n.job1": {
+"d": 4.306,
+"h": "97a1e3f73aab",
+"who": "nadia"
+},
+"d3.n.jobs": {
+"d": 6.306,
+"h": "12114601cfac",
+"who": "nadia"
+},
+"d3.n.lesson": {
+"d": 3.607,
+"h": "ecf94f6cfe02",
+"who": "nadia"
+},
+"d3.n.look": {
+"d": 3.906,
+"h": "74b2ca8f75da",
+"who": "nadia"
+},
+"d3.n.lost": {
+"d": 6.006,
+"h": "db1b53cdc19e",
+"who": "nadia"
+},
+"d3.n.morning": {
+"d": 9.607,
+"h": "83b2987ba31b",
+"who": "nadia"
+},
+"d3.n.night": {
+"d": 3.906,
+"h": "4485022627b2",
+"who": "nadia"
+},
+"d3.n.stop": {
+"d": 5.407,
+"h": "672f84d8bf7c",
+"who": "nadia"
+},
+"d3.n.tail1": {
+"d": 6.407,
+"h": "9b39edf1ba95",
+"who": "nadia"
+},
+"d3.n.tail2": {
+"d": 6.006,
+"h": "4c58f5173be0",
+"who": "nadia"
+},
+"d3.n.trivia": {
+"d": 6.006,
+"h": "3a7f270d5242",
+"who": "nadia"
+},
+"d3.n.turnout": {
+"d": 5.606,
+"h": "aba0a9fe92b0",
+"who": "nadia"
+},
+"d3.ni.cams": {
+"d": 5.806,
+"h": "029dd1732cf8",
+"who": "nina"
+},
+"d3.ni.fix": {
+"d": 3.807,
+"h": "a431d3f54f2a",
+"who": "nina"
+},
+"d3.ni.other": {
+"d": 3.506,
+"h": "24986d788645",
+"who": "nina"
+},
+"d3.p.board1": {
+"d": 5.106,
+"h": "deaff92eb3a3",
+"who": "pearl"
+},
+"d3.p.fallback": {
+"d": 5.106,
+"h": "d1cd33b1d28e",
+"who": "pearl"
+},
+"d3.p.idle": {
+"d": 3.707,
+"h": "d8fb8a788aa2",
+"who": "pearl"
+},
+"d3.p.two": {
+"d": 3.707,
+"h": "67c5a95083c8",
+"who": "pearl"
+},
+"d3.r.cams": {
+"d": 5.707,
+"h": "0118ac9c9b42",
+"who": "ruth"
+},
+"d3.r.hello": {
+"d": 5.006,
+"h": "df526dc65de5",
+"who": "ruth"
+},
+"d3.r.idle": {
+"d": 5.506,
+"h": "126b01a36dc2",
+"who": "ruth"
+},
+"d3.r.yes": {
+"d": 4.907,
+"h": "9a1211c66fa8",
+"who": "ruth"
+},
+"d3.ra.again": {
+"d": 3.506,
+"h": "3ca4608b274c",
+"who": "ray"
+},
+"d3.ra.heckle": {
+"d": 4.006,
+"h": "0247cbccabbf",
+"who": "ray"
+},
+"d3.ra.hello": {
+"d": 3.807,
+"h": "a6c546baa468",
+"who": "ray"
+},
+"d3.ra.won": {
+"d": 4.007,
+"h": "8bfdddd0c3b5",
+"who": "ray"
+},
+"d3.sec.1": {
+"d": 1.62,
+"h": "7642d582b52a",
+"who": "m2"
+},
+"d3.sec.2": {
+"d": 2.259,
+"h": "9f48fd69ac48",
+"who": "m2"
+},
+"d3.sec.3": {
+"d": 1.202,
+"h": "1429b82fef7c",
+"who": "m2"
+},
+"d3.t.hello": {
+"d": 4.006,
+"h": "01c2d7efc501",
+"who": "tommy"
+},
+"d3.wd.hello": {
+"d": 4.606,
+"h": "64e3fa478cff",
+"who": "wade"
+},
+"d3.wt.hello": {
+"d": 5.907,
+"h": "07e236d268aa",
+"who": "walt"
+},
+"d4.bug.g1": {
+"d": 6.606,
+"h": "7d7825b440a6",
+"who": "gideon"
+},
+"d4.bug.g2": {
+"d": 4.707,
+"h": "87462c447acf",
+"who": "gideon"
+},
+"d4.bug.g3": {
+"d": 4.806,
+"h": "bf04a35bb0f1",
+"who": "gideon"
+},
+"d4.bug.w1": {
+"d": 3.207,
+"h": "15b78d6e64fa",
+"who": "walt"
+},
+"d4.bug.w2": {
+"d": 4.907,
+"h": "b32d4173c2a9",
+"who": "walt"
+},
+"d4.bug.w3": {
+"d": 4.707,
+"h": "dcfb39a805d3",
+"who": "walt"
+},
+"d4.bug.w4": {
+"d": 0.739,
+"h": "2594ed0c3253",
+"who": "walt"
+},
+"d4.d.fish": {
+"d": 5.606,
+"h": "29f63d96b397",
+"who": "dolly"
+},
+"d4.d.idle": {
+"d": 5.006,
+"h": "31b239c35f96",
+"who": "dolly"
+},
+"d4.d.job1": {
+"d": 6.506,
+"h": "23919853c62d",
+"who": "dolly"
+},
+"d4.d.job2": {
+"d": 6.907,
+"h": "933369ed2bfd",
+"who": "dolly"
+},
+"d4.dm.ladder": {
+"d": 6.106,
+"h": "b7ffa9e6432f",
+"who": "dmitri"
+},
+"d4.e.hello": {
+"d": 4.707,
+"h": "8f6444bc880a",
+"who": "evan"
+},
+"d4.el.koshkin": {
+"d": 5.806,
+"h": "9553d33daf26",
+"who": "ellen"
+},
+"d4.g.hello": {
+"d": 5.606,
+"h": "fbb625f70497",
+"who": "gabriel"
+},
+"d4.gi.idle": {
+"d": 1.969,
+"h": "237d898ee9e9",
+"who": "gideon"
+},
+"d4.gi.janitor": {
+"d": 5.606,
+"h": "6f1dec848ba4",
+"who": "gideon"
+},
+"d4.gi.later": {
+"d": 3.506,
+"h": "f1ba61002dae",
+"who": "gideon"
+},
+"d4.gr.door": {
+"d": 2.34,
+"h": "b60e218ad33b",
+"who": "grisha"
+},
+"d4.gr.fish": {
+"d": 4.506,
+"h": "a567b9b5bcc8",
+"who": "grisha"
+},
+"d4.gr.fish2": {
+"d": 2.151,
+"h": "78cf41104c7c",
+"who": "grisha"
+},
+"d4.gr.hello": {
+"d": 3.907,
+"h": "cfecddae2ab9",
+"who": "grisha"
+},
+"d4.gr.share": {
+"d": 4.606,
+"h": "055e7ae23ed2",
+"who": "grisha"
+},
+"d4.gr.sorry": {
+"d": 1.168,
+"h": "d61c77888836",
+"who": "grisha"
+},
+"d4.h.idle": {
+"d": 4.807,
+"h": "80501e2981ae",
+"who": "hank"
+},
+"d4.h.janitor": {
+"d": 4.507,
+"h": "f65169db3125",
+"who": "hank"
+},
+"d4.k.fish": {
+"d": 7.207,
+"h": "07f8f54dc4d2",
+"who": "koshkin"
+},
+"d4.k.idle": {
+"d": 4.907,
+"h": "7e5e2a834ed6",
+"who": "koshkin"
+},
+"d4.l.bugs": {
+"d": 5.106,
+"h": "882f3a080266",
+"who": "lyosha"
+},
+"d4.l.cards": {
+"d": 3.607,
+"h": "544a8a64fba6",
+"who": "lyosha"
+},
+"d4.l.chamber": {
+"d": 3.707,
+"h": "d7b6206efbf7",
+"who": "lyosha"
+},
+"d4.l.code": {
+"d": 4.106,
+"h": "1106b06574a6",
+"who": "lyosha"
+},
+"d4.l.keypad": {
+"d": 3.107,
+"h": "ad903407aabc",
+"who": "lyosha"
+},
+"d4.l.lesson": {
+"d": 5.106,
+"h": "ff5a23d50c23",
+"who": "lyosha"
+},
+"d4.l.live": {
+"d": 2.94,
+"h": "d96727077c24",
+"who": "lyosha"
+},
+"d4.l.logger": {
+"d": 7.106,
+"h": "78f28ea05cb4",
+"who": "lyosha"
+},
+"d4.l.mayor": {
+"d": 3.607,
+"h": "e30ec8c339a0",
+"who": "lyosha"
+},
+"d4.l.retry": {
+"d": 3.107,
+"h": "744e3db545df",
+"who": "lyosha"
+},
+"d4.lo.hello": {
+"d": 5.107,
+"h": "1f182daf3499",
+"who": "lou"
+},
+"d4.lo.won": {
+"d": 4.306,
+"h": "92f8693662de",
+"who": "lou"
+},
+"d4.ly.glasses": {
+"d": 5.707,
+"h": "80f321361b5b",
+"who": "lyle"
+},
+"d4.m.hello": {
+"d": 5.006,
+"h": "327e1289ab99",
+"who": "marta"
+},
+"d4.n.back": {
+"d": 2.757,
+"h": "dfdf6baf8c73",
+"who": "nadia"
+},
+"d4.n.cards": {
+"d": 6.006,
+"h": "d8bbcc2436a7",
+"who": "nadia"
+},
+"d4.n.caught": {
+"d": 4.207,
+"h": "c59fa3986ef8",
+"who": "nadia"
+},
+"d4.n.clean": {
+"d": 4.806,
+"h": "9a306c564d42",
+"who": "nadia"
+},
+"d4.n.dolly": {
+"d": 2.957,
+"h": "a03e733ef757",
+"who": "nadia"
+},
+"d4.n.done": {
+"d": 6.407,
+"h": "71be6f66dc6e",
+"who": "nadia"
+},
+"d4.n.grisha": {
+"d": 1.408,
+"h": "84e5c6155abd",
+"who": "nadia"
+},
+"d4.n.hired": {
+"d": 7.407,
+"h": "a85df5502900",
+"who": "nadia"
+},
+"d4.n.home": {
+"d": 2.357,
+"h": "7ec8ec8fd4d6",
+"who": "nadia"
+},
+"d4.n.lesson": {
+"d": 3.707,
+"h": "d5ca60e66e01",
+"who": "nadia"
+},
+"d4.n.missed": {
+"d": 5.806,
+"h": "3b8113197aa4",
+"who": "nadia"
+},
+"d4.n.morning": {
+"d": 7.106,
+"h": "2228db20edaf",
+"who": "nadia"
+},
+"d4.n.night": {
+"d": 4.907,
+"h": "e66a1b5e6bf2",
+"who": "nadia"
+},
+"d4.n.office": {
+"d": 4.306,
+"h": "475a3f287ba3",
+"who": "nadia"
+},
+"d4.n.office2": {
+"d": 3.307,
+"h": "ce704703127e",
+"who": "nadia"
+},
+"d4.n.reason": {
+"d": 4.506,
+"h": "952b72392d98",
+"who": "nadia"
+},
+"d4.n.shaw": {
+"d": 7.306,
+"h": "87a316d83995",
+"who": "nadia"
+},
+"d4.n.wait": {
+"d": 7.006,
+"h": "0f8e507d4889",
+"who": "nadia"
+},
+"d4.ni.hello": {
+"d": 4.606,
+"h": "be71ae47462b",
+"who": "nina"
+},
+"d4.p.admirer": {
+"d": 4.006,
+"h": "541c790222da",
+"who": "pearl"
+},
+"d4.p.crate": {
+"d": 4.306,
+"h": "ab66ff276500",
+"who": "pearl"
+},
+"d4.p.fish": {
+"d": 3.707,
+"h": "651d01e4e457",
+"who": "pearl"
+},
+"d4.p.idle": {
+"d": 3.506,
+"h": "fec1c94b3b17",
+"who": "pearl"
+},
+"d4.p.ship": {
+"d": 3.607,
+"h": "6cf2bbfe8e16",
+"who": "pearl"
+},
+"d4.r.fish": {
+"d": 6.207,
+"h": "65fc242daaa1",
+"who": "ruth"
+},
+"d4.r.gideon": {
+"d": 7.907,
+"h": "136528dad143",
+"who": "ruth"
+},
+"d4.r.idle": {
+"d": 2.896,
+"h": "f9e71b7dd5c1",
+"who": "ruth"
+},
+"d4.ra.hello": {
+"d": 5.306,
+"h": "fdd8b9b07003",
+"who": "ray"
+},
+"d4.t.hello": {
+"d": 3.807,
+"h": "2928c48ef05f",
+"who": "tommy"
+},
+"d4.v.code": {
+"d": 6.306,
+"h": "1ddde2479ffa",
+"who": "valya"
+},
+"d4.v.eat": {
+"d": 3.406,
+"h": "381558f227e8",
+"who": "valya"
+},
+"d4.v.shamir": {
+"d": 12.306,
+"h": "48944c3850a7",
+"who": "valya"
+},
+"d4.wd.crate1": {
+"d": 5.506,
+"h": "1baec79bce3a",
+"who": "wade"
+},
+"d4.wd.crate2": {
+"d": 4.606,
+"h": "5eff09d0a32e",
+"who": "wade"
+},
+"d4.wd.helo": {
+"d": 6.707,
+"h": "330732647330",
+"who": "wade"
+},
+"d4.wd.idle": {
+"d": 4.107,
+"h": "f57799a50334",
+"who": "wade"
+},
+"d4.wt.caught": {
+"d": 4.306,
+"h": "c12252bbfb73",
+"who": "walt"
+},
+"d4.wt.dust": {
+"d": 2.691,
+"h": "deb24f43f9d2",
+"who": "walt"
+},
+"d4.wt.hire1": {
+"d": 5.106,
+"h": "bcc0b5100ee7",
+"who": "walt"
+},
+"d4.wt.hire2": {
+"d": 6.506,
+"h": "80d0ad8d7951",
+"who": "walt"
+},
+"d4.wt.idle": {
+"d": 2.704,
+"h": "599afac6f49e",
+"who": "walt"
+},
+"d4.wt.painting": {
+"d": 5.306,
+"h": "e61d27c6042d",
+"who": "walt"
+},
+"d4.wt.pay": {
+"d": 5.607,
+"h": "8c863befd209",
+"who": "walt"
+},
+"d4.wt.pie": {
+"d": 5.407,
+"h": "7d76125db5a9",
+"who": "walt"
+},
+"d4.wt.pie2": {
+"d": 4.207,
+"h": "7833b05b010e",
+"who": "walt"
+},
+"d4.wt.sorry": {
+"d": 4.207,
+"h": "d451bf8af56b",
+"who": "walt"
+},
+"d4.wt.twenty": {
+"d": 4.907,
+"h": "d8f6e8c2fecb",
+"who": "walt"
+},
+"d5.d.after": {
+"d": 4.007,
+"h": "f25e0e726deb",
+"who": "dolly"
+},
+"d5.d.help": {
+"d": 2.851,
+"h": "0d488dd98337",
+"who": "dolly"
+},
+"d5.d.never": {
+"d": 4.407,
+"h": "2485862c8b60",
+"who": "dolly"
+},
+"d5.d.post": {
+"d": 2.514,
+"h": "b368c419ae8e",
+"who": "dolly"
+},
+"d5.d.pre": {
+"d": 5.806,
+"h": "d5149e362695",
+"who": "dolly"
+},
+"d5.d.serve": {
+"d": 5.007,
+"h": "000e056a2dbe",
+"who": "dolly"
+},
+"d5.d.t0": {
+"d": 3.807,
+"h": "874d9a7224f6",
+"who": "dolly"
+},
+"d5.d.t1": {
+"d": 5.506,
+"h": "bcca056f9777",
+"who": "dolly"
+},
+"d5.d.t2": {
+"d": 6.407,
+"h": "6fbcc3e99537",
+"who": "dolly"
+},
+"d5.d.where": {
+"d": 3.607,
+"h": "3be9d68a6b75",
+"who": "dolly"
+},
+"d5.dm.honest": {
+"d": 6.506,
+"h": "7a10bb8510c4",
+"who": "dmitri"
+},
+"d5.dm.store": {
+"d": 6.907,
+"h": "45b8a8b14acb",
+"who": "dmitri"
+},
+"d5.e.hello": {
+"d": 4.207,
+"h": "7bdee7f716b3",
+"who": "evan"
+},
+"d5.el.carry": {
+"d": 3.107,
+"h": "e20bfee3392c",
+"who": "ellen"
+},
+"d5.el.check": {
+"d": 5.106,
+"h": "36171b541662",
+"who": "ellen"
+},
+"d5.el.fry": {
+"d": 6.306,
+"h": "ef527ab6e204",
+"who": "ellen"
+},
+"d5.el.nome": {
+"d": 5.507,
+"h": "74988fc45749",
+"who": "ellen"
+},
+"d5.el.sasha": {
+"d": 6.907,
+"h": "9b8fcecf80c0",
+"who": "ellen"
+},
+"d5.el.what": {
+"d": 4.207,
+"h": "dfe2de8b28d6",
+"who": "ellen"
+},
+"d5.f.amen": {
+"d": 1.667,
+"h": "425d2c76eb0a",
+"who": "m3"
+},
+"d5.f.laugh": {
+"d": 0.634,
+"h": "f23a120ac949",
+"who": "f1"
+},
+"d5.g.fry": {
+"d": 3.107,
+"h": "d4748a146850",
+"who": "gabriel"
+},
+"d5.g.grace": {
+"d": 7.407,
+"h": "ef0008666b0e",
+"who": "gabriel"
+},
+"d5.gi.hello": {
+"d": 5.207,
+"h": "8aadf7dccce4",
+"who": "gideon"
+},
+"d5.h.after": {
+"d": 4.207,
+"h": "a68c468016b2",
+"who": "hank"
+},
+"d5.h.match": {
+"d": 5.006,
+"h": "0cfeb026a966",
+"who": "hank"
+},
+"d5.h.post": {
+"d": 1.864,
+"h": "7f14f91900d0",
+"who": "hank"
+},
+"d5.h.pre": {
+"d": 4.106,
+"h": "5e3ece94f4b6",
+"who": "hank"
+},
+"d5.h.prove": {
+"d": 3.607,
+"h": "21e6fd13c745",
+"who": "hank"
+},
+"d5.h.t0": {
+"d": 4.106,
+"h": "086b70f079eb",
+"who": "hank"
+},
+"d5.h.t1": {
+"d": 5.606,
+"h": "614593bbe54b",
+"who": "hank"
+},
+"d5.h.t2": {
+"d": 6.907,
+"h": "fb6c79380b65",
+"who": "hank"
+},
+"d5.k.breath": {
+"d": 5.407,
+"h": "50cebcd0b7dc",
+"who": "koshkin"
+},
+"d5.k.fine": {
+"d": 5.506,
+"h": "cf3e591cdf24",
+"who": "koshkin"
+},
+"d5.k.go": {
+"d": 5.107,
+"h": "11a31a15afd5",
+"who": "koshkin"
+},
+"d5.k.hurt": {
+"d": 3.307,
+"h": "6f3ec43b7e8e",
+"who": "koshkin"
+},
+"d5.k.idle": {
+"d": 4.506,
+"h": "138a8afa93d1",
+"who": "koshkin"
+},
+"d5.k.keys": {
+"d": 5.407,
+"h": "360d091da9ea",
+"who": "koshkin"
+},
+"d5.k.morning": {
+"d": 6.506,
+"h": "cfa912ef8981",
+"who": "koshkin"
+},
+"d5.k.open": {
+"d": 4.506,
+"h": "205f2cf143e2",
+"who": "koshkin"
+},
+"d5.k.pain": {
+"d": 3.906,
+"h": "5ec65129c109",
+"who": "koshkin"
+},
+"d5.k.pills": {
+"d": 6.006,
+"h": "b57b0bbffddf",
+"who": "koshkin"
+},
+"d5.k.promise": {
+"d": 3.906,
+"h": "5d9b5fe2ad8d",
+"who": "koshkin"
+},
+"d5.k.sit": {
+"d": 3.307,
+"h": "838dc33bbbd4",
+"who": "koshkin"
+},
+"d5.k.there": {
+"d": 7.606,
+"h": "7732ac4f3249",
+"who": "koshkin"
+},
+"d5.k.wait": {
+"d": 2.796,
+"h": "5e2597217c0e",
+"who": "koshkin"
+},
+"d5.l.lesson": {
+"d": 4.506,
+"h": "0b27bf8b5692",
+"who": "lyosha"
+},
+"d5.l.morning": {
+"d": 4.407,
+"h": "33fdb70e1ce6",
+"who": "lyosha"
+},
+"d5.lo.after": {
+"d": 2.456,
+"h": "899c56a2ec72",
+"who": "lou"
+},
+"d5.lo.fry": {
+"d": 4.507,
+"h": "9eff142eccb7",
+"who": "lou"
+},
+"d5.ly.after": {
+"d": 5.307,
+"h": "fa3033b4e3b5",
+"who": "lyle"
+},
+"d5.ly.post": {
+"d": 2.096,
+"h": "cbd637517804",
+"who": "lyle"
+},
+"d5.ly.pre": {
+"d": 3.507,
+"h": "515cb4162a42",
+"who": "lyle"
+},
+"d5.ly.stop": {
+"d": 4.707,
+"h": "2955625c3d01",
+"who": "lyle"
+},
+"d5.ly.t0": {
+"d": 5.606,
+"h": "de145ac1c431",
+"who": "lyle"
+},
+"d5.ly.t1": {
+"d": 6.407,
+"h": "ddefa0d9669a",
+"who": "lyle"
+},
+"d5.ly.t2": {
+"d": 3.906,
+"h": "ac511e9d431d",
+"who": "lyle"
+},
+"d5.ly.why": {
+"d": 4.606,
+"h": "35777fc36d96",
+"who": "lyle"
+},
+"d5.m.fry": {
+"d": 3.506,
+"h": "da42d18c2694",
+"who": "marta"
+},
+"d5.n.early": {
+"d": 4.606,
+"h": "0de950ad199c",
+"who": "nadia"
+},
+"d5.n.five": {
+"d": 6.106,
+"h": "4381154ed144",
+"who": "nadia"
+},
+"d5.n.fry": {
+"d": 4.006,
+"h": "bb6e2d30c010",
+"who": "nadia"
+},
+"d5.n.lyle": {
+"d": 3.707,
+"h": "fddb92d9a575",
+"who": "nadia"
+},
+"d5.n.morning": {
+"d": 8.607,
+"h": "eff18ffc7d60",
+"who": "nadia"
+},
+"d5.n.night": {
+"d": 3.607,
+"h": "ab417611ca8e",
+"who": "nadia"
+},
+"d5.n.ray": {
+"d": 4.806,
+"h": "a37a5423e48f",
+"who": "nadia"
+},
+"d5.n.run": {
+"d": 3.406,
+"h": "ced775b7c559",
+"who": "nadia"
+},
+"d5.n.sorry": {
+"d": 4.407,
+"h": "78b870f967a1",
+"who": "nadia"
+},
+"d5.n.wade": {
+"d": 2.181,
+"h": "84f636426a44",
+"who": "nadia"
+},
+"d5.ni.fry": {
+"d": 5.207,
+"h": "19cb5eb47c67",
+"who": "nina"
+},
+"d5.p.fry": {
+"d": 5.907,
+"h": "3654acfee0eb",
+"who": "pearl"
+},
+"d5.r.fix": {
+"d": 4.107,
+"h": "fed861e289e6",
+"who": "ruth"
+},
+"d5.r.matter": {
+"d": 4.207,
+"h": "3ccd55ad44df",
+"who": "ruth"
+},
+"d5.r.post": {
+"d": 2.745,
+"h": "d18af39fa429",
+"who": "ruth"
+},
+"d5.r.pre": {
+"d": 3.907,
+"h": "5f0daa898be7",
+"who": "ruth"
+},
+"d5.r.t0": {
+"d": 3.307,
+"h": "0c03ba2066e8",
+"who": "ruth"
+},
+"d5.r.t1": {
+"d": 6.007,
+"h": "0d9a85becd4f",
+"who": "ruth"
+},
+"d5.r.t2": {
+"d": 5.907,
+"h": "b243705708bf",
+"who": "ruth"
+},
+"d5.ra.after": {
+"d": 4.106,
+"h": "debf2ddb2893",
+"who": "ray"
+},
+"d5.ra.heckle": {
+"d": 1.934,
+"h": "9d811ab68d07",
+"who": "ray"
+},
+"d5.ra.post": {
+"d": 1.783,
+"h": "ae34b2342c85",
+"who": "ray"
+},
+"d5.ra.pre": {
+"d": 2.979,
+"h": "d83208db2722",
+"who": "ray"
+},
+"d5.ra.stay": {
+"d": 4.707,
+"h": "b46043cfdaf9",
+"who": "ray"
+},
+"d5.ra.t0": {
+"d": 5.707,
+"h": "503cf012c5fe",
+"who": "ray"
+},
+"d5.ra.t1": {
+"d": 7.207,
+"h": "bae56d7affdc",
+"who": "ray"
+},
+"d5.ra.t2": {
+"d": 3.906,
+"h": "26a9173b7ad3",
+"who": "ray"
+},
+"d5.ra.what": {
+"d": 3.906,
+"h": "9e0daaac1d05",
+"who": "ray"
+},
+"d5.t.fry": {
+"d": 3.807,
+"h": "0f58c199088b",
+"who": "tommy"
+},
+"d5.v.promise": {
+"d": 4.707,
+"h": "91796c25fc2b",
+"who": "valya"
+},
+"d5.wd.after": {
+"d": 4.307,
+"h": "c96bd220d33f",
+"who": "wade"
+},
+"d5.wd.fry": {
+"d": 3.807,
+"h": "2f6203528efe",
+"who": "wade"
+},
+"d5.wd.go": {
+"d": 4.006,
+"h": "386601be5d60",
+"who": "wade"
+},
+"d5.wt.fry": {
+"d": 7.007,
+"h": "dd88fe22d68a",
+"who": "walt"
+},
+"d5.wt.toast": {
+"d": 3.907,
+"h": "429075a2e6ce",
+"who": "walt"
+},
+"d6.d.idle": {
+"d": 4.306,
+"h": "9fe6b05eade2",
+"who": "dolly"
+},
+"d6.d.pie": {
+"d": 7.106,
+"h": "e59c490c114d",
+"who": "dolly"
+},
+"d6.dm.b": {
+"d": 6.407,
+"h": "08179e30b194",
+"who": "dmitri"
+},
+"d6.e.hello": {
+"d": 5.907,
+"h": "c48f20c6b4fb",
+"who": "evan"
+},
+"d6.e.koshkin": {
+"d": 3.906,
+"h": "7029c008506d",
+"who": "evan"
+},
+"d6.e.later": {
+"d": 3.107,
+"h": "c6085df9596b",
+"who": "evan"
+},
+"d6.e.notsale": {
+"d": 5.106,
+"h": "08c394815126",
+"who": "evan"
+},
+"d6.e.offer": {
+"d": 7.006,
+"h": "60ffa7832245",
+"who": "evan"
+},
+"d6.e.out": {
+"d": 2.456,
+"h": "4cc3b4c58d51",
+"who": "evan"
+},
+"d6.e.pass": {
+"d": 2.77,
+"h": "8a9a5b3837aa",
+"who": "evan"
+},
+"d6.e.threat": {
+"d": 6.006,
+"h": "1987effc310f",
+"who": "evan"
+},
+"d6.el.nome": {
+"d": 5.506,
+"h": "3ce403813f54",
+"who": "ellen"
+},
+"d6.f.card": {
+"d": 4.106,
+"h": "195776c819ab",
+"who": "f2"
+},
+"d6.f.loyal": {
+"d": 3.906,
+"h": "31b6c4d50014",
+"who": "m5"
+},
+"d6.g.bells": {
+"d": 5.606,
+"h": "46812d0377a7",
+"who": "gabriel"
+},
+"d6.g.idle": {
+"d": 3.207,
+"h": "bc32471b01a7",
+"who": "gabriel"
+},
+"d6.gi.offer": {
+"d": 5.907,
+"h": "9de7576c2c5b",
+"who": "gideon"
+},
+"d6.gr.race": {
+"d": 4.407,
+"h": "5cbf73354010",
+"who": "grisha"
+},
+"d6.h.stock": {
+"d": 5.707,
+"h": "b6d899a2fc4e",
+"who": "hank"
+},
+"d6.i.b1": {
+"d": 3.506,
+"h": "1af0a003c8e8",
+"who": "ivan"
+},
+"d6.i.b2": {
+"d": 2.631,
+"h": "c4491a6c1377",
+"who": "ivan"
+},
+"d6.k.call1": {
+"d": 7.106,
+"h": "19524e840871",
+"who": "koshkin"
+},
+"d6.k.call2": {
+"d": 7.106,
+"h": "498a98f9e727",
+"who": "koshkin"
+},
+"d6.k.call3": {
+"d": 6.106,
+"h": "1691d8ea6f68",
+"who": "koshkin"
+},
+"d6.l.lesson": {
+"d": 5.606,
+"h": "97e2e0b1221b",
+"who": "lyosha"
+},
+"d6.l.math": {
+"d": 7.006,
+"h": "88e7f45f6c5c",
+"who": "lyosha"
+},
+"d6.l.money": {
+"d": 5.907,
+"h": "56fa4ad4a2a8",
+"who": "lyosha"
+},
+"d6.l.prices": {
+"d": 6.707,
+"h": "838a9f418d64",
+"who": "lyosha"
+},
+"d6.l.till": {
+"d": 3.506,
+"h": "67c4f46aaea9",
+"who": "lyosha"
+},
+"d6.lo.round": {
+"d": 4.006,
+"h": "5b39c9905c08",
+"who": "lou"
+},
+"d6.ly.store": {
+"d": 5.106,
+"h": "257b67b31a7f",
+"who": "lyle"
+},
+"d6.m.store": {
+"d": 5.207,
+"h": "87ac0e31ad8a",
+"who": "marta"
+},
+"d6.n.b0": {
+"d": 4.407,
+"h": "c8947f082cb0",
+"who": "nadia"
+},
+"d6.n.b1": {
+"d": 5.506,
+"h": "4ca97bc59831",
+"who": "nadia"
+},
+"d6.n.b2": {
+"d": 8.007,
+"h": "e6a77d7fbf77",
+"who": "nadia"
+},
+"d6.n.b3": {
+"d": 6.707,
+"h": "9d35d08f4773",
+"who": "nadia"
+},
+"d6.n.b4": {
+"d": 7.907,
+"h": "52b2a5ada5c0",
+"who": "nadia"
+},
+"d6.n.close": {
+"d": 5.506,
+"h": "54d7a332830c",
+"who": "nadia"
+},
+"d6.n.morning": {
+"d": 6.306,
+"h": "e9b7856acde4",
+"who": "nadia"
+},
+"d6.n.night": {
+"d": 5.106,
+"h": "866188658073",
+"who": "nadia"
+},
+"d6.n.open": {
+"d": 4.506,
+"h": "3efed994819e",
+"who": "nadia"
+},
+"d6.n.race": {
+"d": 4.907,
+"h": "e8821eccbd0d",
+"who": "nadia"
+},
+"d6.n.ruth": {
+"d": 4.506,
+"h": "985d9c0b5220",
+"who": "nadia"
+},
+"d6.n.shop": {
+"d": 6.806,
+"h": "f519ee6f9977",
+"who": "nadia"
+},
+"d6.n.shopDone": {
+"d": 4.106,
+"h": "95f2de71d9d6",
+"who": "nadia"
+},
+"d6.n.threat": {
+"d": 4.907,
+"h": "1d5f2cefc71e",
+"who": "nadia"
+},
+"d6.ni.lose": {
+"d": 2.361,
+"h": "0695a43f5ab7",
+"who": "nina"
+},
+"d6.ni.race": {
+"d": 4.807,
+"h": "abeb81850881",
+"who": "nina"
+},
+"d6.ni.race2": {
+"d": 3.807,
+"h": "37c1b674c729",
+"who": "nina"
+},
+"d6.ni.win": {
+"d": 2.997,
+"h": "eba2c51d3017",
+"who": "nina"
+},
+"d6.p.news": {
+"d": 6.006,
+"h": "b796823bece1",
+"who": "pearl"
+},
+"d6.r.first": {
+"d": 7.907,
+"h": "a94feb3ae4cc",
+"who": "ruth"
+},
+"d6.r.race": {
+"d": 3.707,
+"h": "44e96e06cf81",
+"who": "ruth"
+},
+"d6.r.sasha": {
+"d": 6.207,
+"h": "82388386533d",
+"who": "ruth"
+},
+"d6.ra.hello": {
+"d": 5.207,
+"h": "ff8ae709f11e",
+"who": "ray"
+},
+"d6.t.after": {
+"d": 2.594,
+"h": "30536238ea46",
+"who": "tommy"
+},
+"d6.t.early": {
+"d": 3.207,
+"h": "220b56b4a511",
+"who": "tommy"
+},
+"d6.t.go": {
+"d": 1.254,
+"h": "c36beb9fee75",
+"who": "tommy"
+},
+"d6.t.in": {
+"d": 3.406,
+"h": "251ed379639d",
+"who": "tommy"
+},
+"d6.t.invite": {
+"d": 5.607,
+"h": "a1bc63960838",
+"who": "tommy"
+},
+"d6.t.lost": {
+"d": 4.606,
+"h": "9ce960e9093e",
+"who": "tommy"
+},
+"d6.t.missed": {
+"d": 3.906,
+"h": "5534d76eab0f",
+"who": "tommy"
+},
+"d6.t.out": {
+"d": 2.561,
+"h": "f4ecd3edd0dd",
+"who": "tommy"
+},
+"d6.t.rules": {
+"d": 5.207,
+"h": "cd9e0ef64165",
+"who": "tommy"
+},
+"d6.t.won": {
+"d": 3.907,
+"h": "c91ac723f9b4",
+"who": "tommy"
+},
+"d6.v.b": {
+"d": 6.707,
+"h": "40897d96e206",
+"who": "valya"
+},
+"d6.v.race": {
+"d": 3.906,
+"h": "72ddf54089fa",
+"who": "valya"
+},
+"d6.v.shop": {
+"d": 6.506,
+"h": "0fdd998c4638",
+"who": "valya"
+},
+"d6.wd.check": {
+"d": 6.507,
+"h": "6ac687f45424",
+"who": "wade"
+},
+"d6.wt.coffee": {
+"d": 5.407,
+"h": "dc54d0ec401b",
+"who": "walt"
+},
+"d7.d.night": {
+"d": 2.387,
+"h": "6b73bf464d4d",
+"who": "dolly"
+},
+"d7.d.rolls": {
+"d": 5.606,
+"h": "b9e4f9a3ad93",
+"who": "dolly"
+},
+"d7.d.supper": {
+"d": 5.907,
+"h": "9917f635e26a",
+"who": "dolly"
+},
+"d7.dm.bye": {
+"d": 1.017,
+"h": "a8638c79c67c",
+"who": "dmitri"
+},
+"d7.dm.fear": {
+"d": 5.006,
+"h": "6280dcd88b3d",
+"who": "dmitri"
+},
+"d7.dm.hello": {
+"d": 4.306,
+"h": "053d05137222",
+"who": "dmitri"
+},
+"d7.dm.koshkin": {
+"d": 7.407,
+"h": "e839afee5e68",
+"who": "dmitri"
+},
+"d7.e.out": {
+"d": 4.506,
+"h": "b9fe25ed1015",
+"who": "evan"
+},
+"d7.e.sunday": {
+"d": 4.306,
+"h": "47e7deec05eb",
+"who": "evan"
+},
+"d7.el.sunday": {
+"d": 3.107,
+"h": "f25856ce5d99",
+"who": "ellen"
+},
+"d7.f.mercy": {
+"d": 0.924,
+"h": "7e429b722410",
+"who": "f2"
+},
+"d7.g.end": {
+"d": 4.207,
+"h": "092f6e028d06",
+"who": "gabriel"
+},
+"d7.g.idle": {
+"d": 5.207,
+"h": "ebc5c532979c",
+"who": "gabriel"
+},
+"d7.g.peace": {
+"d": 1.382,
+"h": "3a39aeda198b",
+"who": "gabriel"
+},
+"d7.g.radio": {
+"d": 6.907,
+"h": "63528faf2391",
+"who": "gabriel"
+},
+"d7.g.radio2": {
+"d": 5.506,
+"h": "e3441dc41b86",
+"who": "gabriel"
+},
+"d7.g.radio3": {
+"d": 5.606,
+"h": "78e1fbadfd50",
+"who": "gabriel"
+},
+"d7.g.sasha": {
+"d": 5.407,
+"h": "1f21cff9eeb0",
+"who": "gabriel"
+},
+"d7.g.sermon": {
+"d": 8.007,
+"h": "086fad8a4223",
+"who": "gabriel"
+},
+"d7.g.thanks": {
+"d": 5.806,
+"h": "c3d39e96d244",
+"who": "gabriel"
+},
+"d7.gi.sunday": {
+"d": 4.207,
+"h": "80bbe38bf66f",
+"who": "gideon"
+},
+"d7.gr.bye": {
+"d": 1.819,
+"h": "db60769fe2ae",
+"who": "grisha"
+},
+"d7.gr.hello": {
+"d": 3.506,
+"h": "dea08ab99b1e",
+"who": "grisha"
+},
+"d7.gr.sandwich": {
+"d": 5.606,
+"h": "3145ea5b1072",
+"who": "grisha"
+},
+"d7.gr.socks": {
+"d": 3.707,
+"h": "da704a6b1536",
+"who": "grisha"
+},
+"d7.h.sunday": {
+"d": 3.807,
+"h": "3f0aaa965c6f",
+"who": "hank"
+},
+"d7.h.supper": {
+"d": 3.506,
+"h": "53a67b8f22e4",
+"who": "hank"
+},
+"d7.i.miss": {
+"d": 0.952,
+"h": "420f57e80153",
+"who": "ivan"
+},
+"d7.l.bye": {
+"d": 3.406,
+"h": "c569cce7d0f0",
+"who": "lyosha"
+},
+"d7.l.decoy": {
+"d": 6.506,
+"h": "1cb6e5783989",
+"who": "lyosha"
+},
+"d7.l.hello": {
+"d": 5.606,
+"h": "c620c5a023a5",
+"who": "lyosha"
+},
+"d7.l.laptop": {
+"d": 4.606,
+"h": "9edbb6087839",
+"who": "lyosha"
+},
+"d7.l.lens": {
+"d": 4.006,
+"h": "ab2f9667efdd",
+"who": "lyosha"
+},
+"d7.l.lesson": {
+"d": 4.707,
+"h": "409e9ca526c0",
+"who": "lyosha"
+},
+"d7.l.radio": {
+"d": 5.606,
+"h": "df98b76c0b39",
+"who": "lyosha"
+},
+"d7.l.weather": {
+"d": 4.506,
+"h": "c093a653fdb7",
+"who": "lyosha"
+},
+"d7.lo.sunday": {
+"d": 3.906,
+"h": "51cd1dbed21b",
+"who": "lou"
+},
+"d7.ly.sunday": {
+"d": 3.707,
+"h": "f8871a012e28",
+"who": "lyle"
+},
+"d7.m.car": {
+"d": 5.506,
+"h": "a8ac6ccf4d30",
+"who": "marta"
+},
+"d7.m.idle": {
+"d": 3.406,
+"h": "380b98316d36",
+"who": "marta"
+},
+"d7.m.no": {
+"d": 1.411,
+"h": "ae81c54c3167",
+"who": "marta"
+},
+"d7.m.parka": {
+"d": 3.807,
+"h": "7c76910fbf55",
+"who": "marta"
+},
+"d7.n.bag": {
+"d": 5.207,
+"h": "0b45619b6033",
+"who": "nadia"
+},
+"d7.n.bells": {
+"d": 3.906,
+"h": "8b724eede595",
+"who": "nadia"
+},
+"d7.n.call": {
+"d": 6.306,
+"h": "d87f58f780da",
+"who": "nadia"
+},
+"d7.n.call0": {
+"d": 7.006,
+"h": "e4f0d7223c7e",
+"who": "nadia"
+},
+"d7.n.call1": {
+"d": 2.732,
+"h": "b69b60473e0e",
+"who": "nadia"
+},
+"d7.n.choir": {
+"d": 5.606,
+"h": "8a6155022685",
+"who": "nadia"
+},
+"d7.n.dont": {
+"d": 4.707,
+"h": "83b846e93f74",
+"who": "nadia"
+},
+"d7.n.door": {
+"d": 3.906,
+"h": "a3c91f13eef7",
+"who": "nadia"
+},
+"d7.n.early": {
+"d": 2.407,
+"h": "c4728ac702fb",
+"who": "nadia"
+},
+"d7.n.early2": {
+"d": 3.307,
+"h": "2d5c888a016a",
+"who": "nadia"
+},
+"d7.n.good": {
+"d": 1.807,
+"h": "ccf2be868b7d",
+"who": "nadia"
+},
+"d7.n.morning": {
+"d": 7.806,
+"h": "ff431e6ea55e",
+"who": "nadia"
+},
+"d7.n.night": {
+"d": 1.757,
+"h": "03f1a0addc5e",
+"who": "nadia"
+},
+"d7.n.normal1": {
+"d": 5.207,
+"h": "54cfaf824604",
+"who": "nadia"
+},
+"d7.n.normal2": {
+"d": 4.106,
+"h": "6eaff97ccf97",
+"who": "nadia"
+},
+"d7.n.radio": {
+"d": 2.385,
+"h": "049fbc731149",
+"who": "nadia"
+},
+"d7.n.radio2": {
+"d": 5.907,
+"h": "13e53769e19b",
+"who": "nadia"
+},
+"d7.n.slow": {
+"d": 4.306,
+"h": "79f59390a84a",
+"who": "nadia"
+},
+"d7.n.someone": {
+"d": 3.807,
+"h": "88174b5ff212",
+"who": "nadia"
+},
+"d7.n.supper": {
+"d": 6.806,
+"h": "2c349438e47c",
+"who": "nadia"
+},
+"d7.n.up": {
+"d": 6.106,
+"h": "a86af2346321",
+"who": "nadia"
+},
+"d7.n.who": {
+"d": 6.407,
+"h": "2cc5ab7646e8",
+"who": "nadia"
+},
+"d7.ni.sunday": {
+"d": 5.106,
+"h": "c6e29924aa2c",
+"who": "nina"
+},
+"d7.p.grey": {
+"d": 6.007,
+"h": "2e8965524822",
+"who": "pearl"
+},
+"d7.p.grey2": {
+"d": 4.107,
+"h": "1c41afa706ec",
+"who": "pearl"
+},
+"d7.p.grey3": {
+"d": 3.406,
+"h": "7c087a080140",
+"who": "pearl"
+},
+"d7.p.sunday": {
+"d": 4.107,
+"h": "0e6192d040d7",
+"who": "pearl"
+},
+"d7.r.h1": {
+"d": 7.806,
+"h": "5eb6c7a284f9",
+"who": "ruth"
+},
+"d7.r.h2": {
+"d": 9.607,
+"h": "562151c9f801",
+"who": "ruth"
+},
+"d7.r.h3": {
+"d": 8.107,
+"h": "411d76e48444",
+"who": "ruth"
+},
+"d7.r.h4": {
+"d": 9.607,
+"h": "d5212092eeb0",
+"who": "ruth"
+},
+"d7.r.h5": {
+"d": 9.806,
+"h": "550d458fb613",
+"who": "ruth"
+},
+"d7.r.h6": {
+"d": 7.306,
+"h": "87f0cd4da413",
+"who": "ruth"
+},
+"d7.r.h7": {
+"d": 5.707,
+"h": "defc1b46bd29",
+"who": "ruth"
+},
+"d7.r.h8": {
+"d": 6.407,
+"h": "02d2156414bc",
+"who": "ruth"
+},
+"d7.r.idle": {
+"d": 2.366,
+"h": "ecbc5f9fa598",
+"who": "ruth"
+},
+"d7.ra.sunday": {
+"d": 4.606,
+"h": "dc129571cd96",
+"who": "ray"
+},
+"d7.t.lost": {
+"d": 2.152,
+"h": "78023f5b94a5",
+"who": "tommy"
+},
+"d7.t.none": {
+"d": 2.163,
+"h": "5022a5ff6b0c",
+"who": "tommy"
+},
+"d7.t.won": {
+"d": 3.207,
+"h": "1f1c0348c5ab",
+"who": "tommy"
+},
+"d7.v.bear": {
+"d": 5.606,
+"h": "af91bd3ef2eb",
+"who": "valya"
+},
+"d7.v.bye": {
+"d": 2.458,
+"h": "a7d4f89023f2",
+"who": "valya"
+},
+"d7.v.candle": {
+"d": 5.407,
+"h": "fc9d27ce89eb",
+"who": "valya"
+},
+"d7.v.hear": {
+"d": 1.854,
+"h": "b25307316a3c",
+"who": "valya"
+},
+"d7.v.hello": {
+"d": 6.806,
+"h": "1a5887db5413",
+"who": "valya"
+},
+"d7.v.miss": {
+"d": 3.607,
+"h": "88ed029bc5f3",
+"who": "valya"
+},
+"d7.v.socks": {
+"d": 6.907,
+"h": "1e5a1b926a2b",
+"who": "valya"
+},
+"d7.v.thanks": {
+"d": 4.106,
+"h": "b0c139518ef8",
+"who": "valya"
+},
+"d7.wd.sunday": {
+"d": 3.707,
+"h": "ea10cb06d958",
+"who": "wade"
+},
+"d7.wd.toast": {
+"d": 2.758,
+"h": "9121e4c2d0ca",
+"who": "wade"
+},
+"d7.wt.sunday": {
+"d": 4.207,
+"h": "baa1b1d82fc1",
+"who": "walt"
+},
+"d8.d.chat": {
+"d": 4.606,
+"h": "0f028dc0387c",
+"who": "dolly"
+},
+"d8.d.ray": {
+"d": 6.707,
+"h": "e2f58008bc1a",
+"who": "dolly"
+},
+"d8.dm.grey": {
+"d": 6.306,
+"h": "c6c7aa4d0aae",
+"who": "dmitri"
+},
+"d8.e.chat": {
+"d": 5.106,
+"h": "3dedd2ac7ba2",
+"who": "ellen"
+},
+"d8.e.key": {
+"d": 7.407,
+"h": "2bb15f921911",
+"who": "ellen"
+},
+"d8.e.koshkin": {
+"d": 4.907,
+"h": "b1137b2cdf6b",
+"who": "ellen"
+},
+"d8.ev.alarm": {
+"d": 6.207,
+"h": "dbe4ca37930f",
+"who": "evan"
+},
+"d8.ev.hi": {
+"d": 3.207,
+"h": "9367215e8093",
+"who": "evan"
+},
+"d8.ev.self": {
+"d": 5.007,
+"h": "a6bb81eaeb79",
+"who": "evan"
+},
+"d8.ev.since": {
+"d": 6.007,
+"h": "739676f5cfd1",
+"who": "evan"
+},
+"d8.ev.sleep": {
+"d": 3.406,
+"h": "4ab20609f6cb",
+"who": "evan"
+},
+"d8.f.num": {
+"d": 5.006,
+"h": "56917f03d692",
+"who": "f6"
+},
+"d8.g.after": {
+"d": 4.306,
+"h": "38599cb0b120",
+"who": "gabriel"
+},
+"d8.g.chat": {
+"d": 3.906,
+"h": "7cc3574a6776",
+"who": "gabriel"
+},
+"d8.g.dog": {
+"d": 5.007,
+"h": "750e3b0f553c",
+"who": "grisha"
+},
+"d8.g.keep": {
+"d": 3.406,
+"h": "da428ada2939",
+"who": "grisha"
+},
+"d8.g.listen": {
+"d": 4.607,
+"h": "602947a70ed6",
+"who": "gabriel"
+},
+"d8.g.radio": {
+"d": 7.106,
+"h": "83d738caf00c",
+"who": "gabriel"
+},
+"d8.g.radio2": {
+"d": 4.907,
+"h": "8efb770b1851",
+"who": "gabriel"
+},
+"d8.g.tracker": {
+"d": 4.907,
+"h": "a6e0d88cf675",
+"who": "grisha"
+},
+"d8.gi.chat": {
+"d": 4.707,
+"h": "1a6ae4c0ec13",
+"who": "gideon"
+},
+"d8.h.broke": {
+"d": 3.707,
+"h": "19fed2da43ff",
+"who": "hank"
+},
+"d8.h.chat": {
+"d": 3.807,
+"h": "e10087d45e3d",
+"who": "hank"
+},
+"d8.h.chat2": {
+"d": 3.107,
+"h": "914181caadf2",
+"who": "hank"
+},
+"d8.h.lock": {
+"d": 2.619,
+"h": "7e134cf29d55",
+"who": "hank"
+},
+"d8.h.lock2": {
+"d": 4.207,
+"h": "1e24620c7ee9",
+"who": "hank"
+},
+"d8.l.after": {
+"d": 2.813,
+"h": "5974b9a604c8",
+"who": "lyosha"
+},
+"d8.l.alarm": {
+"d": 5.407,
+"h": "c397c0e48565",
+"who": "lyosha"
+},
+"d8.l.app": {
+"d": 5.207,
+"h": "df71992663a7",
+"who": "lyosha"
+},
+"d8.l.camera": {
+"d": 4.407,
+"h": "5d2eef39b1ec",
+"who": "lyosha"
+},
+"d8.l.done": {
+"d": 5.407,
+"h": "10f80a9afc34",
+"who": "lyosha"
+},
+"d8.l.grey": {
+"d": 4.806,
+"h": "ead574ea0cf0",
+"who": "lyosha"
+},
+"d8.l.keep": {
+"d": 3.707,
+"h": "01155087c6e5",
+"who": "lyosha"
+},
+"d8.l.lights": {
+"d": 5.506,
+"h": "ceec7cb49520",
+"who": "lyosha"
+},
+"d8.l.lights2": {
+"d": 6.207,
+"h": "fe15c368aaf2",
+"who": "lyosha"
+},
+"d8.l.loopalarm": {
+"d": 3.506,
+"h": "e0a72ce6baae",
+"who": "lyosha"
+},
+"d8.l.radio": {
+"d": 5.407,
+"h": "9c975c97a8a0",
+"who": "lyosha"
+},
+"d8.l.radio2": {
+"d": 2.73,
+"h": "99ce02dfce88",
+"who": "lyosha"
+},
+"d8.l.retry": {
+"d": 2.365,
+"h": "44703f6be69b",
+"who": "lyosha"
+},
+"d8.l.tap": {
+"d": 5.407,
+"h": "13337422bf58",
+"who": "lyosha"
+},
+"d8.l.three": {
+"d": 4.407,
+"h": "2c2d7058aa3e",
+"who": "lyosha"
+},
+"d8.l.wifi": {
+"d": 4.407,
+"h": "0b01ae8d4162",
+"who": "lyosha"
+},
+"d8.lo.chat": {
+"d": 5.707,
+"h": "833a665f179b",
+"who": "lou"
+},
+"d8.ly.chat": {
+"d": 5.407,
+"h": "b270a7d2f48e",
+"who": "lyle"
+},
+"d8.m.chat": {
+"d": 5.106,
+"h": "13400c79013a",
+"who": "marta"
+},
+"d8.m.lie": {
+"d": 1.411,
+"h": "7c94feb03a28",
+"who": "marta"
+},
+"d8.m.truth": {
+"d": 5.806,
+"h": "91fb9a2c61a7",
+"who": "marta"
+},
+"d8.n.alarm": {
+"d": 6.707,
+"h": "731e8bfcb3e7",
+"who": "nadia"
+},
+"d8.n.box": {
+"d": 10.207,
+"h": "8ae2c9082dc7",
+"who": "nadia"
+},
+"d8.n.dark": {
+"d": 3.906,
+"h": "fbd85231c25b",
+"who": "nadia"
+},
+"d8.n.day": {
+"d": 6.907,
+"h": "e8a53381bbbb",
+"who": "nadia"
+},
+"d8.n.diner": {
+"d": 6.106,
+"h": "6e1e242cd760",
+"who": "nadia"
+},
+"d8.n.evan": {
+"d": 4.306,
+"h": "7c973a8191e6",
+"who": "nadia"
+},
+"d8.n.evan2": {
+"d": 6.006,
+"h": "18f2cf63d019",
+"who": "nadia"
+},
+"d8.n.grey": {
+"d": 5.907,
+"h": "50fab3b17d44",
+"who": "nadia"
+},
+"d8.n.key": {
+"d": 6.207,
+"h": "02cf15833926",
+"who": "nadia"
+},
+"d8.n.lesson": {
+"d": 4.806,
+"h": "03434a99c45e",
+"who": "nadia"
+},
+"d8.n.lock": {
+"d": 4.506,
+"h": "bfd9f61a5555",
+"who": "nadia"
+},
+"d8.n.morning": {
+"d": 6.606,
+"h": "5d7e12435941",
+"who": "nadia"
+},
+"d8.n.nail": {
+"d": 5.306,
+"h": "95c3d7f93303",
+"who": "nadia"
+},
+"d8.n.night": {
+"d": 5.606,
+"h": "9365e4a9930a",
+"who": "nadia"
+},
+"d8.n.numbers": {
+"d": 6.707,
+"h": "238549b50846",
+"who": "nadia"
+},
+"d8.n.pull": {
+"d": 5.006,
+"h": "fc1a26090c25",
+"who": "nadia"
+},
+"d8.n.quiet": {
+"d": 5.806,
+"h": "62e8d04884f0",
+"who": "nadia"
+},
+"d8.ni.chat": {
+"d": 6.106,
+"h": "c99bfc98bba9",
+"who": "nina"
+},
+"d8.o.hello": {
+"d": 5.307,
+"h": "559f1022e93f",
+"who": "okafor"
+},
+"d8.o.know": {
+"d": 5.707,
+"h": "2fe938090cea",
+"who": "okafor"
+},
+"d8.o.lights": {
+"d": 7.707,
+"h": "41ff4e61b549",
+"who": "okafor"
+},
+"d8.o.plane": {
+"d": 6.606,
+"h": "d323aa81406e",
+"who": "okafor"
+},
+"d8.o.stare": {
+"d": 4.707,
+"h": "efa975c7aa71",
+"who": "okafor"
+},
+"d8.o.tired": {
+"d": 2.921,
+"h": "7fe4d1560027",
+"who": "okafor"
+},
+"d8.o.walk": {
+"d": 6.806,
+"h": "9fffd2d7f4a8",
+"who": "okafor"
+},
+"d8.o.warn": {
+"d": 5.907,
+"h": "15dcc3fd434d",
+"who": "okafor"
+},
+"d8.o.warn2": {
+"d": 4.106,
+"h": "6f5f0fa07901",
+"who": "okafor"
+},
+"d8.o.who": {
+"d": 2.584,
+"h": "ca101875eefb",
+"who": "okafor"
+},
+"d8.o.wouldnt": {
+"d": 2.468,
+"h": "b36bcfccceff",
+"who": "okafor"
+},
+"d8.p.chat": {
+"d": 2.275,
+"h": "ee4d71fb98e3",
+"who": "pearl"
+},
+"d8.p.evan": {
+"d": 5.306,
+"h": "26e9a809b5c7",
+"who": "pearl"
+},
+"d8.p.suv": {
+"d": 5.806,
+"h": "1af2dfc0dd8a",
+"who": "pearl"
+},
+"d8.r.cards": {
+"d": 6.407,
+"h": "d22cf8b63ee6",
+"who": "ruth"
+},
+"d8.r.chat": {
+"d": 7.207,
+"h": "c131a317d30f",
+"who": "ruth"
+},
+"d8.ry.chat": {
+"d": 7.506,
+"h": "b4a9a76f41b5",
+"who": "ray"
+},
+"d8.t.chat": {
+"d": 4.707,
+"h": "21adc1b2c1be",
+"who": "tommy"
+},
+"d8.v.num": {
+"d": 11.707,
+"h": "0dc2527c855d",
+"who": "valya"
+},
+"d8.v.num2": {
+"d": 3.906,
+"h": "90757247fcdd",
+"who": "valya"
+},
+"d8.v.sausage": {
+"d": 4.606,
+"h": "cdacc330216f",
+"who": "valya"
+},
+"d8.w.chat": {
+"d": 4.807,
+"h": "98219e7be5b6",
+"who": "walt"
+},
+"d8.wa.chat": {
+"d": 4.107,
+"h": "1efe71fd688c",
+"who": "wade"
+},
+"d9.d.dog": {
+"d": 7.007,
+"h": "1c58a85af5c4",
+"who": "dolly"
+},
+"d9.d.sign": {
+"d": 5.707,
+"h": "0528a957ae27",
+"who": "dolly"
+},
+"d9.dm.dock": {
+"d": 5.006,
+"h": "72d2e6e2c266",
+"who": "dmitri"
+},
+"d9.dm.night": {
+"d": 9.107,
+"h": "58ba8a8e64e6",
+"who": "dmitri"
+},
+"d9.e.checkup": {
+"d": 6.606,
+"h": "7ae2b098c9bc",
+"who": "ellen"
+},
+"d9.e.sign": {
+"d": 5.006,
+"h": "d881aef21e99",
+"who": "ellen"
+},
+"d9.ev.dog": {
+"d": 4.407,
+"h": "c546ace48819",
+"who": "evan"
+},
+"d9.ev.sign": {
+"d": 5.606,
+"h": "de664fc3422c",
+"who": "evan"
+},
+"d9.g.minister": {
+"d": 2.885,
+"h": "d86977c88117",
+"who": "grisha"
+},
+"d9.g.plain": {
+"d": 4.907,
+"h": "d081390106fa",
+"who": "gabriel"
+},
+"d9.g.sign": {
+"d": 5.806,
+"h": "a3b5f06a23d9",
+"who": "gabriel"
+},
+"d9.gi.chat": {
+"d": 5.106,
+"h": "23be19a9fb66",
+"who": "gideon"
+},
+"d9.gi.filed": {
+"d": 4.907,
+"h": "102de42aa62c",
+"who": "gideon"
+},
+"d9.gi.prep": {
+"d": 3.002,
+"h": "5d942a87f4fe",
+"who": "gideon"
+},
+"d9.gi.resident": {
+"d": 2.921,
+"h": "02925dc328dc",
+"who": "gideon"
+},
+"d9.gi.warn": {
+"d": 2.607,
+"h": "9daafa28fef9",
+"who": "gideon"
+},
+"d9.h.nails": {
+"d": 4.907,
+"h": "4031a2e8915c",
+"who": "hank"
+},
+"d9.h.nails2": {
+"d": 3.307,
+"h": "8f01c4cfb5d2",
+"who": "hank"
+},
+"d9.h.sign": {
+"d": 5.207,
+"h": "3a167bb00322",
+"who": "hank"
+},
+"d9.k.bye": {
+"d": 6.407,
+"h": "c26a4c47d3f5",
+"who": "koshkin"
+},
+"d9.k.fine": {
+"d": 7.907,
+"h": "3d78d280ff38",
+"who": "koshkin"
+},
+"d9.k.phone": {
+"d": 6.806,
+"h": "d3df241ce604",
+"who": "koshkin"
+},
+"d9.k.run": {
+"d": 8.007,
+"h": "f1a1aab81209",
+"who": "koshkin"
+},
+"d9.k.sign": {
+"d": 6.407,
+"h": "e0663e2cee62",
+"who": "koshkin"
+},
+"d9.l.after": {
+"d": 4.707,
+"h": "662ec0e8dbed",
+"who": "lyosha"
+},
+"d9.l.clean": {
+"d": 3.607,
+"h": "4e785ba0dd96",
+"who": "lyosha"
+},
+"d9.l.dock": {
+"d": 5.306,
+"h": "9cd6672b4a4d",
+"who": "lyosha"
+},
+"d9.l.retry": {
+"d": 2.695,
+"h": "628f34a09a00",
+"who": "lyosha"
+},
+"d9.l.who": {
+"d": 5.907,
+"h": "28e2f1999a8d",
+"who": "lyosha"
+},
+"d9.lo.back": {
+"d": 5.207,
+"h": "eb54a23720dc",
+"who": "lou"
+},
+"d9.lo.call": {
+"d": 6.306,
+"h": "af127fccc46c",
+"who": "lou"
+},
+"d9.lo.darts": {
+"d": 5.407,
+"h": "74c7b9c9c5d3",
+"who": "lou"
+},
+"d9.lo.first": {
+"d": 4.907,
+"h": "ab7d22af35cc",
+"who": "lou"
+},
+"d9.lo.idea": {
+"d": 4.407,
+"h": "017c106e1aa6",
+"who": "lou"
+},
+"d9.lo.lose": {
+"d": 4.407,
+"h": "50d72660780f",
+"who": "lou"
+},
+"d9.lo.sit": {
+"d": 2.143,
+"h": "c323a7337a67",
+"who": "lou"
+},
+"d9.lo.win": {
+"d": 4.707,
+"h": "00a62e305c36",
+"who": "lou"
+},
+"d9.ly.cute": {
+"d": 6.707,
+"h": "171210231e35",
+"who": "lyle"
+},
+"d9.m.luck": {
+"d": 2.468,
+"h": "bf3bcecd6af9",
+"who": "marta"
+},
+"d9.m.sign": {
+"d": 3.506,
+"h": "798afab907d2",
+"who": "marta"
+},
+"d9.n.card": {
+"d": 2.969,
+"h": "5069d22fda27",
+"who": "nadia"
+},
+"d9.n.enough": {
+"d": 6.006,
+"h": "c34187183921",
+"who": "nadia"
+},
+"d9.n.filed": {
+"d": 5.106,
+"h": "7a15ed358f8d",
+"who": "nadia"
+},
+"d9.n.go": {
+"d": 5.907,
+"h": "4c746c4feec2",
+"who": "nadia"
+},
+"d9.n.lesson": {
+"d": 3.406,
+"h": "af2ad6efcac2",
+"who": "nadia"
+},
+"d9.n.morning": {
+"d": 4.606,
+"h": "f7aa7155f030",
+"who": "nadia"
+},
+"d9.n.petition": {
+"d": 6.707,
+"h": "999272048faf",
+"who": "nadia"
+},
+"d9.n.posters": {
+"d": 5.606,
+"h": "c684ec301f22",
+"who": "nadia"
+},
+"d9.n.yes": {
+"d": 3.207,
+"h": "33b1a249ba3f",
+"who": "nadia"
+},
+"d9.ni.news1": {
+"d": 6.607,
+"h": "5492f7fd7164",
+"who": "nina"
+},
+"d9.ni.news2": {
+"d": 7.807,
+"h": "9331da48a2c8",
+"who": "nina"
+},
+"d9.ni.news3": {
+"d": 5.306,
+"h": "5ea7707b5c68",
+"who": "nina"
+},
+"d9.ni.posters": {
+"d": 4.606,
+"h": "49e0bbf56193",
+"who": "nina"
+},
+"d9.ni.sign": {
+"d": 3.707,
+"h": "2e90aef8d60e",
+"who": "nina"
+},
+"d9.p.copy": {
+"d": 4.207,
+"h": "d91fc5b64a7c",
+"who": "pearl"
+},
+"d9.p.fax": {
+"d": 5.506,
+"h": "4b49ca184af1",
+"who": "pearl"
+},
+"d9.p.sign": {
+"d": 4.306,
+"h": "4facf4f7348b",
+"who": "pearl"
+},
+"d9.p.stamps": {
+"d": 3.406,
+"h": "068c1e9ae9dd",
+"who": "pearl"
+},
+"d9.r.charter": {
+"d": 9.507,
+"h": "3aef005458cf",
+"who": "ruth"
+},
+"d9.r.chat": {
+"d": 6.007,
+"h": "bebffec4aa13",
+"who": "ruth"
+},
+"d9.r.clips": {
+"d": 7.907,
+"h": "d39f77340c21",
+"who": "ruth"
+},
+"d9.r.fast": {
+"d": 4.007,
+"h": "69a132fa5f94",
+"who": "ruth"
+},
+"d9.r.nominate": {
+"d": 5.106,
+"h": "20a39eefb073",
+"who": "ruth"
+},
+"d9.r.sponsor": {
+"d": 5.507,
+"h": "1debf25e99ca",
+"who": "ruth"
+},
+"d9.ry.after": {
+"d": 3.906,
+"h": "440df25e156d",
+"who": "ray"
+},
+"d9.ry.best": {
+"d": 3.107,
+"h": "30be89e7c7ef",
+"who": "ray"
+},
+"d9.ry.call": {
+"d": 2.584,
+"h": "739ab91cf104",
+"who": "ray"
+},
+"d9.ry.card": {
+"d": 5.207,
+"h": "db80b8f42145",
+"who": "ray"
+},
+"d9.ry.chair": {
+"d": 3.506,
+"h": "f4dfd1459fcc",
+"who": "ray"
+},
+"d9.ry.done": {
+"d": 5.707,
+"h": "19b69d2a2c29",
+"who": "ray"
+},
+"d9.ry.good": {
+"d": 4.207,
+"h": "86f57ddcb54d",
+"who": "ray"
+},
+"d9.ry.hello": {
+"d": 4.407,
+"h": "5f533e1db991",
+"who": "ray"
+},
+"d9.ry.letter": {
+"d": 3.607,
+"h": "2d7af8e231ae",
+"who": "ray"
+},
+"d9.ry.right": {
+"d": 3.807,
+"h": "6a3982883408",
+"who": "ray"
+},
+"d9.ry.sign": {
+"d": 4.106,
+"h": "775a9b71fd7b",
+"who": "ray"
+},
+"d9.ry.vote": {
+"d": 5.607,
+"h": "fc313a4f366d",
+"who": "ray"
+},
+"d9.ry.who": {
+"d": 4.306,
+"h": "c2e89137da1f",
+"who": "ray"
+},
+"d9.ry.why": {
+"d": 5.606,
+"h": "e634b4c8f103",
+"who": "ray"
+},
+"d9.t.sign": {
+"d": 2.671,
+"h": "cf0104d5261d",
+"who": "tommy"
+},
+"d9.v.knit": {
+"d": 5.407,
+"h": "e65f3029ef14",
+"who": "valya"
+},
+"d9.w.law": {
+"d": 4.807,
+"h": "fbcbc24257ba",
+"who": "walt"
+},
+"d9.w.neutral": {
+"d": 3.907,
+"h": "a299c311cfc5",
+"who": "walt"
+},
+"d9.w.ok": {
+"d": 6.606,
+"h": "b58ff5f3c7e7",
+"who": "walt"
+},
+"d9.w.read": {
+"d": 4.407,
+"h": "af64061d9d61",
+"who": "walt"
+},
+"d9.wa.push": {
+"d": 5.106,
+"h": "a3a8842e353e",
+"who": "wade"
+},
+"d9.wa.sign": {
+"d": 4.506,
+"h": "c0d5e9798ab7",
+"who": "wade"
+},
+"d9.wa.thanks": {
+"d": 2.967,
+"h": "eda8ec00fd8e",
+"who": "wade"
+},
+"f.g.behind": {
+"d": 4.006,
+"h": "63978a9356e3",
+"who": "grisha"
+},
+"f.g.border": {
+"d": 5.207,
+"h": "aec8b3a3c211",
+"who": "grisha"
+},
+"f.g.down": {
+"d": 1.31,
+"h": "0e5c7f39adbb",
+"who": "grisha"
+},
+"f.g.flares": {
+"d": 1.674,
+"h": "b74ba9b6bfc8",
+"who": "grisha"
+},
+"f.g.good": {
+"d": 1.689,
+"h": "3ad98e0c2030",
+"who": "grisha"
+},
+"f.g.guards": {
+"d": 4.407,
+"h": "2c9536df27c4",
+"who": "grisha"
+},
+"f.g.hit": {
+"d": 2.175,
+"h": "4f1ce943313c",
+"who": "grisha"
+},
+"f.g.islands": {
+"d": 3.506,
+"h": "e26fbb9248d7",
+"who": "grisha"
+},
+"f.g.land": {
+"d": 4.106,
+"h": "a8b61d41f9d1",
+"who": "grisha"
+},
+"f.g.left": {
+"d": 1.201,
+"h": "56bb9f7e61e8",
+"who": "grisha"
+},
+"f.g.radio1": {
+"d": 3.907,
+"h": "15d284beaf4b",
+"who": "grisha"
+},
+"f.g.right": {
+"d": 1.357,
+"h": "193d0fbb6728",
+"who": "grisha"
+},
+"f.g.up": {
+"d": 1.452,
+"h": "ba6f090d20b8",
+"who": "grisha"
+},
+"f.guard.papers": {
+"d": 5.306,
+"h": "179b13f63b5a",
+"who": "guard"
+},
+"f.guard.stop": {
+"d": 2.888,
+"h": "3d02b5c3d950",
+"who": "guard"
+},
+"f.guard.what": {
+"d": 4.106,
+"h": "459acea84e27",
+"who": "guard"
+},
+"f.guard.what_f": {
+"d": 4.106,
+"h": "18c6cbfcf4b6",
+"who": "guard"
+},
+"folk.f1.18": {
+"d": 3.207,
+"h": "2b6b68ce1b64",
+"who": "f1"
+},
+"folk.f1.19": {
+"d": 3.406,
+"h": "50b8f2f18afd",
+"who": "f1"
+},
+"folk.f1.20": {
+"d": 3.207,
+"h": "6207666d8f89",
+"who": "f1"
+},
+"folk.f2.21": {
+"d": 3.807,
+"h": "4b49d8cf6cef",
+"who": "f2"
+},
+"folk.f2.22": {
+"d": 3.307,
+"h": "7173841861cc",
+"who": "f2"
+},
+"folk.f2.23": {
+"d": 3.307,
+"h": "cbaf4ebc6ccf",
+"who": "f2"
+},
+"folk.f3.24": {
+"d": 4.506,
+"h": "b1e0f75dc682",
+"who": "f3"
+},
+"folk.f3.25": {
+"d": 3.807,
+"h": "33c3160c70a7",
+"who": "f3"
+},
+"folk.f3.26": {
+"d": 3.707,
+"h": "059e52982009",
+"who": "f3"
+},
+"folk.f4.27": {
+"d": 3.506,
+"h": "5276b4fe84d8",
+"who": "f4"
+},
+"folk.f4.28": {
+"d": 3.107,
+"h": "6d860a28406e",
+"who": "f4"
+},
+"folk.f4.29": {
+"d": 1.853,
+"h": "f85c99c16013",
+"who": "f4"
+},
+"folk.f5.30": {
+"d": 3.707,
+"h": "0f9bc39c40f2",
+"who": "f5"
+},
+"folk.f5.31": {
+"d": 3.107,
+"h": "133d27359e95",
+"who": "f5"
+},
+"folk.f5.32": {
+"d": 3.506,
+"h": "c69bc667281d",
+"who": "f5"
+},
+"folk.f6.33": {
+"d": 3.807,
+"h": "5840f0b92f4a",
+"who": "f6"
+},
+"folk.f6.34": {
+"d": 3.607,
+"h": "6f9c077ec47d",
+"who": "f6"
+},
+"folk.f6.35": {
+"d": 3.406,
+"h": "1823c34ae48a",
+"who": "f6"
+},
+"folk.m1.0": {
+"d": 2.398,
+"h": "aaf6544d1b60",
+"who": "m1"
+},
+"folk.m1.1": {
+"d": 2.793,
+"h": "a6c36974e897",
+"who": "m1"
+},
+"folk.m1.2": {
+"d": 3.107,
+"h": "af2a4aa06c6d",
+"who": "m1"
+},
+"folk.m2.3": {
+"d": 2.758,
+"h": "ac970f97f10b",
+"who": "m2"
+},
+"folk.m2.4": {
+"d": 2.781,
+"h": "fa9a69664845",
+"who": "m2"
+},
+"folk.m2.5": {
+"d": 2.758,
+"h": "3427bf00a864",
+"who": "m2"
+},
+"folk.m3.6": {
+"d": 3.307,
+"h": "ca927e5acaa1",
+"who": "m3"
+},
+"folk.m3.7": {
+"d": 2.723,
+"h": "913be70595ec",
+"who": "m3"
+},
+"folk.m3.8": {
+"d": 2.805,
+"h": "dfcde98f0c25",
+"who": "m3"
+},
+"folk.m4.10": {
+"d": 2.027,
+"h": "a339931cdcd8",
+"who": "m4"
+},
+"folk.m4.11": {
+"d": 3.207,
+"h": "3dd9a55761a5",
+"who": "m4"
+},
+"folk.m4.9": {
+"d": 2.874,
+"h": "f9db4d4d445e",
+"who": "m4"
+},
+"folk.m5.12": {
+"d": 2.352,
+"h": "c9d011eb1c1e",
+"who": "m5"
+},
+"folk.m5.13": {
+"d": 3.307,
+"h": "332356484d0e",
+"who": "m5"
+},
+"folk.m5.14": {
+"d": 4.006,
+"h": "3847b68e2e5c",
+"who": "m5"
+},
+"folk.m6.15": {
+"d": 3.607,
+"h": "be5c4f105b8e",
+"who": "m6"
+},
+"folk.m6.16": {
+"d": 3.207,
+"h": "8037f7d0ae3a",
+"who": "m6"
+},
+"folk.m6.17": {
+"d": 2.688,
+"h": "48fe968412c2",
+"who": "m6"
+},
+"j.dmitri": {
+"d": 1.855,
+"h": "defc5cb7bd77",
+"who": "dmitri"
+},
+"j.dmitri2": {
+"d": 0.512,
+"h": "9b76e3c4b918",
+"who": "dmitri"
+},
+"j.grisha": {
+"d": 2.198,
+"h": "d6809edc2af3",
+"who": "grisha"
+},
+"j.ivan": {
+"d": 1.936,
+"h": "6f6550e13cf6",
+"who": "ivan"
+},
+"j.ivan_f": {
+"d": 1.96,
+"h": "dbdf5e67fc7a",
+"who": "ivan"
+},
+"j.lyosha": {
+"d": 5.506,
+"h": "2150c341349c",
+"who": "lyosha"
+},
+"j.nadia": {
+"d": 4.707,
+"h": "aaf302e94b56",
+"who": "nadia"
+},
+"j.valya": {
+"d": 4.006,
+"h": "3df0300a0ae3",
+"who": "valya"
+},
+"lesson.l01": {
+"d": 2.714,
+"h": "ede0eb8f2bbb",
+"who": "lyosha"
+},
+"lesson.l02": {
+"d": 3.707,
+"h": "fd05ea80b151",
+"who": "lyosha"
+},
+"lesson.l03": {
+"d": 3.307,
+"h": "41b7c220cb83",
+"who": "lyosha"
+},
+"lesson.l04": {
+"d": 3.807,
+"h": "3082a9f2231d",
+"who": "lyosha"
+},
+"lesson.l05": {
+"d": 3.107,
+"h": "0d1761358696",
+"who": "lyosha"
+},
+"lesson.l06": {
+"d": 3.707,
+"h": "241f25a72afd",
+"who": "lyosha"
+},
+"lesson.l07": {
+"d": 2.364,
+"h": "0a299953b216",
+"who": "lyosha"
+},
+"lesson.l08": {
+"d": 3.506,
+"h": "3fc02c07d6a6",
+"who": "lyosha"
+},
+"lesson.l09": {
+"d": 3.406,
+"h": "be7219b14f0f",
+"who": "lyosha"
+},
+"lesson.l10": {
+"d": 3.406,
+"h": "14ec2b3dac77",
+"who": "lyosha"
+},
+"lesson.l11": {
+"d": 3.906,
+"h": "b8388bb59a28",
+"who": "lyosha"
+},
+"lesson.l12": {
+"d": 4.907,
+"h": "eb24bd9e7634",
+"who": "lyosha"
+},
+"lesson.l13": {
+"d": 2.53,
+"h": "0f273fbf28cb",
+"who": "lyosha"
+},
+"lesson.l14": {
+"d": 3.406,
+"h": "275810004ce6",
+"who": "lyosha"
+},
 "p.grisha.wind": {
 "d": 2.542,
 "h": "15c744907af6",
@@ -88,6 +6483,2236 @@
 "d": 8.507,
 "h": "6a8c2ce16d7a",
 "who": "pilot"
+},
+"sf.d.card3": {
+"d": 5.207,
+"h": "03926190bde2",
+"who": "dmitri"
+},
+"sf.dolly.card": {
+"d": 7.907,
+"h": "d5cd2179a0c0",
+"who": "dolly"
+},
+"sf.dolly.g0": {
+"d": 2.863,
+"h": "7591277598e0",
+"who": "dolly"
+},
+"sf.dolly.g1": {
+"d": 3.906,
+"h": "634ae2306fb8",
+"who": "dolly"
+},
+"sf.dolly.g2": {
+"d": 4.407,
+"h": "8aaee4ad7d56",
+"who": "dolly"
+},
+"sf.dolly.gift1": {
+"d": 6.006,
+"h": "b6132d26a3de",
+"who": "dolly"
+},
+"sf.dolly.gift2": {
+"d": 4.207,
+"h": "0038a9b4b49b",
+"who": "dolly"
+},
+"sf.dolly.gift3": {
+"d": 4.606,
+"h": "93df6d1e3e2d",
+"who": "dolly"
+},
+"sf.dolly.q1": {
+"d": 8.306,
+"h": "e2dac2c17586",
+"who": "dolly"
+},
+"sf.dolly.q2": {
+"d": 8.707,
+"h": "fd8e0091b35e",
+"who": "dolly"
+},
+"sf.dolly.q3": {
+"d": 5.006,
+"h": "375d9858cbaf",
+"who": "dolly"
+},
+"sf.dolly.q4": {
+"d": 6.006,
+"h": "501cf6a0a0f2",
+"who": "dolly"
+},
+"sf.dolly.q5": {
+"d": 6.006,
+"h": "98a728a95c1c",
+"who": "dolly"
+},
+"sf.dolly.q6": {
+"d": 9.107,
+"h": "4a9aa02a848d",
+"who": "dolly"
+},
+"sf.dolly.q7": {
+"d": 6.407,
+"h": "2733a13bae9f",
+"who": "dolly"
+},
+"sf.dolly.q8": {
+"d": 7.007,
+"h": "9b20159d830d",
+"who": "dolly"
+},
+"sf.dolly.t0": {
+"d": 7.806,
+"h": "81ee5fc8c8ba",
+"who": "dolly"
+},
+"sf.dolly.t1": {
+"d": 5.006,
+"h": "1bf7d7f297c1",
+"who": "dolly"
+},
+"sf.dolly.t2": {
+"d": 6.106,
+"h": "d702acec6fc7",
+"who": "dolly"
+},
+"sf.dolly.t3": {
+"d": 6.506,
+"h": "2b63619a57ea",
+"who": "dolly"
+},
+"sf.dolly.t4": {
+"d": 6.207,
+"h": "3ccb302b2914",
+"who": "dolly"
+},
+"sf.ellen.g0": {
+"d": 3.607,
+"h": "d04ea66e54d6",
+"who": "ellen"
+},
+"sf.ellen.g1": {
+"d": 4.006,
+"h": "d96bed36e370",
+"who": "ellen"
+},
+"sf.ellen.g2": {
+"d": 3.907,
+"h": "7499c9c16480",
+"who": "ellen"
+},
+"sf.ellen.gift1": {
+"d": 4.407,
+"h": "51d20ddef978",
+"who": "ellen"
+},
+"sf.ellen.gift2": {
+"d": 2.77,
+"h": "289b3b1792ed",
+"who": "ellen"
+},
+"sf.ellen.gift3": {
+"d": 4.307,
+"h": "2ced2a38ad83",
+"who": "ellen"
+},
+"sf.ellen.q1": {
+"d": 8.306,
+"h": "d706e5d430d5",
+"who": "ellen"
+},
+"sf.ellen.q2": {
+"d": 6.606,
+"h": "f07c1d02f8c8",
+"who": "ellen"
+},
+"sf.ellen.q3": {
+"d": 7.307,
+"h": "bd65de326871",
+"who": "ellen"
+},
+"sf.ellen.q4": {
+"d": 6.207,
+"h": "55a1f157243e",
+"who": "ellen"
+},
+"sf.ellen.q5": {
+"d": 4.106,
+"h": "44bd21e97873",
+"who": "ellen"
+},
+"sf.ellen.q6": {
+"d": 4.207,
+"h": "0e5e73931fb9",
+"who": "ellen"
+},
+"sf.ellen.q6b": {
+"d": 3.607,
+"h": "dbf14c969a3b",
+"who": "ellen"
+},
+"sf.ellen.q7": {
+"d": 4.806,
+"h": "ac962f2ae919",
+"who": "ellen"
+},
+"sf.ellen.t0": {
+"d": 6.306,
+"h": "312bb1ce280b",
+"who": "ellen"
+},
+"sf.ellen.t1": {
+"d": 6.407,
+"h": "4d1c023ce41b",
+"who": "ellen"
+},
+"sf.ellen.t2": {
+"d": 6.707,
+"h": "a66a59f8b643",
+"who": "ellen"
+},
+"sf.ellen.t3": {
+"d": 6.306,
+"h": "9c60c3a333d1",
+"who": "ellen"
+},
+"sf.ellen.t4": {
+"d": 6.207,
+"h": "5727e6fea349",
+"who": "ellen"
+},
+"sf.evan.g0": {
+"d": 2.747,
+"h": "8edf09caf44e",
+"who": "evan"
+},
+"sf.evan.g1": {
+"d": 4.007,
+"h": "ec5f37cfa0d7",
+"who": "evan"
+},
+"sf.evan.g2": {
+"d": 3.207,
+"h": "ea03bc1f47d5",
+"who": "evan"
+},
+"sf.evan.gift": {
+"d": 6.106,
+"h": "4acec76a80e8",
+"who": "evan"
+},
+"sf.evan.q1": {
+"d": 4.907,
+"h": "e13e20ca3a41",
+"who": "evan"
+},
+"sf.evan.q1a": {
+"d": 4.507,
+"h": "98e4e24796af",
+"who": "evan"
+},
+"sf.evan.q1b": {
+"d": 4.307,
+"h": "19d4f27ce5a1",
+"who": "evan"
+},
+"sf.evan.q2": {
+"d": 5.707,
+"h": "9f285bce8259",
+"who": "evan"
+},
+"sf.evan.q3": {
+"d": 6.407,
+"h": "cd26548ffa5c",
+"who": "evan"
+},
+"sf.evan.t0": {
+"d": 6.207,
+"h": "1a07c224b9f6",
+"who": "evan"
+},
+"sf.evan.t1": {
+"d": 5.506,
+"h": "23c1775c8ba9",
+"who": "evan"
+},
+"sf.evan.t2": {
+"d": 6.107,
+"h": "5cc738f45c7f",
+"who": "evan"
+},
+"sf.evan.t3": {
+"d": 6.606,
+"h": "601fe89319ca",
+"who": "evan"
+},
+"sf.evan.t4": {
+"d": 6.707,
+"h": "c156b335e964",
+"who": "evan"
+},
+"sf.g.race": {
+"d": 2.909,
+"h": "edf79aeb2a71",
+"who": "grisha"
+},
+"sf.g.wade1": {
+"d": 4.806,
+"h": "d2421081ee84",
+"who": "grisha"
+},
+"sf.g.wade2": {
+"d": 4.806,
+"h": "ea33b3e63281",
+"who": "grisha"
+},
+"sf.g.wade3": {
+"d": 4.407,
+"h": "94bd4fd81e61",
+"who": "grisha"
+},
+"sf.gabriel.bell": {
+"d": 6.407,
+"h": "996207ed7af7",
+"who": "gabriel"
+},
+"sf.gabriel.chess": {
+"d": 5.506,
+"h": "7073a61ef9cc",
+"who": "gabriel"
+},
+"sf.gabriel.chess2": {
+"d": 6.407,
+"h": "4b81012ba47e",
+"who": "gabriel"
+},
+"sf.gabriel.chowder": {
+"d": 6.707,
+"h": "684d163ab324",
+"who": "gabriel"
+},
+"sf.gabriel.g0": {
+"d": 3.807,
+"h": "e06f6e9d020b",
+"who": "gabriel"
+},
+"sf.gabriel.g1": {
+"d": 4.207,
+"h": "a023d915e5f5",
+"who": "gabriel"
+},
+"sf.gabriel.g2": {
+"d": 4.806,
+"h": "28f49979ab83",
+"who": "gabriel"
+},
+"sf.gabriel.gift1": {
+"d": 5.506,
+"h": "3924ef40257d",
+"who": "gabriel"
+},
+"sf.gabriel.gift2": {
+"d": 5.306,
+"h": "4aedc1ce7813",
+"who": "gabriel"
+},
+"sf.gabriel.hymn": {
+"d": 7.907,
+"h": "84fab24ae51d",
+"who": "gabriel"
+},
+"sf.gabriel.hymn2": {
+"d": 7.407,
+"h": "fc621403753b",
+"who": "gabriel"
+},
+"sf.gabriel.icon": {
+"d": 6.907,
+"h": "be435b5fb0ed",
+"who": "gabriel"
+},
+"sf.gabriel.icon2": {
+"d": 5.407,
+"h": "237f6ae982be",
+"who": "gabriel"
+},
+"sf.gabriel.lose": {
+"d": 4.006,
+"h": "1a4a454e2ce2",
+"who": "gabriel"
+},
+"sf.gabriel.parcel": {
+"d": 5.006,
+"h": "fc30e4959890",
+"who": "gabriel"
+},
+"sf.gabriel.t0": {
+"d": 7.907,
+"h": "2ae5e2324950",
+"who": "gabriel"
+},
+"sf.gabriel.t1": {
+"d": 5.707,
+"h": "16e0eb990442",
+"who": "gabriel"
+},
+"sf.gabriel.t2": {
+"d": 7.106,
+"h": "0a254d588728",
+"who": "gabriel"
+},
+"sf.gabriel.t3": {
+"d": 5.107,
+"h": "22d41eef2933",
+"who": "gabriel"
+},
+"sf.gabriel.t4": {
+"d": 5.607,
+"h": "2ac118034e21",
+"who": "gabriel"
+},
+"sf.gabriel.win": {
+"d": 5.006,
+"h": "09aec9e26b7b",
+"who": "gabriel"
+},
+"sf.gideon.g0": {
+"d": 1.574,
+"h": "887d0bc99fd0",
+"who": "gideon"
+},
+"sf.gideon.g1": {
+"d": 2.816,
+"h": "aafefbaca809",
+"who": "gideon"
+},
+"sf.gideon.gift": {
+"d": 4.207,
+"h": "ce04fee6700f",
+"who": "gideon"
+},
+"sf.gideon.t0": {
+"d": 5.606,
+"h": "54572dfbc197",
+"who": "gideon"
+},
+"sf.gideon.t1": {
+"d": 4.807,
+"h": "c0ecab8011c1",
+"who": "gideon"
+},
+"sf.gideon.t2": {
+"d": 4.907,
+"h": "90d038df840c",
+"who": "gideon"
+},
+"sf.halloran.g0": {
+"d": 4.006,
+"h": "97abceda8f17",
+"who": "halloran"
+},
+"sf.halloran.gift": {
+"d": 1.339,
+"h": "a4f7439d0701",
+"who": "halloran"
+},
+"sf.halloran.t0": {
+"d": 4.606,
+"h": "5bb5921f6e95",
+"who": "halloran"
+},
+"sf.halloran.t1": {
+"d": 2.866,
+"h": "4c9c7714113e",
+"who": "halloran"
+},
+"sf.hank.card": {
+"d": 6.806,
+"h": "19cba4d7028f",
+"who": "hank"
+},
+"sf.hank.chowder": {
+"d": 4.207,
+"h": "9c28a07dbd39",
+"who": "hank"
+},
+"sf.hank.g0": {
+"d": 3.207,
+"h": "2fe54eb87b6d",
+"who": "hank"
+},
+"sf.hank.g1": {
+"d": 4.307,
+"h": "325c20b65d7a",
+"who": "hank"
+},
+"sf.hank.g2": {
+"d": 3.607,
+"h": "ddb3ca2610e5",
+"who": "hank"
+},
+"sf.hank.gift1": {
+"d": 4.907,
+"h": "f5d92501dfbe",
+"who": "hank"
+},
+"sf.hank.gift2": {
+"d": 3.207,
+"h": "e51de7ce10f4",
+"who": "hank"
+},
+"sf.hank.gift3": {
+"d": 4.207,
+"h": "d14337a80459",
+"who": "hank"
+},
+"sf.hank.parcel": {
+"d": 3.607,
+"h": "12db32150b87",
+"who": "hank"
+},
+"sf.hank.pump": {
+"d": 5.006,
+"h": "a50dde9b5dfa",
+"who": "hank"
+},
+"sf.hank.q1": {
+"d": 9.306,
+"h": "1477e70cb63a",
+"who": "hank"
+},
+"sf.hank.q2": {
+"d": 5.806,
+"h": "c73003efdd2b",
+"who": "hank"
+},
+"sf.hank.q3": {
+"d": 7.707,
+"h": "7e63ac494a14",
+"who": "hank"
+},
+"sf.hank.q3b": {
+"d": 5.907,
+"h": "41a45d326b20",
+"who": "hank"
+},
+"sf.hank.q4": {
+"d": 5.707,
+"h": "28e7b953f97b",
+"who": "hank"
+},
+"sf.hank.q5": {
+"d": 5.506,
+"h": "7d49d7304176",
+"who": "hank"
+},
+"sf.hank.q6": {
+"d": 3.207,
+"h": "c7c53485818e",
+"who": "hank"
+},
+"sf.hank.q7": {
+"d": 6.506,
+"h": "0f290b78c4cd",
+"who": "hank"
+},
+"sf.hank.q8": {
+"d": 5.106,
+"h": "75ac639d5423",
+"who": "hank"
+},
+"sf.hank.t0": {
+"d": 3.807,
+"h": "e7647156c9f4",
+"who": "hank"
+},
+"sf.hank.t1": {
+"d": 5.907,
+"h": "047e537a9528",
+"who": "hank"
+},
+"sf.hank.t2": {
+"d": 6.106,
+"h": "c0eabe9e59c9",
+"who": "hank"
+},
+"sf.hank.t3": {
+"d": 6.306,
+"h": "340d20566b5c",
+"who": "hank"
+},
+"sf.hank.t4": {
+"d": 5.006,
+"h": "c55c7fd82fb6",
+"who": "hank"
+},
+"sf.i.marta": {
+"d": 2.527,
+"h": "76c556b34341",
+"who": "ivan"
+},
+"sf.koshkin.g0": {
+"d": 3.707,
+"h": "6ebb2106c932",
+"who": "koshkin"
+},
+"sf.koshkin.g1": {
+"d": 4.606,
+"h": "156ce5a72ca8",
+"who": "koshkin"
+},
+"sf.koshkin.g2": {
+"d": 4.107,
+"h": "c4e7d1ff205e",
+"who": "koshkin"
+},
+"sf.koshkin.gift1": {
+"d": 6.507,
+"h": "c66451d3b300",
+"who": "koshkin"
+},
+"sf.koshkin.gift2": {
+"d": 4.506,
+"h": "1c78a17f6a67",
+"who": "koshkin"
+},
+"sf.koshkin.gift3": {
+"d": 6.407,
+"h": "cc23c06e6fad",
+"who": "koshkin"
+},
+"sf.koshkin.t0": {
+"d": 8.707,
+"h": "4074be0dfcc2",
+"who": "koshkin"
+},
+"sf.koshkin.t1": {
+"d": 7.407,
+"h": "9636a03227d5",
+"who": "koshkin"
+},
+"sf.koshkin.t2": {
+"d": 7.707,
+"h": "3d06cc0e9ec7",
+"who": "koshkin"
+},
+"sf.koshkin.t3": {
+"d": 9.507,
+"h": "e08326022ca6",
+"who": "koshkin"
+},
+"sf.koshkin.t4": {
+"d": 8.107,
+"h": "12456211760f",
+"who": "koshkin"
+},
+"sf.l.card5": {
+"d": 3.307,
+"h": "fcf24615401e",
+"who": "lyosha"
+},
+"sf.l.evan": {
+"d": 2.731,
+"h": "8f75d7b61bf8",
+"who": "lyosha"
+},
+"sf.l.photo": {
+"d": 4.707,
+"h": "405929d48935",
+"who": "lyosha"
+},
+"sf.lou.cuplose": {
+"d": 4.606,
+"h": "daecdca056f8",
+"who": "lou"
+},
+"sf.lou.cupwin": {
+"d": 6.106,
+"h": "ceb64d2e35b2",
+"who": "lou"
+},
+"sf.lou.dlose": {
+"d": 4.506,
+"h": "c394fa3cd781",
+"who": "lou"
+},
+"sf.lou.dwin": {
+"d": 5.306,
+"h": "1d9617c9f486",
+"who": "lou"
+},
+"sf.lou.g0": {
+"d": 4.207,
+"h": "48580fc6eaff",
+"who": "lou"
+},
+"sf.lou.g1": {
+"d": 3.307,
+"h": "d23f01fbfbfe",
+"who": "lou"
+},
+"sf.lou.g2": {
+"d": 4.306,
+"h": "a5ebe19089b0",
+"who": "lou"
+},
+"sf.lou.gift1": {
+"d": 4.907,
+"h": "559d41cb141b",
+"who": "lou"
+},
+"sf.lou.gift2": {
+"d": 4.006,
+"h": "47bd160967e1",
+"who": "lou"
+},
+"sf.lou.gift3": {
+"d": 4.907,
+"h": "5155e9097f46",
+"who": "lou"
+},
+"sf.lou.q1": {
+"d": 6.207,
+"h": "fa99380c1a9f",
+"who": "lou"
+},
+"sf.lou.q3": {
+"d": 5.907,
+"h": "86bc007c6241",
+"who": "lou"
+},
+"sf.lou.ray": {
+"d": 4.506,
+"h": "d68634f52122",
+"who": "lou"
+},
+"sf.lou.right": {
+"d": 0.599,
+"h": "aaef0a1f8435",
+"who": "lou"
+},
+"sf.lou.t0": {
+"d": 5.407,
+"h": "239b6a824b73",
+"who": "lou"
+},
+"sf.lou.t1": {
+"d": 7.607,
+"h": "96ec0372a692",
+"who": "lou"
+},
+"sf.lou.t2": {
+"d": 7.207,
+"h": "9217f411fc0e",
+"who": "lou"
+},
+"sf.lou.t3": {
+"d": 6.806,
+"h": "453f2f0ef992",
+"who": "lou"
+},
+"sf.lou.t4": {
+"d": 6.907,
+"h": "c7a4724adf4b",
+"who": "lou"
+},
+"sf.lou.tmid": {
+"d": 4.507,
+"h": "58b456d16ac9",
+"who": "lou"
+},
+"sf.lou.tq1": {
+"d": 3.507,
+"h": "90b044083f65",
+"who": "lou"
+},
+"sf.lou.tq2": {
+"d": 2.723,
+"h": "db0e6cbaddf3",
+"who": "lou"
+},
+"sf.lou.tq3": {
+"d": 3.607,
+"h": "de39bb9ef7c2",
+"who": "lou"
+},
+"sf.lou.trivia": {
+"d": 5.507,
+"h": "e9bcb9138b14",
+"who": "lou"
+},
+"sf.lou.twin": {
+"d": 5.606,
+"h": "7f022371e450",
+"who": "lou"
+},
+"sf.lou.wrong": {
+"d": 0.738,
+"h": "49b31f59a86c",
+"who": "lou"
+},
+"sf.lyle.card": {
+"d": 5.506,
+"h": "7af7c3915a9b",
+"who": "lyle"
+},
+"sf.lyle.dark": {
+"d": 5.006,
+"h": "dddc31d71d7c",
+"who": "lyle"
+},
+"sf.lyle.deny": {
+"d": 5.807,
+"h": "41076f70346f",
+"who": "lyle"
+},
+"sf.lyle.free": {
+"d": 4.006,
+"h": "0211f9d4833c",
+"who": "lyle"
+},
+"sf.lyle.g0": {
+"d": 5.806,
+"h": "e1e2839b64cd",
+"who": "lyle"
+},
+"sf.lyle.g1": {
+"d": 5.207,
+"h": "2be9bb572381",
+"who": "lyle"
+},
+"sf.lyle.g2": {
+"d": 4.106,
+"h": "b92bd23322e7",
+"who": "lyle"
+},
+"sf.lyle.gift1": {
+"d": 4.807,
+"h": "45d95b648d72",
+"who": "lyle"
+},
+"sf.lyle.gift2": {
+"d": 3.506,
+"h": "3185cd6b61a9",
+"who": "lyle"
+},
+"sf.lyle.gift3": {
+"d": 4.407,
+"h": "79b3f64e0be7",
+"who": "lyle"
+},
+"sf.lyle.q1": {
+"d": 5.707,
+"h": "765a58ef579a",
+"who": "lyle"
+},
+"sf.lyle.q2": {
+"d": 5.807,
+"h": "8f42e7a4fd7a",
+"who": "lyle"
+},
+"sf.lyle.q3": {
+"d": 7.807,
+"h": "1f6a57ef2a5d",
+"who": "lyle"
+},
+"sf.lyle.q4": {
+"d": 7.606,
+"h": "c4ad848f26c7",
+"who": "lyle"
+},
+"sf.lyle.q5": {
+"d": 7.207,
+"h": "27dad54a08db",
+"who": "lyle"
+},
+"sf.lyle.t0": {
+"d": 6.106,
+"h": "c5d060167c63",
+"who": "lyle"
+},
+"sf.lyle.t1": {
+"d": 5.006,
+"h": "97ae5ed80bcd",
+"who": "lyle"
+},
+"sf.lyle.t2": {
+"d": 6.506,
+"h": "dba19e13065e",
+"who": "lyle"
+},
+"sf.lyle.t3": {
+"d": 5.407,
+"h": "183154ff83d1",
+"who": "lyle"
+},
+"sf.lyle.t4": {
+"d": 4.007,
+"h": "296b18254ba1",
+"who": "lyle"
+},
+"sf.marta.g0": {
+"d": 1.423,
+"h": "f827d2f168e7",
+"who": "marta"
+},
+"sf.marta.g1": {
+"d": 3.406,
+"h": "1151093e1e78",
+"who": "marta"
+},
+"sf.marta.g2": {
+"d": 2.874,
+"h": "4b962e71e0a6",
+"who": "marta"
+},
+"sf.marta.gift1": {
+"d": 4.407,
+"h": "43f264b077d3",
+"who": "marta"
+},
+"sf.marta.gift2": {
+"d": 4.006,
+"h": "1e437f7b098b",
+"who": "marta"
+},
+"sf.marta.gift3": {
+"d": 2.607,
+"h": "7e5645312e06",
+"who": "marta"
+},
+"sf.marta.nina": {
+"d": 2.932,
+"h": "245c5108b7d6",
+"who": "marta"
+},
+"sf.marta.q1": {
+"d": 6.907,
+"h": "d3c7f30b7421",
+"who": "marta"
+},
+"sf.marta.q2": {
+"d": 6.207,
+"h": "a5ccb9bcb95f",
+"who": "marta"
+},
+"sf.marta.q3": {
+"d": 7.106,
+"h": "dff84561558c",
+"who": "marta"
+},
+"sf.marta.q4": {
+"d": 7.407,
+"h": "0d9b61f67fa9",
+"who": "marta"
+},
+"sf.marta.t0": {
+"d": 4.507,
+"h": "7353ff5cc422",
+"who": "marta"
+},
+"sf.marta.t1": {
+"d": 4.807,
+"h": "3e9386665fb9",
+"who": "marta"
+},
+"sf.marta.t2": {
+"d": 5.106,
+"h": "7d9b80f50f07",
+"who": "marta"
+},
+"sf.marta.t3": {
+"d": 5.307,
+"h": "6d3045c53f84",
+"who": "marta"
+},
+"sf.marta.t4": {
+"d": 5.907,
+"h": "b84d97e3725d",
+"who": "marta"
+},
+"sf.n.card1": {
+"d": 4.006,
+"h": "85d1718bc5c0",
+"who": "nadia"
+},
+"sf.n.card2": {
+"d": 3.707,
+"h": "994eacc5f997",
+"who": "nadia"
+},
+"sf.n.dolly": {
+"d": 4.006,
+"h": "faf4f2716d5d",
+"who": "nadia"
+},
+"sf.n.evan": {
+"d": 4.707,
+"h": "3d0f2bb1985a",
+"who": "nadia"
+},
+"sf.n.lyle": {
+"d": 4.407,
+"h": "b41b2e35f2b7",
+"who": "nadia"
+},
+"sf.n.marta": {
+"d": 2.961,
+"h": "3e3cbbd42d9d",
+"who": "nadia"
+},
+"sf.n.nina": {
+"d": 5.106,
+"h": "ffac9ba8f064",
+"who": "nadia"
+},
+"sf.n.pearl1": {
+"d": 6.106,
+"h": "f176b69cbbae",
+"who": "nadia"
+},
+"sf.n.pearl2": {
+"d": 5.506,
+"h": "ca92472a0cad",
+"who": "nadia"
+},
+"sf.n.pearl3": {
+"d": 3.807,
+"h": "29501d2961b2",
+"who": "nadia"
+},
+"sf.n.pearl4": {
+"d": 3.707,
+"h": "ce03cb691146",
+"who": "nadia"
+},
+"sf.n.survey": {
+"d": 3.406,
+"h": "0ca958614817",
+"who": "nadia"
+},
+"sf.n.tickets": {
+"d": 2.944,
+"h": "f8b69921569c",
+"who": "nadia"
+},
+"sf.n.wade": {
+"d": 5.407,
+"h": "c37cd97ce3c2",
+"who": "nadia"
+},
+"sf.nina.chowder": {
+"d": 5.407,
+"h": "97a68c610a32",
+"who": "nina"
+},
+"sf.nina.g0": {
+"d": 3.307,
+"h": "d439ee8d5865",
+"who": "nina"
+},
+"sf.nina.g1": {
+"d": 3.406,
+"h": "29ea7ce8c82f",
+"who": "nina"
+},
+"sf.nina.g2": {
+"d": 4.707,
+"h": "c8b5d4ee658e",
+"who": "nina"
+},
+"sf.nina.gift1": {
+"d": 3.807,
+"h": "cca311d8cf88",
+"who": "nina"
+},
+"sf.nina.gift2": {
+"d": 4.306,
+"h": "71e2cfb9ba8c",
+"who": "nina"
+},
+"sf.nina.gift3": {
+"d": 4.207,
+"h": "321a7b2a70b9",
+"who": "nina"
+},
+"sf.nina.q1": {
+"d": 5.807,
+"h": "420b8e375bf8",
+"who": "nina"
+},
+"sf.nina.q2": {
+"d": 6.407,
+"h": "7039cf6aa257",
+"who": "nina"
+},
+"sf.nina.q3": {
+"d": 4.107,
+"h": "2a0b53f073c2",
+"who": "nina"
+},
+"sf.nina.q4": {
+"d": 5.806,
+"h": "7a8f61dfa324",
+"who": "nina"
+},
+"sf.nina.q5": {
+"d": 5.306,
+"h": "1a88279de1c4",
+"who": "nina"
+},
+"sf.nina.q6": {
+"d": 5.907,
+"h": "51be9e660657",
+"who": "nina"
+},
+"sf.nina.t0": {
+"d": 6.506,
+"h": "48bfb92a39ea",
+"who": "nina"
+},
+"sf.nina.t1": {
+"d": 5.506,
+"h": "99cb6abd39e5",
+"who": "nina"
+},
+"sf.nina.t2": {
+"d": 3.807,
+"h": "a60a102a5ed5",
+"who": "nina"
+},
+"sf.nina.t3": {
+"d": 5.207,
+"h": "75d52a214bf3",
+"who": "nina"
+},
+"sf.nina.t4": {
+"d": 5.007,
+"h": "ad6d3748fbda",
+"who": "nina"
+},
+"sf.okafor.g0": {
+"d": 1.493,
+"h": "f4c7ccdba542",
+"who": "okafor"
+},
+"sf.okafor.g1": {
+"d": 6.407,
+"h": "e81b9b62c0ed",
+"who": "okafor"
+},
+"sf.okafor.gift": {
+"d": 4.006,
+"h": "bc00346988c7",
+"who": "okafor"
+},
+"sf.okafor.t0": {
+"d": 2.433,
+"h": "0882c206bfc1",
+"who": "okafor"
+},
+"sf.okafor.t1": {
+"d": 6.307,
+"h": "a381f3da24c2",
+"who": "okafor"
+},
+"sf.okafor.t2": {
+"d": 7.606,
+"h": "608784e5353c",
+"who": "okafor"
+},
+"sf.okafor.t3": {
+"d": 6.807,
+"h": "c2470cefaa6c",
+"who": "okafor"
+},
+"sf.pearl.chowder": {
+"d": 4.707,
+"h": "fafd38349096",
+"who": "pearl"
+},
+"sf.pearl.danny": {
+"d": 6.006,
+"h": "1cec6aef9b6b",
+"who": "pearl"
+},
+"sf.pearl.g0": {
+"d": 4.506,
+"h": "911fdf3ba6f7",
+"who": "pearl"
+},
+"sf.pearl.g1": {
+"d": 4.306,
+"h": "29c4009b50fd",
+"who": "pearl"
+},
+"sf.pearl.g2": {
+"d": 3.707,
+"h": "d664e0d36bd1",
+"who": "pearl"
+},
+"sf.pearl.gift1": {
+"d": 4.407,
+"h": "b7a64cbdcc12",
+"who": "pearl"
+},
+"sf.pearl.gift2": {
+"d": 4.106,
+"h": "c91651597a3a",
+"who": "pearl"
+},
+"sf.pearl.gift3": {
+"d": 3.707,
+"h": "1393595db96d",
+"who": "pearl"
+},
+"sf.pearl.nina": {
+"d": 4.907,
+"h": "39e11d8cb186",
+"who": "pearl"
+},
+"sf.pearl.q1": {
+"d": 7.207,
+"h": "e91f8ab3e9ba",
+"who": "pearl"
+},
+"sf.pearl.q2": {
+"d": 7.207,
+"h": "50fdff17faea",
+"who": "pearl"
+},
+"sf.pearl.q3": {
+"d": 7.407,
+"h": "f4f3dbdd5106",
+"who": "pearl"
+},
+"sf.pearl.q4": {
+"d": 7.506,
+"h": "d62130f918da",
+"who": "pearl"
+},
+"sf.pearl.q5": {
+"d": 5.606,
+"h": "3629cabdc170",
+"who": "pearl"
+},
+"sf.pearl.t0": {
+"d": 5.707,
+"h": "26dd20c2728b",
+"who": "pearl"
+},
+"sf.pearl.t1": {
+"d": 5.506,
+"h": "1906a80c8642",
+"who": "pearl"
+},
+"sf.pearl.t2": {
+"d": 6.606,
+"h": "fe829396cd70",
+"who": "pearl"
+},
+"sf.pearl.t3": {
+"d": 4.807,
+"h": "fe5a53a8177e",
+"who": "pearl"
+},
+"sf.pearl.t4": {
+"d": 4.307,
+"h": "789391992989",
+"who": "pearl"
+},
+"sf.ray.card": {
+"d": 6.907,
+"h": "e043bdf90440",
+"who": "ray"
+},
+"sf.ray.g0": {
+"d": 2.735,
+"h": "b4f551153d39",
+"who": "ray"
+},
+"sf.ray.g1": {
+"d": 2.607,
+"h": "081c4ac6cd4d",
+"who": "ray"
+},
+"sf.ray.g2": {
+"d": 2.596,
+"h": "0df5ad85968d",
+"who": "ray"
+},
+"sf.ray.gift1": {
+"d": 4.407,
+"h": "73bc70b11ceb",
+"who": "ray"
+},
+"sf.ray.gift2": {
+"d": 2.596,
+"h": "a33c96d9a4d0",
+"who": "ray"
+},
+"sf.ray.gift3": {
+"d": 3.707,
+"h": "12e7fae7d7ba",
+"who": "ray"
+},
+"sf.ray.q1": {
+"d": 9.806,
+"h": "cc47cc6ae9af",
+"who": "ray"
+},
+"sf.ray.q2": {
+"d": 6.606,
+"h": "2659a0431590",
+"who": "ray"
+},
+"sf.ray.q3": {
+"d": 4.507,
+"h": "3f812543cb59",
+"who": "ray"
+},
+"sf.ray.q4": {
+"d": 7.106,
+"h": "0da035de842d",
+"who": "ray"
+},
+"sf.ray.q5": {
+"d": 4.707,
+"h": "aa41f45bbcc0",
+"who": "ray"
+},
+"sf.ray.q6": {
+"d": 6.207,
+"h": "3c345c9b2f18",
+"who": "ray"
+},
+"sf.ray.q7": {
+"d": 6.306,
+"h": "a50660537df1",
+"who": "ray"
+},
+"sf.ray.t0": {
+"d": 6.106,
+"h": "3d881adf9f9a",
+"who": "ray"
+},
+"sf.ray.t1": {
+"d": 5.407,
+"h": "fab62b6acdd9",
+"who": "ray"
+},
+"sf.ray.t2": {
+"d": 5.806,
+"h": "54494903d192",
+"who": "ray"
+},
+"sf.ray.t3": {
+"d": 7.006,
+"h": "a2e4e5bd3978",
+"who": "ray"
+},
+"sf.ray.t4": {
+"d": 6.207,
+"h": "1ed8ee9e2079",
+"who": "ray"
+},
+"sf.ray.ticket": {
+"d": 5.907,
+"h": "b198c7803a38",
+"who": "ray"
+},
+"sf.ruth.card": {
+"d": 7.306,
+"h": "f9359f1b4aee",
+"who": "ruth"
+},
+"sf.ruth.g0": {
+"d": 4.907,
+"h": "9ca4c478b0dc",
+"who": "ruth"
+},
+"sf.ruth.g1": {
+"d": 3.406,
+"h": "c1dbabc71fb3",
+"who": "ruth"
+},
+"sf.ruth.g2": {
+"d": 4.207,
+"h": "a88cbaee99fe",
+"who": "ruth"
+},
+"sf.ruth.gift1": {
+"d": 6.907,
+"h": "f07961249268",
+"who": "ruth"
+},
+"sf.ruth.gift2": {
+"d": 3.406,
+"h": "41c248dbd265",
+"who": "ruth"
+},
+"sf.ruth.gift3": {
+"d": 5.106,
+"h": "0f6d754b1909",
+"who": "ruth"
+},
+"sf.ruth.parcel": {
+"d": 4.606,
+"h": "29f4f5876c0c",
+"who": "ruth"
+},
+"sf.ruth.q1": {
+"d": 9.107,
+"h": "7eaba2f690f2",
+"who": "ruth"
+},
+"sf.ruth.q1b": {
+"d": 7.207,
+"h": "5bcb0b8cf6ba",
+"who": "ruth"
+},
+"sf.ruth.q2": {
+"d": 8.707,
+"h": "feb9527f1ac9",
+"who": "ruth"
+},
+"sf.ruth.q2a": {
+"d": 7.006,
+"h": "eaa0830f6da0",
+"who": "ruth"
+},
+"sf.ruth.q3": {
+"d": 10.207,
+"h": "23ebdec8eb05",
+"who": "ruth"
+},
+"sf.ruth.q4": {
+"d": 6.707,
+"h": "aa5e2de627b8",
+"who": "ruth"
+},
+"sf.ruth.q5": {
+"d": 7.107,
+"h": "fb276e95f7de",
+"who": "ruth"
+},
+"sf.ruth.q6": {
+"d": 7.707,
+"h": "da8cc58a8b94",
+"who": "ruth"
+},
+"sf.ruth.q7": {
+"d": 5.407,
+"h": "536d76faf8dd",
+"who": "ruth"
+},
+"sf.ruth.t0": {
+"d": 7.907,
+"h": "99edb1b72ef1",
+"who": "ruth"
+},
+"sf.ruth.t1": {
+"d": 8.207,
+"h": "122e97f9726e",
+"who": "ruth"
+},
+"sf.ruth.t2": {
+"d": 7.606,
+"h": "820810b60482",
+"who": "ruth"
+},
+"sf.ruth.t3": {
+"d": 7.407,
+"h": "e0fb2ba3638a",
+"who": "ruth"
+},
+"sf.ruth.t4": {
+"d": 7.006,
+"h": "fd2277eb1b23",
+"who": "ruth"
+},
+"sf.ruth.tape": {
+"d": 8.406,
+"h": "f3445af1f567",
+"who": "ruth"
+},
+"sf.tommy.champ": {
+"d": 4.806,
+"h": "6ab6f610a331",
+"who": "tommy"
+},
+"sf.tommy.dome": {
+"d": 6.106,
+"h": "af211c3155f6",
+"who": "tommy"
+},
+"sf.tommy.dome2": {
+"d": 4.306,
+"h": "30d82702f0e9",
+"who": "tommy"
+},
+"sf.tommy.dome3": {
+"d": 4.606,
+"h": "68c4e67c562e",
+"who": "tommy"
+},
+"sf.tommy.fix": {
+"d": 2.948,
+"h": "de34cab5c94b",
+"who": "tommy"
+},
+"sf.tommy.g0": {
+"d": 4.507,
+"h": "97a53597c3d5",
+"who": "tommy"
+},
+"sf.tommy.g1": {
+"d": 3.107,
+"h": "263361ca6c8c",
+"who": "tommy"
+},
+"sf.tommy.g2": {
+"d": 2.583,
+"h": "f4b6d89781ec",
+"who": "tommy"
+},
+"sf.tommy.gift1": {
+"d": 3.807,
+"h": "4b88b2607894",
+"who": "tommy"
+},
+"sf.tommy.gift2": {
+"d": 3.307,
+"h": "fb949b9dba8e",
+"who": "tommy"
+},
+"sf.tommy.gift3": {
+"d": 3.406,
+"h": "9af33cdb9ded",
+"who": "tommy"
+},
+"sf.tommy.lose": {
+"d": 3.406,
+"h": "737f5b96fff8",
+"who": "tommy"
+},
+"sf.tommy.lose3": {
+"d": 3.307,
+"h": "0a4054856f7e",
+"who": "tommy"
+},
+"sf.tommy.q1": {
+"d": 4.407,
+"h": "b74290a7e81e",
+"who": "tommy"
+},
+"sf.tommy.q2": {
+"d": 5.306,
+"h": "6c34352022ef",
+"who": "tommy"
+},
+"sf.tommy.q3": {
+"d": 4.707,
+"h": "d6d51b5fa7b4",
+"who": "tommy"
+},
+"sf.tommy.race1": {
+"d": 4.407,
+"h": "712344eff99e",
+"who": "tommy"
+},
+"sf.tommy.race2": {
+"d": 3.707,
+"h": "b867d4b7eec5",
+"who": "tommy"
+},
+"sf.tommy.race3": {
+"d": 4.807,
+"h": "ce6ddda0c28b",
+"who": "tommy"
+},
+"sf.tommy.t0": {
+"d": 5.806,
+"h": "9bb9a3f82afb",
+"who": "tommy"
+},
+"sf.tommy.t1": {
+"d": 5.806,
+"h": "7e963ac6ae39",
+"who": "tommy"
+},
+"sf.tommy.t2": {
+"d": 6.006,
+"h": "2e1cc87462ae",
+"who": "tommy"
+},
+"sf.tommy.t3": {
+"d": 6.506,
+"h": "4d2f046fc8cf",
+"who": "tommy"
+},
+"sf.tommy.t4": {
+"d": 5.506,
+"h": "a7c52e05e687",
+"who": "tommy"
+},
+"sf.tommy.win": {
+"d": 3.307,
+"h": "d56bbf93da76",
+"who": "tommy"
+},
+"sf.v.card4": {
+"d": 4.707,
+"h": "59670155c1f9",
+"who": "valya"
+},
+"sf.v.hymn1": {
+"d": 8.207,
+"h": "a9fe4718f106",
+"who": "valya"
+},
+"sf.v.hymn2": {
+"d": 7.106,
+"h": "c50ad84b588b",
+"who": "valya"
+},
+"sf.wade.again": {
+"d": 4.007,
+"h": "180791faf71c",
+"who": "wade"
+},
+"sf.wade.broke": {
+"d": 3.207,
+"h": "7079f9f49e70",
+"who": "wade"
+},
+"sf.wade.crate": {
+"d": 5.506,
+"h": "8e99353f8298",
+"who": "wade"
+},
+"sf.wade.g0": {
+"d": 3.407,
+"h": "5322eca1e80a",
+"who": "wade"
+},
+"sf.wade.g1": {
+"d": 3.707,
+"h": "603ea7d8657c",
+"who": "wade"
+},
+"sf.wade.g2": {
+"d": 4.207,
+"h": "debbb960b895",
+"who": "wade"
+},
+"sf.wade.gift1": {
+"d": 4.806,
+"h": "1d9de1350664",
+"who": "wade"
+},
+"sf.wade.gift2": {
+"d": 2.688,
+"h": "f7fb6b06408e",
+"who": "wade"
+},
+"sf.wade.gift3": {
+"d": 3.906,
+"h": "e1cc2fc1a3dd",
+"who": "wade"
+},
+"sf.wade.l1a": {
+"d": 6.207,
+"h": "6d30bec0c086",
+"who": "wade"
+},
+"sf.wade.l1b": {
+"d": 3.707,
+"h": "5f1cbd7b4cfd",
+"who": "wade"
+},
+"sf.wade.l1c": {
+"d": 3.807,
+"h": "af21e324d736",
+"who": "wade"
+},
+"sf.wade.l2a": {
+"d": 6.606,
+"h": "dba3f9694607",
+"who": "wade"
+},
+"sf.wade.l2b": {
+"d": 4.307,
+"h": "1c597b28ba54",
+"who": "wade"
+},
+"sf.wade.l3a": {
+"d": 7.006,
+"h": "72836770956c",
+"who": "wade"
+},
+"sf.wade.l3b": {
+"d": 7.007,
+"h": "bbe2f1141cf9",
+"who": "wade"
+},
+"sf.wade.offer": {
+"d": 5.606,
+"h": "75ef43ecbf2f",
+"who": "wade"
+},
+"sf.wade.t0": {
+"d": 5.507,
+"h": "4ef6cb97b89e",
+"who": "wade"
+},
+"sf.wade.t1": {
+"d": 5.207,
+"h": "21ec5ad30071",
+"who": "wade"
+},
+"sf.wade.t2": {
+"d": 5.807,
+"h": "b88fcc7fe41b",
+"who": "wade"
+},
+"sf.wade.t3": {
+"d": 6.806,
+"h": "e2e0bca34d42",
+"who": "wade"
+},
+"sf.wade.t4": {
+"d": 6.106,
+"h": "c321948dc0f9",
+"who": "wade"
+},
+"sf.walt.g0": {
+"d": 3.207,
+"h": "05b40d262c2c",
+"who": "walt"
+},
+"sf.walt.g1": {
+"d": 5.606,
+"h": "ae77b5fc66fc",
+"who": "walt"
+},
+"sf.walt.gift1": {
+"d": 4.107,
+"h": "54bb64f4714d",
+"who": "walt"
+},
+"sf.walt.gift2": {
+"d": 4.007,
+"h": "7df874d99bc8",
+"who": "walt"
+},
+"sf.walt.t0": {
+"d": 4.606,
+"h": "b078311125ca",
+"who": "walt"
+},
+"sf.walt.t1": {
+"d": 4.806,
+"h": "6e0d3a3480b9",
+"who": "walt"
+},
+"sf.walt.t2": {
+"d": 4.306,
+"h": "fb418b89f405",
+"who": "walt"
+},
+"sj.c.ivanoff1": {
+"d": 4.106,
+"h": "1772405792c7",
+"who": "f6"
+},
+"sj.c.ivanoff2": {
+"d": 4.707,
+"h": "e8ea81a16c41",
+"who": "f6"
+},
+"sj.c.ivanoff3": {
+"d": 4.506,
+"h": "ac2db3d31101",
+"who": "f6"
+},
+"sj.c.mike": {
+"d": 4.907,
+"h": "6e521aaa4596",
+"who": "m4"
+},
+"sj.c.nanouk1": {
+"d": 5.106,
+"h": "0de605c70e72",
+"who": "f5"
+},
+"sj.c.nanouk2": {
+"d": 4.106,
+"h": "2ec0cbdb9f13",
+"who": "f5"
+},
+"sj.c.nanouk3": {
+"d": 3.906,
+"h": "843d603d75b2",
+"who": "f5"
+},
+"sj.c.pearl": {
+"d": 6.106,
+"h": "b7809ba492f0",
+"who": "pearl"
+},
+"sj.c.ruth": {
+"d": 7.606,
+"h": "6a9a86e7363e",
+"who": "ruth"
+},
+"sj.c.tommy": {
+"d": 4.106,
+"h": "0c9703d18917",
+"who": "tommy"
+},
+"sj.e.cards": {
+"d": 5.006,
+"h": "650be64da5d8",
+"who": "evan"
+},
+"sj.e.flyer": {
+"d": 4.806,
+"h": "6120fb58e9e2",
+"who": "evan"
+},
+"sj.e.offer": {
+"d": 5.506,
+"h": "fe527e79a4e6",
+"who": "evan"
+},
+"sj.e.offer2": {
+"d": 3.307,
+"h": "86674426d939",
+"who": "evan"
+},
+"sj.g.plow": {
+"d": 3.906,
+"h": "9ca28df37a18",
+"who": "grisha"
+},
+"sj.h.broke": {
+"d": 3.607,
+"h": "ee971701fe6d",
+"who": "hank"
+},
+"sj.h.end1": {
+"d": 4.306,
+"h": "aab6e5ec57c8",
+"who": "hank"
+},
+"sj.h.end2": {
+"d": 4.306,
+"h": "4adc3019ce35",
+"who": "hank"
+},
+"sj.h.notruck": {
+"d": 4.307,
+"h": "f9d5202ce467",
+"who": "hank"
+},
+"sj.h.plow": {
+"d": 7.106,
+"h": "4430b77f8a68",
+"who": "hank"
+},
+"sj.h.sold": {
+"d": 6.806,
+"h": "06ca993489d7",
+"who": "hank"
+},
+"sj.k.call0a": {
+"d": 8.306,
+"h": "7864278c74fe",
+"who": "koshkin"
+},
+"sj.k.call0b": {
+"d": 5.507,
+"h": "43d749c92c3e",
+"who": "koshkin"
+},
+"sj.k.call1": {
+"d": 8.307,
+"h": "af37b9fcc3ce",
+"who": "koshkin"
+},
+"sj.k.call2a": {
+"d": 7.707,
+"h": "6b3073e09dcc",
+"who": "koshkin"
+},
+"sj.k.call2b": {
+"d": 6.207,
+"h": "38ccd2ab39c5",
+"who": "koshkin"
+},
+"sj.k.call3": {
+"d": 9.007,
+"h": "ef4126d77ecb",
+"who": "koshkin"
+},
+"sj.k.call4": {
+"d": 7.506,
+"h": "f68b9241e306",
+"who": "koshkin"
+},
+"sj.k.call5": {
+"d": 7.506,
+"h": "95a209b02077",
+"who": "koshkin"
+},
+"sj.k.call6": {
+"d": 7.507,
+"h": "f78c02790c34",
+"who": "koshkin"
+},
+"sj.k.end1": {
+"d": 4.506,
+"h": "59e4df4add75",
+"who": "koshkin"
+},
+"sj.k.end2": {
+"d": 5.606,
+"h": "1c62f84b4bcb",
+"who": "koshkin"
+},
+"sj.k.end3": {
+"d": 7.006,
+"h": "a2185f596692",
+"who": "koshkin"
+},
+"sj.k.later": {
+"d": 3.307,
+"h": "0d7bb91b0fbd",
+"who": "koshkin"
+},
+"sj.k.offer": {
+"d": 6.506,
+"h": "7fbb59981e7c",
+"who": "koshkin"
+},
+"sj.k.start": {
+"d": 8.007,
+"h": "af29889e7a83",
+"who": "koshkin"
+},
+"sj.l.radio": {
+"d": 4.006,
+"h": "402aa34e5d37",
+"who": "lyosha"
+},
+"sj.n.end1": {
+"d": 5.106,
+"h": "7100ce5b73ae",
+"who": "nina"
+},
+"sj.n.end2": {
+"d": 5.707,
+"h": "6ae7d5e92e69",
+"who": "nina"
+},
+"sj.n.evan": {
+"d": 4.506,
+"h": "96f95bae4d24",
+"who": "nadia"
+},
+"sj.n.job": {
+"d": 5.506,
+"h": "4de5fa3e386d",
+"who": "nadia"
+},
+"sj.n.offer": {
+"d": 4.606,
+"h": "a2668f7962bc",
+"who": "nina"
+},
+"sj.n.start": {
+"d": 5.806,
+"h": "3f5ab94d3458",
+"who": "nina"
+},
+"sj.r.end1": {
+"d": 5.806,
+"h": "44e67e37df7c",
+"who": "ray"
+},
+"sj.r.end2": {
+"d": 4.606,
+"h": "84005c8f774a",
+"who": "ray"
+},
+"sj.r.offer": {
+"d": 7.306,
+"h": "653924f8d61b",
+"who": "ray"
+},
+"sj.r.start": {
+"d": 5.907,
+"h": "7f75bf9a9908",
+"who": "ray"
+},
+"sj.v.shop": {
+"d": 7.106,
+"h": "aa4cadd93a1c",
+"who": "valya"
+},
+"st.d.spirit": {
+"d": 8.306,
+"h": "b2b61d7a151a",
+"who": "dmitri"
+},
+"st.n.board": {
+"d": 7.006,
+"h": "e5393f944248",
+"who": "nadia"
+},
+"st.n.spirit": {
+"d": 3.307,
+"h": "20e03d6770d9",
+"who": "nadia"
+},
+"st.pearl.board": {
+"d": 4.707,
+"h": "c8e367cd6959",
+"who": "pearl"
+},
+"st.pearl.busy": {
+"d": 3.906,
+"h": "c68138a5403a",
+"who": "pearl"
+},
+"st.pearl.drop": {
+"d": 3.607,
+"h": "708751c0a203",
+"who": "pearl"
+},
+"st.pearl.empty": {
+"d": 4.407,
+"h": "736b4c04301a",
+"who": "pearl"
+},
+"st.pearl.first": {
+"d": 6.407,
+"h": "876832d1202d",
+"who": "pearl"
+},
+"st.pearl.notoday": {
+"d": 2.76,
+"h": "371f12cdf11f",
+"who": "pearl"
+},
+"st.pearl.taken": {
+"d": 3.407,
+"h": "1dedc5c3a0f8",
+"who": "pearl"
+},
+"st.rx.dolly.heater": {
+"d": 5.506,
+"h": "f8ea039b6028",
+"who": "dolly"
+},
+"st.rx.dolly.nanouk": {
+"d": 6.106,
+"h": "10629ac8a855",
+"who": "dolly"
+},
+"st.rx.dolly.sign": {
+"d": 6.506,
+"h": "924f5139e9d4",
+"who": "dolly"
+},
+"st.rx.dolly.window": {
+"d": 4.306,
+"h": "b4755410adb8",
+"who": "dolly"
+},
+"st.rx.ellen.blind": {
+"d": 4.606,
+"h": "41697d90b16d",
+"who": "ellen"
+},
+"st.rx.ellen.ramp": {
+"d": 5.907,
+"h": "3e15876425e3",
+"who": "ellen"
+},
+"st.rx.evan.lights": {
+"d": 5.407,
+"h": "e2ebe49a7873",
+"who": "evan"
+},
+"st.rx.evan.sign": {
+"d": 4.006,
+"h": "bbb60a3bd68a",
+"who": "evan"
+},
+"st.rx.gabriel.cross": {
+"d": 5.506,
+"h": "e86ffafafc4d",
+"who": "gabriel"
+},
+"st.rx.gabriel.domes": {
+"d": 7.106,
+"h": "3fb6b944e08f",
+"who": "gabriel"
+},
+"st.rx.gabriel.fence": {
+"d": 4.806,
+"h": "34edb03aaaac",
+"who": "gabriel"
+},
+"st.rx.gabriel.rectory": {
+"d": 4.207,
+"h": "40d1b1be09ed",
+"who": "gabriel"
+},
+"st.rx.gabriel.stairs": {
+"d": 5.207,
+"h": "c732be8ccb6c",
+"who": "gabriel"
+},
+"st.rx.hank.fence": {
+"d": 3.207,
+"h": "9f7d1a413824",
+"who": "hank"
+},
+"st.rx.hank.sorensen": {
+"d": 3.607,
+"h": "aa34c28248ef",
+"who": "hank"
+},
+"st.rx.koshkin.porch": {
+"d": 4.707,
+"h": "25ad283fd3c2",
+"who": "koshkin"
+},
+"st.rx.koshkin.roof": {
+"d": 5.306,
+"h": "a069e9121744",
+"who": "koshkin"
+},
+"st.rx.koshkin.sign": {
+"d": 6.006,
+"h": "328c3345c21f",
+"who": "koshkin"
+},
+"st.rx.lou.kaplan": {
+"d": 6.207,
+"h": "5be17ee6044a",
+"who": "lou"
+},
+"st.rx.lou.sign": {
+"d": 4.106,
+"h": "e5f74f646142",
+"who": "lou"
+},
+"st.rx.lyle.gym": {
+"d": 4.207,
+"h": "2360a4f4b8d3",
+"who": "lyle"
+},
+"st.rx.marta.lights": {
+"d": 5.306,
+"h": "b0bd2ee5e8d1",
+"who": "marta"
+},
+"st.rx.marta.porch": {
+"d": 4.207,
+"h": "1dedcbf04954",
+"who": "marta"
+},
+"st.rx.nina.door": {
+"d": 3.307,
+"h": "c26fbee9b87e",
+"who": "nina"
+},
+"st.rx.nina.mast": {
+"d": 4.006,
+"h": "b97f6e6e45d2",
+"who": "nina"
+},
+"st.rx.pearl.house": {
+"d": 3.207,
+"h": "8b7008a91376",
+"who": "pearl"
+},
+"st.rx.pearl.ivanoff": {
+"d": 4.806,
+"h": "eb7b39f633d7",
+"who": "pearl"
+},
+"st.rx.pearl.petrov": {
+"d": 5.407,
+"h": "1ecb275a7009",
+"who": "pearl"
+},
+"st.rx.pearl.sign": {
+"d": 4.607,
+"h": "14dae799d790",
+"who": "pearl"
+},
+"st.rx.pearl.steps": {
+"d": 5.006,
+"h": "a48b4d83783e",
+"who": "pearl"
+},
+"st.rx.ray.delgado": {
+"d": 3.607,
+"h": "c298e359a380",
+"who": "ray"
+},
+"st.rx.ray.door": {
+"d": 4.306,
+"h": "75b7724756c3",
+"who": "ray"
+},
+"st.rx.ruth.gym": {
+"d": 4.707,
+"h": "b92137d2f55e",
+"who": "ruth"
+},
+"st.rx.ruth.playground": {
+"d": 5.606,
+"h": "2a00a9e39dc9",
+"who": "ruth"
+},
+"st.rx.ruth.shore": {
+"d": 6.907,
+"h": "f56879e4760c",
+"who": "ruth"
+},
+"st.rx.ruth.windows": {
+"d": 3.406,
+"h": "3d2345c66191",
+"who": "ruth"
+},
+"st.rx.tommy.boardwalk": {
+"d": 4.007,
+"h": "aa5f6acf6d3c",
+"who": "tommy"
+},
+"st.rx.tommy.dogs": {
+"d": 3.207,
+"h": "aa9061dac03b",
+"who": "tommy"
+},
+"st.rx.wade.lighthouse": {
+"d": 5.907,
+"h": "69918e0999a6",
+"who": "wade"
+},
+"st.rx.walt.lights": {
+"d": 4.806,
+"h": "86ace37361ea",
+"who": "walt"
 },
 "w.dmitri.bought": {
 "d": 10.906,

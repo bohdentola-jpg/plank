@@ -80,6 +80,17 @@ or Firefox with WebGL2. A controller is welcome (DualSense first, any standard p
   real in-game Python interpreter, then field hacks with real mission data
   (loop a camera, clean a petition, decode a ledger, combine the vault key) —
   and the finale is a real program written against a ten-minute clock.
+- **Wheels and skis.** Buy Hank's old pickup (and drive the city's snow-plough
+  route for money), ride your snowmobile, race Tommy across frozen Loon Lake.
+  Northstar's black SUVs patrol at night, and they see.
+- **Your phone** (Tab): a map with waypoints, the journal, everyone you know and
+  how close you are, the town's restoration projects, your wallet.
+- **A score that follows you.** Generative music in the same engine as Midnight
+  Frequency's radio: a spy-synth title theme, a quiet cue under the warehouse
+  table, folk for Port Zarya's days, aurora ambience for its nights, tension
+  that rises as Northstar's attention does, the chase, and the credits.
+  Procedural sound for everything else — rotors, engines, gunfire, church
+  bells, footsteps in snow, the till, the earpiece clicking on.
 - **The finale**: a chopper chase QTE across the strait, a landing by hand, the
   empty warehouse, ten minutes, the arrest, credits over a sunset in a cell.
 
@@ -112,7 +123,8 @@ coldboot/
   against CPython, every lesson and field hack solvable.
 - `node coldboot/tools/shot.mjs "screen=town&ff=1" out.png --wait 60000` —
   headless screenshots into `qa/` (`ff=1` lets slow software rendering keep up;
-  `screen=finale&phase=jail&auto=1` jumps into scenes).
+  `&day=8` starts a story day, `&free=1` skips the arrival,
+  `screen=finale&phase=jail&auto=1` jumps into the finale's scenes).
 - `tools/build_humans.py` — bakes the MakeHuman data (needs the MakeHuman 1.x
   `data` folder). `tools/export_lines.mjs` + `tools/build_voice.py` — render
   voice lines (Silero, Piper, rubberband, ffmpeg; `--qa` runs Whisper).
