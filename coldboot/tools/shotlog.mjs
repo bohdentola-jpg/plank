@@ -60,7 +60,13 @@ while (Date.now() - t0 < secs * 1000) {
   seen = st.cuts;
   n++;
   const file = `${String(n).padStart(3, '0')}.jpg`;
-  await page.screenshot({ path: join(outDir, file), type: 'jpeg', quality: 70 });
+  try {
+    await page.screenshot({ path: join(outDir, file), type: 'jpeg', quality: 70, timeout: 120000 });
+  } catch (e) {
+    console.log(`[cut ${n}] screenshot failed (${String(e.message || e).split('\n')[0]}); carrying on`);
+    n--;
+    continue;
+  }
   const info = await page.evaluate(async () => {
     const G = window.__cb?.G;
     const sub = (await import('/coldboot/src/audio/voice.js')).voice.subtitle;
