@@ -62,7 +62,7 @@ export const LINES = {
   'd10.n.breathe': { who: 'nadia', ru: 'Рыбка… мы всё слышали. Всё хорошо? Дыши.', en: 'Rybka… we heard everything. Are you alright? Breathe.', emo: 'worry' },
   'd10.dm.deal': { who: 'dmitri', ru: 'Американский полицейский, который слушает. Я прожил шестьдесят два года и видел таких двоих.', en: "An American policeman who listens. I've lived sixty-two years and seen two of those.", emo: 'smile' },
   'd10.g.deal': { who: 'grisha', ru: 'Ну всё, теперь у нас свой человек в ФБР! Ивана можно увольнять.', en: "That's it — now we've got our own man in the FBI! We can fire Ivan.", emo: 'laugh' },
-  'd10.i.no': { who: 'ivan', ru: '…Нельзя.', en: "…You can't.", emo: 'smile' },
+  'd10.i.no': { who: 'ivan', ru: '…Нет. Так нельзя.', en: "…You can't.", emo: 'smile' },
   'd10.dm.hostile': { who: 'dmitri', ru: 'Значит, теперь за нами смотрят двое. Значит, идём быстрее.', en: 'So now two of them are watching us. So we go faster.', emo: 'serious' },
   'd10.l.hostile': { who: 'lyosha', ru: 'Я буду следить за его запросами. Полезет в базу ещё раз — узнаем первыми.', en: "I'll watch his queries. If he digs in the database again, we'll know first." },
   'd10.n.tea': { who: 'nadia', ru: 'Рут Акпик звонила в магазин. Зовёт тебя вечером на чай. Сходи — она не из тех, кто зовёт просто так.', en: "Ruth Aqpik called the store. She's inviting you for tea this evening. Go — she isn't one to invite people for nothing." },

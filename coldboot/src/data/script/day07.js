@@ -70,7 +70,7 @@ export const LINES = {
   'd7.v.socks': { who: 'valya', ru: 'Я тебе носки вяжу. Шерстяные. Гриша привезёт, когда всё кончится. Размер помню.', en: "I'm knitting you socks. Wool. Grisha will bring them when this is all over. I remember your size.", emo: 'smile' },
   'd7.gr.socks': { who: 'grisha', ru: 'Она и мне вяжет. Уже третий месяц. Один носок.', en: "She's knitting me some too. Third month now. One sock." },
   'd7.v.bear': { who: 'valya', ru: 'У тебя нога как у медведя, Гриша. На тебя шерсти во всей Чукотке не хватит.', en: "You've got feet like a bear, Grisha. There isn't enough wool in all Chukotka for you.", emo: 'laugh' },
-  'd7.gr.sandwich': { who: 'grisha', ru: 'А правда, что у вас там бутерброд стоит двенадцать долларов? Я за двенадцать долларов корову куплю!', en: "Is it true a sandwich costs twelve dollars over there? For twelve dollars I'd buy a cow!", emo: 'laugh' },
+  'd7.gr.sandwich': { who: 'grisha', ru: 'Правда, что у вас там бутерброд — двенадцать долларов? Да я за такие деньги корову куплю!', en: "Is it true a sandwich costs twelve dollars over there? For twelve dollars I'd buy a cow!", emo: 'laugh' },
   'd7.dm.koshkin': { who: 'dmitri', ru: 'Знаю. Надя рассказала. Хороший старик. Держи его магазин, как свой. Теперь это и твой дом.', en: "I know. Nadia told me. A good old man. Keep his store like your own. It's your home now too.", emo: 'serious' },
   'd7.v.miss': { who: 'valya', ru: 'И мы скучаем. Даже Иван. Иван, скажи.', en: 'And we miss you. Even Ivan. Ivan, say something.', emo: 'smile' },
   'd7.i.miss': { who: 'ivan', ru: '…Скучаем.', en: '…We miss you.' },

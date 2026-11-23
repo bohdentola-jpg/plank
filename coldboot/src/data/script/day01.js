@@ -28,7 +28,7 @@ export const LINES = {
   'd1.k.cabin': { who: 'koshkin', en: "My brother's cabin. Yuri. He passed in the spring. Stove works, roof leaks a little on the north side, the view is the best in town. A hundred fifty a week." },
   'd1.k.deal': { who: 'koshkin', en: "Good. Here's the key. And if you're any good with a hammer, come by in the morning. I've got more broken things than customers these days." },
   'd1.k.haggle': { who: 'koshkin', en: "Hundred and twenty then, and you fix the roof. Ha. You're not from here, but you're not stupid. Here's the key." },
-  'd1.k.spasibo': { who: 'koshkin', ru: 'Спасибо? Ха! Давно я не слышал. Мой дед говорил по-русски. В этом городе многие деды говорили.', en: "Spasibo? Ha! Haven't heard that in a long time. My grandfather spoke Russian. Lots of grandfathers in this town did." },
+  'd1.k.spasibo': { who: 'koshkin', en: "Spasibo? Ha! Haven't heard that in a long time. My grandfather spoke Russian. Lots of grandfathers in this town did." },
   'd1.k.northstar': { who: 'koshkin', en: "That glass box across the square? Opened in June. Cheaper milk, prettier lights, cameras in every corner. Half my customers walked over there. They'll walk back. Maybe." },
   'd1.k.bye': { who: 'koshkin', en: "Go on. And don't let Evan over there sell you a sandwich. Twelve dollars. Twelve!" },
   'd1.k.again': { who: 'koshkin', en: "Still here? Cabin's the last one on Shore Road, past the bar. Can't miss it — it's the one leaning." },

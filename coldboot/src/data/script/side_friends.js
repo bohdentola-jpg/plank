@@ -279,7 +279,7 @@ export const LINES = {
   'sf.lou.tq2': { who: 'lou', en: "Question two. What's the name of Wade Tolliver's helicopter?" },
   'sf.lou.tq3': { who: 'lou', en: "Question three. How many buckets were catching drips on the school gym floor?" },
   'sf.lou.right': { who: 'lou', en: "That's right!", emo: 'smile' },
-  'sf.lou.wrong': { who: 'lou', en: "Ooh. No." },
+  'sf.lou.wrong': { who: 'lou', en: "Ooh. No, no, no." },
   'sf.lou.twin': { who: 'lou', en: "Three for three? Somebody's been listening. Fifty bucks and the trivia crown. It's a cardboard crown. Wear it with pride.", emo: 'laugh' },
   'sf.lou.tmid': { who: 'lou', en: "Not bad for an outsider. A round on the house, and a little respect. The respect's worth more." },
   'sf.lou.q3': { who: 'lou', en: "Once a year, the Anchor Cup. Me against whoever's brave. You're brave. Or dumb. Same thing in here. Tomorrow night, nine o'clock." },

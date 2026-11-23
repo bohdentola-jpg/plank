@@ -155,8 +155,8 @@
 "who": "koshkin"
 },
 "d1.k.spasibo": {
-"d": 29.306,
-"h": "6b69c6679e4e",
+"d": 7.306,
+"h": "949a7d236d3f",
 "who": "koshkin"
 },
 "d1.k.who": {
@@ -320,8 +320,8 @@
 "who": "hank"
 },
 "d10.i.no": {
-"d": 0.718,
-"h": "d9b1c756e781",
+"d": 1.735,
+"h": "7c8545595747",
 "who": "ivan"
 },
 "d10.i.papers": {
@@ -810,13 +810,13 @@
 "who": "hank"
 },
 "d11.i.copied": {
-"d": 2.666,
-"h": "3be549bdbab5",
+"d": 2.557,
+"h": "fb0f633f9aec",
 "who": "ivan"
 },
 "d11.i.given": {
-"d": 2.336,
-"h": "5a579a8f1c82",
+"d": 2.382,
+"h": "2cf3ddad171d",
 "who": "ivan"
 },
 "d11.k.chat": {
@@ -1470,8 +1470,8 @@
 "who": "tommy"
 },
 "d12.t.whoop": {
-"d": 0.913,
-"h": "0b04797ad134",
+"d": 1.256,
+"h": "000dd9b9d678",
 "who": "tommy"
 },
 "d12.v.after": {
@@ -1980,8 +1980,8 @@
 "who": "grisha"
 },
 "d14.g.plan": {
-"d": 6.707,
-"h": "088482bdd56d",
+"d": 8.607,
+"h": "307fac97c00e",
 "who": "grisha"
 },
 "d14.g.road": {
@@ -2140,8 +2140,8 @@
 "who": "halloran"
 },
 "d14.i.morning": {
-"d": 1.101,
-"h": "a55fdd5f53fe",
+"d": 1.227,
+"h": "e01011b02ec4",
 "who": "ivan"
 },
 "d14.k.bye": {
@@ -4230,8 +4230,8 @@
 "who": "nadia"
 },
 "d5.n.wade": {
-"d": 2.181,
-"h": "84f636426a44",
+"d": 2.494,
+"h": "eb21a86b85f2",
 "who": "nadia"
 },
 "d5.ni.fry": {
@@ -4825,8 +4825,8 @@
 "who": "grisha"
 },
 "d7.gr.sandwich": {
-"d": 5.606,
-"h": "3145ea5b1072",
+"d": 5.006,
+"h": "2ee02fce6ca6",
 "who": "grisha"
 },
 "d7.gr.socks": {
@@ -6056,12 +6056,12 @@
 },
 "f.g.border": {
 "d": 5.207,
-"h": "aec8b3a3c211",
+"h": "5bb9a342d920",
 "who": "grisha"
 },
 "f.g.down": {
-"d": 1.31,
-"h": "0e5c7f39adbb",
+"d": 1.784,
+"h": "66cd730da580",
 "who": "grisha"
 },
 "f.g.flares": {
@@ -6085,8 +6085,8 @@
 "who": "grisha"
 },
 "f.g.islands": {
-"d": 3.506,
-"h": "e26fbb9248d7",
+"d": 4.207,
+"h": "2d25433e4afc",
 "who": "grisha"
 },
 "f.g.land": {
@@ -6095,8 +6095,8 @@
 "who": "grisha"
 },
 "f.g.left": {
-"d": 1.201,
-"h": "56bb9f7e61e8",
+"d": 1.253,
+"h": "b2468a7dd723",
 "who": "grisha"
 },
 "f.g.radio1": {
@@ -7250,8 +7250,8 @@
 "who": "lou"
 },
 "sf.lou.wrong": {
-"d": 0.738,
-"h": "49b31f59a86c",
+"d": 1.748,
+"h": "668dcf7657eb",
 "who": "lou"
 },
 "sf.lyle.card": {
@@ -8295,8 +8295,8 @@
 "who": "evan"
 },
 "sj.g.plow": {
-"d": 3.906,
-"h": "9ca28df37a18",
+"d": 3.406,
+"h": "3fc3f00f4b6a",
 "who": "grisha"
 },
 "sj.h.broke": {
@@ -8785,8 +8785,8 @@
 "who": "ivan"
 },
 "w.ivan.papers": {
-"d": 6.007,
-"h": "d07e6f00621f",
+"d": 5.506,
+"h": "90268c83fdc6",
 "who": "ivan"
 },
 "w.lyosha.aurora1": {

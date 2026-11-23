@@ -41,7 +41,7 @@ export const LINES = {
   // ---- the team
   'sj.n.job': { who: 'nadia', ru: 'Работа — лучшая легенда. Чем больше тебя видят за работой, тем меньше к тебе присматриваются.', en: 'Work is the best cover. The more they see you working, the less closely they look at you.' },
   'sj.l.radio': { who: 'lyosha', ru: 'Ты в эфире? Я слушаю через ретранслятор! Поставь что-нибудь нормальное, а?', en: "You're on the air? I'm listening through the relay! Put on something decent, would you?", emo: 'laugh' },
-  'sj.g.plow': { who: 'grisha', ru: 'Снегоочиститель! Вот это техника. Только в гавань не съезжай.', en: "A snowplough! Now that's machinery. Just don't drive it into the harbour.", emo: 'laugh' },
+  'sj.g.plow': { who: 'grisha', ru: 'Плуг! Вот это техника. Только в гавань не съезжай.', en: "A snowplough! Now that's machinery. Just don't drive it into the harbour.", emo: 'laugh' },
   'sj.v.shop': { who: 'valya', ru: 'Магазин теперь на тебе? Главное правило: в долг не давай тем, кто слишком широко улыбается.', en: 'The store is on you now? Rule number one: never give credit to anyone who smiles too wide.', emo: 'smile' },
   'sj.n.evan': { who: 'nadia', ru: 'Он проверяет тебя. Не злись. Злость — это для него информация.', en: "He's testing you. Don't get angry. To him, anger is information.", emo: 'serious' },
 

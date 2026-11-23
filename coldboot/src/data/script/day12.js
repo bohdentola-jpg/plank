@@ -47,7 +47,7 @@ export const LINES = {
   'd12.ry.dad': { who: 'ray', en: 'My father gutted fish for forty years, Lyle! The cannery paid for your school shoes!', emo: 'angry' },
   'd12.ly.stumble': { who: 'lyle', en: 'The specifics are proprietary. Northstar will release the details in due course.', emo: 'worry' },
   'd12.h.fair': { who: 'hank', en: "Huh. That's a fair question. Somebody answer it.", emo: 'frown' },
-  'd12.t.whoop': { who: 'tommy', en: 'Woo! Go, carpenter!', emo: 'laugh' },
+  'd12.t.whoop': { who: 'tommy', en: 'Woo-hoo! Go get them, carpenter!', emo: 'laugh' },
   'd12.g.close': { who: 'gabriel', en: 'Closing statements. Lyle, you first.' },
   'd12.ly.close': { who: 'lyle', en: "Northstar never paid me a cent. Not one. I'm my own man, and I'm Port Zarya's man. That's my closing statement.", emo: 'smile' },
   'd12.ly.free1': { who: 'lyle', en: 'I had a speech. Gideon wrote it. It\'s a very good speech.', emo: 'worry' },

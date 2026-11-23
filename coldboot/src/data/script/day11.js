@@ -51,9 +51,9 @@ export const LINES = {
   'd11.w.thanks': { who: 'walt', en: "Go on, now. And thank you. You gave me back her waltz. I don't know what that's worth. More than twenty-five thousand." },
   // ---------------------------------------------------------------- the key: given or copied
   'd11.n.given': { who: 'nadia', ru: 'Он отдал его сам. Рыбка… он тебе поверил. Не подведи его.', en: "He gave it to you himself. Rybka… he believed you. Don't let him down.", emo: 'smile' },
-  'd11.i.given': { who: 'ivan', ru: 'Хороший ключ. Береги его.', en: 'A good key. Look after it.' },
+  'd11.i.given': { who: 'ivan', ru: 'Хороший ключ. Не потеряй.', en: 'A good key. Look after it.' },
   'd11.dm.given': { who: 'dmitri', ru: 'Человек отдал тебе ключ от своего города. Это доверие. Доверие не скопируешь.', en: "A man gave you the key to his own town. That is trust. Trust can't be copied.", emo: 'serious' },
-  'd11.i.copied': { who: 'ivan', ru: 'Копия хорошая. Я бы не отличил.', en: "A good copy. I couldn't tell the difference." },
+  'd11.i.copied': { who: 'ivan', ru: 'Хорошая копия. Не отличить.', en: "A good copy. I couldn't tell the difference." },
   'd11.dm.copied': { who: 'dmitri', ru: 'Мы взяли то, что нам не давали. Иногда так надо. Но не привыкай.', en: "We took what wasn't given to us. Sometimes it has to be done. But don't get used to it.", emo: 'serious' },
   'd11.w.after': { who: 'walt', en: 'Lost my keys fishing today. Can you believe it? Fishing. In November. Ellen says I should get my head looked at.', emo: 'smile' },
   'd11.w.afterCopy': { who: 'walt', en: "Thanks again for June's box. I wound it twice tonight. Don't tell anybody. They'll think I've gone soft.", emo: 'smile' },

@@ -32,7 +32,7 @@ export const LINES = {
   'w.nadia.ear': { who: 'nadia', ru: 'Я буду у тебя в ухе. Всё время. Каждый день — задание. Каждую ночь — отчёт.', en: "I'll be in your ear. The whole time. Every day, a task. Every night, a report." },
   'w.lyosha.teach': { who: 'lyosha', ru: 'А по ночам я буду учить тебя программировать. Не спорь. Если что-то пойдёт не так — код придётся писать тебе.', en: "And at night I'll teach you to code. Don't argue. If something goes wrong, you're the one who'll have to write the code.", emo: 'smile' },
   'w.grisha.fly': { who: 'grisha', ru: 'А если совсем не так пойдёт — я рядом. Вертолёт заведу хоть на дне моря.', en: "And if it goes really wrong — I'm close. I could start a helicopter at the bottom of the sea.", emo: 'smile' },
-  'w.ivan.papers': { who: 'ivan', ru: 'Паспорт. Права. Рекомендации. Ты — плотник. Из Анкориджа.', en: "Passport. Licence. References. You're a carpenter. From Anchorage." },
+  'w.ivan.papers': { who: 'ivan', ru: 'Вот паспорт. Права. Рекомендации. Ты плотник из Анкориджа.', en: "Passport. Licence. References. You're a carpenter. From Anchorage." },
   'w.ivan.lose': { who: 'ivan', ru: '…Не потеряй.', en: "…Don't lose it." },
   'w.valya.doll': { who: 'valya', ru: 'А это от меня. На удачу. Не открывай, пока не понадобится.', en: "And this is from me. For luck. Don't open it until you need it.", emo: 'smile' },
   'w.dmitri.plane': { who: 'dmitri', ru: 'Самолёт в шесть утра. Гриша отвезёт тебя в Анадырь, оттуда — чартер.', en: "The plane's at six in the morning. Grisha drives you to Anadyr; from there, a charter." },

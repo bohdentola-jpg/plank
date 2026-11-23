@@ -43,7 +43,7 @@ export const LINES = {
   'd5.n.five': { who: 'nadia', ru: 'Пятеро — пять историй. Каждому что-то нужно. Мы можем помочь. По-настоящему помочь.', en: 'Five people, five stories. Each one needs something. We can help. Really help.' },
   'd5.dm.honest': { who: 'dmitri', ru: 'Помогай честно, Рыбка. Мы пришли не обманывать этих людей. Мы пришли сохранить им свет.', en: "Help them honestly, Rybka. We didn't come to cheat these people. We came to keep their lights on.", emo: 'serious' },
   'd5.n.run': { who: 'nadia', ru: 'Беги! Клиника — через площадь. Быстрее!', en: "Run! The clinic is across the square. Hurry!", emo: 'worry' },
-  'd5.n.wade': { who: 'nadia', ru: 'Уэйд — в закусочной. Беги!', en: "Wade's at the diner. Run!", emo: 'worry' },
+  'd5.n.wade': { who: 'nadia', ru: 'Уэйд сидит в закусочной. Беги!', en: "Wade's at the diner. Run!", emo: 'worry' },
   'd5.n.sorry': { who: 'nadia', ru: 'Мне очень жаль, Рыбка. Он крепкий старик. Он выкарабкается.', en: "I'm so sorry, Rybka. He's a tough old man. He'll pull through.", emo: 'worry' },
   'd5.dm.store': { who: 'dmitri', ru: 'Магазин теперь на тебе. Это тяжело. Но хозяин лавки на площади видит всех и слышит всё.', en: 'The store is on you now. It is a heavy load. But the shopkeeper on the square sees everyone and hears everything.', emo: 'serious' },
   'd5.v.promise': { who: 'valya', ru: 'Обещание старику — это святое. Держи слово, рыбка.', en: 'A promise to an old man is sacred. Keep your word, little fish.' },

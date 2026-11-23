@@ -30,10 +30,10 @@ export const LINES = {
   'd14.dm.morning': { who: 'dmitri', ru: 'Две недели назад мы посадили тебя в самолёт. Я тогда не спал всю ночь. Сегодня тоже не буду. Это нормально.', en: "Two weeks ago we put you on a plane. I didn't sleep that whole night. I won't sleep tonight either. That's normal.", emo: 'smile' },
   'd14.v.morning': { who: 'valya', ru: 'Матрёшку мою держи при себе. Сегодня, может, и пригодится.', en: 'Keep my matryoshka with you. Today it might be needed.', emo: 'smile' },
   'd14.l.morning': { who: 'lyosha', ru: 'Я проверил всё три раза. Потом ещё два. Ключ, карта, код. Всё сходится. Я просто хочу, чтобы мы все снова сели за этот стол. С чаем.', en: 'I checked everything three times. Then twice more. Key, card, code. It all adds up. I just want us all to sit at this table again. With tea.', emo: 'worry' },
-  'd14.i.morning': { who: 'ivan', ru: '…Береги себя.', en: '…Take care of yourself.' },
+  'd14.i.morning': { who: 'ivan', ru: '…Ты там осторожнее.', en: '…Take care of yourself.' },
   'd14.g.morning': { who: 'grisha', ru: 'Сегодня ночью я буду в эфире всё время. Если что — просто зови. Гриша. Громко.', en: "Tonight I'll be on the air the whole time. If anything happens, just call. Grisha. Loud.", emo: 'smile' },
   'd14.n.dress': { who: 'nadia', ru: 'Тебе идёт. Правда. У Хэллорана нет шансов.', en: "It suits you. Really. Halloran doesn't stand a chance.", emo: 'smile' },
-  'd14.g.plan': { who: 'grisha', ru: 'План простой. Диск — ангар Уэйда — вертолёт — через пролив. Восемьдесят километров. Я тебя доведу.', en: "The plan is simple. The drive, Wade's hangar, the helicopter, across the strait. Eighty kilometres. I'll get you home." },
+  'd14.g.plan': { who: 'grisha', ru: 'План простой. Берёшь диск, бежишь в ангар к Уэйду и летишь через пролив. Восемьдесят километров. Я буду на связи.', en: "The plan is simple. The drive, Wade's hangar, the helicopter, across the strait. Eighty kilometres. I'll get you home." },
   'd14.n.goodbyes': { who: 'nadia', ru: 'Ты прощаешься. Они не знают. Так и надо.', en: "You're saying goodbye. They don't know it. That's how it should be.", emo: 'worry' },
   'd14.n.seven': { who: 'nadia', ru: 'Семь часов. Мэр ждёт на площади. Пора.', en: "Seven o'clock. The mayor's waiting on the square. It's time." },
   // ---------------------------------------------------------------- the suit
