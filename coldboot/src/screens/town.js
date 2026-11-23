@@ -45,20 +45,15 @@ export const G = {
 
 /** Dressed for the Winter Gala. */
 function galaDNA() {
+  // the same person in their best: clothes dyed to evening colours
   const dna = { ...playerDNA() };
   const fem = (dna.sex ?? 1) < 0.5;
-  dna.outfit = fem
-    ? [{ slot: 'top', pattern: 'plain', color: '#4a1426', thick: 0.004, hem: 'hip', sleeves: 0.2 }, { slot: 'skirt', pattern: 'plain', color: '#4a1426', thick: 0.006, hem: 'calf' }, { slot: 'boots', pattern: 'leather', color: '#0a0806', thick: 0.008, shaft: 0.05 }]
-    : [{ slot: 'top', pattern: 'plain', color: '#e8e6e0', thick: 0.004, hem: 'hip', neckUp: 0.02 }, { slot: 'coat', pattern: 'wool', color: '#16181e', thick: 0.008, hem: 'hip' }, { slot: 'bottom', pattern: 'wool', color: '#16181e', thick: 0.005 }, { slot: 'boots', pattern: 'leather', color: '#0a0806', thick: 0.008, shaft: 0.06 }];
-  return dna;
+  return { ...dna, tint: fem ? '#4a1426' : '#16181e', tintAmt: 0.92 };
 }
 
-/** The player's outdoor outfit: their own clothes under a parka. */
-function outdoorDNA(profile) {
-  const dna = { ...playerDNA() };
-  const base = (dna.outfit || []).filter((g) => g.slot !== 'coat');
-  dna.outfit = [...base, { slot: 'coat', pattern: 'nylon', color: profile?.coat || '#2e3a44', thick: 0.016, puff: 0.016, hem: 'hip' }];
-  return dna;
+/** The player outdoors: their own clothes (Rocketbox outfits are fixed; the creator's dye carries over). */
+function outdoorDNA() {
+  return { ...playerDNA() };
 }
 
 registerScreen('town', () => {
@@ -472,11 +467,13 @@ registerScreen('town', () => {
       if (!s.flags.tipsDone && !G.cinematic && !G.overlay && !G.dialog.active) {
         tipT += dt;
         const TIPS = [
-          [4, 'MOVE', 'WASD or the left stick · Shift runs · the mouse looks around'],
-          [16, 'TALK & USE', 'E (✕) when a prompt appears · Space skips a line'],
-          [30, 'YOUR PHONE', 'Tab: map, journal, people, town, wallet · M map · J journal'],
-          [46, 'BEING WATCHED', 'The eye bottom-left opens when a camera or a person sees you. Spy work in sight raises ATTENTION.'],
-          [64, 'WHEELS', 'F (△) gets you in and out of vehicles once you have one'],
+          [4, 'MOVE', 'WASD or the left stick · Shift sprints · the mouse looks around'],
+          [16, 'WHERE TO GO', 'Follow the amber marker · the arrow at the edge points to it when it is off-screen'],
+          [30, 'TALK & USE', 'E (✕) when a prompt appears · Space skips a line'],
+          [44, 'YOUR PHONE', 'Tab · M map · J journal · on the map, G walks you to the objective'],
+          [60, 'BEING WATCHED', 'The eye by the map opens when a camera sees you; it turns red when that costs you'],
+          [78, 'WAITING', 'When an objective is set for a time, T skips ahead to it'],
+          [96, 'WHEELS', 'F (△) gets you in and out of a vehicle once you have one'],
         ];
         const k = s.flags.tipN || 0;
         if (k < TIPS.length && tipT > TIPS[k][0]) { hud.toast(TIPS[k][1], TIPS[k][2], '#7fe6ff'); s.flags.tipN = k + 1; }
