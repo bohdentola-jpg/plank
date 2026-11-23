@@ -1,8 +1,7 @@
 // COLD BOOT — the leitmotif family (see cb_common.js for MOTIF):
-//   cb_title      slow spy-synth in D minor: analog arpeggio bass, the "Bond line"
-//                 (i, i+5, i6, i+5) on the pad, a lonely square lead singing the motif
-//                 with its folk raised sixth, celesta answers, trip-hop rim groove,
-//                 the whole deck through a tape-warmth insert.
+//   cb_title      slow and cold, in D minor: a low D pedal, the "Bond line"
+//                 (i, i+5, i6, i+5) on strings, the motif on piano and then a cello,
+//                 celesta fragments in the break, a slow heartbeat under the B section.
 //   cb_warehouse  the Bely Mys table, under dialogue: a D pedal drone, a distant
 //                 accordion breathing slow chords, sparse celesta / piano fragments
 //                 of the motif high above the voices, no drums.
@@ -26,11 +25,11 @@ export class CBTitle extends CBSong {
   static intensity = 1;
 
   compose() {
-    this.bpm = 92;
+    this.bpm = 76;
     this.keyPc = 2; // D minor
     this.scale = 'minor';
-    this.humanize = 0.004;
-    this.velJitter = 0.07;
+    this.humanize = 0.01;
+    this.velJitter = 0.1;
     this.progs.main = MOTIF_PROG.minor;
     this.progs.bond = 'i:4';
     this.form = [
@@ -38,90 +37,75 @@ export class CBTitle extends CBSong {
       { type: 'A', bars: 8 },
       { type: 'B', bars: 8 },
       { type: 'break', bars: 4, prog: 'bond' },
-      { type: 'A', bars: 8, var: 1, drums: 'B', plus: 'kick snare perc chords' },
-      { type: 'B', bars: 8, var: 1 },
+      { type: 'A', bars: 8, var: 1, plus: 'chords' },
+      { type: 'B', bars: 8, var: 1, plus: 'kick' },
     ];
     this.loopFrom = 1;
+    // strings, piano and a cello over a D pedal; the only drum is a slow heartbeat
     this.sectionLayers = {
       intro: 'pad bass fx',
-      A: 'pad bass lead hats fx',
-      B: 'pad bass lead chords kick snare hats perc arp gtr fx',
-      break: 'pad bass gtr hats fx',
+      A: 'pad bass lead fx',
+      B: 'pad bass lead chords fx',
+      break: 'pad bass gtr fx',
     };
-    this.kit = { ...this.kit, kick: 'kick_soft', rim: 'rim', snap: 'snap', hat: 'hat_dusty', ohat: 'hat_odusty', shaker: 'shaker' };
-    this.kitGain.rim = 0.8;
-    this.drums = {
-      A: { hat: pat('..g...g...g...g.') },
-      B: {
-        kick: pat('x.......x.x.....'),
-        rim: pat('....x.......x...'),
-        snap: pat('.............g..'),
-        hat: pat('g.o.g.o.g.o.g.og'),
-        shaker: pat('....o.......o.o.'),
-      },
-    };
+    this.kit = { ...this.kit, kick: 'kick_soft' };
+    this.drums = { B: { kick: pat('x..x............') } };
     const D4 = 62;
     this.motif = tune(MOTIF.minor, D4, 'minor');
     this.counter = tune(TITLE_COUNTER, D4, 'minor');
     this.mix = {
-      kick: { v: 0.34 }, snare: { v: 0.3, rev: 0.12 }, hats: { v: 0.3 }, perc: { v: 0.2 },
-      bass: { v: 0.46 }, pad: { v: 0.36, rev: 0.3 }, chords: { v: 0.26, rev: 0.35 },
-      arp: { v: 0.2, dly: 0.45, rev: 0.2 }, gtr: { v: 0.42, rev: 0.45, dly: 0.25 },
-      lead: { v: 0.62, rev: 0.32, dly: 0.24 }, fx: { v: 0.6 },
+      kick: { v: 0.3, rev: 0.2 },
+      bass: { v: 0.5 }, pad: { v: 0.34, rev: 0.45 }, chords: { v: 0.3, rev: 0.5 },
+      gtr: { v: 0.3, rev: 0.7, dly: 0.3 }, lead: { v: 0.5, rev: 0.42, dly: 0.12 }, fx: { v: 0.5 },
     };
-    this.trim = 0.8;
+    this.trim = 0.9;
   }
 
   setup() {
-    this.dlyTime = this.beatDur * 0.75;
-    this.dlyFb = 0.34;
-    this.tapeFx({ hiss: 0.006, lp: 13000, drive: 1.3 });
-    this.bass = new Mono(this, 'bass', {
-      oscs: [{ type: 'sawtooth', gain: 0.5 }, { type: 'square', gain: 0.28, detune: -6 }], cut: 300, q: 4.5, env: 900,
-      fatk: 0.003, fdec: 0.16, keytrack: 0.6, atk: 0.004, dec: 0.3, sus: 0.55, rel: 0.06, glide: 0.04, level: 0.42,
-      sub: 0.45, subMul: 1, drive: 1.2, post: 3500,
+    this.dlyTime = this.beatDur * 1.5;
+    this.dlyFb = 0.28;
+    this.tapeFx({ hiss: 0.003, lp: 12000, drive: 1.1 });
+    this.drone = new Drone(this, 'bass', { level: 0.26, cut: 260, lfoDepth: 70, lfoRate: 0.04, sub: 0.3, atk: 2.5 });
+    this.pad = new Poly(this, 'pad', 'strings', { level: 0.24, atk: 1.2, rel: 1.8, cut: 2600 });
+    this.strings = new Poly(this, 'chords', 'strings', { level: 0.2, atk: 0.8, rel: 1.6, cut: 3200 });
+    this.piano = new Poly(this, 'lead', 'piano', { level: 0.34, rel: 0.9, cut: 4200 });
+    this.cello = new Breath(this, 'lead', {
+      wave: 'sawtooth', level: 0.15, lp: 1400, vib: 12, vibRate: 5.0, breath: 0.03, glide: 0.07, atk: 0.14, rel: 0.4,
     });
-    this.pad = new Poly(this, 'pad', 'pad', { level: 0.3, atk: 0.5, rel: 1.2, cut: 2400 });
-    this.strings = new Poly(this, 'chords', 'strings', { level: 0.26, atk: 0.7, rel: 1.4, cut: 3200 });
-    this.arp = new Poly(this, 'arp', 'pluck', { level: 0.32, rel: 0.08, cut: 3000 });
-    this.cel = new Poly(this, 'gtr', 'celesta', { level: 0.42, rel: 0.6 });
-    this.lead = new Breath(this, 'lead', {
-      wave: 'square', wave2: 'sawtooth', level: 0.22, lp: 2700, vib: 15, vibRate: 5.1, breath: 0.035,
-      glide: 0.06, atk: 0.035, rel: 0.28,
-    });
+    this.cel = new Poly(this, 'gtr', 'celesta', { level: 0.32, rel: 0.8 });
   }
 
-  /** The spy cliché, honestly: D minor with a chromatic inner voice A – Bb – B – Bb. */
+  /** The spy cliché, honestly, but on strings: D minor with a chromatic inner voice A – Bb – B – Bb. */
   bond(s, t) {
     if ((s & 7) !== 0) return;
     const k = (this.barInSec * 2 + (s >> 3)) % 4;
-    if (k === 0) this.pad.chord(t, [50, 53, 62], this.barDur + 0.05, 0.42);
-    this.pad.note(t, [57, 58, 59, 58][k], this.beatDur * 2 + 0.06, 0.4);
+    if (k === 0) this.pad.chord(t, [50, 53, 62], this.barDur + 0.05, 0.36);
+    this.pad.note(t, [57, 58, 59, 58][k], this.beatDur * 2 + 0.06, 0.32);
+  }
+
+  onBar(t) {
+    if (this.barInSec === 0) {
+      const ty = this.sec.type;
+      this.drone.set(t, 38, ty === 'intro' || ty === 'break' ? 0.7 : 1);
+    }
   }
 
   onStep(s, t) {
     const ty = this.sec.type, v = this.sec.var || 0;
     if (this.on('pad')) {
       if (this.sec.prog === 'bond') this.bond(s, t);
-      else this.padPlay(this.pad, s, t, { n: 4, lo: 50, hi: 69, vel: 0.42 });
+      else this.padPlay(this.pad, s, t, { n: 4, lo: 50, hi: 69, vel: 0.36 });
     }
-    if (this.on('bass')) {
-      const calm = ty === 'intro' || ty === 'break';
-      const p = calm ? 'R.o.r.o.R.o.r.o.' : 'R.orR.orR.orR.of';
-      const open = ty === 'B' ? 1 : v ? 0.8 : ty === 'A' ? 0.55 : 0.2;
-      this.rolePlay(this.bass, p, s, t, { lo: 33, gate: calm ? 0.5 : 0.62, vel: 0.8, slides: false, nopts: () => ({ cut: 200 + 560 * open }) });
-    }
-    if (this.on('chords')) this.padPlay(this.strings, s, t, { n: 4, lo: 55, hi: 74, key: 'str', vel: 0.42 });
-    if (this.on('arp')) this.arpPlay(this.arp, s, t, { rate: 2, pat: [0, 2, 1, 3, 2, 1, 3, 2], lo: 62, hi: 81, vel: 0.45, gate: 0.45 });
-    if (this.on('gtr')) {
-      if (ty === 'break') this.tunePlay(this.cel, this.motif, s, t, { vel: 0.55, oct: 1 });
-      else if (ty === 'B' && !v) this.tunePlay(this.cel, this.motif, s, t, { vel: 0.4, oct: 1, harm: 3 }); // second voice under the lead
-      else if (ty === 'B') this.tunePlay(this.cel, this.counter, s, t, { vel: 0.34, oct: 1, orn: false });
-    }
+    if (this.on('chords')) this.padPlay(this.strings, s, t, { n: 3, lo: 57, hi: 76, key: 'str', vel: 0.3 });
+    if (this.on('gtr') && ty === 'break') this.tunePlay(this.cel, this.motif, s, t, { vel: 0.42, oct: 1, gate: 1.3 });
     if (this.on('lead')) {
-      if (ty === 'A' && !v) this.tunePlay(this.lead, this.motif, s, t, { vel: 0.85, legato: true });
-      else if (ty === 'A') this.tunePlay(this.lead, this.counter, s, t, { vel: 0.8, legato: true });
-      else if (ty === 'B') this.tunePlay(this.lead, this.motif, s, t, { vel: 0.8, oct: 1, legato: true });
+      if (ty === 'A' && !v) this.tunePlay(this.piano, this.motif, s, t, { vel: 0.55, gate: 1.4 });
+      else if (ty === 'A') this.tunePlay(this.cello, this.counter, s, t, { vel: 0.8, legato: true });
+      else if (ty === 'B' && !v) this.tunePlay(this.cello, this.motif, s, t, { vel: 0.85, legato: true });
+      else if (ty === 'B') {
+        this.tunePlay(this.cello, this.motif, s, t, { vel: 0.85, legato: true });
+        this.tunePlay(this.piano, this.counter, s, t, { vel: 0.34, oct: 1, gate: 1.2, orn: false });
+      }
     }
   }
 }
