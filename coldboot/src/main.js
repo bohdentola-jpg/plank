@@ -199,7 +199,22 @@ async function boot() {
     master: settings.get('volMaster'), music: settings.get('volMusic'), sfx: settings.get('volSfx'),
   });
 
-  await import('./screens/index.js');
+  // A file that didn't arrive (a busy local server dropping connections) fails the
+  // whole import, and the browser remembers the failure until the page reloads:
+  // so reload, at most twice, before saying so.
+  const tries = (() => { try { return +(sessionStorage.getItem('cb_reload') || 0); } catch { return 2; } })();
+  try {
+    await import('./screens/index.js');
+  } catch (e) {
+    if (tries < 2) {
+      try { sessionStorage.setItem('cb_reload', String(tries + 1)); } catch { /* */ }
+      location.reload();
+      return new Promise(() => {});
+    }
+    try { sessionStorage.removeItem('cb_reload'); } catch { /* */ }
+    throw new Error(`Some game files didn't load: ${e.message}\n\nClose the black server window, run coldboot.bat again (or: python serve.py --open coldboot/), then refresh this page.\nIf it keeps happening, press F12, open the Network tab, refresh, and look for the file shown in red.`);
+  }
+  try { sessionStorage.removeItem('cb_reload'); } catch { /* */ }
 
   const start = game.query.get('screen') || 'boot';
   if (start !== 'boot') game.renderer.power = 1;
