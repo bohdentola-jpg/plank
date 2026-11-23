@@ -1,0 +1,77 @@
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"><i></i><i class="r"></i><i></i><i></i><i class="l"></i><i class="g"></i><i class="g"></i><i></i></span>
+      <b>Snake Lab</b><small>learn Python by building a game</small>
+    </div>
+    <nav class="map" id="map" aria-label="Lessons"></nav>
+    <button class="iconbtn" id="soundBtn" title="Sound on or off">Sound: on</button>
+  </header>
+
+  <main class="grid">
+    <section class="col-left">
+      <article class="card lesson" aria-live="polite">
+        <div class="eyebrow" id="eyebrow"></div>
+        <h1 id="title"></h1>
+        <p class="story" id="story"></p>
+        <div class="task" id="task"></div>
+        <details class="concept" id="concept" open><summary></summary><div></div></details>
+        <div class="hints" id="hints"></div>
+        <div class="lesson-actions">
+          <button class="btn ghost" id="hintBtn">Hint</button>
+          <button class="btn ghost" id="solveBtn" hidden>Show the solution</button>
+          <span class="spacer"></span>
+          <button class="btn ghost" id="prevBtn" title="Previous lesson">← Back</button>
+          <button class="btn go" id="nextBtn" hidden>Next lesson →</button>
+        </div>
+      </article>
+
+      <section class="card editor-card">
+        <div class="editor-bar">
+          <span class="file">main.py</span>
+          <span class="toolkit" id="toolkitNote"></span>
+          <span class="spacer"></span>
+          <button class="btn ghost" id="resetBtn" title="Put the starting code back">Reset</button>
+          <button class="btn primary" id="runBtn" title="Run your code (Ctrl+Enter)">▶ Run <kbd>Ctrl ↵</kbd></button>
+        </div>
+        <div class="editor">
+          <div class="gutter" id="gutter"></div>
+          <div class="code">
+            <pre id="hl" aria-hidden="true"></pre>
+            <textarea id="src" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" aria-label="Python code"></textarea>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="col-right">
+      <div class="device" id="device" tabindex="0" aria-label="PIXEL-8 console">
+        <div class="device-top"><span class="led" id="led"></span><span class="device-name">PIXEL-8<small>16 × 16</small></span></div>
+        <div class="screen-wrap">
+          <canvas id="screen" width="640" height="640" aria-label="16 by 16 pixel screen"></canvas>
+          <div class="overlay" id="overlay"></div>
+        </div>
+        <div class="status"><span id="statusL">x –, y –</span><span id="statusR"></span></div>
+        <div class="controls">
+          <div class="dpad" aria-label="Direction pad">
+            <button class="u" data-dir="up" aria-label="Up">▲</button>
+            <button class="l" data-dir="left" aria-label="Left">◀</button>
+            <span class="c"></span>
+            <button class="r" data-dir="right" aria-label="Right">▶</button>
+            <button class="d" data-dir="down" aria-label="Down">▼</button>
+          </div>
+          <div class="playwrap">
+            <button class="playbtn" id="playBtn" disabled aria-label="Play">▶</button>
+            <span class="playlabel" id="playLabel">Play</span>
+          </div>
+        </div>
+      </div>
+
+      <section class="card console-card">
+        <div class="console-bar"><span>Console</span><span class="spacer"></span><button class="iconbtn" id="clearBtn">Clear</button></div>
+        <div class="console" id="console" aria-live="polite"></div>
+      </section>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
