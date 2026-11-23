@@ -2,8 +2,8 @@
 
 *Save the world. Quietly.*
 
-A spy game in the browser, in the neon-CRT style of Midnight Frequency: the whole
-game plays on an old NOVATRON widescreen TV.
+A quiet spy thriller in the browser: a cold Arctic town, an earpiece, and a
+code that has to be found before dawn.
 
 **Bely Mys, Chukotka.** Six Russians sit around a table in a fish warehouse under
 one lamp: Dmitri, Nadia, Lyosha, Grisha, Baba Valya and Ivan. A man named Cyrus
@@ -41,13 +41,15 @@ or Firefox with WebGL2. A controller is welcome (DualSense first, any standard p
 
 | | Keyboard / mouse | Controller |
 | --- | --- | --- |
-| Walk / drive | WASD | left stick |
-| Run | Shift | R2 |
+| Move / drive | WASD (a jog) | left stick (nudge it to walk) |
+| Sprint | Shift | R2 |
 | Look | mouse | right stick |
 | Talk, use, pick up | E | ✕ |
 | Get in / out of a vehicle | F | △ |
 | Brake / handbrake (driving) | S / Space | L2 / □ |
 | Phone (map, journal, people, town, wallet) | Tab · M map · J journal | CREATE · touchpad |
+| Go to the waypoint / objective (phone map) | G | △ |
+| Wait until a set time (when the objective says so) | T | d-pad ↓ |
 | Crouch | C | ◯ |
 | Skip a line / choose | Space, Enter · 1–4 | ✕ |
 | Pause, options | Esc | OPTIONS |
@@ -98,20 +100,21 @@ or Firefox with WebGL2. A controller is welcome (DualSense first, any standard p
 
 ```
 coldboot/
-  index.html, style.css      the NOVATRON TV and the canvas
+  index.html, style.css      the page: a 16:9 canvas on black, the bundled fonts
   src/main.js                screens, transitions, the loop
-  src/core/                  renderer (HDR → bloom → DOF → CRT), input, UI, settings
+  src/core/                  renderer (HDR → bloom → DOF → film grade), input, UI, settings
   src/human/                 MakeHuman runtime: body, face, skin, hair, clothes, animation
   src/world/                 terrain, sea, roads, buildings kit, props, sky, snow, smoke, chopper
   src/game/                  player, physics, NPCs, dialog, missions, attention, economy,
                              minigames, phone, vehicles, HUD, state/save
   src/code/                  Python interpreter, lessons, field hacks, grading
   src/scenes/                warehouse prologue, plane, finale, the cutscene director
-  src/screens/               boot, title, creator, town, laptop, options, credits, labs
+  src/screens/               title, creator, town, laptop, options, credits, labs
   src/data/                  cast, schedules, script (every line and mission)
   assets/human/              baked MakeHuman data (CC0)
   assets/vo/                 rendered voice lines (Opus) + manifest
   assets/tex/                CC0 textures (Poly Haven, ambientCG) — see CREDITS.md
+  assets/fonts/              Inter and JetBrains Mono (SIL Open Font License)
   tools/                     build scripts and QA
 ```
 
@@ -137,5 +140,5 @@ coldboot/
 
 People: MakeHuman base mesh, targets and assets (CC0). Voices: Silero TTS v4 (ru),
 Piper (LibriTTS-R voices, ru_RU voices). Textures: Poly Haven and ambientCG (CC0).
-Rendering: three.js. Everything else — the town, the story, the music and sound —
+Type: Inter and JetBrains Mono (SIL OFL 1.1). Rendering: three.js. Everything else — the town, the story, the music and sound —
 is made in code.

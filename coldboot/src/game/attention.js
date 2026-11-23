@@ -70,6 +70,8 @@ export class Attention {
     if (was < 0.5 && this.watched >= 0.5 && (this.suspicious > 0 || s0(G) > 30)) G.sfx?.sting?.('spotted');
     this.seenBy = by;
     G.hud.watched = this.watched;
+    // the eye turns red only when being seen costs you something
+    G.hud.danger = this.watched > 0.3 && (this.suspicious > 0 || this.zones.some((zn) => Math.hypot(P.x - zn.x, P.z - zn.z) < zn.r));
     const s = G.state;
     // suspicious acts in view
     if (this.suspicious > 0) {

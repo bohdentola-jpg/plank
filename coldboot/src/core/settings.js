@@ -9,7 +9,7 @@ const DEFAULTS = {
   volSfx: 0.9,
   volVoice: 1.0,
   subtitles: true,
-  crt: 1,              // CRT effect strength 0..1
+
   rumble: true,
   autoQuality: true,
   invertY: false,

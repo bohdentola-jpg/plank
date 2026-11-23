@@ -191,16 +191,15 @@ registerScreen('warehouse', () => {
         }
       }
       if (youLine) {
-        const a = Math.min(1, youLine.t * 5) * Math.min(1, (2.6 - youLine.t) * 3);
+        const a = Math.max(0, Math.min(1, youLine.t * 5) * Math.min(1, (2.6 - youLine.t) * 3));
+        const base = game.renderer.post.letterbox > 0.5 ? H - 104 : H - 64;
         ctx.save();
         ctx.globalAlpha = a;
-        ctx.fillStyle = 'rgba(0,0,0,0.42)';
-        ctx.fillRect(W / 2 - 420, H - 168, 840, 66);
-        text(ctx, 'YOU', W / 2, H - 146, { size: 15, weight: 800, color: '#9fe8b0', align: 'center', spacing: 3 });
-        text(ctx, youLine.s, W / 2, H - 116, { size: 24, weight: 600, color: '#f4f6f8', align: 'center' });
+        text(ctx, 'YOU', W / 2, base - 28, { size: 12, weight: 600, color: '#a9d4b2', align: 'center', spacing: 2.5 });
+        text(ctx, youLine.s, W / 2, base, { size: 23, weight: 500, color: '#f6f7f8', align: 'center' });
         ctx.restore();
       }
-      if (skipHold > 0.1) text(ctx, 'HOLD TO SKIP', W - 60, 60, { size: 14, weight: 800, color: '#fff', align: 'right', alpha: Math.min(1, skipHold * 2), spacing: 2 });
+      if (skipHold > 0.1) text(ctx, 'Hold to skip', W - 60, 60, { size: 14, weight: 500, color: '#fff', align: 'right', alpha: Math.min(1, skipHold * 2) });
     },
     view() { return { scene, camera }; },
   };

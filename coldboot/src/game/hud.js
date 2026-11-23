@@ -260,16 +260,17 @@ export class HUD {
     // the eye: opens when something is watching you
     const ex = cx + R * 0.71 + 6, ey = cy - R * 0.71 - 6;
     const o = Math.max(0.12, open || 0);
-    const watching = (open || 0) > 0.3;
+    const watching = (open || 0) > 0.3 && !!this.danger;
+    const seen = (open || 0) > 0.3;
     ctx.save();
     ctx.beginPath();
     ctx.arc(ex, ey, 15, 0, Math.PI * 2);
     ctx.fillStyle = watching ? 'rgba(120,24,20,0.9)' : 'rgba(14,18,22,0.85)';
     ctx.fill();
-    ctx.strokeStyle = watching ? C.red : 'rgba(255,255,255,0.25)';
+    ctx.strokeStyle = watching ? C.red : seen ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.25)';
     ctx.lineWidth = 1.2;
     ctx.stroke();
-    ctx.fillStyle = watching ? '#fff' : 'rgba(225,230,235,0.75)';
+    ctx.fillStyle = watching || seen ? '#fff' : 'rgba(225,230,235,0.75)';
     ctx.beginPath();
     ctx.moveTo(ex - 9, ey);
     ctx.quadraticCurveTo(ex, ey - 9 * o, ex + 9, ey);

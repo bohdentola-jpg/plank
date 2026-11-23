@@ -15,7 +15,7 @@ import { Animator } from '../human/anim.js';
 import { CollisionWorld } from '../game/physics.js';
 import { Player, OrbitCamera } from '../game/player.js';
 import { HUD } from '../game/hud.js';
-import { game$, newState, loadGame, saveGame } from '../game/state.js';
+import { game$, newState, loadGame, saveGame, DAYS } from '../game/state.js';
 import { store } from '../core/settings.js';
 import { voice } from '../audio/voice.js';
 import { audio } from '../audio/audio.js';
@@ -146,6 +146,7 @@ registerScreen('town', () => {
     G.fadeTeleport = fadeTeleport;
     G.reveal = reveal;
     G.sleep = sleep;
+    G.showDayCard = (day = G.state.day) => { dayCard = { day, t: 0 }; };
     // the end of day 14: across the strait (scenes/finale.js)
     G.finale = async () => { saveGame(); go('finale', {}, { transition: 'black' }); await new Promise(() => {}); };
     cabinSpots();
@@ -211,6 +212,27 @@ registerScreen('town', () => {
       console.warn(e);
       G.hud.toast('LAPTOP', 'The laptop is still booting…');
     }
+  }
+
+  let dayCard = null;
+  const WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const NUM = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen'];
+  function drawDayCard(ctx) {
+    const c = dayCard;
+    const black = c.t < 2.6 ? 1 : Math.max(0, 1 - (c.t - 2.6) / 1.0);
+    if (black <= 0) { dayCard = null; return; }
+    ctx.save();
+    ctx.fillStyle = `rgba(0,0,0,${black})`;
+    ctx.fillRect(0, 0, W, H);
+    const a = Math.min(1, Math.max(0, (c.t - 0.3) / 0.5)) * Math.min(1, Math.max(0, (2.5 - c.t) / 0.5));
+    if (a > 0) {
+      ctx.globalAlpha = a;
+      const left = DAYS - c.day;
+      vText(ctx, `Day ${NUM[c.day] || c.day}`, W / 2, H / 2 - 6, 30, { align: 'center', weight: 0.12, spacing: 10, color: '#fff' });
+      text(ctx, WEEK[(c.day - 1) % 7], W / 2, H / 2 + 30, { size: 15, weight: 400, color: C.dim, align: 'center', spacing: 2 });
+      text(ctx, left > 0 ? `Wormwood wakes in ${left} day${left === 1 ? '' : 's'}` : 'Wormwood wakes at dawn', W / 2, H / 2 + 74, { size: 13, weight: 500, color: left <= 1 ? C.red : '#c9cfd5', align: 'center', spacing: 1 });
+    }
+    ctx.restore();
   }
 
   function fade(to, dur) {
@@ -327,18 +349,19 @@ registerScreen('town', () => {
     const s = G.state;
     const need = DAY_START[s.day]?.mustFinish || [];
     const open = need.filter((m) => !s.missions.done[m]);
-    if (open.length && s.day < 14) { G.missions.ear('d1.n.notyet'); return; }
-    if (s.day >= 14) { G.hud.toast('NOT TONIGHT', 'The Winter Gala. Wormwood wakes at dawn.', '#ff6a5a'); return; }
+    if (open.length && s.day < DAYS) { G.missions.ear('d1.n.notyet'); return; }
+    if (s.day >= DAYS) { G.hud.toast('NOT TONIGHT', 'Wormwood wakes at dawn. Finish it.', '#ff6a5a'); return; }
     G.player.locked = true;
     await fade(1, 0.8);
     s.day += 1;
     s.hour = 8.0;
     s.pos = { x: G.player.pos.x, z: G.player.pos.z, yaw: G.player.yaw };
     s.attention = Math.max(0, s.attention - 15);
-    G.hud.toast('A NEW DAY', `Day ${s.day}`, '#ffd166');
     saveGame();
-    await new Promise((r) => setTimeout(r, 900));
-    await fade(0, 1.0);
+    // a title card over black: the card draws its own black, so the fade can lift
+    dayCard = { day: s.day, t: 0 };
+    game.fx.fade = 0;
+    await new Promise((r) => setTimeout(r, 3600));
     G.player.locked = false;
     for (const id of DAY_START[s.day]?.start || []) G.missions.start(id);
     for (const h of NEWDAY_HOOKS) { try { h(G, s.day); } catch (e) { console.error(e); } }
@@ -470,7 +493,8 @@ registerScreen('town', () => {
       saveT += dt;
       if (saveT > 60) { saveT = 0; s.pos = { x: P.pos.x, z: P.pos.z, yaw: P.yaw }; saveGame(); }
     },
-    draw(ctx) {
+    draw(ctx, dt = 1 / 60) {
+      if (dayCard) { dayCard.t += dt; if (dayCard.t < 2.6) { drawDayCard(ctx); return; } }
       if (!ready) {
         ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
         vText(ctx, 'Port Zarya', 96, H - 120, 26, { color: '#fff', weight: 0.14, spacing: 8 });
@@ -504,6 +528,7 @@ registerScreen('town', () => {
         hints(ctx, [['ud', 'Select'], ['confirm', 'OK'], ['pause', 'Resume']]);
         if (opts) opts.draw(ctx);
       }
+      if (dayCard) drawDayCard(ctx);
     },
     view() { return ready ? { scene, camera } : null; },
   };

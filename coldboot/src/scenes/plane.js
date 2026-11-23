@@ -14,7 +14,7 @@ import { createSky } from '../world/sky.js';
 import { voice } from '../audio/voice.js';
 import { getEnvMap } from '../core/envmap.js';
 import { playerDNA } from './warehouse.js';
-import { text, W, H, C, actionGlyph } from '../core/ui.js';
+import { text, W, H, C, actionGlyph, measure, roundRect } from '../core/ui.js';
 import { store } from '../core/settings.js';
 import { makeNoise2D } from '../core/util.js';
 import { fabric } from '../human/fabric.js';
@@ -342,17 +342,23 @@ registerScreen('plane', () => {
       d.draw(ctx);
       if (t < 6) {
         const a = Math.min(1, t / 1.2) * Math.min(1, (6 - t) / 1.2);
-        text(ctx, 'BERINGIA AIR 211', 80, 110, { size: 34, weight: 900, color: '#fff', alpha: a, italic: true, spacing: 4 });
-        text(ctx, 'ANADYR → PORT ZARYA  ·  05:40', 82, 140, { size: 15, weight: 700, color: C.dim, alpha: a, spacing: 3 });
+        text(ctx, 'Beringia Air 211', 96, H - 172, { size: 30, weight: 300, color: '#fff', alpha: a, spacing: 1 });
+        text(ctx, 'ANADYR  →  PORT ZARYA', 98, H - 144, { size: 12, weight: 500, color: C.dim, alpha: a, spacing: 4 });
+        text(ctx, 'Over the Bering Strait, 5:40 am', 98, H - 120, { size: 15, weight: 400, color: '#c9cfd5', alpha: a });
       }
       if (prompt) {
-        const px = W / 2, py = 120;
-        ctx.fillStyle = 'rgba(0,0,0,0.45)';
-        ctx.fillRect(px - 190, py - 26, 380, 44);
-        const gw = actionGlyph(ctx, prompt.action === 'look' ? 'look' : 'interact', px - 170, py - 4, 11);
-        text(ctx, prompt.text + (prompt.action === 'interact' ? `  ${taps}/2` : ''), px - 170 + gw + 14, py + 2, { size: 16, weight: 800, color: '#fff', spacing: 2 });
+        const label = prompt.text + (prompt.action === 'interact' ? `  ${taps}/2` : '');
+        const tw = measure(ctx, label, { size: 16, weight: 500 });
+        const bw = tw + 70, px = W / 2 - bw / 2, py = H - 150;
+        ctx.save();
+        roundRect(ctx, px, py - 20, bw, 40, 6);
+        ctx.fillStyle = 'rgba(10,12,15,0.62)';
+        ctx.fill();
+        ctx.restore();
+        const gw = actionGlyph(ctx, prompt.action === 'look' ? 'look' : 'interact', px + 12, py, 10.5);
+        text(ctx, label, px + 24 + gw, py + 6, { size: 16, weight: 500, color: '#fff' });
       }
-      if (skipHold > 0.1) text(ctx, 'HOLD TO SKIP', W - 60, 60, { size: 14, weight: 800, color: '#fff', align: 'right', alpha: Math.min(1, skipHold * 2), spacing: 2 });
+      if (skipHold > 0.1) text(ctx, 'Hold to skip', W - 60, 60, { size: 14, weight: 500, color: '#fff', align: 'right', alpha: Math.min(1, skipHold * 2) });
     },
     view() { return { scene, camera }; },
   };
