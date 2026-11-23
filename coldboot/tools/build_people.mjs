@@ -26,7 +26,7 @@
 // the root's translation; facial/helper bones dropped; locomotion made
 // in-place (speed kept as metadata), loops made seamless.
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, readdirSync, copyFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, readdirSync } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { tmpdir } from 'node:os';
@@ -297,7 +297,6 @@ async function buildAvatar(id) {
   const scene = doc.createScene(id);
   // skeleton: Bip01 and every bone below it that the skin uses (or leads to one)
   const joints = mesh.skeleton.bones;
-  const jointSet = new Set(joints);
   let bip = joints[0]; while (bip.parent && bip.parent.isBone) bip = bip.parent;
   const needed = new Set();
   for (const j of joints) { let b = j; while (b && b.isBone) { needed.add(b); b = b.parent; } }
@@ -321,7 +320,6 @@ async function buildAvatar(id) {
   });
   const skin = doc.createSkin('skin').setSkeleton(nodeOf.get(bip)).setInverseBindMatrices(acc(D, 'MAT4', ibm));
   for (const j of joints) skin.addJoint(nodeOf.get(j));
-  void jointSet;
 
   const partNames = [];
   let height = 0, minY = Infinity;
@@ -368,10 +366,6 @@ async function buildAvatar(id) {
 }
 
 // ------------------------------------------------------------------ clips
-function quatTrackArrays(track) {
-  return { t: track.times, v: track.values };
-}
-
 /** Sample a track at times ts (linear / slerp), returns Float32Array. */
 function sampleTrack(track, ts) {
   const interp = track.createInterpolant();
@@ -642,4 +636,3 @@ let total = 0;
 const walk = (d) => { for (const f of readdirSync(d)) { const p = join(d, f); const st = statSync(p); if (st.isDirectory()) walk(p); else total += st.size; } };
 walk(OUT);
 console.log(`assets/people: ${(total / 1e6).toFixed(1)} MB`);
-void copyFileSync; void quatTrackArrays;

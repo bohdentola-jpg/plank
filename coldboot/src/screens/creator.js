@@ -143,8 +143,7 @@ registerScreen('creator', () => {
       camK += (wantK - camK) * Math.min(1, dt * 4);
       const h = ch?.height || 1.75;
       const eye = ch ? ch.bones.head.getWorldPosition(new THREE.Vector3()).y + 0.06 : h - 0.1;
-      // the person stands left of centre (the panel takes the right half)
-      const cx = 0.62 * (1 - camK) + 0.3 * camK;
+      const cx = 0.25 * (1 - camK) + 0.3 * camK;   // full body: between the header and the panel
       camera.position.set(cx, 1.05 * (1 - camK) + (eye - 0.02) * camK, 3.9 - 2.35 * camK);
       camera.lookAt(cx, 0.95 * (1 - camK) + (eye - 0.04) * camK, 0);
       camera.fov = 30 - 6 * camK;

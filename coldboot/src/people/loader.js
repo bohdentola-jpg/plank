@@ -39,9 +39,43 @@ export function loadAvatar(id) {
   return avatarCache.get(id);
 }
 
-/** A new skinned copy of a template (shared geometry and materials). */
+/** A new skinned copy of a template (shared geometry and materials). Pair with release(). */
 export function instantiate(tpl) {
+  tpl.users = (tpl.users || 0) + 1;
+  clearTimeout(tpl.dropTimer);
   return cloneSkinned(tpl.scene);
+}
+
+/**
+ * An instance is gone. When nobody has used an avatar for a while (townsfolk
+ * left behind across town), its textures and meshes leave the GPU; it loads
+ * again (about a megabyte) if someone with that face comes back.
+ */
+export function release(tpl, keepMs = 45000) {
+  tpl.users = Math.max(0, (tpl.users || 0) - 1);
+  if (tpl.users || tpl.pinned) return;
+  clearTimeout(tpl.dropTimer);
+  tpl.dropTimer = setTimeout(() => {
+    if (tpl.users) return;
+    avatarCache.delete(tpl.id);
+    const seen = new Set();
+    tpl.scene.traverse((o) => {
+      if (!o.isMesh) return;
+      o.geometry.dispose();
+      for (const m of [o.material, o.material.userData?.fringe].filter(Boolean)) {
+        if (seen.has(m)) continue;
+        seen.add(m);
+        for (const v of Object.values(m)) if (v && v.isTexture) v.dispose();
+        m.dispose();
+      }
+    });
+  }, keepMs);
+}
+
+/** Keep an avatar loaded for good (the player). */
+export function pin(id, on = true) {
+  const p = avatarCache.get(id);
+  if (p) p.then((tpl) => { tpl.pinned = on; });
 }
 
 /** Bones that move the legs/hips (Biped: the thighs hang off Bip01_Spine). */

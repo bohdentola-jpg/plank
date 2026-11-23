@@ -142,7 +142,7 @@ export const CREDIT_LINES = [
   ['COLD BOOT', 'title'], ['ХОЛОДНЫЙ ПУСК', 'ru'], ['Save the world. Quietly.', 'sub'], ['', ''],
   ['A game about six people at a table in a fish warehouse,', ''], ['one stranger, five days, and a small town worth saving.', ''], ['', ''],
   ['— PEOPLE —', 'head'],
-  ['Every face, body and hairline is grown at runtime', ''], ['from the MakeHuman base mesh and its CC0 assets.', ''], ['', ''],
+  ['Avatars and motion capture:', ''], ['the Microsoft Rocketbox library (MIT licence).', ''], ['', ''],
   ['— VOICES —', 'head'],
   ['Russian: Silero TTS v4 (ru)', ''], ['English: Piper (LibriTTS-R voices)', ''], ['Checked line by line with Whisper.', ''], ['', ''],
   ['— WORLD —', 'head'],

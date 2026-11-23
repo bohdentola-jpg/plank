@@ -68,7 +68,10 @@ export function vec(G, x, y, z) {
 }
 /** A fixed shot from one place (raised `ah` m) looking at another (raised `bh` m). */
 export function shot(G, a, ah, b, bh, fov = 45) {
-  return { pos: vec(G, a.x, (a.y || 0) + ah, a.z), look: vec(G, b.x, (b.y || 0) + bh, b.z), fov, dof: false };
+  // heights are above the floor or ground actually there: a place given as bare
+  // {x, z} has y = 0, and Port Zarya stands several metres above that
+  const base = (p) => Math.max(p.y || 0, G.world?.groundNear ? G.world.groundNear(p.x, p.z, p.y || undefined) : 0);
+  return { pos: vec(G, a.x, base(a) + ah, a.z), look: vec(G, b.x, base(b) + bh, b.z), fov, dof: false };
 }
 /** A close-up, only if that actor really made it on stage. */
 export function cu(d, id, o) { return d.actors?.[id] ? d.closeUp(id, o) : undefined; }

@@ -1,5 +1,7 @@
-// Streets: packed-snow ribbons draped on the terrain, tyre ruts worn grey into
-// them, ploughed snowbanks along both edges. Dirt trails are narrow tracks.
+// Streets: ploughed asphalt draped on the terrain — the CC0 asphalt photo for
+// grain, darker polished wheel tracks, a worn yellow centre dash, white edge
+// lines half under the snow, slush along the edges — and ploughed snowbanks on
+// both sides. Dirt trails are narrow packed-snow tracks.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { TOWN } from './townplan.js';
@@ -18,6 +20,7 @@ function ribbon(pts, width, y0, uvScale = 1) {
   const n = pts.length;
   const pos = new Float32Array(n * 2 * 3);
   const uv = new Float32Array(n * 2 * 2);
+  const uv1 = new Float32Array(n * 2 * 2);   // metres (across, along) for tiling detail maps
   const idx = [];
   let dist = 0;
   for (let i = 0; i < n; i++) {
@@ -33,12 +36,14 @@ function ribbon(pts, width, y0, uvScale = 1) {
       const k = i * 2 + s;
       pos[k * 3] = x; pos[k * 3 + 1] = groundY(x, z) + y0; pos[k * 3 + 2] = z;
       uv[k * 2] = s; uv[k * 2 + 1] = dist / uvScale;
+      uv1[k * 2] = s * width; uv1[k * 2 + 1] = dist;
     }
     if (i < n - 1) { const k = i * 2; idx.push(k, k + 2, k + 1, k + 1, k + 2, k + 3); }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  g.setAttribute('uv1', new THREE.BufferAttribute(uv1, 2));
   g.setIndex(idx);
   g.computeVertexNormals();
   return g;
@@ -76,28 +81,111 @@ function bank(pts, side, width, h) {
   return g;
 }
 
+const TEX_URL = new URL('../../assets/tex/', import.meta.url).href;
+const ROAD_TILE = 12;   // metres of road per colour-texture repeat (one centre dash)
+
+function rng(seed) { return () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }; }
+
 let roadTex = null;
+/** The road surface, painted across the width (u 0..1) and along 12 m (v 0..1). */
 function roadTexture() {
   if (roadTex) return roadTex;
+  const W = 512, H = 1024;
   const cv = document.createElement('canvas');
-  cv.width = 128; cv.height = 512;
+  cv.width = W; cv.height = H;
   const c = cv.getContext('2d');
-  c.fillStyle = '#d8dde2'; c.fillRect(0, 0, 128, 512);
-  // grey slush ruts where the wheels go
-  for (const x of [30, 98]) {
-    const g = c.createLinearGradient(x - 14, 0, x + 14, 0);
-    g.addColorStop(0, 'rgba(90,96,104,0)'); g.addColorStop(0.5, 'rgba(90,96,104,0.75)'); g.addColorStop(1, 'rgba(90,96,104,0)');
-    c.fillStyle = g; c.fillRect(x - 14, 0, 28, 512);
-  }
-  for (let i = 0; i < 2600; i++) {
-    c.fillStyle = `rgba(${Math.random() < 0.5 ? '60,64,70' : '255,255,255'},${Math.random() * 0.25})`;
-    c.fillRect(Math.random() * 128, Math.random() * 512, 1 + Math.random() * 3, 1 + Math.random() * 6);
-  }
+  const paint = (img) => {
+    const r = rng(7);
+    // asphalt: the photo, tiled at ~3 m (the road is ~9 m across, 12 m along)
+    c.fillStyle = '#3c3f43';
+    c.fillRect(0, 0, W, H);
+    if (img) {
+      const tw = W / 3, th = H / 4;
+      for (let y = 0; y < H; y += th) for (let x = 0; x < W; x += tw) c.drawImage(img, x, y, tw + 1, th + 1);
+      c.fillStyle = 'rgba(28,30,34,0.42)';   // colder, darker than the sunny photo
+      c.fillRect(0, 0, W, H);
+    }
+    // repairs: a few darker tar patches and cracks
+    for (let i = 0; i < 3; i++) {
+      c.fillStyle = `rgba(18,19,21,${0.25 + r() * 0.2})`;
+      c.fillRect(W * (0.15 + r() * 0.6), H * r(), W * (0.1 + r() * 0.15), H * (0.04 + r() * 0.08));
+    }
+    c.strokeStyle = 'rgba(14,15,17,0.55)';
+    c.lineWidth = 1.5;
+    for (let i = 0; i < 14; i++) {
+      let x = W * r(), y = H * r();
+      c.beginPath(); c.moveTo(x, y);
+      for (let k = 0; k < 6; k++) { x += (r() - 0.5) * 40; y += (r() - 0.3) * 60; c.lineTo(x, y); }
+      c.stroke();
+    }
+    // wheel tracks: polished darker bands in each lane
+    for (const u of [0.18, 0.36, 0.64, 0.82]) {
+      const x = u * W, w = W * 0.07;
+      const g = c.createLinearGradient(x - w, 0, x + w, 0);
+      g.addColorStop(0, 'rgba(10,11,13,0)'); g.addColorStop(0.5, 'rgba(10,11,13,0.28)'); g.addColorStop(1, 'rgba(10,11,13,0)');
+      c.fillStyle = g;
+      c.fillRect(x - w, 0, w * 2, H);
+    }
+    // white edge lines, worn
+    for (const u of [0.07, 0.93]) {
+      for (let y = 0; y < H; y += 6) {
+        c.fillStyle = `rgba(226,228,226,${0.55 + r() * 0.3})`;
+        c.fillRect(u * W - 4, y, 8, 6);
+      }
+    }
+    // the yellow centre dash: 3 m painted, 9 m gap; worn at its ends
+    const dash = H * (3 / ROAD_TILE);
+    for (let y = 0; y < dash; y += 4) {
+      const wear = Math.min(1, Math.min(y, dash - y) / 40);
+      c.fillStyle = `rgba(214,168,46,${(0.55 + r() * 0.3) * wear})`;
+      c.fillRect(W / 2 - 6, y + H * 0.35, 12, 4);
+    }
+    // slush and snow drift along both edges, ragged, and a little in the crown
+    for (let y = 0; y < H; y += 3) {
+      const t = y / H;
+      const wl = W * (0.05 + 0.05 * Math.sin(t * 19 + 1.3) * Math.sin(t * 7) + 0.035 * r());
+      const wr = W * (0.05 + 0.05 * Math.sin(t * 23 + 0.4) * Math.sin(t * 5 + 2) + 0.035 * r());
+      const gl = c.createLinearGradient(0, 0, wl * 1.5, 0);
+      gl.addColorStop(0, 'rgba(232,236,240,0.96)'); gl.addColorStop(0.65, 'rgba(214,220,226,0.75)'); gl.addColorStop(1, 'rgba(200,206,212,0)');
+      c.fillStyle = gl; c.fillRect(0, y, wl * 1.5, 3);
+      const gr = c.createLinearGradient(W, 0, W - wr * 1.5, 0);
+      gr.addColorStop(0, 'rgba(232,236,240,0.96)'); gr.addColorStop(0.65, 'rgba(214,220,226,0.75)'); gr.addColorStop(1, 'rgba(200,206,212,0)');
+      c.fillStyle = gr; c.fillRect(W - wr * 1.5, y, wr * 1.5, 3);
+    }
+    for (let i = 0; i < 900; i++) {
+      const u = r() < 0.5 ? 0.42 + r() * 0.16 : r();
+      c.fillStyle = `rgba(210,216,222,${r() * 0.18})`;
+      c.fillRect(u * W, r() * H, 2 + r() * 10, 1 + r() * 3);
+    }
+    if (roadTex) roadTex.needsUpdate = true;
+  };
+  paint(null);
   roadTex = new THREE.CanvasTexture(cv);
   roadTex.colorSpace = THREE.SRGBColorSpace;
-  roadTex.wrapS = roadTex.wrapT = THREE.RepeatWrapping;
+  roadTex.wrapS = THREE.ClampToEdgeWrapping;
+  roadTex.wrapT = THREE.RepeatWrapping;
   roadTex.anisotropy = 8;
+  const img = new Image();
+  img.onload = () => paint(img);
+  img.src = TEX_URL + 'asphalt_col.jpg';
   return roadTex;
+}
+
+let detail = null;
+/** The asphalt photo's normal and roughness maps, tiled every 3 m on the road's uv1 (metres). */
+function roadDetail() {
+  if (detail) return detail;
+  const L = new THREE.TextureLoader();
+  const load = (f) => {
+    const t = L.load(TEX_URL + f);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(1 / 3, 1 / 3);
+    t.channel = 1;
+    t.anisotropy = 8;
+    return t;
+  };
+  detail = { normal: load('asphalt_nrm.jpg'), rough: load('asphalt_rgh.jpg') };
+  return detail;
 }
 
 export function buildRoads() {
@@ -107,10 +195,14 @@ export function buildRoads() {
   for (const st of TOWN.streets) {
     const pts = resample(st.pts, 3);
     if (st.dirt) { trails.push(ribbon(pts, st.width * 0.6, 0.05, 8)); continue; }
-    roads.push(ribbon(pts, st.width, 0.06, st.width * 1.8));
+    roads.push(ribbon(pts, st.width, 0.06, ROAD_TILE));
     banks.push(bank(pts, 1, st.width, 0.55), bank(pts, -1, st.width, 0.55));
   }
-  const roadMat = new THREE.MeshStandardMaterial({ map: roadTexture(), roughness: 0.55, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  const D = roadDetail();
+  const roadMat = new THREE.MeshStandardMaterial({
+    map: roadTexture(), normalMap: D.normal, normalScale: new THREE.Vector2(0.8, 0.8), roughnessMap: D.rough,
+    roughness: 0.92, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+  });
   const r = new THREE.Mesh(mergeGeometries(roads), roadMat);
   r.receiveShadow = true;
   group.add(r);

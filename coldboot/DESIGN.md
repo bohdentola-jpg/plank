@@ -137,10 +137,12 @@ Optional, and every piece of it shows up later in the story:
 - **Renderer** (`core/renderer.js`): MF's pipeline at 16:9 — HDR target → bloom → CRT pass
   (curvature, aberration, ACES, grade, scanlines, mask, grain, vignette, letterbox).
   UI is a 1280×720 canvas composited under the glass.
-- **Humans** (`src/human/`): MakeHuman hm08 base mesh (CC0) baked by
-  `tools/build_humans.py` into `assets/human/*.bin`; runtime morphing (macro + face
-  targets), skeleton from joint groups, skinning, facial expression morphs, procedural
-  skin/eyes/hair/clothing. See `src/human/README.md`.
+- **People** (`src/people/`): Microsoft Rocketbox avatars (MIT) baked by
+  `tools/build_people.mjs` into `assets/people/*.glb` (body, head with 43 blendshapes,
+  hair, props; WebP textures), mocap clips per sex in `anim_m.glb` / `anim_f.glb`.
+  Runtime: skin/hair/cloth materials, a layered animator (lower/upper body, gait
+  blending 0–6 m/s, sit, crouch, talk gestures, look-at, eyes, blinks, visemes).
+  `src/human/character.js` and `anim.js` re-export it for older callers.
 - **Voice** (`tools/build_voice.py`): every voiced line in `src/data/` has an id; Piper
   (+ Silero for Russian) renders `assets/vo/<id>.ogg`. The game plays it, drives lip-sync
   from its amplitude, and shows subtitles. Missing files fall back to timed subtitles.

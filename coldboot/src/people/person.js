@@ -12,7 +12,7 @@
 //                  or the old MakeHuman expression names)
 import * as THREE from 'three';
 import { AVATARS, PLAYER_AVATARS } from './catalog.js';
-import { loadAvatar, loadClips, instantiate } from './loader.js';
+import { loadAvatar, loadClips, instantiate, release } from './loader.js';
 
 // old expression names (MakeHuman rig) → blendshapes [name, gain]
 const LEGACY = {
@@ -42,6 +42,7 @@ export function avatarOf(dna = {}) {
 export class Character {
   constructor(tpl, lib, dna, opts = {}) {
     this.dna = dna;
+    this.tpl = tpl;
     this.avatar = tpl.id;
     this.meta = tpl.meta;
     this.sex = tpl.meta.sex === 'f' ? 'f' : 'm';
@@ -180,17 +181,25 @@ export class Character {
   }
 
   dispose() {
+    if (this.disposed) return;
+    this.disposed = true;
     this.group.removeFromParent();
     for (const m of this.materials) m.dispose();
     this.skeleton?.dispose();
     this.animator?.dispose?.();
+    release(this.tpl);
   }
 }
 
 /** Build a person (async: the avatar and its sex's clips load once, then come from cache). */
 export async function buildCharacter(dnaIn = {}, opts = {}) {
   const id = avatarOf(dnaIn);
-  const tpl = await loadAvatar(id);
+  let tpl;
+  try { tpl = await loadAvatar(id); } catch (e) {
+    // a missing or broken file shouldn't take a scene down: stand someone in
+    console.error(e);
+    tpl = await loadAvatar(id === DEFAULT_DNA.avatar ? 'Female_Adult_07' : DEFAULT_DNA.avatar);
+  }
   const lib = await loadClips(tpl.meta.sex);
   const dna = { ...dnaIn, avatar: tpl.id, sex: tpl.meta.sex === 'f' ? 0 : 1 };
   return new Character(tpl, lib, dna, opts);

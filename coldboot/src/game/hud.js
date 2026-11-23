@@ -176,7 +176,9 @@ export class HUD {
     const p = g.player?.pos;
     if (!p) return;
     const scale = R / 120; // metres shown to the edge
-    const rot = -(g.camYaw ?? 0) - Math.PI; // heading-up
+    // Heading-up: rotate the world (x → screen right, z → screen down, so north is up
+    // before rotating) by the orbit yaw, which puts the camera's forward at the top.
+    const rot = g.camYaw ?? 0;
     ctx.save();
     ctx.beginPath();
     ctx.arc(cx, cy, R, 0, Math.PI * 2);
@@ -246,12 +248,10 @@ export class HUD {
     // north tick
     const na = rot - Math.PI / 2;
     text(ctx, 'N', cx + Math.cos(na) * (R - 10), cy + Math.sin(na) * (R - 10) + 4, { size: 11, weight: 600, color: '#fff', align: 'center' });
-    // player arrow
-    const fa = (g.player.yaw ?? 0);
-    const ang = -fa - rot + Math.PI;
+    // player arrow: drawn pointing up, turned by where the player faces relative to the camera
     ctx.save();
     ctx.translate(cx, cy);
-    ctx.rotate(-ang + Math.PI);
+    ctx.rotate(Math.PI - (g.player.yaw ?? 0) + rot);
     ctx.fillStyle = '#fff';
     ctx.shadowColor = 'rgba(0,0,0,0.6)';
     ctx.shadowBlur = 3;

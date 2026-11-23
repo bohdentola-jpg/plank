@@ -72,6 +72,9 @@ export class Animator {
     this.mixer = new THREE.AnimationMixer(ch.root);
     this.rootK = ch.hip / (this.lib.hip || ch.hip);
     this.B = ch.bones;
+    // the Biped root isn't a skin joint, so the loader makes it a plain node, not a Bone:
+    // find it by name so the procedural lean has something to turn
+    if (!this.B.Bip01) this.B.Bip01 = ch.root?.getObjectByName?.('Bip01') || (ch.root?.name === 'Bip01' ? ch.root : null);
     // ---- the old Animator's public state
     this.t = Math.random() * 10;
     this.speed = 0;
@@ -483,6 +486,7 @@ export class Animator {
     const ang = -this._turnS * 7 * D2R * moveK * clamp(Math.abs(this.speed) / 3, 0.3, 1);
     if (Math.abs(ang) < 1e-4) return;
     const bip = this.B.Bip01;
+    if (!bip) return;
     _q.setFromAxisAngle(_v.set(0, 0, 1), ang);
     bip.quaternion.premultiply(_q);
     bip.position.applyQuaternion(_q);

@@ -118,7 +118,7 @@ export class Dialog {
     P.anim.lookAt = null;
     G.player.locked = false;
     G.cinematic = false;
-    game.renderer.dof = null;
+    d.release();
     game.renderer.tweakPost({ letterbox: 0 });
     G.orbit?.snapBehind(P);
     this.active = null;

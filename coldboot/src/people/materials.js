@@ -109,16 +109,16 @@ export function hairMaterial(src) {
   return core;
 }
 
+/** Glasses: the frame is cut out of the map's alpha (opaque, depth-sorted with the hair); the lenses drop out. */
 export function glassesMaterial(src) {
   return new THREE.MeshPhysicalMaterial({
     name: 'people-glasses',
     map: texOf(src, 'map'),
-    roughness: 0.12,
-    metalness: 0.1,
-    transparent: true,
-    depthWrite: false,
+    roughness: 0.25,
+    metalness: 0.3,
+    alphaTest: 0.45,
+    alphaToCoverage: true,
     side: THREE.DoubleSide,
-    specularIntensity: 1,
   });
 }
 

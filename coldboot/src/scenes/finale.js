@@ -458,7 +458,7 @@ const CREDITS = [
   ['Doc Ellen Haverford · Pearl Jessup', ''], ['Mayor Walt Hennessey · Gideon Shaw · Evan Pike', ''],
   ['Special Agent Daniel Okafor', ''], ['and Cyrus Halloran', ''], ['', ''],
   ['— MADE WITH —', 'head'],
-  ['three.js', ''], ['People grown from the MakeHuman base mesh (CC0)', ''], ['Voices: Silero & Piper neural speech', ''],
+  ['three.js', ''], ['People: Microsoft Rocketbox avatars and motion capture (MIT)', ''], ['Voices: Silero & Piper neural speech', ''],
   ['Textures: Poly Haven & ambientCG (CC0)', ''], ['Everything else: code', ''], ['', ''],
   ['Thank you for playing.', 'head'], ['', ''], ['', ''],
   ['Тихо.', 'title'],

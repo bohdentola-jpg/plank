@@ -57,11 +57,12 @@ or Firefox with WebGL2. A controller is welcome (DualSense first, any standard p
 
 ## What's in it
 
-- **People that look like people.** Every character is grown at runtime from the
-  MakeHuman base mesh (CC0): macro shape, face sculpting, skin shading with
-  subsurface wrap, pores and wrinkles, shell hair with real hairlines, beards,
-  clothes grown from the body and draped, procedural walking, sitting, gestures,
-  blinks, glances and lip-sync to the voice. The character creator makes *you*.
+- **People that look like people.** Every character is a Microsoft Rocketbox
+  avatar (MIT) moving on Rocketbox motion capture: walk, jog, run and sprint
+  blended on one gait, sitting, crouching, idles, listening nods, talk gestures
+  by mood, with look-at, eye saccades, blinks, expressions and lip-sync to the
+  voice layered on top. The creator lets you pick who you are from twelve
+  people, with height and clothing tint.
 - **Real voices.** The Russian team speaks Russian (subtitled in English, with the
   original underneath); the town speaks English. Neural TTS (Silero for Russian,
   Piper for English), checked line by line with Whisper, played through an
@@ -104,7 +105,8 @@ coldboot/
   index.html, style.css      the page: a 16:9 canvas on black, the bundled fonts
   src/main.js                screens, transitions, the loop
   src/core/                  renderer (HDR → bloom → DOF → film grade), input, UI, settings
-  src/human/                 MakeHuman runtime: body, face, skin, hair, clothes, animation
+  src/people/                Rocketbox avatars: loader, materials, person, animator
+  src/human/                 compatibility exports (character.js, anim.js → src/people)
   src/world/                 terrain, sea, roads, buildings kit, props, sky, snow, smoke, chopper
   src/game/                  player, physics, NPCs, dialog, missions, attention, economy,
                              minigames, phone, vehicles, HUD, state/save
@@ -112,7 +114,7 @@ coldboot/
   src/scenes/                warehouse prologue, plane, finale, the cutscene director
   src/screens/               title, creator, town, laptop, options, credits, labs
   src/data/                  cast, schedules, script (every line and mission)
-  assets/human/              baked MakeHuman data (CC0)
+  assets/people/             Rocketbox avatars and mocap clips as GLB (MIT — see LICENSE-Rocketbox.md)
   assets/vo/                 rendered voice lines (Opus) + manifest
   assets/tex/                CC0 textures (Poly Haven, ambientCG) — see CREDITS.md
   assets/fonts/              Inter and JetBrains Mono (SIL Open Font License)
@@ -127,19 +129,24 @@ coldboot/
   against CPython, every lesson and field hack solvable.
 - `node coldboot/tools/shot.mjs "screen=town&ff=1" out.png --wait 60000` —
   headless screenshots into `qa/` (`ff=1` lets slow software rendering keep up;
-  `&day=8` starts a story day, `&free=1` skips the arrival,
+  `&day=3` starts a story day (1–5), `&free=1` skips the arrival,
   `screen=finale&phase=jail&auto=1` jumps into the finale's scenes).
 - `--eval "import('/coldboot/tools/autopilot.js').then((m) => m.run(600))"` on a
   `screen=town&ff=1&day=N` shot — an autopilot that plays the current
   objectives (teleports, talks, answers, skips, waits) and logs the chain, so a
   broken story step shows up as an objective that never changes.
-- `tools/build_humans.py` — bakes the MakeHuman data (needs the MakeHuman 1.x
-  `data` folder). `tools/export_lines.mjs` + `tools/build_voice.py` — render
-  voice lines (Silero, Piper, rubberband, ffmpeg; `--qa` runs Whisper).
+- `tools/build_people.mjs` (+ `build_people_tex.py`) — fetches the Rocketbox
+  avatars and clips it needs (sparse checkout) and bakes them to GLB/WebP
+  (needs three@0.160, @gltf-transform/core and /extensions, Pillow, numpy).
+  `tools/export_lines.mjs` + `tools/build_voice.py` — render voice lines
+  (Silero, Piper, rubberband, ffmpeg; `--qa` runs Whisper).
+- `node coldboot/tools/shotlog.mjs "screen=town&ff=1&day=2" d2 --autopilot` —
+  a screenshot at every cutscene camera cut, labelled with the line being
+  spoken; `python3 coldboot/tools/contact.py d2` makes contact sheets.
 
 ## Credits
 
-People: MakeHuman base mesh, targets and assets (CC0). Voices: Silero TTS v4 (ru),
+People: Microsoft Rocketbox avatar library and animations (MIT). Voices: Silero TTS v4 (ru),
 Piper (LibriTTS-R voices, ru_RU voices). Textures: Poly Haven and ambientCG (CC0).
 Type: Inter and JetBrains Mono (SIL OFL 1.1). Rendering: three.js. Everything else — the town, the story, the music and sound —
 is made in code.

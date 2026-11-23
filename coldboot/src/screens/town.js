@@ -209,6 +209,14 @@ registerScreen('town', () => {
     }
   }
 
+  const errSeen = new Set();
+  function safe(tag, f) {
+    try { f(); } catch (e) {
+      const k = tag + ':' + (e?.message || e);
+      if (!errSeen.has(k)) { errSeen.add(k); console.error(`[town:${tag}]`, e); }
+    }
+  }
+
   let dayCard = null;
   const WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const NUM = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen'];
@@ -265,24 +273,26 @@ registerScreen('town', () => {
     d.cam({ pos: V(-40, 70, 220), look: V(10, 4, -20), fov: 46, dof: false });
     d.cam({ pos: V(-10, 42, 120), look: V(0, 6, -30), fov: 44, dur: 4.5 });
     await d.wait(4.2);
+    // each building framed from its own front (+z out of its door), whichever way it faces
+    const F = (b, lx, lz, h) => V(b.x + lx * Math.cos(b.rot) + lz * Math.sin(b.rot), b.y + h, b.z - lx * Math.sin(b.rot) + lz * Math.cos(b.rot));
     const ch = B.church;
-    d.cam({ pos: V(ch.x - 26, ch.y + 22, ch.z + 34), look: V(ch.x, ch.y + 14, ch.z), fov: 34, dof: false });
-    d.cam({ pos: V(ch.x - 14, ch.y + 18, ch.z + 30), look: V(ch.x, ch.y + 16, ch.z), fov: 32, dur: 3.2 });
+    d.cam({ pos: F(ch, -12, 38, 16), look: F(ch, 0, 0, 13), fov: 34, dof: false });
+    d.cam({ pos: F(ch, -7, 30, 13), look: F(ch, 0, 0, 14), fov: 32, dur: 3.2 });
     await d.wait(3.0);
     const k = B.koshkin;
-    d.cam({ pos: V(k.x - 22, k.y + 6, k.z + 10), look: V(k.x, k.y + 4, k.z), fov: 36 });
-    d.cam({ pos: V(k.x - 18, k.y + 5, k.z + 4), look: V(k.x, k.y + 4, k.z), fov: 34, dur: 3 });
+    d.cam({ pos: F(k, -9, 20, 4.5), look: F(k, 0, 0, 3.5), fov: 36 });
+    d.cam({ pos: F(k, -5, 15, 3.8), look: F(k, 0, 0, 3.2), fov: 34, dur: 3 });
     await d.wait(2.8);
     const n = B.northstar;
-    d.cam({ pos: V(n.x + 26, n.y + 3, n.z + 14), look: V(n.x, n.y + 3, n.z), fov: 38 });
-    d.cam({ pos: V(n.x + 18, n.y + 2.5, n.z + 8), look: V(n.x, n.y + 3, n.z), fov: 30, dur: 4.5 });
+    d.cam({ pos: F(n, 11, 24, 3), look: F(n, 0, 0, 3), fov: 38 });
+    d.cam({ pos: F(n, 7, 17, 2.4), look: F(n, 0, 0, 2.8), fov: 30, dur: 4.5 });
     await line;
     await d.wait(0.8);
     game.renderer.tweakPost({ letterbox: 0 });
+    d.release();
     orbit.snapBehind(G.player);
     G.cinematic = false;
     G.player.locked = false;
-    game.renderer.dof = null;
   }
 
   /** Cutscenes in the open world: d.bring() puts people on stage. */
@@ -336,7 +346,7 @@ registerScreen('town', () => {
     d.removeActor('player');
     G.player.anim.setPosture('stand');
     game.renderer.tweakPost({ letterbox: 0 });
-    game.renderer.dof = null;
+    d.release();
     orbit.snapBehind(G.player);
     G.cinematic = false;
     G.player.locked = false;
@@ -428,16 +438,19 @@ registerScreen('town', () => {
       s.stats.playSeconds += dt;
       env.hour = s.hour;
       const P = G.player;
-      P.update(dt, orbit.yaw);
-      P.anim.update(dt);
-      G.npcs.update(dt);
-      G.missions.update(dt);
-      G.minigames.update(dt);
-      G.interact.update(dt);
-      G.vehicles.update(dt);
-      G.attention.update(dt);
-      G.director.update(dt);
-      G.dialog.update(dt);
+      // each system runs on its own: one that throws logs once and the rest of the
+      // frame (above all the camera) still happens
+      safe('player', () => P.update(dt, orbit.yaw));
+      safe('anim', () => P.anim.update(dt));
+      safe('npcs', () => G.npcs.update(dt));
+      safe('missions', () => G.missions.update(dt));
+      safe('minigames', () => G.minigames.update(dt));
+      safe('interact', () => G.interact.update(dt));
+      safe('vehicles', () => G.vehicles.update(dt));
+      safe('attention', () => G.attention.update(dt));
+      safe('director', () => G.director.update(dt));
+      if (!G.cinematic && G.director.shot) G.director.release();   // gameplay owns the camera
+      safe('dialog', () => G.dialog.update(dt));
       occT -= dt;
       if (occT <= 0) { occT = 0.5; updateOccluders(); }
       // interiors appear when you're close (and you're indoors if inside one's footprint)
@@ -448,7 +461,7 @@ registerScreen('town', () => {
         if (d < 6) indoors = true;
       }
       P.indoors = indoors;
-      if (!G.cinematic) orbit.update(dt, P, { indoors, vehicle: G.vehicles.driving });
+      if (!G.cinematic) safe('camera', () => orbit.update(dt, P, { indoors, vehicle: G.vehicles.driving }));
       G.camYaw = orbit.yaw;
       const r = env.update(dt, P.pos, camera);
       game.renderer.tweakPost({ exposure: env.exposure });

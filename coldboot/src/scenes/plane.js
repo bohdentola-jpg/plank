@@ -198,11 +198,11 @@ registerScreen('plane', () => {
     await d.wait(2.5);
     await d.say('nadia', 'p.nadia.check');
     // tap the earpiece twice
-    prompt = { text: 'TAP THE EARPIECE TWICE', action: 'interact' };
+    prompt = { text: 'Tap the earpiece twice', action: 'interact' };
     waitTaps = true;
     taps = 0;
     let waited = 0;
-    while (taps < 2 && waited < 25) { await d.wait(0.1); waited += 0.1; }
+    while (taps < 2 && waited < (window.__qaAuto ? 2 : 25)) { await d.wait(0.1); waited += 0.1; }
     waitTaps = false;
     prompt = null;
     await d.wait(0.6);
@@ -211,7 +211,7 @@ registerScreen('plane', () => {
     await d.say('nadia', 'p.nadia.lyosha');
     await d.say('nadia', 'p.nadia.rules');
     await d.say('nadia', 'p.nadia.koshkin');
-    prompt = { text: 'LOOK AROUND', action: 'look' };
+    prompt = { text: 'Look around', action: 'look' };
     await d.wait(7);
     prompt = null;
     // the flash

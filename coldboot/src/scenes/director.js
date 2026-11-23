@@ -63,6 +63,7 @@ export class Director {
   // -------------------------------------------------------------- camera
   /** Instant cut / move. spec: {pos, look, fov, dof (focus metres) | dofOn: id, dur} */
   cam(spec) {
+    if (typeof window !== 'undefined') { window.__cuts = (window.__cuts || 0) + 1; window.__cutAt = performance.now(); window.__cutDur = spec?.dur || 0; }   // QA: tools/shotlog.mjs
     const cam = this.camera;
     const from = { pos: cam.position.clone(), look: this._look ? this._look.clone() : new THREE.Vector3(0, 1, 0), fov: cam.fov };
     const resolve = (v) => (typeof v === 'function' ? v() : v);
@@ -73,6 +74,14 @@ export class Director {
     };
     if (!spec.dur) this._applyShot(1);
     return new Promise((r) => { this.shot.resolve = r; if (!spec.dur) r(); });
+  }
+
+  /** Stop driving the camera: the scene is over and gameplay owns it again. */
+  release() {
+    if (this.shot?.resolve) { const r = this.shot.resolve; this.shot.resolve = null; r(); }
+    this.shot = null;
+    this._look = null;
+    game.renderer.dof = null;
   }
 
   _applyShot(k) {
@@ -102,6 +111,7 @@ export class Director {
     // depth of field on the subject
     const r = game.renderer;
     if (s.spec.dof === false) r.dof = null;
+    else if (s.spec.dofOn && !this.actors[s.spec.dofOn]) r.dof = null;   // subject left the stage: no focus to hold
     else if (s.spec.dofOn || s.spec.dof) {
       const focus = s.spec.dofOn ? cam.position.distanceTo(this.headPos(s.spec.dofOn)) : s.spec.dof;
       r.dof = { focus, aperture: s.spec.aperture ?? 7, maxBlur: s.spec.maxBlur ?? 8 };
@@ -205,6 +215,7 @@ export class Director {
     if (actor) {
       const emo = opts.emo || L?.emo;
       this._setEmo(actor, emo);
+      if (opts.gesture) actor.anim.play?.(opts.gesture, { upper: true });   // a scripted mocap gesture
     }
     // everyone else looks at the speaker
     const listeners = opts.listeners === undefined ? Object.keys(this.actors) : opts.listeners;
@@ -249,7 +260,11 @@ export class Director {
   /** Present choices; resolves to the picked index. */
   choose(options, o = {}) {
     if (this.skipping) return Promise.resolve(o.skipTo ?? 0);
-    return new Promise((r) => { this.choice = { options, sel: 0, r, t: 0, prompt: o.prompt }; });
+    return new Promise((r) => {
+      this.choice = { options, sel: 0, r, t: 0, prompt: o.prompt };
+      // QA runs (tools/shotlog.mjs) answer with the first option after a beat
+      if (typeof window !== 'undefined' && window.__qaAuto) setTimeout(() => { if (this.choice?.r === r) { this.choice = null; r(0); } }, 1500);
+    });
   }
 
   // -------------------------------------------------------------- frame

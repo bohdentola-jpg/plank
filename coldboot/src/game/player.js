@@ -168,6 +168,9 @@ export class OrbitCamera {
     this.pitch = pitch;
     this.pivotS = null;
     this.sinceLook = 0;
+    this.curDist = this.dist;
+    this.camera.fov = this.fovBase;   // cutscenes leave long lenses behind
+    this.camera.updateProjectionMatrix();
   }
 
   /** World yaw the camera is looking along (for camera-relative input). */
