@@ -129,7 +129,8 @@ export class Director {
     else if (s.spec.dofOn && !this.actors[s.spec.dofOn]) r.dof = null;   // subject left the stage: no focus to hold
     else if (s.spec.dofOn || s.spec.dof) {
       const focus = s.spec.dofOn ? cam.position.distanceTo(this.headPos(s.spec.dofOn)) : s.spec.dof;
-      r.dof = { focus, aperture: s.spec.aperture ?? 7, maxBlur: s.spec.maxBlur ?? 8 };
+      // a face more than 25 m from the lens isn't what this shot is about: no blur
+      r.dof = s.spec.dofOn && focus > 25 ? null : { focus, aperture: s.spec.aperture ?? 7, maxBlur: s.spec.maxBlur ?? 8 };
     }
   }
 
@@ -217,18 +218,37 @@ export class Director {
     };
   }
 
-  /** Over the shoulder of `from` looking at `to`. */
+  /**
+   * Over the shoulder of `from` looking at `to`. Two people talking face to face
+   * need to be near each other: if the player is one of them and stands far away,
+   * the scene's stagePlayer() hook walks them over first; if they're still apart,
+   * the shot becomes a close-up on `to` (never a long lens across the town).
+   */
   overShoulder(from, to, o = {}) {
     const fov = o.fov ?? 32;
+    const apart = () => (this.actors[from] && this.actors[to] ? this.headPos(from).distanceTo(this.headPos(to)) : 0);
+    if (apart() > 5 && this.stagePlayer && (from === 'player' || to === 'player')) {
+      try { this.stagePlayer(from === 'player' ? to : from); } catch (e) { console.error(e); }
+    }
+    let cu = null;
+    const far = () => {
+      if (apart() <= 5) return false;
+      cu ||= this.closeUp(to, { side: o.side ?? 1 });
+      return true;
+    };
     return {
       pos: () => {
         if (!this.actors[from] || !this.actors[to]) return this.camera.position.clone();
+        if (far()) return cu.pos();
         const a = this.headPos(from), b = this.headPos(to);
         const dir = b.clone().sub(a).normalize();
         const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
         return a.clone().addScaledVector(dir, -0.45).addScaledVector(right, (o.side ?? 1) * 0.32).add(new THREE.Vector3(0, 0.1, 0));
       },
-      look: () => (this.actors[to] ? this.headPos(to) : this._look?.clone() || new THREE.Vector3()),
+      look: () => {
+        if (this.actors[to] && far()) return cu.look();
+        return this.actors[to] ? this.headPos(to) : this._look?.clone() || new THREE.Vector3();
+      },
       fov, dofOn: this.actors[to] ? to : undefined, aperture: 6,
     };
   }

@@ -304,6 +304,17 @@ registerScreen('town', () => {
     d.setFill(WU.night.value > 0.5 ? 0.9 : 0.6, 0xffe8d0, 3.6);
     d.addActor('player', G.player.ch, G.player.anim, { external: true });
     const brought = [];
+    // a two-shot with the player and someone across town: walk the player over,
+    // to stand a step in front of them, facing them
+    d.stagePlayer = (id) => {
+      const npc = G.npcs.get(id);
+      if (!npc?.pos) return;
+      const P = G.player;
+      if (Math.hypot(P.pos.x - npc.pos.x, P.pos.z - npc.pos.z) < 5) return;
+      const x = npc.pos.x + Math.sin(npc.yaw) * 1.6, z = npc.pos.z + Math.cos(npc.yaw) * 1.6;
+      P.place(x, z, Math.atan2(npc.pos.x - x, npc.pos.z - z), npc.pos.y);
+      P.anim.setPosture('stand');
+    };
     d.bring = async (id, where, o = {}) => {
       if (id === 'player') {
         const p = G.missions.where(where);
@@ -346,6 +357,7 @@ registerScreen('town', () => {
     d.hangUp?.();
     for (const npc of brought) { d.removeActor(npc.id); npc.scripted = false; npc.goal = null; }
     d.removeActor('player');
+    d.stagePlayer = null;
     G.player.anim.setPosture('stand');
     game.renderer.tweakPost({ letterbox: 0 });
     d.release();
