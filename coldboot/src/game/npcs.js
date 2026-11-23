@@ -92,18 +92,22 @@ export class NPCs {
     return null;
   }
 
-  async _build(npc) {
+  _build(npc) {
+    // one body per person: a scene's bring() and the spawn queue can ask at the same time
+    if (npc.ch) return Promise.resolve();
+    if (npc._building) return npc._building;
     npc.building = true;
     const dna = npc.def.folk ? npc.def.dna : outdoorize(CAST[npc.id].dna, npc.id);
-    const ch = await buildCharacter(dna);
-    npc.ch = ch;
-    npc.anim = new Animator(ch);
-    npc.anim.fidget = Math.random();
-    this.G.scene.add(ch.group);
-    npc.building = false;
-    npc.pos.y = this.G.world.groundNear(npc.pos.x, npc.pos.z, npc.pos.y || undefined);
-    ch.group.position.copy(npc.pos);
-    ch.group.rotation.y = npc.yaw;
+    npc._building = buildCharacter(dna).then((ch) => {
+      npc.ch = ch;
+      npc.anim = new Animator(ch);
+      npc.anim.fidget = Math.random();
+      this.G.scene.add(ch.group);
+      npc.pos.y = this.G.world.groundNear(npc.pos.x, npc.pos.z, npc.pos.y || undefined);
+      ch.group.position.copy(npc.pos);
+      ch.group.rotation.y = npc.yaw;
+    }).finally(() => { npc.building = false; npc._building = null; });
+    return npc._building;
   }
 
   _release(npc) {

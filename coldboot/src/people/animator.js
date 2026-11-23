@@ -39,6 +39,16 @@ const SIT_TABLE = ['sitTable', 'sitTable', 'sitTable2', 'sitTableLook'];
 const SIT_CHAIR = ['sitChair', 'sitChair', 'sitChair2', 'sitChairLook'];
 const HIP_ABOVE_SEAT = 0.1;   // hip joint over the seat surface (m)
 const PROCEDURAL = new Set(['handsUp']);
+// blendshape gains (see _face)
+const GAIN = {
+  AK_44_MouthSmileLeft: 2.2, AK_45_MouthSmileRight: 2.2, AK_07_CheekSquintLeft: 1.5, AK_08_CheekSquintRight: 1.5,
+  AK_28_MouthDimpleLeft: 1.6, AK_29_MouthDimpleRight: 1.6, AK_30_MouthFrownLeft: 1.9, AK_31_MouthFrownRight: 2.6,
+  AK_01_BrowDownLeft: 1.8, AK_02_BrowDownRight: 1.7, AK_04_BrowOuterUpLeft: 1.6, AK_05_BrowOuterUpRight: 1.5,
+  AK_21_EyeWideLeft: 2.2, AK_22_EyeWideRight: 1.6, AK_19_EyeSquintLeft: 1.8, AK_20_EyeSquintRight: 1.8,
+  AK_50_NoseSneerLeft: 1.5, AK_51_NoseSneerRight: 1.4, AK_36_MouthPressLeft: 1.6, AK_37_MouthPressRight: 1.1,
+  AK_46_MouthStretchLeft: 1.5, AK_47_MouthStretchRight: 1.9, AK_42_MouthShrugLower: 1.0,
+  AA_VI_14_U: 1.6, AA_VI_01_PP: 1.6, AA_VI_11_E: 1.2, AA_VI_12_I: 1.3,
+};
 
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3(), _v4 = new THREE.Vector3();
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion();
@@ -113,7 +123,7 @@ export class Animator {
   // ------------------------------------------------------------------ rig facts (from the bind pose)
   _initRig() {
     const B = this.B, root = this.ch.root;
-    root.updateMatrixWorld(true);
+    root.updateWorldMatrix(true, true);   // parents (holder scale) first, then every bone
     const inv = new THREE.Quaternion();
     root.getWorldQuaternion(inv).invert();
     // a bone's local axis that points along the character's +Z (forward), at rest
@@ -230,7 +240,8 @@ export class Animator {
     const ch = this.ch;
     // level of detail: far or unseen people animate less often
     const far = ch.camDist ?? 0;
-    const unseen = performance.now() / 1000 - (ch.seenAt ?? 0) > 0.6;
+    ch.tick = (ch.tick || 0) + 1;
+    const unseen = ch.tick - (ch.seenTick ?? ch.tick) > 3;   // not drawn for a few frames (culled, off screen)
     const every = unseen ? 4 : far > 45 ? 3 : far > 25 ? 2 : 1;
     this._acc = (this._acc || 0) + dt;
     if (!this.snapNext && every > 1 && this.frame % every) return;
@@ -294,8 +305,8 @@ export class Animator {
     this.snapNext = false;
 
     // ---------------------------------------------------------------- procedural
-    ch.root.updateMatrixWorld(true);
     this._seat(seated, sit, drive);
+    ch.root.updateWorldMatrix(true, true);   // the game may have moved the group this frame
     this._lean(moveK, dt);
     this._look(dt, seated);
     this._armsCrossed(dt);
@@ -303,7 +314,7 @@ export class Animator {
     this._drive(drive, dt);
     // faces only up close (a frozen half-blink at 30 m would be the only tell)
     if (!(far > 22 || unseen)) { this._face(dt); this._faceOn = true; }
-    else if (this._faceOn) { this._faceOn = false; ch.influences.fill(0); }
+    else if (this._faceOn) { this._faceOn = false; ch.resetFace(); }
     // shadows: far away only the body casts one
     const shadows = far < 40;
     if (shadows !== this._shadows) {
@@ -352,7 +363,11 @@ export class Animator {
       this.nodT -= dt;
       if (this.nodT <= 0) {
         this.nodT = rand(6, 14);
-        if (Math.random() < 0.45 && !this.shots.length) this.play('nod', { upper: true, fade: 0.4 });
+        // standing: the mocap nod; seated (arms on a table): just the head
+        if (Math.random() < 0.45 && !this.shots.length) {
+          if (seated > 0.5) this.nodProc = 0.001;
+          else this.play('nod', { fade: 0.4 });
+        }
       }
     }
   }
@@ -498,7 +513,14 @@ export class Animator {
     pitch = clamp(pitch, -0.6, 0.45);
     // talking: little head beats; headTilt
     const tk = Math.min(1, this.talkHold) * (0.4 + 0.6 * this.voice.open);
-    const beat = Math.sin(this.t * 5.3 + this.fidget * 9) * 0.035 * tk * (seated > 0.5 ? 1 : 0.5);
+    let beat = Math.sin(this.t * 5.3 + this.fidget * 9) * 0.035 * tk * (seated > 0.5 ? 1 : 0.5);
+    // a listener's nod: two soft dips of the head
+    if (this.nodProc) {
+      this.nodProc += dt;
+      const k = this.nodProc / 1.3;
+      if (k >= 1) this.nodProc = 0;
+      else beat -= Math.sin(k * Math.PI * 2) ** 2 * Math.sin(k * Math.PI) * 0.16;   // down, not up
+    }
     const lw = this.lookW * 0.92;   // a little of the mocap's own head motion stays
     if (lw < 0.005 && Math.abs(beat) < 1e-4 && !this.headTilt) { this._eyeAim = null; return; }
     // where the animation already points the head (body space)
@@ -553,9 +575,9 @@ export class Animator {
       const side = s === 'L' ? 1 : -1;
       // Rocketbox faces +Z, its left is +X
       const sh = A.u.getWorldPosition(new THREE.Vector3());
-      const upperDir = new THREE.Vector3(side * 0.93, 0.32, 0.18).normalize().applyQuaternion(bodyQ);
+      const upperDir = new THREE.Vector3(side * 0.78, 0.3, 0.45).normalize().applyQuaternion(bodyQ);   // elbows out and a little forward
       const elbow = sh.clone().addScaledVector(upperDir, A.l1);
-      const hand = elbow.clone().addScaledVector(new THREE.Vector3(side * 0.06, 1, 0.12).normalize().applyQuaternion(bodyQ), A.l2);
+      const hand = elbow.clone().addScaledVector(new THREE.Vector3(side * 0.04, 1, 0.2).normalize().applyQuaternion(bodyQ), A.l2);
       const pole = elbow.clone().addScaledVector(new THREE.Vector3(0, -1, -0.4).applyQuaternion(bodyQ), 0.3);
       this._ik(A, hand, pole, w);
       // palms out (toward whoever is in front)
@@ -685,31 +707,33 @@ export class Animator {
     const vo = this.voice;
     const open = clamp(vo.open, 0, 1), wide = clamp(vo.wide, 0, 1), round = clamp(vo.round, 0, 1);
     const speaking = this.talkHold > 0 ? 1 : 0;
-    const M = (n, x) => ch.morph(n, clamp(x, 0, 1));
-    M('AA_VI_10_aa', open * (1 - round * 0.8) * (1 - wide * 0.4) * 0.85);
-    M('AA_VI_11_E', open * wide * 0.7);
-    M('AA_VI_12_I', wide * (1 - open) * 0.35 * speaking);
-    M('AA_VI_13_O', open * round * 0.8);
-    M('AA_VI_14_U', round * (1 - open) * 0.45 * speaking);
-    M('AA_VI_01_PP', speaking * (open < 0.06 ? 0.35 : 0) * (1 - round));
-    M('AK_25_JawOpen', open * 0.18 + e.surprise * 0.12);
+    // Rocketbox's ARKit shapes are gentle (a full smile moves the corners ~4 mm): GAIN scales them to read on camera
+    const M = (n, x) => ch.morph(n, clamp(x * (GAIN[n] || 1), 0, 2.5));
+    // the jaw follows the loudness, the lips the vowel colour (wide → E/I, round → O/U), closures between syllables
+    M('AA_VI_10_aa', open * (1 - round * 0.8) * (1 - wide * 0.45) * 0.72);
+    M('AA_VI_11_E', open * wide * 0.85);
+    M('AA_VI_12_I', wide * (1 - open) * 0.45 * speaking);
+    M('AA_VI_13_O', open * round * 0.9);
+    M('AA_VI_14_U', round * (1 - open) * 0.6 * speaking);
+    M('AA_VI_01_PP', speaking * smooth(0.12, 0.02, open) * 0.55 * (1 - round));
+    M('AK_25_JawOpen', open * 0.15 + e.surprise * 0.15);
     // expressions
     const sm = e.smile, fr = e.frown, wo = e.worry, su = e.surprise, an = e.angry, sq = e.squint;
-    const browBeat = speaking * 0.22 * Math.max(0, Math.sin(this.t * 2.1 + this.fidget * 4)) * open;
-    M('AK_44_MouthSmileLeft', sm * 0.75); M('AK_45_MouthSmileRight', sm * 0.72);
-    M('AK_07_CheekSquintLeft', sm * 0.5 + sq * 0.2); M('AK_08_CheekSquintRight', sm * 0.5 + sq * 0.2);
-    M('AK_28_MouthDimpleLeft', sm * 0.25); M('AK_29_MouthDimpleRight', sm * 0.25);
-    M('AK_30_MouthFrownLeft', fr * 0.6 + wo * 0.25 + an * 0.2); M('AK_31_MouthFrownRight', fr * 0.6 + wo * 0.25 + an * 0.2);
-    M('AK_42_MouthShrugLower', fr * 0.3 + an * 0.25);
-    M('AK_01_BrowDownLeft', an * 0.8 + fr * 0.35); M('AK_02_BrowDownRight', an * 0.8 + fr * 0.35);
-    M('AK_03_BrowInnerUp', wo * 0.85 + su * 0.6 + browBeat);
-    M('AK_04_BrowOuterUpLeft', su * 0.7 + browBeat * 0.6); M('AK_05_BrowOuterUpRight', su * 0.7 + browBeat * 0.6);
-    M('AK_21_EyeWideLeft', su * 0.55); M('AK_22_EyeWideRight', su * 0.55);
-    M('AK_50_NoseSneerLeft', an * 0.4); M('AK_51_NoseSneerRight', an * 0.4);
-    M('AK_36_MouthPressLeft', an * 0.35 * (1 - open)); M('AK_37_MouthPressRight', an * 0.35 * (1 - open));
-    M('AK_46_MouthStretchLeft', wo * 0.18 + wide * open * 0.2); M('AK_47_MouthStretchRight', wo * 0.18 + wide * open * 0.2);
+    const browBeat = speaking * 0.3 * Math.max(0, Math.sin(this.t * 2.1 + this.fidget * 4)) * open;
+    M('AK_44_MouthSmileLeft', sm); M('AK_45_MouthSmileRight', sm * 0.95);
+    M('AK_07_CheekSquintLeft', sm * 0.7 + sq * 0.3); M('AK_08_CheekSquintRight', sm * 0.7 + sq * 0.3);
+    M('AK_28_MouthDimpleLeft', sm * 0.35); M('AK_29_MouthDimpleRight', sm * 0.35);
+    M('AK_30_MouthFrownLeft', fr * 0.8 + wo * 0.35 + an * 0.3); M('AK_31_MouthFrownRight', fr * 0.8 + wo * 0.35 + an * 0.3);
+    M('AK_42_MouthShrugLower', fr * 0.35 + an * 0.25);
+    M('AK_01_BrowDownLeft', an * 0.9 + fr * 0.45); M('AK_02_BrowDownRight', an * 0.9 + fr * 0.45);
+    M('AK_03_BrowInnerUp', wo * 0.9 + su * 0.7 + browBeat);
+    M('AK_04_BrowOuterUpLeft', su * 0.8 + browBeat * 0.6); M('AK_05_BrowOuterUpRight', su * 0.8 + browBeat * 0.6);
+    M('AK_21_EyeWideLeft', su * 0.7); M('AK_22_EyeWideRight', su * 0.7);
+    M('AK_50_NoseSneerLeft', an * 0.5); M('AK_51_NoseSneerRight', an * 0.5);
+    M('AK_36_MouthPressLeft', an * 0.45 * (1 - open)); M('AK_37_MouthPressRight', an * 0.45 * (1 - open));
+    M('AK_46_MouthStretchLeft', wo * 0.25 + wide * open * 0.25); M('AK_47_MouthStretchRight', wo * 0.25 + wide * open * 0.25);
     const sleepy = smooth(0.7, 1, sq);
-    const squintK = sq * 0.55 + sm * 0.22 + an * 0.25;
+    const squintK = sq * 0.6 + sm * 0.3 + an * 0.3;
     M('AK_19_EyeSquintLeft', squintK); M('AK_20_EyeSquintRight', squintK);
     const lid = clamp(b + sleepy * 0.85 + clamp(lidDown, 0, 0.6) * 0.45 + sm * 0.08, 0, 1);
     M('AK_09_EyeBlinkLeft', lid); M('AK_10_EyeBlinkRight', lid);

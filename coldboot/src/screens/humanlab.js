@@ -3,6 +3,7 @@
 //     &cam=face|bust|full   &yaw=0.3   &light=studio|lamp|night
 //     &anim=idle|walk|jog|run|sit|sitchair|talk|sittalk|drive|crouch|crouchwalk|handsup|listen|<clip>
 //     &speed=1.4 (walk speeds)   &expr=smile:1;worry:0.5   &look=1 (eyes to camera)   &mouth=1 (fake speech)
+//     &open=0.8&wide=0&round=0 (a held vowel)   &sit=1 (&table=1): play the clip seated (upper body over the sitting legs)   &time=4 (advance s)
 // Keys: ←/→ turn, camera key cycles face/bust/full, [ ] previous/next cast member, A next animation.
 import * as THREE from 'three';
 import { registerScreen, game } from '../main.js';
@@ -120,6 +121,7 @@ registerScreen('humanlab', () => {
     if (a === 'handsup') an.play('handsUp');
     if (a === 'arms') an.armsCrossed = 1;
     if (a === 'listen') an.lookAt = camera.position.clone();
+    if (params.sit === '1' && an.posture === 'stand') { an.setPosture('sit'); an.sitHeight = 0.48; an.handsOnTable = params.table === '1' ? 1 : 0; }
     if (an.has(a) && !['idle', 'walk', 'jog', 'run'].includes(a)) an.play(a, { hold: true });
     for (const k of Object.keys(an.postureW)) an.postureW[k] = k === an.posture ? 1 : 0;
     an.snap();
@@ -184,7 +186,7 @@ registerScreen('humanlab', () => {
       for (const p of people) {
         p.ch.group.rotation.y = yaw;
         const an = p.anim;
-        if (mouth) {
+        if (params.open) { an.voice.open = +params.open; an.voice.wide = +(params.wide || 0); an.voice.round = +(params.round || 0); an.talk = 0.9; } else if (mouth) {
           // a fake voice: syllables at ~5 Hz with vowel colour changes
           const syl = Math.max(0, Math.sin(t * 13) * Math.sin(t * 3.1 + 1) + 0.15);
           an.voice.open = Math.min(1, syl * 1.1);

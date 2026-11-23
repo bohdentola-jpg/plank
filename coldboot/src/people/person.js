@@ -87,40 +87,43 @@ export class Character {
     // optional parts (hats) start shown; keep: listed parts are hideable via setPart
     // clothes tint (per person: its own copy of the cloth material)
     if (dna.tint && this.meshes.body) this.setClothTint(dna.tint, dna.tintAmt ?? 0.75);
-    // the face
-    const head = this.meshes.head;
-    this.morphDict = head?.morphTargetDictionary || {};
-    this.influences = head?.morphTargetInfluences || [];
-    this.morphIndex = {};
-    for (const [k, i] of Object.entries(this.morphDict)) {
-      this.morphIndex[k] = i;
-      this.morphIndex[k.replace(/^(AK|AA_VI)_\d+_/, '')] = i;   // short names: JawOpen, aa, PP
+    // the face: blendshapes live on the head and, for some avatars, on the lash/brow cards too
+    this.morphIndex = {};          // name → [[influences, index]…]
+    this.influences = this.meshes.head?.morphTargetInfluences || [];
+    for (const m of Object.values(this.meshes)) {
+      if (!m.morphTargetDictionary) continue;
+      for (const [k, i] of Object.entries(m.morphTargetDictionary)) {
+        for (const key of [k, k.replace(/^(AK|AA_VI)_\d+_/, '')]) (this.morphIndex[key] ||= []).push([m.morphTargetInfluences, i]);
+      }
     }
     this.hair = { group: this.meshes.hair || new THREE.Object3D() };
-    // a point on the head the director can track (it adds 6 cm for the eye line)
-    root.updateMatrixWorld(true);
+    // a point on the head the director can track (it adds 6 cm for the eye line): 8 cm under the eyes,
+    // worked out from bone-local transforms (the head's rest orientation), so stale matrices can't skew it
     const hb = this.bones.Bip01_Head;
-    const eyes = new THREE.Vector3();
     const le = this.bones.Bip01_LEye, re = this.bones.Bip01_REye;
-    if (le && re) eyes.setFromMatrixPosition(le.matrixWorld).add(new THREE.Vector3().setFromMatrixPosition(re.matrixWorld)).multiplyScalar(0.5);
-    else eyes.setFromMatrixPosition(hb.matrixWorld).add(new THREE.Vector3(0, 0.1 * s, 0.08 * s));
-    this.eyeHeight = eyes.y / s;
+    const restQ = new THREE.Quaternion();
+    for (let b = hb; b && b !== this.holder; b = b.parent) restQ.premultiply(b.quaternion);
+    const toHead = restQ.clone().invert();
+    const eyesLocal = le && re && le.parent === hb && re.parent === hb
+      ? le.position.clone().add(re.position).multiplyScalar(0.5)
+      : new THREE.Vector3(0, 0.1, 0.08).applyQuaternion(toHead);
     const anchor = new THREE.Object3D();
     anchor.name = 'headAnchor';
+    anchor.position.copy(eyesLocal).add(new THREE.Vector3(0, -0.08, 0).applyQuaternion(toHead));
     hb.add(anchor);
-    anchor.position.copy(hb.worldToLocal(eyes.clone().add(new THREE.Vector3(0, -0.08 * s, 0))));
     this.bones.head = anchor;
     this.headBone = hb;
     this.height = (tpl.meta.height || 1.75) * s;
     this.hip = (tpl.meta.hip || 0.9);
     // level of detail: the animator throttles people far from the camera or out of view
     this.camDist = 0;
-    this.seenAt = performance.now() / 1000;
+    this.tick = 0;          // animator frames
+    this.seenTick = 0;      // the animator frame when it was last drawn
     const probe = this.meshes.body || this.meshes.head;
     if (probe) {
       const p = new THREE.Vector3();
       probe.onBeforeRender = (r, sc, cam) => {
-        this.seenAt = performance.now() / 1000;
+        this.seenTick = this.tick;
         this.camDist = cam.position.distanceTo(p.setFromMatrixPosition(this.group.matrixWorld));
       };
     }
@@ -128,8 +131,13 @@ export class Character {
 
   /** Blendshape by name (ARKit 'AK_25_JawOpen' / 'JawOpen', viseme 'AA_VI_10_aa' / 'aa'). */
   morph(name, v) {
-    const i = this.morphIndex[name];
-    if (i !== undefined) this.influences[i] = v;
+    const list = this.morphIndex[name];
+    if (list) for (const [inf, i] of list) inf[i] = v;
+  }
+
+  /** All blendshapes back to rest. */
+  resetFace() {
+    for (const m of Object.values(this.meshes)) m.morphTargetInfluences?.fill(0);
   }
 
   /** Expression unit (blendshape name or an old MakeHuman expression name), 0..1. */

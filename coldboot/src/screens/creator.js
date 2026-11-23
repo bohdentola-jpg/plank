@@ -36,7 +36,7 @@ registerScreen('creator', () => {
   const camera = new THREE.PerspectiveCamera(28, 16 / 9, 0.05, 50);
   const prof = defaultProfile();
   let ch = null, anim = null, building = false, want = null, t = 0;
-  let row = 0, yaw = 0.25, camMode = 'full', camK = 0, naming = false;
+  let row = 1, yaw = 0.25, camMode = 'full', camK = 0, naming = false, shown = 0;
   const thumbs = {};
   for (const id of PLAYER_AVATARS) { const im = new Image(); im.src = THUMB(id); thumbs[id] = im; }
   const ROWS = ['name', 'who', 'height', 'clothes', 'done'];
@@ -55,7 +55,8 @@ registerScreen('creator', () => {
       scene.add(ch.group);
       anim = new Animator(ch);
       anim.lookAt = camera.position.clone();
-      anim.play(['wave', 'nod', 'shrug'][PLAYER_AVATARS.indexOf(target) % 3], { upper: true });
+      // a hello from whoever you just picked (not on the first photo)
+      if (shown++) anim.play(['wave', 'nod', 'shrug'][PLAYER_AVATARS.indexOf(target) % 3], { upper: true });
       // the neighbours load while you look
       const i = PLAYER_AVATARS.indexOf(target), n = PLAYER_AVATARS.length;
       loadAvatar(PLAYER_AVATARS[(i + 1) % n]).catch(() => {});
@@ -144,8 +145,8 @@ registerScreen('creator', () => {
       const eye = ch ? ch.bones.head.getWorldPosition(new THREE.Vector3()).y + 0.06 : h - 0.1;
       // the person stands left of centre (the panel takes the right half)
       const cx = 0.62 * (1 - camK) + 0.3 * camK;
-      camera.position.set(cx, 1.05 * (1 - camK) + (eye - 0.06) * camK, 3.9 - 2.35 * camK);
-      camera.lookAt(cx, 0.95 * (1 - camK) + (eye - 0.12) * camK, 0);
+      camera.position.set(cx, 1.05 * (1 - camK) + (eye - 0.02) * camK, 3.9 - 2.35 * camK);
+      camera.lookAt(cx, 0.95 * (1 - camK) + (eye - 0.04) * camK, 0);
       camera.fov = 30 - 6 * camK;
       camera.updateProjectionMatrix();
       if (anim) anim.lookAt = camera.position.clone().add(new THREE.Vector3(0, -0.05, 0));
