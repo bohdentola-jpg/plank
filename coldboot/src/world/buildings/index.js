@@ -16,9 +16,15 @@
 import { build as house } from './house.js';
 import { build as church } from './church.js';
 import { build as generalStore } from './generalStore.js';
+import { build as cornerStore } from './cornerStore.js';
+import { build as cabin } from './cabin.js';
+import { build as postOffice } from './postOffice.js';
+import { build as clinic } from './clinic.js';
+import { build as police } from './police.js';
+import { build as communityHall } from './communityHall.js';
 
 const GEN = {
-  house, church, generalStore,
+  house, church, generalStore, cornerStore, cabin, postOffice, clinic, police, communityHall,
 };
 
 /** Register a generator (used by the per-type modules below). */

@@ -786,7 +786,7 @@ export function porch(ctx, x, z, W, D, y, o = {}) {
     if (wear > 0.5 && r() < (wear - 0.45) * 0.25) continue; // missing board
     const bx = -W / 2 + (i + 0.5) * (W / nb);
     const dy = -sag * Math.sin((i / nb) * PI);
-    b.box(key, bx, y - 0.035 + dy, 0, W / nb - 0.012, 0.035, D, { color: rgb(col, 0.9 + r() * 0.2) });
+    b.box(key, bx, y - 0.035 + dy, 0, W / nb - 0.012, 0.035, D, { color: rgb(col, 0.9 + r() * 0.2), noSnow: !!o.roof });
   }
   b.box('wood_raw', 0, y - 0.25, D / 2 - 0.05, W, 0.21, 0.05, { color: '#6a5a48' });
   b.box('wood_raw', 0, y - 0.25, 0, W - 0.1, 0.18, D - 0.2, { color: '#3a3228', skip: 't' });

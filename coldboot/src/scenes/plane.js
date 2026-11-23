@@ -249,7 +249,7 @@ registerScreen('plane', () => {
     await d.say('pilot', 'p.pilot.descent');
     await d.wait(1.5);
     finished = true;
-    go('arrival', {}, { transition: 'black' });
+    go('town', { newgame: 1 }, { transition: 'black' });
   }
 
   return {
@@ -334,7 +334,7 @@ registerScreen('plane', () => {
         if (flashT > 0.4) flashT = -1;
       }
       if (input.keys.has('Escape') || input.padHeld(9)) skipHold += dt; else skipHold = 0;
-      if (skipHold > 1.2 && !finished) { finished = true; voice.stopAll(); go('arrival', {}, { transition: 'black' }); }
+      if (skipHold > 1.2 && !finished) { finished = true; voice.stopAll(); go('town', { newgame: 1 }, { transition: 'black' }); }
     },
     draw(ctx) {
       d.draw(ctx);

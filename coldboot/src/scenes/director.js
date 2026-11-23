@@ -28,10 +28,12 @@ export class Director {
     this._skipHeld = 0;
   }
 
-  addActor(id, ch, anim) {
-    this.actors[id] = { id, ch, anim, head: new THREE.Vector3() };
+  addActor(id, ch, anim, opts = {}) {
+    this.actors[id] = { id, ch, anim, head: new THREE.Vector3(), external: !!opts.external };
     return this.actors[id];
   }
+
+  removeActor(id) { delete this.actors[id]; }
 
   headPos(id, out = new THREE.Vector3()) {
     const a = this.actors[id];
@@ -201,7 +203,7 @@ export class Director {
       actor.anim.voice.round = h.features.round;
       actor.anim.talk = Math.min(1, actor.anim.talk + dt * 2) * (0.6 + 0.4 * h.features.open);
     }
-    for (const a of Object.values(this.actors)) a.anim.update(dt);
+    for (const a of Object.values(this.actors)) if (!a.external) a.anim.update(dt);
     if (this._waits) {
       for (const w of this._waits) { w.t -= dt; if (w.t <= 0) w.r(); }
       this._waits = this._waits.filter((w) => w.t > 0);

@@ -106,6 +106,7 @@ LESSONS.forEach((L, i) => {
   ok(`${where} id/day`, L.id === `l${String(i + 1).padStart(2, '0')}` && L.day === i + 1, J({ id: L.id, day: L.day }));
   ok(`${where} title`, typeof L.title === 'string' && L.title.length > 3);
   ok(`${where} ru line`, L.ru && /[А-Яа-яЁё]/.test(L.ru.line) && typeof L.ru.en === 'string' && L.ru.en.length > 10, J(L.ru));
+  ok(`${where} ru line is one sentence`, !/[.!?…]\s+[А-ЯЁA-Z]/.test(L.ru.line) && L.ru.line.length < 140, L.ru.line);
   ok(`${where} 3–5 pages`, L.pages.length >= 3 && L.pages.length <= 5, L.pages.length);
   L.pages.forEach((p, j) => {
     const n = words(p.text);

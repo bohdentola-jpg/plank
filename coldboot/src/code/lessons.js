@@ -30,7 +30,7 @@ export const LESSONS = [
     id: 'l01',
     day: 1,
     title: 'Hello, Port Zarya',
-    ru: { line: 'Привет, Рыбка. Сегодня этот ноутбук впервые скажет тебе «привет».', en: 'Hi, Rybka. Tonight this laptop says hello to you for the first time.' },
+    ru: { line: 'Сегодня, Рыбка, этот ноутбук впервые скажет тебе «привет».', en: 'Tonight, Rybka, this laptop says hello to you for the first time.' },
     pages: [
       {
         text: "Privet, Rybka. Pull up a stool, mind the tea: it's mostly sugar. This laptop runs Python, a language for telling a computer exactly what to do. Computers are fast but very literal. They do what you wrote, not what you meant. Our first command is print. Whatever you put inside its brackets appears on the screen. Text goes inside quotes, so Python knows it's text and not a command. Press Run and watch.",
@@ -125,7 +125,7 @@ export const LESSONS = [
     id: 'l02',
     day: 2,
     title: 'Counting Fish',
-    ru: { line: 'Компьютер — это просто очень быстрый калькулятор. Давай посчитаем рыбу.', en: "A computer is just a very fast calculator. Let's count some fish." },
+    ru: { line: 'Компьютер — это просто очень быстрый калькулятор, так что давай посчитаем рыбу.', en: "A computer is just a very fast calculator, so let's count some fish." },
     pages: [
       {
         text: "A variable is a name with a value attached, like a label on a jar in Koshkin's back room. You make one with a single equals sign: catch = 40. From then on, catch means 40. You can change it whenever you like. Names can use letters, digits and underscores, but can't start with a digit, and capitals matter: Catch and catch are two different jars.",
@@ -239,7 +239,7 @@ export const LESSONS = [
     id: 'l03',
     day: 3,
     title: 'Numbers, Text and F-strings',
-    ru: { line: 'Число и текст — разные звери, Рыбка. Сегодня учимся их различать.', en: 'Numbers and text are different animals, Rybka. Tonight we learn to tell them apart.' },
+    ru: { line: 'Число и текст — разные звери, и сегодня мы учимся их различать.', en: 'Numbers and text are different animals, and tonight we learn to tell them apart.' },
     pages: [
       {
         text: "Every value in Python has a type. 42 is an int, a whole number. 4.5 is a float, a number with a decimal point. \"42\" in quotes is a str: text that happens to look like a number. True and False are bools. type(x) tells you what you're holding. Half of all bugs are a value being a different type than you thought it was.",
@@ -826,7 +826,7 @@ export const LESSONS = [
     id: 'l08',
     day: 8,
     title: 'Cutting Strings',
-    ru: { line: 'Строку можно резать, переворачивать и склеивать. Как колбасу.', en: 'You can slice a string, flip it and glue it back together. Like sausage.' },
+    ru: { line: 'Строку можно резать, переворачивать и склеивать — прямо как колбасу.', en: 'You can slice a string, flip it and glue it back together, just like sausage.' },
     pages: [
       {
         text: "A string is a sequence of characters, so it behaves a lot like a list. s[0] is the first character, s[-1] the last. A slice s[a:b] cuts out the characters from position a up to, but not including, b. Leave out a to start at the beginning; leave out b to go all the way to the end.",
@@ -934,7 +934,7 @@ export const LESSONS = [
     id: 'l09',
     day: 9,
     title: 'Recipes',
-    ru: { line: 'Функция — это рецепт. Написал один раз — готовишь сколько хочешь.', en: 'A function is a recipe. Write it once, cook it as often as you like.' },
+    ru: { line: 'Функция — это рецепт: написал один раз — готовишь сколько хочешь.', en: 'A function is a recipe: write it once, cook it as often as you like.' },
     pages: [
       {
         text: "A function is a named block of code you can run whenever you like. def name(): starts it, and the indented block underneath is its body. Defining a function doesn't run it; calling it does: name(). Write it once, use it everywhere. Koshkin's pelmeni recipe works the same way, and it's been in use since 1911.",
@@ -1058,7 +1058,7 @@ export const LESSONS = [
     id: 'l10',
     day: 10,
     title: 'Whose Is This?',
-    ru: { line: 'Словарь знает ответ на вопрос «чьё это?». В нашем деле очень полезно.', en: "A dictionary answers the question 'whose is this?'. Very useful in our line of work." },
+    ru: { line: 'Словарь знает ответ на вопрос «чьё это?», а в нашем деле это очень полезно.', en: "A dictionary knows the answer to 'whose is this?', and in our line of work that's very useful." },
     pages: [
       {
         text: "A dictionary stores pairs: a key and its value. Curly braces, key: value, commas between the pairs. You look things up by key, not by position: phone[\"Dolly\"]. Keys are usually strings; values can be anything at all. It's a phone book, a price list, a who-owns-what. Assigning to a new key adds a new pair.",
@@ -1320,7 +1320,7 @@ export const LESSONS = [
     id: 'l12',
     day: 12,
     title: "Baba Valya's Codes",
-    ru: { line: 'Сегодня урок ведёт Баба Валя. Слушай внимательно — она шифровала, когда меня ещё на свете не было.', en: 'Tonight Baba Valya teaches. Listen closely: she was encrypting before I was even born.' },
+    ru: { line: 'Сегодня урок ведёт Баба Валя, так что слушай внимательно: она шифровала, когда меня ещё на свете не было.', en: 'Tonight Baba Valya teaches, so listen closely: she was encrypting before I was even born.' },
     pages: [
       {
         text: "Lyosha here, typing while Baba Valya talks, so these notes are mostly her words. 'Every letter is secretly a number, Rybka.' ord(\"A\") gives 65, the character's code. chr(65) turns the number back into \"A\". Letters in a row have codes in a row: B is 66, C is 67. 'In 1974 we did this with paper tables,' she says. 'You have it easy.'",
@@ -1571,7 +1571,7 @@ export const LESSONS = [
     id: 'l14',
     day: 14,
     title: 'Dress Rehearsal',
-    ru: { line: 'Скоро у тебя будет десять минут. Сегодня — репетиция.', en: "Soon you'll have ten minutes. Tonight is the rehearsal." },
+    ru: { line: 'Скоро у тебя будет всего десять минут, поэтому сегодня у нас репетиция.', en: "Soon you'll have just ten minutes, so tonight we rehearse." },
     pages: [
       {
         text: "Here's what we know about the drive. The Root Key is split into shards: a list of strings. Some shards are decoys. Every real shard is stored backwards, and every character in it is shifted. On the night the rules will be different, because Halloran isn't stupid, but the shape will be the same. Tonight, my rules: decoys end with \"!\", and every character is shifted up by 1.",

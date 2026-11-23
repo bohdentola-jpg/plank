@@ -3423,8 +3423,16 @@ class Tokenizer {
     this.br = [];
     this.expr = !!opts.expr;
     this.lastNl = null;
+    this.inF = 0;
   }
-  err(msg, line, col0, type = 'SyntaxError') { throw synErr(type, msg, line, col0 + 1); }
+  err(msg, line, col0, type = 'SyntaxError', lazy = false) {
+    const e = synErr(type, msg, line, col0 + 1);
+    if (this.inF > 0) e.inF = true;
+    // "lazy" errors (bad dedent, tab/space mix, bad line continuation) only surface in CPython when the
+    // parser reaches them; the others are raised by the tokenizer itself and win over parser errors.
+    if (lazy) e.lazy = true;
+    throw e;
+  }
   tok(type, v, line, col, extra) {
     const t = { type, v, line, col, eline: this.line, ecol: this.p - this.ls };
     if (extra) Object.assign(t, extra);
@@ -3432,6 +3440,18 @@ class Tokenizer {
     return t;
   }
   run() {
+    if (this.expr) { this.scanAll(); return this.toks; }
+    try { this.scanAll(); } catch (e) {
+      if (!(e instanceof PyException)) throw e;
+      this.error = e;
+      const c0 = Math.max(0, (e.col || 1) - 1);
+      this.toks.push({ type: 'error', v: '', line: e.line, col: c0, eline: e.line, ecol: c0 });
+      this.toks.push({ type: 'eof', v: '', line: e.line, col: c0, eline: e.line, ecol: c0 });
+    }
+    this.unclosed = this.br;
+    return this.toks;
+  }
+  scanAll() {
     const s = this.s, n = s.length;
     let bol = !this.expr;
     for (;;) {
@@ -3451,6 +3471,7 @@ class Tokenizer {
           if (this.p < n) { this.p++; this.line++; this.ls = this.p; bol = true; }
           continue;
         }
+        if (c === '\\' && s[p + 1] !== '\n') this.err('unexpected character after line continuation character', this.line, p - this.ls + 1, 'SyntaxError', true);
         this.indentTo(col, alt);
       }
       let c;
@@ -3467,8 +3488,8 @@ class Tokenizer {
       if (ch === '#') { while (this.p < n && s[this.p] !== '\n') this.p++; continue; }
       if (ch === '\\') {
         if (s[this.p + 1] === '\n') { this.p += 2; this.line++; this.ls = this.p; continue; }
-        if (this.p + 1 >= n) this.err('unexpected EOF while parsing', this.line, this.p - this.ls);
-        this.err('unexpected character after line continuation character', this.line, this.p - this.ls + 1);
+        if (this.p + 1 >= n) this.err('unexpected EOF while parsing', this.line, this.p - this.ls, 'SyntaxError', true);
+        this.err('unexpected character after line continuation character', this.line, this.p - this.ls + 1, 'SyntaxError', true);
       }
       this.scanToken();
     }
@@ -3487,12 +3508,11 @@ class Tokenizer {
       this.toks.push({ type: 'eof', v: '', line: this.line, col: endCol, eline: this.line, ecol: endCol });
     }
     this.unclosed = this.br;
-    return this.toks;
   }
   indentTo(col, alt) {
     const line = this.line, c0 = this.p - this.ls;
     const top = this.ind[this.ind.length - 1];
-    const tabErr = () => this.err('inconsistent use of tabs and spaces in indentation', line, c0, 'TabError');
+    const tabErr = () => this.err('inconsistent use of tabs and spaces in indentation', line, c0, 'TabError', true);
     if (col === top) {
       if (alt !== this.alt[this.alt.length - 1]) tabErr();
     } else if (col > top) {
@@ -3500,11 +3520,13 @@ class Tokenizer {
       this.ind.push(col); this.alt.push(alt);
       this.toks.push({ type: 'indent', v: '', line, col: c0, eline: line, ecol: c0 });
     } else {
+      let k = this.ind.length - 1;
+      while (k > 0 && col < this.ind[k]) k--;
+      if (col !== this.ind[k]) this.err('unindent does not match any outer indentation level', line, c0, 'IndentationError', true);
       while (this.ind.length > 1 && col < this.ind[this.ind.length - 1]) {
         this.ind.pop(); this.alt.pop();
         this.toks.push({ type: 'dedent', v: '', line, col: c0, eline: line, ecol: c0 });
       }
-      if (col !== this.ind[this.ind.length - 1]) this.err('unindent does not match any outer indentation level', line, c0, 'IndentationError');
       if (alt !== this.alt[this.alt.length - 1]) tabErr();
     }
   }
@@ -3570,7 +3592,7 @@ class Tokenizer {
         this.err(`invalid ${kind} literal`, line, col + 1);
       }
       end = start + m[0].length;
-      if (end < s.length && RE_AFTER_NUM.test(s[end])) {
+      if (end < s.length && RE_AFTER_NUM.test(s[end]) && !this.kwAfterNumber(end)) {
         if (k === 'o' && /[89]/.test(s[end])) this.err(`invalid digit '${s[end]}' in octal literal`, line, end - this.ls);
         if (k === 'b' && /[2-9]/.test(s[end])) this.err(`invalid digit '${s[end]}' in binary literal`, line, end - this.ls);
         this.err(`invalid ${kind} literal`, line, end - this.ls);
@@ -3588,7 +3610,7 @@ class Tokenizer {
         e.line = line; e.col = col + 1;
         throw e;
       }
-      if (end < s.length && RE_AFTER_NUM.test(s[end])) {
+      if (end < s.length && RE_AFTER_NUM.test(s[end]) && !this.kwAfterNumber(end)) {
         this.err('invalid decimal literal', line, s[end] === '_' ? end - this.ls : col);
       }
       if (!isFloat && text.length > 1 && text[0] === '0' && /[1-9]/.test(text)) {
@@ -3601,6 +3623,16 @@ class Tokenizer {
     this.p = end;
     this.tok('num', value, line, col);
   }
+  kwAfterNumber(p) { // CPython's verify_end_of_number
+    const s = this.s, c = s[p];
+    if (c === 'a') return s.startsWith('nd', p + 1);
+    if (c === 'e') return s.startsWith('lse', p + 1);
+    if (c === 'f') return s.startsWith('or', p + 1);
+    if (c === 'i') return s[p + 1] === 'f' || s[p + 1] === 'n' || s[p + 1] === 's';
+    if (c === 'o') return s[p + 1] === 'r';
+    if (c === 'n') return s.startsWith('ot', p + 1);
+    return false;
+  }
   readString(prefix, line, col) {
     const s = this.s, n = s.length;
     const low = prefix.toLowerCase();
@@ -3609,7 +3641,12 @@ class Tokenizer {
     const triple = s[this.p + 1] === q && s[this.p + 2] === q;
     const qlen = triple ? 3 : 1;
     let p = this.p + qlen;
-    if (isF) { this.readFString(raw, q, triple, p, line, col); return; }
+    if (isF) {
+      this.inF++;
+      this.readFString(raw, q, triple, p, line, col);
+      this.inF--;
+      return;
+    }
     const bodyStart = p;
     for (;;) {
       if (p >= n) {
@@ -3708,27 +3745,33 @@ class Tokenizer {
   readFField(p, q, triple, nest) {
     const s = this.s, n = s.length;
     const exprStart = p, eLine = this.line, eCol = p - this.ls;
+    const braceLine = this.line, braceCol = p - 1 - this.ls;
     const expecting = () => this.err("f-string: expecting '}'", this.line, Math.min(p, n) - this.ls);
-    let depth = 0;
+    const stack = [];
     for (;;) {
       if (p >= n) expecting();
       const c = s[p];
       if (c === "'" || c === '"') {
-        if (c === q && !triple && depth === 0) expecting();
+        if (c === q && !triple && stack.length === 0) expecting();
         const e = this.skipNestedString(p);
         if (e < 0) expecting();
         p = e;
         continue;
       }
+      if (c === '#') this.err("'{' was never closed", braceLine, braceCol);
       if (c === '\n') {
-        if (!triple && depth === 0) expecting();
+        if (!triple && stack.length === 0) expecting();
         this.line++; this.ls = p + 1; p++;
         continue;
       }
-      if (c === '(' || c === '[' || c === '{') depth++;
-      else if (c === ')' || c === ']') depth--;
-      else if (c === '}') { if (depth <= 0) break; depth--; }
-      else if (depth === 0) {
+      if (c === '(' || c === '[' || c === '{') stack.push(c);
+      else if (c === ')' || c === ']' || (c === '}' && stack.length)) {
+        if (!stack.length) this.err(`f-string: unmatched '${c}'`, this.line, p - this.ls);
+        const o = stack.pop();
+        const want = c === ')' ? '(' : c === ']' ? '[' : '{';
+        if (o !== want) this.err(`closing parenthesis '${c}' does not match opening parenthesis '${o}'`, this.line, p - this.ls);
+      } else if (c === '}') break;
+      else if (stack.length === 0) {
         if (c === '!' && s[p + 1] !== '=') break;
         if (c === ':') break;
         if (c === '=' && s[p + 1] !== '=' && !'=!<>'.includes(s[p - 1])) {
@@ -3848,15 +3891,21 @@ function isBitwiseOrNode(n) {
 }
 
 class Parser {
-  constructor(toks, unclosed, fmode = false) {
+  constructor(toks, unclosed, fmode = false, tokErr = null) {
     this.t = toks;
     this.i = 0;
     this.unclosed = unclosed || [];
     this.fmode = fmode;
     this.far = 0;
+    this.tokErr = tokErr;
+    this.tokErrIdx = tokErr ? toks.findIndex((t) => t.type === 'error') : -1;
   }
   get tok() { return this.t[this.i]; }
-  peek(k = 1) { return this.t[Math.min(this.i + k, this.t.length - 1)]; }
+  peek(k = 1) {
+    const j = Math.min(this.i + k, this.t.length - 1);
+    if (j > this.far) this.far = j;
+    return this.t[j];
+  }
   at(type) { return this.t[this.i].type === type; }
   atOp(v) { const t = this.t[this.i]; return t.type === 'op' && t.v === v; }
   atKw(v) { const t = this.t[this.i]; return t.type === 'kw' && t.v === v; }
@@ -3869,7 +3918,13 @@ class Parser {
     return props ? Object.assign(node, props) : node;
   }
   errAt(at, msg, type = 'SyntaxError') {
-    let e = synErr(type, this.fmode && type === 'SyntaxError' && !msg.startsWith('f-string') ? 'f-string: ' + msg : msg, at.line, at.col + 1);
+    // The parser reached the tokenizer's error token: that error is what CPython reports.
+    if (this.tokErr && Math.max(this.i, this.far) >= this.tokErrIdx) throw this.tokErr;
+    let e = synErr(type, msg, at.line, at.col + 1);
+    // CPython raises "unexpected indent" straight away; everything else gets a full-source re-scan
+    // in which a later tokenizer error (or an unclosed bracket) takes priority.
+    if (type === 'IndentationError' && msg === 'unexpected indent') throw e;
+    if (this.tokErr && !this.tokErr.lazy && !this.tokErr.inF) throw this.tokErr;
     if (this.unclosed.length) {
       const b = this.unclosed[this.unclosed.length - 1];
       const farTok = this.t[Math.min(Math.max(this.i, this.far), this.t.length - 1)];
@@ -3877,7 +3932,10 @@ class Parser {
     }
     throw e;
   }
-  fail(msg = 'invalid syntax', at = this.tok) { this.errAt(at, msg); }
+  fail(msg = 'invalid syntax', at = this.tok) {
+    if (this.fmode && at.type === 'eof' && msg === 'invalid syntax') msg = "f-string: expecting '=', or '!', or ':', or '}'";
+    this.errAt(at, msg);
+  }
   notSupported(at, what) {
     const e = exc('NotImplementedError', `${what} ${what.endsWith('s') ? 'are' : 'is'} not supported in Night School's Python`);
     e.line = at.line; e.col = at.col + 1;
@@ -4207,13 +4265,25 @@ class Parser {
     const first = this.parseStarExprs();
     if (this.atOp('=')) {
       const targets = [first];
-      while (this.eatOp('=')) {
+      while (this.atOp('=')) {
+        const cur = targets[targets.length - 1];
+        const bad = invalidTarget(cur, 'assign');
+        if (bad) {
+          const save = this.i;
+          this.i++;
+          let here = false;
+          if (targets.length === 1 && bad === cur && isBitwiseOrNode(cur) && !cur.paren) {
+            here = this.tryParse(() => { this.parseBitOr(); if (this.atOp('=') || this.atOp(':=')) throw exc('SyntaxError'); });
+          }
+          this.i = save;
+          this.errAt(bad, here ? `cannot assign to ${exprName(bad)} here. Maybe you meant '==' instead of '='?` : `cannot assign to ${exprName(bad)}`);
+        }
+        this.i++;
         if (this.atKw('yield')) throw this.notSupported(this.tok, "'yield' (generator functions)");
         targets.push(this.parseStarExprs());
       }
       const value = targets.pop();
       if (value.type === 'Starred') this.errAt(value, "can't use starred expression here");
-      targets.forEach((tg, idx) => this.checkTarget(tg, 'assign', targets.length === 1 && idx === 0));
       return this.mk('Assign', t, { targets, value });
     }
     const tk = this.tok;
@@ -4227,14 +4297,21 @@ class Parser {
       return this.mk('AugAssign', t, { target: first, op: AUG_OPS[tk.v], value });
     }
     if (this.atOp(':')) {
-      if (first.type === 'Tuple') this.errAt(first, 'only single target (not tuple) can be annotated');
-      if (first.type === 'List') this.errAt(first, 'only single target (not list) can be annotated');
-      if (first.type !== 'Name' && first.type !== 'Attribute' && first.type !== 'Subscript') this.errAt(first, 'illegal target for annotation');
+      const colonTok = this.tok;
+      if (first.type !== 'Name' && first.type !== 'Attribute' && first.type !== 'Subscript') {
+        this.i++;
+        const hasAnn = this.canStartExpr() && this.tryParse(() => this.parseExpr());
+        this.i--;
+        if (!hasAnn) this.fail('invalid syntax', colonTok);
+        if (first.type === 'Tuple') this.errAt(first, 'only single target (not tuple) can be annotated');
+        if (first.type === 'List') this.errAt(first, 'only single target (not list) can be annotated');
+        this.errAt(first, 'illegal target for annotation');
+      }
       this.i++;
-      this.parseExpr();
+      const annotation = this.parseExpr();
       let value = null;
       if (this.eatOp('=')) value = this.parseStarExprs();
-      return this.mk('AnnAssign', t, { target: first, value });
+      return this.mk('AnnAssign', t, { target: first, value, annotation });
     }
     if (!this.atStmtEnd() && first.type === 'Name' && (first.id === 'print' || first.id === 'exec') && !this.atOp('(')) {
       if (this.tryParse(() => this.parseStarExprs())) {
@@ -4576,7 +4653,8 @@ class Parser {
         if (this.atOp(',') || this.atOp('}')) this.errAt(k, "':' expected after dictionary key");
         this.commaHint(k, s2, '}');
       }
-      this.i++;
+      const colonTok = this.next();
+      if (this.atOp(',') || this.atOp('}')) this.errAt(colonTok, "expression expected after dictionary key and ':'");
       const vIdx = this.i;
       const v = this.parseExpr();
       keys.push(k);
@@ -4588,7 +4666,8 @@ class Parser {
     } else {
       const first = this.atOp('*') ? this.parseStarredItem() : this.parseNamedExpr();
       if (this.atOp(':') && first.type !== 'Starred') {
-        this.i++;
+        const colonTok = this.next();
+        if (this.atOp(',') || this.atOp('}')) this.errAt(colonTok, "expression expected after dictionary key and ':'");
         const vIdx = this.i;
         const v = this.parseExpr();
         if (this.atKw('for')) { const c = this.parseComp(first, v, 'DictComp', lb); this.closeBracket('}'); return c; }
@@ -4623,9 +4702,8 @@ class Parser {
     const gens = [];
     while (this.atKw('for')) {
       const ft = this.next();
-      const start = this.i;
       const target = this.parseTargetList('in');
-      if (!this.atKw('in')) this.forTargetError(start);
+      if (!this.atKw('in')) this.fail("'in' expected after for-loop variables");
       this.checkTarget(target, 'for');
       this.i++;
       const iter = this.parseDisjunction();
@@ -4679,6 +4757,10 @@ class Parser {
     return out;
   }
   parseFExpr(f) {
+    if (/^\s*lambda\b/.test(f.src)) {
+      const k = f.src.search(/\S/);
+      throw synErr('SyntaxError', 'f-string: lambda expressions are not allowed without parentheses', f.line, f.col + k + 1);
+    }
     const tz = new Tokenizer(f.src, { line: f.line, col: f.col, expr: true });
     let toks;
     try { toks = tz.run(); } catch (e) {
@@ -4698,7 +4780,7 @@ class Parser {
 function parseSource(src) {
   const tz = new Tokenizer(src);
   const toks = tz.run();
-  const p = new Parser(toks, tz.unclosed);
+  const p = new Parser(toks, tz.unclosed, false, tz.error || null);
   return p.parseFile();
 }
 
@@ -5034,9 +5116,10 @@ class Compiler {
         return (f) => { const v = val(f); for (let i = 0; i < sts.length; i++) sts[i](f, v); };
       }
       case 'AnnAssign': {
-        if (!s.value) return () => undefined;
+        const ann = sc.kind === 'module' && s.annotation ? this.expr(s.annotation, sc) : null;
+        if (!s.value) return ann ? (f) => { ann(f); } : () => undefined;
         const val = this.expr(s.value, sc), st = this.target(s.target, sc);
-        return (f) => { st(f, val(f)); };
+        return (f) => { const v = val(f); if (ann) ann(f); st(f, v); };
       }
       case 'AugAssign': return this.augAssign(s, sc);
       case 'Pass': case 'Global': case 'Nonlocal': return () => undefined;
@@ -5637,21 +5720,25 @@ class Compiler {
     const argFns = e.args.map((a) => (a.type === 'Starred' ? { star: true, fn: this.expr(a.value, sc), node: a } : { star: false, fn: this.expr(a, sc) }));
     const kwFns = e.keywords.map((k) => ({ name: k.arg, fn: this.expr(k.value, sc), node: k }));
     const nargs = argFns.length;
-    const funcLabel = e.func.type === 'Name' ? e.func.id : e.func.type === 'Attribute' ? e.func.attr : 'function';
+    const soloStar = argFns.length === 1 && argFns[0].star;
     let buildArgs;
     if (!hasStar) {
       const fns = argFns.map((a) => a.fn);
       buildArgs = nargs === 0 ? () => [] : nargs === 1 ? (f) => [fns[0](f)] : nargs === 2 ? (f) => [fns[0](f), fns[1](f)]
         : (f) => { const a = new Array(nargs); for (let i = 0; i < nargs; i++) a[i] = fns[i](f); return a; };
     } else {
-      buildArgs = (f) => {
+      buildArgs = (f, callee) => {
         const out = [];
         for (const a of argFns) {
           if (a.star) {
             const v = a.fn(f);
             let arr;
             try { arr = iterToArray(v); } catch (x) {
-              if (x instanceof PyException && x.cls === EXC.TypeError) { const y = TypeErr(`${funcLabel}() argument after * must be an iterable, not ${tname(v)}`); setLoc(y, a.node, where); throw y; }
+              if (x instanceof PyException && x.cls === EXC.TypeError) {
+                const y = TypeErr(soloStar ? `${calleeLabel(callee)}() argument after * must be an iterable, not ${tname(v)}` : `Value after * must be an iterable, not ${tname(v)}`);
+                setLoc(y, a.node, where);
+                throw y;
+              }
               throw locate(x, a.node, where);
             }
             for (const it of arr) out.push(it);
@@ -5660,19 +5747,19 @@ class Compiler {
         return out;
       };
     }
-    const buildKw = kwFns.length === 0 ? null : (f) => {
+    const buildKw = kwFns.length === 0 ? null : (f, callee) => {
       const kw = Object.create(null);
       for (const k of kwFns) {
         if (k.name === null) {
           const d = k.fn(f);
-          if (!(d instanceof PyDict)) { const y = TypeErr(`${funcLabel}() argument after ** must be a mapping, not ${tname(d)}`); setLoc(y, k.node, where); throw y; }
+          if (!(d instanceof PyDict)) { const y = TypeErr(`${calleeLabel(callee)}() argument after ** must be a mapping, not ${tname(d)}`); setLoc(y, k.node, where); throw y; }
           for (const en of d.m.values()) {
             if (typeof en[0] !== 'string') { const y = TypeErr('keywords must be strings'); setLoc(y, k.node, where); throw y; }
-            if (en[0] in kw) { const y = TypeErr(`${funcLabel}() got multiple values for keyword argument '${en[0]}'`); setLoc(y, k.node, where); throw y; }
+            if (en[0] in kw) { const y = TypeErr(`${calleeLabel(callee)}() got multiple values for keyword argument '${en[0]}'`); setLoc(y, k.node, where); throw y; }
             kw[en[0]] = en[1];
           }
         } else {
-          if (k.name in kw) { const y = TypeErr(`${funcLabel}() got multiple values for keyword argument '${k.name}'`); setLoc(y, k.node, where); throw y; }
+          if (k.name in kw) { const y = TypeErr(`${calleeLabel(callee)}() got multiple values for keyword argument '${k.name}'`); setLoc(y, k.node, where); throw y; }
           kw[k.name] = k.fn(f);
         }
       }
@@ -5681,10 +5768,12 @@ class Compiler {
     if (e.func.type === 'Attribute') {
       const obj = this.expr(e.func.value, sc), name = e.func.attr;
       const lm = LM[name], sm = SM[name];
+      const method = hasStar || buildKw ? (o) => { try { return getAttr(o, name); } catch (x) { return null; } } : null;
       return (f) => {
         const o = obj(f);
-        const args = buildArgs(f);
-        const kw = buildKw ? buildKw(f) : null;
+        const callee = method ? method(o) : null;
+        const args = buildArgs(f, callee);
+        const kw = buildKw ? buildKw(f, callee) : null;
         try {
           if (Array.isArray(o)) { if (lm !== undefined) return lm(o, args, kw); }
           else if (typeof o === 'string' && sm !== undefined) return sm(o, args, kw);
@@ -5696,14 +5785,14 @@ class Compiler {
     if (!buildKw) {
       return (f) => {
         const fv = fn(f);
-        const args = buildArgs(f);
+        const args = buildArgs(f, fv);
         try { return callValue(fv, args, null); } catch (x) { throw callErr(x, e, where); }
       };
     }
     return (f) => {
       const fv = fn(f);
-      const args = buildArgs(f);
-      const kw = buildKw(f);
+      const args = buildArgs(f, fv);
+      const kw = buildKw(f, fv);
       try { return callValue(fv, args, kw); } catch (x) { throw callErr(x, e, where); }
     };
   }
@@ -5779,6 +5868,13 @@ class Compiler {
       return out;
     };
   }
+}
+
+function calleeLabel(f) {
+  if (f instanceof PyFunction) return f.qualname;
+  if (f instanceof PyBuiltin) return f.self !== undefined && f.self !== null ? `${tname(f.self)}.${f.name}` : f.qual || f.name;
+  if (f instanceof PyType) return f.name;
+  return tname(f);
 }
 
 function compileSource(vm, src) {

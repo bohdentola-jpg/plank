@@ -8,3 +8,4 @@ import './creator.js';
 import '../scenes/plane.js';
 import './townview.js';
 import './town.js';
+import './laptoplab.js';

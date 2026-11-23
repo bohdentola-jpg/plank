@@ -132,7 +132,7 @@ const DEF = {
 };
 
 export function materialNames() {
-  return [...Object.keys(DEF), 'glass_warm', 'glass_cold', 'glass_dark', 'neon', 'neon_flicker', 'glow', 'chainlink'];
+  return [...Object.keys(DEF), 'glass_warm', 'glass_cold', 'glass_dark', 'glass_clear', 'neon', 'neon_flicker', 'neon_blink', 'glow', 'chainlink'];
 }
 
 // ------------------------------------------------------------------ textures
@@ -208,6 +208,9 @@ float snowK = 0.0;
   float ny = normalize(vSnowN).y;
   float nz = snNoise(vSnowWP.xz * 1.1 + vSnowWP.y * 0.3) * 0.6 + snNoise(vSnowWP.xz * 4.7 - vSnowWP.y) * 0.4;
   snowK = smoothstep(0.32, 0.6, ny + (nz - 0.5) * 0.42) * snowCover;
+  #if defined( USE_COLOR_ALPHA )
+    snowK *= vColor.a; // sheltered surfaces (covered porches) carry alpha 0
+  #endif
   float sparkle = step(0.985, snHash(floor(vSnowWP.xz * 60.0))) * 0.25;
   vec3 snowCol = vec3(0.80, 0.84, 0.90) * (0.9 + 0.12 * nz) + sparkle;
   diffuseColor.rgb = mix(diffuseColor.rgb, snowCol, snowK);
@@ -393,6 +396,10 @@ function makeGlass(kind) {
   m.userData.nightEmissive = cold ? 3.2 : 2.1;
   if (!dark) nightMaterials.add(m);
   m.onBeforeCompile = (sh) => {
+    if (dark) {
+      sh.fragmentShader = sh.fragmentShader.replace('#include <color_fragment>', '').replace('#include <emissivemap_fragment>', '');
+      return;
+    }
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <color_fragment>', `
         // glass: the vertex colour drives the light behind it, not the glass
@@ -404,7 +411,7 @@ function makeGlass(kind) {
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
         totalEmissiveRadiance *= vColor.rgb * (1.0 - frost * 0.4);`);
   };
-  m.customProgramCacheKey = () => 'glass';
+  m.customProgramCacheKey = () => (dark ? 'glassD' : 'glass');
   m.userData.kind = kind;
   return m;
 }
@@ -475,6 +482,20 @@ export function getMaterial(name, opts = {}) {
     m = makeGlass(name === 'glass' ? 'glass_warm' : name);
   } else if (name === 'neon' || name === 'neon_flicker' || name === 'glow') {
     m = makeNeon(name === 'neon_flicker');
+  } else if (name === 'neon_blink') {
+    // aviation obstruction lights: slow on/off
+    m = new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
+    m.name = name;
+    m.onBeforeCompile = (sh) => {
+      sh.uniforms.time = WU.time;
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform float time;')
+        .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb *= 0.06 + 0.94 * smoothstep(0.35, 0.45, fract(time * 0.75)) * (1.0 - smoothstep(0.85, 0.95, fract(time * 0.75)));');
+    };
+    m.customProgramCacheKey = () => 'neonBlink';
+  } else if (name === 'glass_clear') {
+    m = new THREE.MeshStandardMaterial({ color: 0x9fb4c0, roughness: 0.04, metalness: 0.2, transparent: true, opacity: 0.18, depthWrite: false, envMapIntensity: 1.2 });
+    m.name = name;
   } else if (name === 'solid') {
     m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, metalness: 0, vertexColors: true, envMapIntensity: 1.0 });
     m.name = 'solid';
@@ -647,21 +668,33 @@ function weatherCanvas(g, W, H, k, seed) {
   const r = mulberry(seed * 977 + 13);
   g.save();
   g.globalCompositeOperation = 'source-atop';
-  g.fillStyle = `rgba(190,180,160,${0.35 * k})`;
+  // overall sun bleach
+  g.fillStyle = `rgba(205,195,175,${0.4 * k})`;
   g.fillRect(0, 0, W, H);
-  for (let i = 0; i < 260 * k; i++) {
-    g.fillStyle = r() < 0.6 ? `rgba(120,105,85,${0.5 * k})` : `rgba(220,210,190,${0.5 * k})`;
-    const s = 2 + r() * W * 0.02;
-    g.fillRect(r() * W, r() * H, s * (1 + r() * 3), s);
+  // flaked paint: soft irregular blotches showing bare grey wood
+  const n = Math.floor(90 * k);
+  for (let i = 0; i < n; i++) {
+    const x = r() * W, y = r() * H, rad = (0.004 + r() * r() * 0.03) * W;
+    const gr = g.createRadialGradient(x, y, 0, x, y, rad);
+    const c = r() < 0.7 ? '140,128,110' : '96,84,70';
+    gr.addColorStop(0, `rgba(${c},${0.85 * k})`);
+    gr.addColorStop(0.7, `rgba(${c},${0.6 * k})`);
+    gr.addColorStop(1, `rgba(${c},0)`);
+    g.fillStyle = gr;
+    g.beginPath();
+    g.ellipse(x, y, rad * (1 + r() * 1.5), rad, r() * 3, 0, Math.PI * 2);
+    g.fill();
   }
-  // rust/water streaks
-  for (let i = 0; i < 18 * k; i++) {
+  // board seams + water/rust streaks running down
+  g.fillStyle = `rgba(60,50,40,${0.25 * k})`;
+  for (let y = H / 4; y < H; y += H / 4) g.fillRect(0, y, W, Math.max(1, H * 0.01));
+  for (let i = 0; i < 22 * k; i++) {
     const x = r() * W;
     const gr = g.createLinearGradient(0, 0, 0, H);
-    gr.addColorStop(0, `rgba(90,60,40,${0.35 * k})`);
-    gr.addColorStop(1, 'rgba(90,60,40,0)');
+    gr.addColorStop(0, `rgba(80,55,35,${0.3 * k})`);
+    gr.addColorStop(1, 'rgba(80,55,35,0)');
     g.fillStyle = gr;
-    g.fillRect(x, 0, 2 + r() * 5, H * (0.3 + r() * 0.7));
+    g.fillRect(x, 0, 1 + r() * 3, H * (0.3 + r() * 0.7));
   }
   g.restore();
 }

@@ -166,11 +166,12 @@ export class GeoBuilder {
       const p = P[i];
       B.pos.push(p[0], p[1], p[2]);
       B.nrm.push(nx, ny, nz);
+      const sa = o.noSnow ? 0 : 1;
       if (vg) {
         const t = Math.max(0, Math.min(1, (p[1] - vg[0]) / (vg[1] - vg[0])));
         const k = vg[2] + (vg[3] - vg[2]) * t;
-        B.col.push(col[0] * k, col[1] * k, col[2] * k);
-      } else B.col.push(col[0], col[1], col[2]);
+        B.col.push(col[0] * k, col[1] * k, col[2] * k, sa);
+      } else B.col.push(col[0], col[1], col[2], sa);
       let u, v;
       if (tg.rm) { u = tg.rm[0]; v = tg.rm[1]; } else if (uvs) { u = uvs[i][0]; v = uvs[i][1]; } else {
         u = (p[0] * tx + p[1] * ty + p[2] * tz) * su + ou;
@@ -215,8 +216,8 @@ export class GeoBuilder {
       B.nrm.push(nx / l, ny / l, nz / l);
       if (tg.rm) B.uv.push(tg.rm[0], tg.rm[1]);
       else B.uv.push(uv ? uv[i * 2] * su + ou : 0, uv ? uv[i * 2 + 1] * sv + ov : 0);
-      if (col) B.col.push(col[0], col[1], col[2]);
-      else B.col.push(o.colors[i * 3], o.colors[i * 3 + 1], o.colors[i * 3 + 2]);
+      if (col) B.col.push(col[0], col[1], col[2], o.noSnow ? 0 : 1);
+      else B.col.push(o.colors[i * 3], o.colors[i * 3 + 1], o.colors[i * 3 + 2], o.noSnow ? 0 : 1);
     }
     if (idx) for (let i = 0; i < idx.length; i++) B.idx.push(base + idx[i]);
     else for (let i = 0; i < count; i++) B.idx.push(base + i);
@@ -326,7 +327,7 @@ export class GeoBuilder {
       const t = (i / segs) * Math.PI * 2 * dir;
       pts.push([x + Math.sin(t) * r, y, z + Math.cos(t) * r]);
     }
-    this.poly(key, pts, { color: o.color, uvScale: o.capUvScale, uvOff: o.uvOff });
+    this.poly(key, pts, { color: o.color, uvScale: o.capUvScale, uvOff: o.uvOff, noSnow: o.noSnow });
   }
 
   /** Cylinder between two points (pipes, poles, rods, wires). */
@@ -478,7 +479,7 @@ export class GeoBuilder {
         for (let i = 0; i < S.n; i++) D.uv.push(rm[0], rm[1]);
       }
       const mean = !pref && TEX_MEAN[name] ? rgb(TEX_MEAN[name]) : null;
-      for (let i = 0; i < S.col.length; i++) D.col.push(mean ? S.col[i] * mean[i % 3] * 1.15 : S.col[i]);
+      for (let i = 0; i < S.col.length; i++) D.col.push(mean && i % 4 < 3 ? S.col[i] * mean[i % 4] * 1.15 : S.col[i]);
       for (let i = 0; i < S.idx.length; i++) D.idx.push(S.idx[i] + base);
       D.n += S.n;
       this.buckets.delete(src);
@@ -494,7 +495,7 @@ export class GeoBuilder {
       g.setAttribute('position', new THREE.Float32BufferAttribute(B.pos, 3));
       g.setAttribute('normal', new THREE.Float32BufferAttribute(B.nrm, 3));
       g.setAttribute('uv', new THREE.Float32BufferAttribute(B.uv, 2));
-      g.setAttribute('color', new THREE.Float32BufferAttribute(B.col, 3));
+      g.setAttribute('color', new THREE.Float32BufferAttribute(B.col, 4));
       g.setIndex(B.n > 65535 ? new THREE.Uint32BufferAttribute(B.idx, 1) : new THREE.Uint16BufferAttribute(B.idx, 1));
       g.computeBoundingSphere();
       g.computeBoundingBox();
