@@ -257,18 +257,34 @@ export class Director {
       cu ||= this.closeUp(to, { side: o.side ?? 1 });
       return true;
     };
+    let side = o.side ?? 1, pull = 1, decided = false;
+    const at = (sd, k) => {
+      const a = this.headPos(from), b = this.headPos(to);
+      const gap = a.distanceTo(b);
+      const dir = b.clone().sub(a).normalize();
+      const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
+      // people standing close (a shop counter): step back and wider, so the near
+      // head is a shoulder at the edge of frame, not half the picture
+      const close = Math.max(0, 1.5 - gap);
+      return a.clone().addScaledVector(dir, -(0.45 + close * 0.6) * k).addScaledVector(right, sd * (0.32 + close * 0.25) * k).add(new THREE.Vector3(0, 0.1, 0));
+    };
     return {
       pos: () => {
         if (!this.actors[from] || !this.actors[to]) return this.camera.position.clone();
         if (far()) return cu.pos();
-        const a = this.headPos(from), b = this.headPos(to);
-        const gap = a.distanceTo(b);
-        const dir = b.clone().sub(a).normalize();
-        const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
-        // people standing close (a shop counter): step back and wider, so the near
-        // head is a shoulder at the edge of frame, not half the picture
-        const close = Math.max(0, 1.5 - gap);
-        return a.clone().addScaledVector(dir, -(0.45 + close * 0.6)).addScaledVector(right, (o.side ?? 1) * (0.32 + close * 0.25)).add(new THREE.Vector3(0, 0.1, 0));
+        if (!decided) {
+          // the lens sits behind someone's head: if that's inside a shelf or a wall,
+          // try the other shoulder, then come in closer
+          decided = true;
+          const a = this.headPos(from), want = at(side, 1), full = a.distanceTo(want);
+          const c1 = this.clearDist(a, want);
+          if (c1 < full - 0.03) {
+            const c2 = this.clearDist(a, at(-side, 1));
+            if (c2 >= full - 0.03) side = -side;
+            else { if (c2 > c1) side = -side; pull = Math.max(0.25, (Math.max(c1, c2) - 0.08) / full); }
+          }
+        }
+        return at(side, pull);
       },
       look: () => {
         if (this.actors[to] && far()) return cu.look();
