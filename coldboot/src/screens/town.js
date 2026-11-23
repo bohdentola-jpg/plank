@@ -315,8 +315,10 @@ registerScreen('town', () => {
       P.place(x, z, Math.atan2(npc.pos.x - x, npc.pos.z - z), npc.pos.y);
       P.anim.setPosture('stand');
     };
+    d.playerPlaced = false;
     d.bring = async (id, where, o = {}) => {
       if (id === 'player') {
+        d.playerPlaced = true;
         const p = G.missions.where(where);
         if (p) G.player.place(p.x, p.z, o.face ?? p.rot ?? G.player.yaw, p.y);
         G.player.anim.setPosture(o.sit ? 'sit' : 'stand');
@@ -358,6 +360,7 @@ registerScreen('town', () => {
     for (const npc of brought) { d.removeActor(npc.id); npc.scripted = false; npc.goal = null; }
     d.removeActor('player');
     d.stagePlayer = null;
+    d.playerPlaced = false;
     G.player.anim.setPosture('stand');
     game.renderer.tweakPost({ letterbox: 0 });
     d.release();

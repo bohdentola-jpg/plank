@@ -244,12 +244,16 @@ export class Director {
   overShoulder(from, to, o = {}) {
     const fov = o.fov ?? 32;
     const apart = () => (this.actors[from] && this.actors[to] ? this.headPos(from).distanceTo(this.headPos(to)) : 0);
-    if (apart() > 5 && this.stagePlayer && (from === 'player' || to === 'player')) {
+    const withPlayer = from === 'player' || to === 'player';
+    // a scene that placed the player itself means the distance (a long lens on a
+    // car up the road): leave it. Otherwise walk the player over, or fall back.
+    const intended = withPlayer && this.playerPlaced;
+    if (!intended && apart() > 5 && this.stagePlayer && withPlayer) {
       try { this.stagePlayer(from === 'player' ? to : from); } catch (e) { console.error(e); }
     }
     let cu = null;
     const far = () => {
-      if (apart() <= 5) return false;
+      if (intended || apart() <= 5) return false;
       cu ||= this.closeUp(to, { side: o.side ?? 1 });
       return true;
     };
