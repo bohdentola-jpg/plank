@@ -144,6 +144,7 @@ export class Director {
     if (len < 1e-3 || !this.scene) return len;
     dir.divideScalar(len);
     const rc = this._rc || (this._rc = new THREE.Raycaster());
+    rc.camera = this.camera;   // sprites need one to be raycast at all
     rc.set(from, dir);
     rc.near = 0.12;
     rc.far = len;
