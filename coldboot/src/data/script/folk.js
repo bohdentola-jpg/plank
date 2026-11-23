@@ -41,8 +41,17 @@ const B = [
 
 export const LINES = {};
 export const FOLK = {};
+// Ids are by position (folk.<voice>.<index>), so lines are never removed from B:
+// a few are just kept out of the pool, or only said when they're true.
+const SKIP = new Set([19, 33]);   // the Friday fish fry, Wednesday trivia: not in this story
+const WHEN = {
+  8: (s) => !!s.flags.bellFixed,                                         // the bell rang today
+  23: (s) => Object.keys(s.repairs || {}).some((k) => k.startsWith('r.')), // somebody's been fixing things
+  25: (s) => !s.flags.rayQuit,                                            // a council seat might open up
+};
 B.forEach(([voice, en], i) => {
   const id = `folk.${voice}.${i}`;
-  LINES[id] = { who: voice, en };
-  (FOLK[voice] ||= []).push({ id });
+  LINES[id] = { who: voice, name: 'Neighbour', en };
+  if (SKIP.has(i)) return;
+  (FOLK[voice] ||= []).push(WHEN[i] ? { id, when: WHEN[i] } : { id });
 });

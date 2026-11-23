@@ -85,21 +85,28 @@ export function clothMaterial(src) {
   return m;
 }
 
-/** Hair cards, brows and lashes (alpha). */
+/**
+ * Hair cards, brows and lashes. Two passes: an opaque core (alpha ≥ 0.5, writes
+ * depth, alpha-to-coverage under MSAA) and a blended fringe on top for the soft
+ * strand tips (userData.fringe, drawn by a second mesh on the same skeleton).
+ */
 export function hairMaterial(src) {
-  return new THREE.MeshStandardMaterial({
-    name: 'people-hair',
+  const params = {
     map: texOf(src, 'map'),
-    normalMap: texOf(src, 'normalMap'),
-    roughnessMap: texOf(src, 'roughnessMap'),
-    roughness: 0.72,
+    roughness: 0.55,
     metalness: 0,
     side: THREE.DoubleSide,
-    alphaTest: 0.32,
-    alphaToCoverage: true,
-    transparent: false,
-    depthWrite: true,
-  });
+    sheen: 0.35,
+    sheenRoughness: 0.35,
+    sheenColor: new THREE.Color(0.8, 0.75, 0.68),
+    specularIntensity: 0.5,
+  };
+  const core = new THREE.MeshPhysicalMaterial({ ...params, name: 'people-hair', alphaTest: 0.5, alphaToCoverage: true });
+  // the fringe is thin strands: little specular, or the tips turn to glass at grazing angles
+  const fringe = new THREE.MeshPhysicalMaterial({ ...params, name: 'people-hair-fringe', transparent: true, depthWrite: false, alphaTest: 0.02,
+    specularIntensity: 0.15, sheen: 0.1, envMapIntensity: 0.35 });
+  core.userData.fringe = fringe;
+  return core;
 }
 
 export function glassesMaterial(src) {

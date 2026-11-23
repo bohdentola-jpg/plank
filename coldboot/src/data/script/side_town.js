@@ -1,11 +1,12 @@
 // Side content — fixing up Port Zarya (TOWN SPIRIT).
 //
-//   REPAIRS     every restoration project. Pearl's job board, the friendship
-//               quests and the story all call m.repair(id): game/economy.js
-//               checks `materials` (Hank's sells them), runs `minigames`, pays
-//               `pay`, adds `spirit` and restores `building` visually.
-//               unlock: { day?, flag? } — when it can be offered. board: false —
-//               never pinned on Pearl's board (a quest hands it out).
+//   REPAIRS     eight restoration projects, each with a visible result. Pearl's
+//               job board, Koshkin's roof deal and the story call m.repair(id):
+//               game/economy.js checks `materials` (Hank's sells them), runs
+//               `minigames`, pays `pay`, adds `spirit` and restores `building`
+//               visually. Two of them win a council member's trust (and card):
+//               the diner sign (Dolly) and Hank's yard fence (Hank).
+//               unlock: { day?, flag? } — when it can be offered.
 //   'jobs.board'  Pearl's board at the post office: three cards, pick one, it
 //               becomes the objective, fix it, get paid. Repeatable.
 //   REACTIONS   what people say (once) after their thing is fixed — played by
@@ -15,37 +16,31 @@ import { CAST } from '../cast.js';
 
 // ------------------------------------------------------------------ the projects
 export const REPAIRS = {
-  // ---- Holy Transfiguration and the old graves
-  'r.church.domes': {
-    name: 'Gild the dome stars', building: 'church', where: 'church.belfry', hint: 'Up the bell tower, then out on a rope',
-    materials: { paint: 2, rope: 2 }, minigames: ['rope', 'paint', 'paint'], pay: 0, spirit: 15, unlock: { day: 3 }, owner: 'gabriel',
-    desc: 'The gold stars on the blue onion domes have flaked to grey. Father Gabriel has the gold paint, but not the head for heights.',
+  // ---- for the council (their trust, their cards)
+  'r.dolly.sign': {
+    name: 'The Midnight Sun sign', building: 'diner', where: 'diner', hint: 'Midnight Sun Diner, Front St',
+    materials: { wire: 3, glass: 1 }, minigames: ['wire', 'glass'], pay: 90, spirit: 10, owner: 'dolly',
+    desc: "Half the neon is dead. At night it reads MIDN  HT SUN D NER, which Dolly says is 'just rude'.",
   },
-  'r.church.cross': {
-    name: 'Straighten the tower cross', building: 'church', where: 'church.belfry', hint: 'Top of the bell tower',
-    materials: { pipe: 2, wire: 2, rope: 1 }, minigames: ['rope', 'hammer'], pay: 0, spirit: 10, owner: 'gabriel',
-    desc: 'The three-bar cross on the bell tower has leaned like a tired man since the October storm. The whole town sees it every morning.',
+  'r.hank.fence': {
+    name: "Hank's yard fence", building: 'hardware', where: 'hardware.yard', hint: 'Brubaker Hardware & Fuel, the yard',
+    materials: { lumber: 5, nails: 2 }, minigames: ['saw', 'hammer'], pay: 110, spirit: 5, owner: 'hank',
+    desc: 'Somebody backed a fuel truck through Hank\'s yard fence. Hank says he knows who. Hank says it was Northstar. Hank says a lot of things.',
   },
-  'r.church.stairs': {
-    name: 'Bell tower stairs', building: 'church', where: 'church.ladderBottom', hint: 'Inside the church, under the tower',
-    materials: { lumber: 4, nails: 2 }, minigames: ['saw', 'hammer'], pay: 30, spirit: 8, owner: 'gabriel',
-    desc: 'Three treads on the bell tower stairs are rotten through. Father Gabriel climbs them anyway, praying all the way up.',
+  'r.school.gym': {
+    name: 'School gym roof', building: 'school', where: 'school.gymDoor', hint: 'Port Zarya School',
+    materials: { shingles: 6, lumber: 2, nails: 2 }, minigames: ['saw', 'hammer', 'hammer'], pay: 180, spirit: 15, owner: 'ruth',
+    desc: 'The gym roof leaks like a sieve. There are eleven buckets on the basketball court. The children have named them.',
   },
-  'r.cemetery.fence': {
-    name: 'Cemetery fence', building: 'cemetery', where: 'cemetery', hint: 'The cemetery, south end of Main St',
-    materials: { lumber: 4, nails: 2, paint: 1 }, minigames: ['saw', 'hammer', 'paint'], pay: 0, spirit: 10, owner: 'gabriel',
-    desc: 'The white picket fence around the old Russian graves lies flat under the snow. Some of those crosses say 1840.',
+  'r.cannery.door': {
+    name: 'Cannery loading door', building: 'cannery', where: 'cannery', hint: 'Zarya Seafoods, Cannery Rd',
+    materials: { pipe: 2, lumber: 1, nails: 1 }, minigames: ['hammer', 'hammer'], pay: 90, spirit: 6, owner: 'ray',
+    desc: 'The big sliding door at Zarya Seafoods jumped its track. The line freezes every time a forklift goes through.',
   },
-  'r.house.rectory': {
-    name: 'The rectory stovepipe', building: 'house34', where: 'house34.door', hint: "Father Gabriel's house, by the cemetery",
-    materials: { pipe: 2, wire: 1 }, minigames: ['hammer', 'wire'], pay: 0, spirit: 6, owner: 'gabriel',
-    desc: "Father Gabriel's stovepipe rattles loose in every wind and smokes out the rectory. He says it keeps him humble.",
-  },
-
-  // ---- Koshkin's
+  // ---- around the square
   'r.koshkin.roof': {
-    name: 'The cabin roof', building: 'cabin', where: 'cabin.porch', hint: 'Your cabin on Shore Road (Koshkin\'s deal)',
-    materials: { shingles: 3, lumber: 1, nails: 1 }, minigames: ['saw', 'hammer'], pay: 0, spirit: 4, unlock: { day: 5, flag: 'hasCabin' }, owner: 'koshkin',
+    name: 'The cabin roof', building: 'cabin', where: 'cabin.porch', hint: "Your cabin on Shore Road (Koshkin's deal)",
+    materials: { shingles: 3, lumber: 1, nails: 1 }, minigames: ['saw', 'hammer'], pay: 0, spirit: 4, unlock: { flag: 'hasCabin' }, owner: 'koshkin',
     desc: "Yuri's old cabin, your cabin, leaks on the north side. Koshkin pinned the card himself: 'Fix the roof, carpenter.' He could have just said it.",
   },
   'r.koshkin.sign': {
@@ -53,184 +48,15 @@ export const REPAIRS = {
     materials: { paint: 2, nails: 1 }, minigames: ['hammer', 'paint'], pay: 70, spirit: 8, owner: 'koshkin',
     desc: "KOSHKIN'S GENERAL MDSE., est. 1911. His grandfather painted the gold letters. Half are gone, and Northstar's sign glows all night across the square.",
   },
-  'r.koshkin.porch': {
-    name: "Koshkin's porch boards", building: 'koshkin', where: 'koshkin.porch', hint: 'Church Square',
-    materials: { lumber: 3, nails: 1 }, minigames: ['saw', 'hammer'], pay: 70, spirit: 5, owner: 'koshkin',
-    desc: 'The porch of the general store bounces when you walk on it. Mrs. Ivanoff says it is like a trampoline. She is ninety.',
-  },
-
-  // ---- Front Street and the waterfront
-  'r.dolly.sign': {
-    name: 'The Midnight Sun sign', building: 'diner', where: 'diner', hint: 'Midnight Sun Diner, Front St',
-    materials: { wire: 3, glass: 1 }, minigames: ['wire', 'glass'], pay: 90, spirit: 10, owner: 'dolly',
-    desc: "Half the neon is dead. At night it reads MIDN  HT SUN D NER, which Dolly says is 'just rude'.",
-  },
-  'r.dolly.window': {
-    name: "The diner's front window", building: 'diner', where: 'diner', hint: 'Midnight Sun Diner, Front St',
-    materials: { glass: 2, nails: 1 }, minigames: ['glass', 'glass'], pay: 100, spirit: 6, unlock: { day: 3 }, owner: 'dolly',
-    desc: "A plough threw a block of ice through the diner's big window in October. It has been plywood and duct tape since.",
-  },
-  'r.dolly.freezer': {
-    name: "Earl's walk-in freezer", building: 'diner', where: 'diner', hint: 'Midnight Sun Diner, the kitchen',
-    materials: { pipe: 2, wire: 2 }, minigames: ['wire', 'hammer'], pay: 0, spirit: 6, unlock: { flag: 'sf.dolly.freezer' }, board: false, owner: 'dolly',
-    desc: 'Earl put in the walk-in freezer himself in 1988. It wheezes like an old dog and quits on warm days. Warm days, up here.',
-  },
-  'r.hank.pump': {
-    name: "Hank's fuel truck pump", building: 'fueltanks', where: 'fueltanks', hint: "Hank's fuel yard, Front St",
-    materials: { pipe: 1, wire: 2 }, minigames: ['wire', 'hammer'], pay: 0, spirit: 5, unlock: { flag: 'sf.hank.pumpAsk' }, board: false, owner: 'hank',
-    desc: "The heating-oil delivery truck has a dying fuel pump. If Hank can't deliver, the town's fuel contract goes to Northstar by default.",
-  },
-  'r.anchor.sign': {
-    name: "The Rusty Anchor's sign", building: 'bar', where: 'bar', hint: 'The Rusty Anchor, Front St',
-    materials: { rope: 1, nails: 1, paint: 1 }, minigames: ['rope', 'paint'], pay: 60, spirit: 5, owner: 'lou',
-    desc: "The bar's sign hangs by one chain and bangs on the wall all night. Lou says it is the only thing in there that's truly rusty.",
-  },
-  'r.hank.fence': {
-    name: "Hank's yard fence", building: 'hardware', where: 'hardware', hint: 'Brubaker Hardware & Fuel',
-    materials: { lumber: 5, nails: 2 }, minigames: ['saw', 'hammer'], pay: 110, spirit: 5, owner: 'hank',
-    desc: 'Somebody backed a fuel truck through Hank\'s yard fence. Hank says he knows who. Hank says it was Northstar. Hank says a lot of things.',
-  },
-  'r.harbor.boardwalk': {
-    name: 'Harbour boardwalk', building: 'harbor', where: 'harbor', hint: 'Small Boat Harbor',
-    materials: { lumber: 6, nails: 2 }, minigames: ['saw', 'hammer', 'hammer'], pay: 60, spirit: 12,
-    desc: 'Rotten planks along the harbour boardwalk. Two fishermen and a dog went through this year. The dog was fine.',
-  },
-  'r.cannery.door': {
-    name: 'Cannery loading door', building: 'cannery', where: 'cannery', hint: 'Zarya Seafoods, Cannery Rd',
-    materials: { pipe: 2, lumber: 1, nails: 1 }, minigames: ['hammer', 'hammer'], pay: 90, spirit: 6, unlock: { day: 3 }, owner: 'ray',
-    desc: 'The big sliding door at Zarya Seafoods jumped its track. The line freezes every time a forklift goes through.',
-  },
-
-  // ---- Main St, Third Ave, the school
   'r.post.steps': {
     name: 'Post office steps', building: 'post', where: 'post.door', hint: 'U.S. Post Office, Third Ave',
     materials: { lumber: 4, nails: 1 }, minigames: ['saw', 'hammer'], pay: 90, spirit: 8, owner: 'pearl',
     desc: 'The post office steps are split and iced. The mail carrier went down them on his back on Monday. Pearl has opinions.',
   },
-  'r.post.sign': {
-    name: 'Post office sign', building: 'post', where: 'post.flag', hint: 'U.S. Post Office, Third Ave',
-    materials: { paint: 1, nails: 1 }, minigames: ['hammer', 'paint'], pay: 45, spirit: 5, owner: 'pearl',
-    desc: 'The sign reads U.S. POST OFF CE. Pearl wants her I back.',
-  },
-  'r.third.lights': {
-    // not a building: 'third' is the street id (roads), so the rebuild is a no-op
-    name: 'Streetlights on Third Ave', building: 'third', where: 'post', hint: 'Third Ave, by the post office',
-    materials: { wire: 4, glass: 2 }, minigames: ['wire', 'glass'], pay: 0, spirit: 12,
-    desc: 'The old sodium lamps on Third go dark every time it blows. Northstar offered to replace them with smart lights. Free. With cameras.',
-  },
-  'r.school.gym': {
-    name: 'School gym roof', building: 'school', where: 'school.gymDoor', hint: 'Port Zarya School',
-    materials: { shingles: 6, lumber: 2, nails: 2 }, minigames: ['saw', 'hammer', 'hammer'], pay: 180, spirit: 15, unlock: { day: 3 },
-    desc: 'The gym roof leaks like a sieve. There are eleven buckets on the basketball court. The children have named them.',
-  },
-  'r.school.playground': {
-    name: 'The school playground', building: 'school', where: 'school.playground', hint: 'Port Zarya School',
-    materials: { rope: 2, pipe: 2, paint: 1 }, minigames: ['rope', 'hammer', 'paint'], pay: 0, spirit: 12,
-    desc: 'Two swings with no chains and a slide with a hole in it. Ruth Aqpik has asked the city for a new one every year since 2009.',
-  },
-  'r.school.shelter': {
-    name: 'School bus shelter', building: 'school', where: 'school.flag', hint: 'Main St, by the school',
-    materials: { lumber: 3, shingles: 2, nails: 1 }, minigames: ['saw', 'hammer'], pay: 0, spirit: 8,
-    desc: 'The bus shelter lost its roof in a storm. The children wait for the bus in the dark at minus thirty.',
-  },
-  'r.hall.heater': {
-    name: 'Parish Hall heater', building: 'hall', where: 'hall.kitchen', hint: 'Parish Hall, Church Square',
-    materials: { pipe: 2, wire: 2 }, minigames: ['wire', 'hammer'], pay: 0, spirit: 10,
-    desc: 'The oil heater in the Parish Hall coughs, bangs and quits. The fish fry is Friday. Nobody wants to eat halibut in mittens.',
-  },
-  'r.kzry.mast': {
-    name: 'KZRY transmitter mast', building: 'radio', where: 'radio.mastBase', hint: 'KZRY 88.9, west of the square',
-    materials: { wire: 4, rope: 2, pipe: 1 }, minigames: ['rope', 'wire', 'wire'], pay: 0, spirit: 15, unlock: { day: 3 }, owner: 'nina',
-    desc: 'Slack guy wires, a corroded feed line. KZRY reaches the harbour on a good day. Nina wants it to reach Nome.',
-  },
-  'r.kzry.door': {
-    name: 'Radio station door', building: 'radio', where: 'radio.door', hint: 'KZRY 88.9',
-    materials: { lumber: 2, nails: 1, paint: 1 }, minigames: ['saw', 'hammer'], pay: 60, spirit: 4, owner: 'nina',
-    desc: "The station door is warped and won't latch. Every time somebody walks in, the wind blows the playlist off the desk.",
-  },
-  'r.clinic.ramp': {
-    name: 'Clinic ramp', building: 'clinic', where: 'clinic.door', hint: 'Port Zarya Clinic',
-    materials: { lumber: 4, pipe: 2, nails: 1 }, minigames: ['saw', 'hammer'], pay: 80, spirit: 10, owner: 'ellen',
-    desc: 'The wheelchair ramp at the clinic is cracked and the railing wobbles. Doc Haverford salts it herself every morning at seven.',
-  },
-
-  // ---- out of town
-  'r.lighthouse.lamp': {
-    name: 'The lighthouse lamp', building: 'lighthouse', where: 'lighthouse', hint: 'Zarya Point, end of Shore Rd',
-    materials: { glass: 2, wire: 3 }, minigames: ['wire', 'glass'], pay: 0, spirit: 15, unlock: { day: 5 },
-    desc: 'Zarya Point light has been dark since the Coast Guard automated it and forgot it. Old fishermen still look for it on the way home.',
-  },
-  'r.house.dogyard': {
-    name: "Joe Okpealuk's dog yard", building: 'house37', where: 'house37.yard', hint: 'East end of town',
-    materials: { lumber: 4, shingles: 2, nails: 2 }, minigames: ['saw', 'hammer'], pay: 40, spirit: 8,
-    desc: 'Twenty-two huskies, nine doghouses, no roofs. Old Joe ran the Iditarod twice. His back will not let him climb any more.',
-  },
-
-  // ---- houses
-  'r.house.ivanoff': {
-    name: "Mrs. Ivanoff's porch steps", building: 'house0', where: 'house0.door', hint: '2nd Ave, west',
-    materials: { lumber: 3, nails: 1 }, minigames: ['saw', 'hammer'], pay: 30, spirit: 6,
-    desc: 'Agnes Ivanoff is ninety and still shovels her own steps. The steps are losing.',
-  },
-  'r.house.ruth': {
-    name: "Ruth Aqpik's storm windows", building: 'house1', where: 'house1.door', hint: '2nd Ave, west',
-    materials: { glass: 2, nails: 1 }, minigames: ['glass', 'hammer'], pay: 0, spirit: 6, owner: 'ruth',
-    desc: "Ruth's storm windows rattle like a drum kit. She says she likes the company. Tommy says she sleeps in her coat.",
-  },
-  'r.house.kaplan': {
-    name: "Old Kaplan's siding", building: 'house2', where: 'house2.door', hint: '2nd Ave, west',
-    materials: { paint: 3 }, minigames: ['paint', 'paint'], pay: 90, spirit: 6,
-    desc: "Old Mr. Kaplan's house was blue in 1970. It is now the colour of weather.",
-  },
-  'r.house.ray': {
-    name: "Ray Moody's porch roof", building: 'house3', where: 'house3.door', hint: '2nd Ave, west end',
-    materials: { lumber: 2, shingles: 2, nails: 1 }, minigames: ['saw', 'hammer'], pay: 0, spirit: 6, unlock: { flag: 'sf.ray.go' }, board: false, owner: 'ray',
-    desc: "Ray's porch roof sags in the middle like a hammock. He hasn't touched it since his wife moved to Fairbanks.",
-  },
-  'r.house.nanouk': {
-    name: "The Nanouk kids' window", building: 'house5', where: 'house5.door', hint: '2nd Ave',
-    materials: { glass: 1, nails: 1 }, minigames: ['glass'], pay: 0, spirit: 8,
-    desc: 'Three kids and a bedroom window covered in plastic sheeting. Jimmy Nanouk was laid off from the cannery in September.',
-  },
-  'r.house.petrov': {
-    name: "The Petrov sisters' house", building: 'house7', where: 'house7.door', hint: 'East of the square',
-    materials: { paint: 3 }, minigames: ['paint', 'paint'], pay: 90, spirit: 6,
-    desc: 'Vera and Lida Petrov want their house painted pink. Flamingo pink. They have been very clear about this.',
-  },
-  'r.house.delgado': {
-    name: 'The Delgado roof', building: 'house13', where: 'house13.door', hint: '2nd Ave, east',
-    materials: { shingles: 4, nails: 2 }, minigames: ['hammer', 'hammer'], pay: 100, spirit: 6,
-    desc: 'The Delgados work the cannery line. Their roof lost a row of shingles in the storm, and their landlord lives in Seattle.',
-  },
-  'r.house.pearl': {
-    name: "Pearl's porch light and mailbox", building: 'house15', where: 'house15.door', hint: 'North of Third Ave',
-    materials: { wire: 1, nails: 1, paint: 1 }, minigames: ['wire', 'hammer'], pay: 50, spirit: 4, owner: 'pearl',
-    desc: "The postmaster's own mailbox fell off its post. Pearl says nobody is to make a joke about it.",
-  },
-  'r.house.ellen': {
-    name: "Doc Ellen's bird blind", building: 'house19', where: 'house19.yard', hint: 'South of Third Ave',
-    materials: { lumber: 3, nails: 1 }, minigames: ['saw', 'hammer'], pay: 60, spirit: 4, owner: 'ellen',
-    desc: "Doc Haverford's back-deck bird blind blew down. She says the ravens are laughing at her. She is probably right.",
-  },
-  'r.house.marta': {
-    name: 'The Kowalczyk porch railing', building: 'house24', where: 'house24.door', hint: 'Third Ave, by the police station',
-    materials: { lumber: 2, nails: 1, paint: 1 }, minigames: ['saw', 'hammer'], pay: 70, spirit: 5, owner: 'marta',
-    desc: "The police chief's porch railing is held together with crime-scene tape. Nina did that. Nina thinks it is funny.",
-  },
-  'r.house.sorensen': {
-    name: 'The Sorensen pipes', building: 'house38', where: 'house38.door', hint: 'West end of town',
-    materials: { pipe: 3 }, minigames: ['hammer', 'wire'], pay: 70, spirit: 5,
-    desc: 'A pipe froze and burst under the Sorensen place. They have been melting snow on the stove for a week.',
-  },
-  'r.house.shore': {
-    name: 'Foundation on Shore Road', building: 'house29', where: 'house29.door', hint: 'Shore Rd, past your cabin',
-    materials: { lumber: 4, pipe: 2 }, minigames: ['shovel', 'hammer'], pay: 0, spirit: 8, unlock: { day: 4 },
-    desc: "The Okpik house on Shore Road is cracking down the middle. The ground under it is going soft. Someone sold them that lot.",
-  },
-  'r.house.dolly': {
-    name: "Earl's workshop door", building: 'house32', where: 'house32.door', hint: 'Behind the Midnight Sun Diner',
-    materials: { lumber: 2, nails: 1, pipe: 1 }, minigames: ['saw', 'hammer'], pay: 0, spirit: 4, unlock: { flag: 'sf.dolly.shed' }, board: false, owner: 'dolly',
-    desc: "Earl Finch's workshop behind the diner. Dolly hasn't opened it in four years. The door has frozen into its frame.",
+  'r.church.domes': {
+    name: 'Gild the dome stars', building: 'church', where: 'church.belfry', hint: 'Up the bell tower, then out on a rope',
+    materials: { paint: 2, rope: 2 }, minigames: ['rope', 'paint', 'paint'], pay: 0, spirit: 15, owner: 'gabriel',
+    desc: 'The gold stars on the blue onion domes have flaked to grey. Father Gabriel has the gold paint, but not the head for heights.',
   },
 };
 
@@ -338,7 +164,7 @@ export function repairUnlocked(s, id) {
   return true;
 }
 function hash(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
-const STARTERS = ['r.post.steps', 'r.dolly.sign', 'r.post.sign'];
+const STARTERS = ['r.dolly.sign', 'r.hank.fence', 'r.post.steps'];
 /** The three cards on Pearl's board today (stable through the day). */
 export function boardOffer(s) {
   const avail = Object.keys(REPAIRS).filter((id) => !(s.repairs || {})[id] && REPAIRS[id].board !== false && repairUnlocked(s, id));
@@ -396,73 +222,28 @@ export const LINES = {
   'st.d.spirit': { who: 'dmitri', ru: 'Пять починок. Знаешь, в чём сила хорошей работы? Её не замечают, пока всё стоит. А всё стоит — благодаря ей.', en: 'Five repairs. You know the strength of good work? Nobody notices it while everything stands. And everything stands because of it.' },
 
   // ---- reactions: the town talks about what you fixed
-  'st.rx.dolly.sign': { who: 'dolly', en: "Honey, did you see my sign? You can see it from the harbour! I stood outside for twenty minutes last night, just looking at it like a fool.", emo: 'laugh' },
-  'st.rx.dolly.window': { who: 'dolly', en: "I can see the street again! I'd forgotten how much gossip you miss behind a sheet of plywood.", emo: 'smile' },
-  'st.rx.dolly.heater': { who: 'dolly', en: "The parish hall is warm! Last year I fried two hundred pieces of halibut in there wearing mittens.", emo: 'smile' },
-  'st.rx.dolly.nanouk': { who: 'dolly', en: "The Nanouk kids have a real window again. Sarah sat in my booth and cried for an hour. Happy crying. I gave her pie." },
-  'st.rx.pearl.steps': { who: 'pearl', en: "Not one person has fallen down my steps since you fixed them. The mail carrier sends his regards. So does his tailbone.", emo: 'smile' },
-  'st.rx.pearl.sign': { who: 'pearl', en: "I've got my I back. Post office, fully spelled, the way the federal government intended. Thank you." },
-  'st.rx.pearl.house': { who: 'pearl', en: "My mailbox is back on its post. I did see you smirking. I'll allow it." },
-  'st.rx.pearl.ivanoff': { who: 'pearl', en: "Agnes Ivanoff came in to mail you a thank-you card. Through the post. You live four streets away. She insisted.", emo: 'laugh' },
-  'st.rx.pearl.petrov': { who: 'pearl', en: "The Petrov sisters' house is pink. Very pink. Visible from space. They're speaking to each other again. Mostly about the pink." },
-  'st.rx.gabriel.domes': { who: 'gabriel', en: "The stars on the domes! When the sun came over Kettle Hill this morning they lit up like Easter. Old Mrs. Ivanoff cried on the steps.", emo: 'smile' },
-  'st.rx.gabriel.cross': { who: 'gabriel', en: "The cross stands straight. People stop in the square and look up, and then they look at each other. It's a small thing. It isn't a small thing." },
-  'st.rx.gabriel.stairs': { who: 'gabriel', en: "I climbed the tower stairs this morning without praying once. Well. I prayed. But out of habit, not fear.", emo: 'smile' },
-  'st.rx.gabriel.fence': { who: 'gabriel', en: "The fence around the old graves. Thank you. Those are the people who built this town. They deserve a fence." },
-  'st.rx.gabriel.rectory': { who: 'gabriel', en: "My stovepipe doesn't rattle any more. I slept nine hours. I didn't know I could do that." },
+  'st.rx.dolly.sign': { who: 'dolly', en: 'Honey, did you see my sign? You can see it from the harbour! I stood outside for twenty minutes last night, just looking at it like a fool.', emo: 'laugh' },
+  'st.rx.hank.fence': { who: 'hank', en: "Fence looks good. Better than I'd have done. Don't tell anybody I said that." },
+  'st.rx.ruth.gym': { who: 'ruth', en: 'They took the buckets off the gym floor. Eleven buckets. The children held a funeral for them.' },
+  'st.rx.lyle.gym': { who: 'lyle', en: "Nice work on the gym roof. Folks are saying it was the city. I didn't correct them. Kidding. Mostly." },
+  'st.rx.ray.door': { who: 'ray', en: "Door runs smooth. Line didn't freeze once today. Company'll take the credit, but the guys know." },
   'st.rx.koshkin.roof': { who: 'koshkin', en: "Roof doesn't leak? Yuri would be happy. He put a bucket there in nineteen ninety and called it the system.", emo: 'smile' },
   'st.rx.koshkin.sign': { who: 'koshkin', en: "My grandfather painted those letters. Now you. Is good. Is very good. Don't make me say it twice." },
-  'st.rx.koshkin.porch': { who: 'koshkin', en: "Porch doesn't bounce. Mrs. Ivanoff is disappointed. She liked the bounce." },
-  'st.rx.nina.mast': { who: 'nina', en: "We reached Nome! A guy in Nome called in! He asked for polka, which, ugh, but still. Nome!", emo: 'laugh' },
-  'st.rx.nina.door': { who: 'nina', en: "The door closes! My playlist stays on the desk! Do you know what a gift that is?" },
-  'st.rx.hank.fence': { who: 'hank', en: "Fence looks good. Better than I'd have done. Don't tell anybody I said that." },
-  'st.rx.hank.sorensen': { who: 'hank', en: "Sorensens have water again. They bought the pipe from me, so I'm taking half the credit." },
-  'st.rx.tommy.boardwalk': { who: 'tommy', en: "You fixed the boardwalk? I went through that thing on my snowmachine last year. Long story. Cold story.", emo: 'laugh' },
-  'st.rx.tommy.dogs': { who: 'tommy', en: "Old Joe says his dogs have better roofs than he does now. He's thinking of moving in with them." },
-  'st.rx.lou.sign': { who: 'lou', en: "Sign doesn't bang any more. First quiet night in a year. I almost missed it. Almost." },
-  'st.rx.lou.kaplan': { who: 'lou', en: "Old Kaplan's house is blue again. He sat on his porch all afternoon looking at it. Then he came in here and told everybody. Twice." },
-  'st.rx.ray.door': { who: 'ray', en: "Door runs smooth. Line didn't freeze once today. Company'll take the credit, but the guys know." },
-  'st.rx.ray.delgado': { who: 'ray', en: "The Delgados' roof. They told the whole line. You've got a fan club at the cannery now." },
-  'st.rx.ellen.ramp': { who: 'ellen', en: "Mrs. Ivanoff came up the ramp in her wheelchair this morning by herself. She waved at me like she'd won a race.", emo: 'smile' },
-  'st.rx.ellen.blind': { who: 'ellen', en: "My blind's back up. I've already seen a gyrfalcon from it. A gyrfalcon! In my yard!", emo: 'surprise' },
-  'st.rx.marta.lights': { who: 'marta', en: "Third Avenue's lit. Two fender-benders a week out there in the dark, and none since. That's on you. The good kind of on you." },
-  'st.rx.marta.porch': { who: 'marta', en: "You fixed my railing. Nina says you took her crime-scene tape. She wants it back." },
-  'st.rx.ruth.playground': { who: 'ruth', en: "The children are on the swings again. I can hear them from the post office. That's the sound a town is supposed to make.", emo: 'smile' },
-  'st.rx.ruth.gym': { who: 'ruth', en: "They took the buckets off the gym floor. Eleven buckets. The children held a funeral for them." },
-  'st.rx.ruth.windows': { who: 'ruth', en: "My windows don't sing any more. I'll miss them a little. Tommy won't." },
-  'st.rx.ruth.shore': { who: 'ruth', en: "You shored up the Okpik house on Shore Road. Those families were sold bad land. Someone should answer for that. Meanwhile, thank you.", emo: 'serious' },
-  'st.rx.wade.lighthouse': { who: 'wade', en: "Saw Zarya Point lit up from two thousand feet last night. Haven't seen that since I was a kid. Nearly flew into a cloud looking at it." },
-  'st.rx.walt.lights': { who: 'walt', en: "The city thanks you. Unofficially. Officially the city has no budget, so this conversation never happened." },
-  'st.rx.evan.lights': { who: 'evan', en: "Third Avenue looks so nice now! Northstar had a smart lighting proposal ready for it, but someone got there first. How enterprising.", emo: 'smile' },
   'st.rx.evan.sign': { who: 'evan', en: "Koshkin's sign looks lovely. Vintage is very in right now. We should do a collab. Ha. Kidding.", emo: 'smile' },
-  'st.rx.lyle.gym': { who: 'lyle', en: "Nice work on the gym roof. Folks are saying it was the city. I didn't correct them. Kidding. Mostly." },
+  'st.rx.pearl.steps': { who: 'pearl', en: 'Not one person has fallen down my steps since you fixed them. The mail carrier sends his regards. So does his tailbone.', emo: 'smile' },
+  'st.rx.gabriel.domes': { who: 'gabriel', en: 'The stars on the domes! When the sun came over Kettle Hill this morning they lit up like Easter. Old Mrs. Ivanoff cried on the steps.', emo: 'smile' },
 };
 
 // npc, repair, line, friendship, standing
 export const REACTIONS = [
-  ['dolly', 'r.dolly.sign', 'st.rx.dolly.sign', 6], ['dolly', 'r.dolly.window', 'st.rx.dolly.window', 4],
-  ['dolly', 'r.hall.heater', 'st.rx.dolly.heater', 3], ['dolly', 'r.house.nanouk', 'st.rx.dolly.nanouk', 3],
-  ['pearl', 'r.post.steps', 'st.rx.pearl.steps', 4], ['pearl', 'r.post.sign', 'st.rx.pearl.sign', 3],
-  ['pearl', 'r.house.pearl', 'st.rx.pearl.house', 4], ['pearl', 'r.house.ivanoff', 'st.rx.pearl.ivanoff', 2],
-  ['pearl', 'r.house.petrov', 'st.rx.pearl.petrov', 2],
-  ['gabriel', 'r.church.domes', 'st.rx.gabriel.domes', 8], ['gabriel', 'r.church.cross', 'st.rx.gabriel.cross', 5],
-  ['gabriel', 'r.church.stairs', 'st.rx.gabriel.stairs', 4], ['gabriel', 'r.cemetery.fence', 'st.rx.gabriel.fence', 4],
-  ['gabriel', 'r.house.rectory', 'st.rx.gabriel.rectory', 4],
+  ['dolly', 'r.dolly.sign', 'st.rx.dolly.sign', 6],
+  ['hank', 'r.hank.fence', 'st.rx.hank.fence', 6],
+  ['ruth', 'r.school.gym', 'st.rx.ruth.gym', 6], ['lyle', 'r.school.gym', 'st.rx.lyle.gym', 2],
+  ['ray', 'r.cannery.door', 'st.rx.ray.door', 6],
   ['koshkin', 'r.koshkin.roof', 'st.rx.koshkin.roof', 5], ['koshkin', 'r.koshkin.sign', 'st.rx.koshkin.sign', 8],
-  ['koshkin', 'r.koshkin.porch', 'st.rx.koshkin.porch', 4],
-  ['nina', 'r.kzry.mast', 'st.rx.nina.mast', 8], ['nina', 'r.kzry.door', 'st.rx.nina.door', 4],
-  ['hank', 'r.hank.fence', 'st.rx.hank.fence', 6], ['hank', 'r.house.sorensen', 'st.rx.hank.sorensen', 2],
-  ['tommy', 'r.harbor.boardwalk', 'st.rx.tommy.boardwalk', 4], ['tommy', 'r.house.dogyard', 'st.rx.tommy.dogs', 3],
-  ['lou', 'r.anchor.sign', 'st.rx.lou.sign', 6], ['lou', 'r.house.kaplan', 'st.rx.lou.kaplan', 2],
-  ['ray', 'r.cannery.door', 'st.rx.ray.door', 5], ['ray', 'r.house.delgado', 'st.rx.ray.delgado', 3],
-  ['ellen', 'r.clinic.ramp', 'st.rx.ellen.ramp', 6], ['ellen', 'r.house.ellen', 'st.rx.ellen.blind', 4],
-  ['marta', 'r.third.lights', 'st.rx.marta.lights', 6], ['marta', 'r.house.marta', 'st.rx.marta.porch', 5],
-  ['ruth', 'r.school.playground', 'st.rx.ruth.playground', 6], ['ruth', 'r.school.gym', 'st.rx.ruth.gym', 4],
-  ['ruth', 'r.house.ruth', 'st.rx.ruth.windows', 6], ['ruth', 'r.house.shore', 'st.rx.ruth.shore', 4],
-  ['wade', 'r.lighthouse.lamp', 'st.rx.wade.lighthouse', 6],
-  ['walt', 'r.third.lights', 'st.rx.walt.lights', 2, 2],
-  ['evan', 'r.third.lights', 'st.rx.evan.lights', 0], ['evan', 'r.koshkin.sign', 'st.rx.evan.sign', 0],
-  ['lyle', 'r.school.gym', 'st.rx.lyle.gym', 2],
+  ['evan', 'r.koshkin.sign', 'st.rx.evan.sign', 0],
+  ['pearl', 'r.post.steps', 'st.rx.pearl.steps', 4],
+  ['gabriel', 'r.church.domes', 'st.rx.gabriel.domes', 8],
 ];
 
 /** Once per fixed thing: the owner (or a neighbour) says something about it. */

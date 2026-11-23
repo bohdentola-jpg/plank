@@ -29,17 +29,29 @@ registerScreen('humanlab', () => {
   function setLight(kind) {
     lights.clear();
     if (kind === 'lamp') {
-      // the warehouse: one warm bulb over the table, near darkness around
+      // the warehouse: one warm bulb over the table (same light as warehouseSet), near darkness around
       scene.background = new THREE.Color(0x020304);
       scene.environment = getEnvMap(game.renderer.gl, 'interior');
       scene.environmentIntensity = 0.25;
-      const lamp = new THREE.PointLight(0xffb070, 9, 7, 1.6);
-      lamp.position.set(0.3, 2.3, 0.9);
+      const lamp = new THREE.SpotLight(0xffc98a, 8.5, 9, 1.0, 0.65, 1.6);
+      lamp.position.set(0, 2.23, 1.0);
+      lamp.target.position.set(0, 0, 1.0);
       lamp.castShadow = true;
-      lamp.shadow.mapSize.set(1024, 1024);
-      lamp.shadow.bias = -0.0004;
-      lights.add(lamp);
-      lights.add(new THREE.HemisphereLight(0x1a2430, 0x0a0806, 0.25));
+      lamp.shadow.mapSize.set(2048, 2048);
+      lamp.shadow.bias = -0.0003;
+      lamp.shadow.normalBias = 0.02;
+      lamp.shadow.camera.near = 0.2;
+      lights.add(lamp, lamp.target);
+      const lampFill = new THREE.PointLight(0xffb070, 1.3, 6, 2);
+      lampFill.position.set(0, 2.05, 1.0);
+      lights.add(lampFill);
+      const camFill = new THREE.PointLight(0xffe4c8, 0.55, 3.2, 2);   // the director's fill, above the camera
+      camFill.position.set(0, 1.6, 2.2);
+      lights.add(camFill);
+      const moon = new THREE.DirectionalLight(0x6a9ac8, 0.55);
+      moon.position.set(-3, 9, -10);
+      lights.add(moon);
+      lights.add(new THREE.HemisphereLight(0x1c2a36, 0x0c0a08, 0.35));
     } else if (kind === 'night') {
       scene.background = new THREE.Color(0x05070c);
       scene.environment = getEnvMap(game.renderer.gl, 'night');
@@ -134,6 +146,7 @@ registerScreen('humanlab', () => {
     furniture(['sit', 'sittalk', 'sitchair'].includes(anim), people.map((p) => p.ch.group.position.x));
     info = `${names.map((n) => `${n}${CAST[n] ? ' → ' + people.find((p) => p.name === n)?.ch.avatar : ''}`).join(', ')} · ${anim} · ${tris} tris · ${Math.round(performance.now() - t0)} ms`;
     ready = true;
+    window.__people = people;   // QA handle
   }
 
   return {

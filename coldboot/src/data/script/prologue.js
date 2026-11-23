@@ -12,7 +12,7 @@ export const LINES = {
   'w.lyosha.aurora1': { who: 'lyosha', ru: 'Так. Вот это — «Аврора». Её продаёт американская компания «Нордстар». Она стоит в энергосетях по всему миру.', en: "Okay. This is AURORA. An American company, Northstar, sells it. It's inside power grids all over the world." },
   'w.lyosha.aurora2': { who: 'lyosha', ru: 'Москва, Лондон, Токио, Чикаго… везде. Управляет сетью, балансирует нагрузку. Умная. Слишком умная.', en: 'Moscow, London, Tokyo, Chicago… everywhere. It runs the grid, balances the load. Smart. Too smart.' },
   'w.nadia.worm': { who: 'nadia', ru: 'Покажи червя.', en: 'Show them the worm.', emo: 'serious' },
-  'w.lyosha.worm': { who: 'lyosha', ru: 'Внутри «Авроры» спит вот это. Мы назвали его «Полынь». Через четырнадцать дней, на рассвете, он проснётся — и выключит свет. Везде. Сразу.', en: "Inside AURORA, this is sleeping. We named it Wormwood. In fourteen days, at dawn, it wakes up — and turns off the lights. Everywhere. All at once.", emo: 'worry' },
+  'w.lyosha.worm': { who: 'lyosha', ru: 'Внутри «Авроры» спит вот это. Мы назвали его «Полынь». Через пять дней, на рассвете, он проснётся — и выключит свет. Везде. Сразу.', en: "Inside AURORA, this is sleeping. We named it Wormwood. In five days, at dawn, it wakes up — and turns off the lights. Everywhere. All at once.", emo: 'worry' },
   'w.grisha.hosp': { who: 'grisha', ru: 'Больницы. Насосы. Отопление. Зимой.', en: 'Hospitals. Water pumps. Heating. In winter.', emo: 'frown' },
   'w.dmitri.war': { who: 'dmitri', ru: 'Погибнет больше людей, чем в любой войне.', en: 'More people will die than in any war.', emo: 'serious' },
   // player choice 1

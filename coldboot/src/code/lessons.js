@@ -25,6 +25,10 @@ const COUNCIL = [
 ];
 
 export const LESSONS = [
+  // Story order (5 nights): 1 Hello, Port Zarya · 2 If the Camera Is Watching ·
+  // 3 One Loop, Every Item · 4 Cutting Strings · 5 Dress Rehearsal (the shape of
+  // the finale's unwrap(shards)). The rest unlock one by one after the rehearsal,
+  // as extra credit (their day numbers are past the last day on purpose).
   // -------------------------------------------------------------------------
   {
     id: 'l01',
@@ -122,228 +126,8 @@ export const LESSONS = [
   },
   // -------------------------------------------------------------------------
   {
-    id: 'l02',
-    day: 2,
-    title: 'Counting Fish',
-    ru: { line: 'Компьютер — это просто очень быстрый калькулятор, так что давай посчитаем рыбу.', en: "A computer is just a very fast calculator, so let's count some fish." },
-    pages: [
-      {
-        text: "A variable is a name with a value attached, like a label on a jar in Koshkin's back room. You make one with a single equals sign: catch = 40. From then on, catch means 40. You can change it whenever you like. Names can use letters, digits and underscores, but can't start with a digit, and capitals matter: Catch and catch are two different jars.",
-        code: dd(`
-          catch = 40
-          print(catch)
-          catch = 55
-          print(catch)
-          boat_name = "Margaret Rose"
-          print(boat_name)
-        `),
-      },
-      {
-        text: "+, - and * work like on paper. / is division, and it always gives an answer with a decimal point: 7 / 2 is 3.5, and even 8 / 2 is 4.0. Brackets work as you'd expect, and * and / happen before + and -, just like at school. Python happily does the arithmetic you're too tired for at two in the morning.",
-        code: dd(`
-          crates = 12
-          fish_per_crate = 25
-          print(crates * fish_per_crate)
-          print(7 / 2)
-          print(8 / 2)
-          print((3 + 4) * 2)
-        `),
-      },
-      {
-        text: "Two operators are pure gold for us. // divides and throws away the leftovers: 17 // 5 is 3, three full crates. % gives only the leftovers: 17 % 5 is 2 fish left over. Together they answer 'how many full ones, and what's left?'. And ** is power: 2 ** 10 is 1024. Hackers love powers of two. Don't ask why; the answer is a very long story about zeros and ones.",
-        code: dd(`
-          fish = 17
-          print(fish // 5)   # full crates
-          print(fish % 5)    # fish left over
-          print(2 ** 10)
-        `),
-      },
-      {
-        text: "A variable can use its own old value: catch = catch + 5 means 'take the old catch, add 5, store it back'. The short way is catch += 5. Now a trap: you can't glue a number onto text with +. 'Total: ' + 40 is an error. Turn the number into text first with str(40), or let print do the work with a comma.",
-        code: dd(`
-          catch = 40
-          catch = catch + 5
-          catch += 10
-          print("Total: " + str(catch))
-          print("Total:", catch)
-        `),
-      },
-    ],
-    exercises: [
-      {
-        id: 'l02e1',
-        prompt: "Hank's hardware sells rope at 3 dollars a metre. Father Gabriel's bell rope must be 14 metres long. Print the total cost using the two variables.",
-        starter: dd(`
-          price_per_metre = 3
-          metres = 14
-          # print the total cost here
-        `),
-        check: { kind: 'stdout', expected: '42' },
-        hints: [
-          'Cost is price times length. Multiplication is *.',
-          'Use the variable names, not the numbers: price_per_metre * metres',
-          'print(price_per_metre * metres)',
-        ],
-        solution: dd(`
-          price_per_metre = 3
-          metres = 14
-          print(price_per_metre * metres)
-        `),
-      },
-      {
-        id: 'l02e2',
-        prompt: "Today's catch is 137 salmon, and Koshkin packs them 12 to a crate. Print how many FULL crates he can fill, then on the next line how many salmon are left over.",
-        starter: dd(`
-          salmon = 137
-          per_crate = 12
-        `),
-        check: { kind: 'stdout', expected: '11\n5' },
-        hints: [
-          '// gives the number of whole crates; % gives the leftovers.',
-          'Two prints: one with salmon // per_crate, one with salmon % per_crate.',
-          'print(salmon // per_crate)\nprint(salmon % per_crate)',
-        ],
-        solution: dd(`
-          salmon = 137
-          per_crate = 12
-          print(salmon // per_crate)
-          print(salmon % per_crate)
-        `),
-      },
-      {
-        id: 'l02e3',
-        prompt: "Dolly's diner sold 23 bowls of fish soup at 7 dollars each. The starter crashes. Fix it so it prints exactly: Soup money: 161",
-        starter: dd(`
-          bowls = 23
-          price = 7
-          total = bowls * price
-          print("Soup money: " + total)
-        `),
-        check: { kind: 'stdout', expected: 'Soup money: 161' },
-        hints: [
-          "Read the error: you can't add a number to a string.",
-          'Turn the number into text with str( ) before gluing it.',
-          'print("Soup money: " + str(total))',
-        ],
-        solution: dd(`
-          bowls = 23
-          price = 7
-          total = bowls * price
-          print("Soup money: " + str(total))
-        `),
-      },
-    ],
-  },
-  // -------------------------------------------------------------------------
-  {
-    id: 'l03',
-    day: 3,
-    title: 'Numbers, Text and F-strings',
-    ru: { line: 'Число и текст — разные звери, и сегодня мы учимся их различать.', en: 'Numbers and text are different animals, and tonight we learn to tell them apart.' },
-    pages: [
-      {
-        text: "Every value in Python has a type. 42 is an int, a whole number. 4.5 is a float, a number with a decimal point. \"42\" in quotes is a str: text that happens to look like a number. True and False are bools. type(x) tells you what you're holding. Half of all bugs are a value being a different type than you thought it was.",
-        code: dd(`
-          print(type(42))
-          print(type(4.5))
-          print(type("42"))
-          print(type(True))
-        `),
-      },
-      {
-        text: "You can convert between types. int(\"42\") turns text into a whole number, float(\"4.5\") into a decimal, and str(42) back into text. int() of a float chops the decimals off: int(9.99) is 9. No rounding; Hank would hate it. Data from cameras, ledgers and forms almost always arrives as text, so you'll be converting a lot.",
-        code: dd(`
-          count = int("42")
-          print(count + 1)
-          price = float("4.5")
-          print(price * 2)
-          print(int(9.99))
-          print(str(7) + "7")
-        `),
-      },
-      {
-        text: "Gluing strings with + and str() gets ugly fast. Meet the f-string: put an f right before the opening quote, then write any variable or even a small calculation inside curly braces. Python fills them in for you. It's the cleanest way to build a message, and the one I use every single day.",
-        code: dd(`
-          name = "Rybka"
-          fish = 12
-          print(f"{name} caught {fish} fish")
-          print(f"Double that is {fish * 2}")
-        `),
-      },
-      {
-        text: "Inside the braces you can add a colon and a format. {price:.2f} shows exactly two decimals, perfect for money. {n:>5} pads to a width of 5 lined up on the right, {n:<5} on the left, and {n:04d} pads with zeros, like a door code. Every receipt from NORTHSTAR 24 uses .2f. So will ours.",
-        code: dd(`
-          price = 4.5
-          print(f"Cod: \${price:.2f}")
-          n = 7
-          print(f"[{n:>5}] [{n:<5}] [{n:04d}]")
-        `),
-      },
-    ],
-    exercises: [
-      {
-        id: 'l03e1',
-        prompt: 'A camera log gives the frame count as text. At 4 frames per second, how many minutes of video is that? The starter crashes. Convert frames to a number so it prints 7.5',
-        starter: dd(`
-          frames = "1800"
-          seconds = frames / 4
-          print(seconds / 60)
-        `),
-        check: { kind: 'stdout', expected: '7.5' },
-        hints: [
-          "frames is text (it has quotes). You can't divide text.",
-          'int(frames) turns "1800" into the number 1800.',
-          'seconds = int(frames) / 4',
-        ],
-        solution: dd(`
-          frames = "1800"
-          seconds = int(frames) / 4
-          print(seconds / 60)
-        `),
-      },
-      {
-        id: 'l03e2',
-        prompt: "Make Koshkin's price tag with an f-string. Print exactly: Herring: $2.50 per kg",
-        starter: dd(`
-          item = "Herring"
-          price = 2.5
-          # print: Herring: $2.50 per kg
-        `),
-        check: { kind: 'stdout', expected: 'Herring: $2.50 per kg' },
-        hints: [
-          'Start the string with f, and put item and price inside { }.',
-          'Use :.2f after price to get exactly two decimals. The $ is just a normal character.',
-          'print(f"{item}: ${price:.2f} per kg")',
-        ],
-        solution: dd(`
-          item = "Herring"
-          price = 2.5
-          print(f"{item}: \${price:.2f} per kg")
-        `),
-      },
-      {
-        id: 'l03e3',
-        prompt: 'The keypad at City Hall wants a 4-digit code with leading zeros. I found code = 73. Print exactly: CODE 0073',
-        starter: dd(`
-          code = 73
-        `),
-        check: { kind: 'stdout', expected: 'CODE 0073' },
-        hints: [
-          'An f-string can pad numbers with zeros.',
-          '{code:04d} means: at least 4 digits, fill with zeros.',
-          'print(f"CODE {code:04d}")',
-        ],
-        solution: dd(`
-          code = 73
-          print(f"CODE {code:04d}")
-        `),
-      },
-    ],
-  },
-  // -------------------------------------------------------------------------
-  {
     id: 'l04',
-    day: 4,
+    day: 2,
     title: 'If the Camera Is Watching',
     ru: { line: 'Программа умеет выбирать: если камера смотрит — молчим, иначе — работаем.', en: 'A program can choose: if the camera is watching, we keep quiet; otherwise, we work.' },
     pages: [
@@ -474,8 +258,569 @@ export const LESSONS = [
   },
   // -------------------------------------------------------------------------
   {
-    id: 'l05',
+    id: 'l07',
+    day: 3,
+    title: 'One Loop, Every Item',
+    ru: { line: 'Сегодня один цикл пройдёт по всему списку за нас.', en: 'Tonight one loop walks through the whole list for us.' },
+    pages: [
+      {
+        text: "for item in my_list: runs its block once for every item, and each time the variable holds the next one. No counter to manage, no n += 1 to forget. It's my favourite loop. The name after for is yours to choose, so pick one that says what the thing is: for place in houses reads almost like English.",
+        code: dd(`
+          houses = ["church", "diner", "hardware", "cabin"]
+          for place in houses:
+              print("Checking", place)
+        `),
+      },
+      {
+        text: "range(n) gives the numbers 0 up to n - 1, ready for a for loop. range(a, b) runs from a up to b - 1. range(a, b, step) jumps by step, and a negative step counts down. The end number is never included: same rule as list indexes, and just as annoying on the first day.",
+        code: dd(`
+          for i in range(3):
+              print(i)
+          for km in range(0, 10, 5):
+              print(km)
+          for t in range(3, 0, -1):
+              print(t)
+        `),
+      },
+      {
+        text: "Same trick as with while: make a total before the loop, add to it inside, print it after. Here we add up the crab traps. You can count things the same way: start a counter at 0 and add 1 whenever an item passes a test. Total and counter, the two oldest tools in the box.",
+        code: dd(`
+          traps = [3, 0, 5, 2, 0, 4]
+          total = 0
+          empty = 0
+          for crabs in traps:
+              total += crabs
+              if crabs == 0:
+                  empty += 1
+          print(total, "crabs,", empty, "empty traps")
+        `),
+      },
+      {
+        text: "You can build a new list inside a loop: start with an empty list [] and append to it. If you need the position as well, enumerate(my_list) hands you pairs: for i, item in enumerate(my_list). Two names, separated by a comma. Remember both tools; the camera job needs them.",
+        code: dd(`
+          temps = [-12, -30, -8]
+          cold = []
+          for t in temps:
+              if t < -10:
+                  cold.append(t)
+          print(cold)
+          for i, t in enumerate(temps):
+              print(i, t)
+        `),
+      },
+    ],
+    exercises: [
+      {
+        id: 'l07e1',
+        prompt: "Sasha Koshkin's great-nephew has homework: the 7 times table. Print 7 x 1 = 7 up to 7 x 10 = 70, one line each. Use a for loop and range.",
+        starter: dd(`
+          # 7 x 1 = 7 ... 7 x 10 = 70
+        `),
+        check: { kind: 'stdout', expected: Array.from({ length: 10 }, (_, i) => `7 x ${i + 1} = ${7 * (i + 1)}`).join('\n') },
+        hints: [
+          'range(1, 11) gives the numbers 1 to 10.',
+          'Inside the loop, an f-string builds each line: f"7 x {i} = {7 * i}"',
+          'for i in range(1, 11):\n    print(f"7 x {i} = {7 * i}")',
+        ],
+        solution: dd(`
+          for i in range(1, 11):
+              print(f"7 x {i} = {7 * i}")
+        `),
+      },
+      {
+        id: 'l07e2',
+        prompt: "The cannery's fish counts for the week are in a list. Print the total for the week, then on the next line how many days were over 500.",
+        starter: dd(`
+          counts = [420, 615, 380, 702, 510, 299, 640]
+        `),
+        check: { kind: 'stdout', expected: '3566\n4' },
+        hints: [
+          'Two variables before the loop: total = 0 and busy = 0.',
+          'Inside the loop add each count to total, and add 1 to busy when the count is over 500.',
+          'total = 0\nbusy = 0\nfor c in counts:\n    total += c\n    if c > 500:\n        busy += 1\nprint(total)\nprint(busy)',
+        ],
+        solution: dd(`
+          counts = [420, 615, 380, 702, 510, 299, 640]
+          total = 0
+          busy = 0
+          for c in counts:
+              total += c
+              if c > 500:
+                  busy += 1
+          print(total)
+          print(busy)
+        `),
+      },
+      {
+        id: 'l07e3',
+        prompt: "A streetlight camera reports brightness readings. Build a new list with only the readings above 50 (50 itself doesn't count) and print it.",
+        starter: dd(`
+          readings = [12, 88, 51, 50, 97, 3, 64]
+          bright = []
+        `),
+        check: { kind: 'stdout', expected: '[88, 51, 97, 64]' },
+        hints: [
+          'Loop over readings and test each one with if r > 50:',
+          'Inside the if, bright.append(r). Print after the loop.',
+          'for r in readings:\n    if r > 50:\n        bright.append(r)\nprint(bright)',
+        ],
+        solution: dd(`
+          readings = [12, 88, 51, 50, 97, 3, 64]
+          bright = []
+          for r in readings:
+              if r > 50:
+                  bright.append(r)
+          print(bright)
+        `),
+      },
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'l08',
+    day: 4,
+    title: 'Cutting Strings',
+    ru: { line: 'Строку можно резать, переворачивать и склеивать — прямо как колбасу.', en: 'You can slice a string, flip it and glue it back together, just like sausage.' },
+    pages: [
+      {
+        text: "A string is a sequence of characters, so it behaves a lot like a list. s[0] is the first character, s[-1] the last. A slice s[a:b] cuts out the characters from position a up to, but not including, b. Leave out a to start at the beginning; leave out b to go all the way to the end.",
+        code: dd(`
+          code = "ZARYA-1822"
+          print(code[0], code[-1])
+          print(code[0:5])
+          print(code[6:])
+          print(code[:5])
+        `),
+      },
+      {
+        text: "A slice can take a third number, the step. s[::2] takes every second character. A step of -1 walks backwards, so s[::-1] is the whole string reversed. Northstar's engineers love storing things backwards and calling it security. It isn't. Remember this one, Rybka; it comes back on a very important night.",
+        code: dd(`
+          word = "AURORA"
+          print(word[::2])
+          print(word[::-1])
+          print("droffats"[::-1])
+        `),
+      },
+      {
+        text: "Strings have methods, little functions you call with a dot. .upper() and .lower() change case, .title() capitalises each word, .strip() cuts spaces off both ends, .replace(old, new) swaps text. .startswith(x) and .endswith(x) answer True or False. A method never changes the original string; it hands you a new one, so store it.",
+        code: dd(`
+          name = "  hank brubaker  "
+          clean = name.strip().title()
+          print(clean)
+          print(clean.upper(), clean.lower())
+          print("frame 12: PERSON at lamp".replace("PERSON", "nobody"))
+          print("#x9".startswith("#"))
+        `),
+      },
+      {
+        text: ".split() chops a string into a list of words; .split(\",\") chops at commas instead. The opposite is join: \" / \".join(names) glues a list of strings into one, with \" / \" between them. Split, fix, join: that's how we read Northstar's logs and put them back without anyone noticing.",
+        code: dd(`
+          line = "Dolly,Hank,Ruth,Ray,Lyle"
+          names = line.split(",")
+          print(names)
+          print(len(names))
+          print(" / ".join(names))
+        `),
+      },
+    ],
+    exercises: [
+      {
+        id: 'l08e1',
+        prompt: "Mr. Grey dropped a page from his notebook. He writes backwards. Print it the right way round.",
+        starter: dd(`
+          page = ".thgin ta rewot lleb eht stisiv tcejbuS"
+        `),
+        check: { kind: 'stdout', expected: 'Subject visits the bell tower at night.' },
+        hints: [
+          'A slice with a step of -1 reverses a string.',
+          'page[::-1]',
+          'print(page[::-1])',
+        ],
+        solution: dd(`
+          page = ".thgin ta rewot lleb eht stisiv tcejbuS"
+          print(page[::-1])
+        `),
+      },
+      {
+        id: 'l08e2',
+        prompt: 'A camera log line has four parts separated by spaces. Print just the camera name (the third part), then on the next line YES if the line mentions PERSON, otherwise NO.',
+        starter: dd(`
+          line = "DAY08 03:14 CAM07 PERSON"
+        `),
+        check: { kind: 'stdout', expected: 'CAM07\nYES' },
+        hints: [
+          'line.split() gives a list of the four parts. The third part is at index 2.',
+          'For the second line, use if "PERSON" in line:',
+          'parts = line.split()\nprint(parts[2])\nif "PERSON" in line:\n    print("YES")\nelse:\n    print("NO")',
+        ],
+        solution: dd(`
+          line = "DAY08 03:14 CAM07 PERSON"
+          parts = line.split()
+          print(parts[2])
+          if "PERSON" in line:
+              print("YES")
+          else:
+              print("NO")
+        `),
+      },
+      {
+        id: 'l08e3',
+        prompt: "Koshkin's old ledger shouts the names in capitals, separated by commas. Print them neatly: each name in Title Case, joined with ' | ' between them.",
+        starter: dd(`
+          raw = "DOLLY FINCH,HANK BRUBAKER,RUTH AQPIK"
+        `),
+        check: { kind: 'stdout', expected: 'Dolly Finch | Hank Brubaker | Ruth Aqpik' },
+        hints: [
+          '.title() fixes the capitals and .split(",") makes a list of names.',
+          'Then " | ".join(the_list) glues them back together.',
+          'names = raw.title().split(",")\nprint(" | ".join(names))',
+        ],
+        solution: dd(`
+          raw = "DOLLY FINCH,HANK BRUBAKER,RUTH AQPIK"
+          names = raw.title().split(",")
+          print(" | ".join(names))
+        `),
+      },
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'l14',
     day: 5,
+    title: 'Dress Rehearsal',
+    ru: { line: 'Скоро у тебя будет всего десять минут, поэтому сегодня у нас репетиция.', en: "Soon you'll have just ten minutes, so tonight we rehearse." },
+    pages: [
+      {
+        text: "Here's what we know about the drive. The Root Key is split into shards: a list of strings. Some shards are decoys. Every real shard is stored backwards, and every character in it is shifted. On the night the rules will be different, because Halloran isn't stupid, but the shape will be the same. Tonight, my rules: decoys end with \"!\", and every character is shifted up by 1.",
+        code: dd(`
+          shards = ["NPE", "GO!", ".F", "OP"]
+          print(len(shards), "shards")
+          print(shards[1].endswith("!"))
+        `),
+      },
+      {
+        text: "Break the problem into small steps and check each one before the next. Step one: keep only the real shards. A loop, an if and .endswith() build a new list. Never delete from a list while you're looping over it; build a new one instead. Step two: flip each real shard with [::-1] and glue them together in order.",
+        code: dd(`
+          shard = "CBA"
+          print(shard[::-1])
+          glued = ""
+          for piece in ["ab", "cd"]:
+              glued += piece
+          print(glued)
+        `),
+      },
+      {
+        text: "Step three: walk through the glued string and shift every character back down: chr(ord(c) - 1). Build the answer in a new string. Then return it; don't print it. The dish only listens to return. Print is for you to peek while you work. Take the peeks out before the end.",
+        code: dd(`
+          word = "EPNF"
+          plain = ""
+          for c in word:
+              plain += chr(ord(c) - 1)
+          print(plain)
+        `),
+      },
+      {
+        text: "On the night: breathe. Read the rules twice. Write the function in small steps and run it after each step. Check the edge cases: no decoys at all, only one real shard. If an error appears, read the last line. And if for some reason I'm not on the radio, you won't need me, Rybka. You've done every piece of this already.",
+      },
+    ],
+    exercises: [
+      {
+        id: 'l14e1',
+        prompt: 'Step one. Write keep_real(shards): return a new list with only the real shards. Decoys end with "!".',
+        starter: dd(`
+          def keep_real(shards):
+              real = []
+              return real
+        `),
+        check: { kind: 'call', fn: 'keep_real', cases: [{ args: [['NPE', 'GO!', '.F', 'OP']], expect: ['NPE', '.F', 'OP'] }, { args: [['A!', 'B!']], expect: [] }, { args: [['ABC']], expect: ['ABC'] }, { args: [[]], expect: [] }] },
+        hints: [
+          'Loop over shards and check each one with .endswith("!").',
+          'Append only the shards that do NOT end with "!".',
+          'for s in shards:\n    if not s.endswith("!"):\n        real.append(s)\nreturn real',
+        ],
+        solution: dd(`
+          def keep_real(shards):
+              real = []
+              for s in shards:
+                  if not s.endswith("!"):
+                      real.append(s)
+              return real
+        `),
+      },
+      {
+        id: 'l14e2',
+        prompt: 'Step two. Write glue(shards): reverse every shard and join them, in order, into one string. (No decoys in this step.)',
+        starter: dd(`
+          def glue(shards):
+              joined = ""
+              return joined
+        `),
+        check: { kind: 'call', fn: 'glue', cases: [{ args: [['NPE', '.F', 'OP']], expect: 'EPNF.PO' }, { args: [['CBA']], expect: 'ABC' }, { args: [['21', '43']], expect: '1234' }, { args: [[]], expect: '' }] },
+        hints: [
+          'Loop over shards. s[::-1] is a shard reversed.',
+          'Add each reversed shard to joined with +=.',
+          'for s in shards:\n    joined += s[::-1]\nreturn joined',
+        ],
+        solution: dd(`
+          def glue(shards):
+              joined = ""
+              for s in shards:
+                  joined += s[::-1]
+              return joined
+        `),
+      },
+      {
+        id: 'l14e3',
+        prompt: 'The full rehearsal. Write unwrap(shards): drop the decoys (they end with "!"), reverse each real shard, join them in order, then shift every character DOWN by 1. Return the code.',
+        starter: dd(`
+          def unwrap(shards):
+              code = ""
+              return code
+        `),
+        check: { kind: 'call', fn: 'unwrap', cases: [{ args: [['NPE', 'GO!', '.F', 'OP']], expect: 'DOME-ON' }, { args: [['BMBH', 'JO.', 'UIH']], expect: 'GALA-NIGHT' }, { args: [['DECOY!', 'UMVBW', 'X!', '!!']], expect: 'VAULT' }, { args: [['!', 'L', '.ZF!', '.ZF', '52']], expect: 'KEY-14' }] },
+        hints: [
+          'Do it in two loops. First loop: skip decoys and glue the reversed real shards into one string.',
+          'Second loop: go through the glued string and add chr(ord(c) - 1) for each character.',
+          'joined = ""\nfor s in shards:\n    if not s.endswith("!"):\n        joined += s[::-1]\ncode = ""\nfor c in joined:\n    code += chr(ord(c) - 1)\nreturn code',
+        ],
+        solution: dd(`
+          def unwrap(shards):
+              joined = ""
+              for s in shards:
+                  if not s.endswith("!"):
+                      joined += s[::-1]
+              code = ""
+              for c in joined:
+                  code += chr(ord(c) - 1)
+              return code
+        `),
+      },
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'l02',
+    day: 6,
+    title: 'Counting Fish',
+    ru: { line: 'Компьютер — это просто очень быстрый калькулятор, так что давай посчитаем рыбу.', en: "A computer is just a very fast calculator, so let's count some fish." },
+    pages: [
+      {
+        text: "A variable is a name with a value attached, like a label on a jar in Koshkin's back room. You make one with a single equals sign: catch = 40. From then on, catch means 40. You can change it whenever you like. Names can use letters, digits and underscores, but can't start with a digit, and capitals matter: Catch and catch are two different jars.",
+        code: dd(`
+          catch = 40
+          print(catch)
+          catch = 55
+          print(catch)
+          boat_name = "Margaret Rose"
+          print(boat_name)
+        `),
+      },
+      {
+        text: "+, - and * work like on paper. / is division, and it always gives an answer with a decimal point: 7 / 2 is 3.5, and even 8 / 2 is 4.0. Brackets work as you'd expect, and * and / happen before + and -, just like at school. Python happily does the arithmetic you're too tired for at two in the morning.",
+        code: dd(`
+          crates = 12
+          fish_per_crate = 25
+          print(crates * fish_per_crate)
+          print(7 / 2)
+          print(8 / 2)
+          print((3 + 4) * 2)
+        `),
+      },
+      {
+        text: "Two operators are pure gold for us. // divides and throws away the leftovers: 17 // 5 is 3, three full crates. % gives only the leftovers: 17 % 5 is 2 fish left over. Together they answer 'how many full ones, and what's left?'. And ** is power: 2 ** 10 is 1024. Hackers love powers of two. Don't ask why; the answer is a very long story about zeros and ones.",
+        code: dd(`
+          fish = 17
+          print(fish // 5)   # full crates
+          print(fish % 5)    # fish left over
+          print(2 ** 10)
+        `),
+      },
+      {
+        text: "A variable can use its own old value: catch = catch + 5 means 'take the old catch, add 5, store it back'. The short way is catch += 5. Now a trap: you can't glue a number onto text with +. 'Total: ' + 40 is an error. Turn the number into text first with str(40), or let print do the work with a comma.",
+        code: dd(`
+          catch = 40
+          catch = catch + 5
+          catch += 10
+          print("Total: " + str(catch))
+          print("Total:", catch)
+        `),
+      },
+    ],
+    exercises: [
+      {
+        id: 'l02e1',
+        prompt: "Hank's hardware sells rope at 3 dollars a metre. Father Gabriel's bell rope must be 14 metres long. Print the total cost using the two variables.",
+        starter: dd(`
+          price_per_metre = 3
+          metres = 14
+          # print the total cost here
+        `),
+        check: { kind: 'stdout', expected: '42' },
+        hints: [
+          'Cost is price times length. Multiplication is *.',
+          'Use the variable names, not the numbers: price_per_metre * metres',
+          'print(price_per_metre * metres)',
+        ],
+        solution: dd(`
+          price_per_metre = 3
+          metres = 14
+          print(price_per_metre * metres)
+        `),
+      },
+      {
+        id: 'l02e2',
+        prompt: "Today's catch is 137 salmon, and Koshkin packs them 12 to a crate. Print how many FULL crates he can fill, then on the next line how many salmon are left over.",
+        starter: dd(`
+          salmon = 137
+          per_crate = 12
+        `),
+        check: { kind: 'stdout', expected: '11\n5' },
+        hints: [
+          '// gives the number of whole crates; % gives the leftovers.',
+          'Two prints: one with salmon // per_crate, one with salmon % per_crate.',
+          'print(salmon // per_crate)\nprint(salmon % per_crate)',
+        ],
+        solution: dd(`
+          salmon = 137
+          per_crate = 12
+          print(salmon // per_crate)
+          print(salmon % per_crate)
+        `),
+      },
+      {
+        id: 'l02e3',
+        prompt: "Dolly's diner sold 23 bowls of fish soup at 7 dollars each. The starter crashes. Fix it so it prints exactly: Soup money: 161",
+        starter: dd(`
+          bowls = 23
+          price = 7
+          total = bowls * price
+          print("Soup money: " + total)
+        `),
+        check: { kind: 'stdout', expected: 'Soup money: 161' },
+        hints: [
+          "Read the error: you can't add a number to a string.",
+          'Turn the number into text with str( ) before gluing it.',
+          'print("Soup money: " + str(total))',
+        ],
+        solution: dd(`
+          bowls = 23
+          price = 7
+          total = bowls * price
+          print("Soup money: " + str(total))
+        `),
+      },
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'l03',
+    day: 7,
+    title: 'Numbers, Text and F-strings',
+    ru: { line: 'Число и текст — разные звери, и сегодня мы учимся их различать.', en: 'Numbers and text are different animals, and tonight we learn to tell them apart.' },
+    pages: [
+      {
+        text: "Every value in Python has a type. 42 is an int, a whole number. 4.5 is a float, a number with a decimal point. \"42\" in quotes is a str: text that happens to look like a number. True and False are bools. type(x) tells you what you're holding. Half of all bugs are a value being a different type than you thought it was.",
+        code: dd(`
+          print(type(42))
+          print(type(4.5))
+          print(type("42"))
+          print(type(True))
+        `),
+      },
+      {
+        text: "You can convert between types. int(\"42\") turns text into a whole number, float(\"4.5\") into a decimal, and str(42) back into text. int() of a float chops the decimals off: int(9.99) is 9. No rounding; Hank would hate it. Data from cameras, ledgers and forms almost always arrives as text, so you'll be converting a lot.",
+        code: dd(`
+          count = int("42")
+          print(count + 1)
+          price = float("4.5")
+          print(price * 2)
+          print(int(9.99))
+          print(str(7) + "7")
+        `),
+      },
+      {
+        text: "Gluing strings with + and str() gets ugly fast. Meet the f-string: put an f right before the opening quote, then write any variable or even a small calculation inside curly braces. Python fills them in for you. It's the cleanest way to build a message, and the one I use every single day.",
+        code: dd(`
+          name = "Rybka"
+          fish = 12
+          print(f"{name} caught {fish} fish")
+          print(f"Double that is {fish * 2}")
+        `),
+      },
+      {
+        text: "Inside the braces you can add a colon and a format. {price:.2f} shows exactly two decimals, perfect for money. {n:>5} pads to a width of 5 lined up on the right, {n:<5} on the left, and {n:04d} pads with zeros, like a door code. Every receipt from NORTHSTAR 24 uses .2f. So will ours.",
+        code: dd(`
+          price = 4.5
+          print(f"Cod: \${price:.2f}")
+          n = 7
+          print(f"[{n:>5}] [{n:<5}] [{n:04d}]")
+        `),
+      },
+    ],
+    exercises: [
+      {
+        id: 'l03e1',
+        prompt: 'A camera log gives the frame count as text. At 4 frames per second, how many minutes of video is that? The starter crashes. Convert frames to a number so it prints 7.5',
+        starter: dd(`
+          frames = "1800"
+          seconds = frames / 4
+          print(seconds / 60)
+        `),
+        check: { kind: 'stdout', expected: '7.5' },
+        hints: [
+          "frames is text (it has quotes). You can't divide text.",
+          'int(frames) turns "1800" into the number 1800.',
+          'seconds = int(frames) / 4',
+        ],
+        solution: dd(`
+          frames = "1800"
+          seconds = int(frames) / 4
+          print(seconds / 60)
+        `),
+      },
+      {
+        id: 'l03e2',
+        prompt: "Make Koshkin's price tag with an f-string. Print exactly: Herring: $2.50 per kg",
+        starter: dd(`
+          item = "Herring"
+          price = 2.5
+          # print: Herring: $2.50 per kg
+        `),
+        check: { kind: 'stdout', expected: 'Herring: $2.50 per kg' },
+        hints: [
+          'Start the string with f, and put item and price inside { }.',
+          'Use :.2f after price to get exactly two decimals. The $ is just a normal character.',
+          'print(f"{item}: ${price:.2f} per kg")',
+        ],
+        solution: dd(`
+          item = "Herring"
+          price = 2.5
+          print(f"{item}: \${price:.2f} per kg")
+        `),
+      },
+      {
+        id: 'l03e3',
+        prompt: 'The keypad at City Hall wants a 4-digit code with leading zeros. I found code = 73. Print exactly: CODE 0073',
+        starter: dd(`
+          code = 73
+        `),
+        check: { kind: 'stdout', expected: 'CODE 0073' },
+        hints: [
+          'An f-string can pad numbers with zeros.',
+          '{code:04d} means: at least 4 digits, fill with zeros.',
+          'print(f"CODE {code:04d}")',
+        ],
+        solution: dd(`
+          code = 73
+          print(f"CODE {code:04d}")
+        `),
+      },
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'l05',
+    day: 8,
     title: 'Loops That Wait',
     ru: { line: 'Цикл — это когда компьютер делает скучную работу вместо тебя.', en: 'A loop is when the computer does the boring work instead of you.' },
     pages: [
@@ -598,7 +943,7 @@ export const LESSONS = [
   // -------------------------------------------------------------------------
   {
     id: 'l06',
-    day: 6,
+    day: 9,
     title: 'Shelves',
     ru: { line: 'Список — как полка в магазине Кошкина: всё стоит по порядку.', en: "A list is like a shelf in Koshkin's store: everything stands in order." },
     pages: [
@@ -704,235 +1049,8 @@ export const LESSONS = [
   },
   // -------------------------------------------------------------------------
   {
-    id: 'l07',
-    day: 7,
-    title: 'One Loop, Every Item',
-    ru: { line: 'Сегодня один цикл пройдёт по всему списку за нас.', en: 'Tonight one loop walks through the whole list for us.' },
-    pages: [
-      {
-        text: "for item in my_list: runs its block once for every item, and each time the variable holds the next one. No counter to manage, no n += 1 to forget. It's my favourite loop. The name after for is yours to choose, so pick one that says what the thing is: for place in houses reads almost like English.",
-        code: dd(`
-          houses = ["church", "diner", "hardware", "cabin"]
-          for place in houses:
-              print("Checking", place)
-        `),
-      },
-      {
-        text: "range(n) gives the numbers 0 up to n - 1, ready for a for loop. range(a, b) runs from a up to b - 1. range(a, b, step) jumps by step, and a negative step counts down. The end number is never included: same rule as list indexes, and just as annoying on the first day.",
-        code: dd(`
-          for i in range(3):
-              print(i)
-          for km in range(0, 10, 5):
-              print(km)
-          for t in range(3, 0, -1):
-              print(t)
-        `),
-      },
-      {
-        text: "Same trick as with while: make a total before the loop, add to it inside, print it after. Here we add up the crab traps. You can count things the same way: start a counter at 0 and add 1 whenever an item passes a test. Total and counter, the two oldest tools in the box.",
-        code: dd(`
-          traps = [3, 0, 5, 2, 0, 4]
-          total = 0
-          empty = 0
-          for crabs in traps:
-              total += crabs
-              if crabs == 0:
-                  empty += 1
-          print(total, "crabs,", empty, "empty traps")
-        `),
-      },
-      {
-        text: "You can build a new list inside a loop: start with an empty list [] and append to it. If you need the position as well, enumerate(my_list) hands you pairs: for i, item in enumerate(my_list). Two names, separated by a comma. Remember both tools; the camera job needs them.",
-        code: dd(`
-          temps = [-12, -30, -8]
-          cold = []
-          for t in temps:
-              if t < -10:
-                  cold.append(t)
-          print(cold)
-          for i, t in enumerate(temps):
-              print(i, t)
-        `),
-      },
-    ],
-    exercises: [
-      {
-        id: 'l07e1',
-        prompt: "Sasha Koshkin's great-nephew has homework: the 7 times table. Print 7 x 1 = 7 up to 7 x 10 = 70, one line each. Use a for loop and range.",
-        starter: dd(`
-          # 7 x 1 = 7 ... 7 x 10 = 70
-        `),
-        check: { kind: 'stdout', expected: Array.from({ length: 10 }, (_, i) => `7 x ${i + 1} = ${7 * (i + 1)}`).join('\n') },
-        hints: [
-          'range(1, 11) gives the numbers 1 to 10.',
-          'Inside the loop, an f-string builds each line: f"7 x {i} = {7 * i}"',
-          'for i in range(1, 11):\n    print(f"7 x {i} = {7 * i}")',
-        ],
-        solution: dd(`
-          for i in range(1, 11):
-              print(f"7 x {i} = {7 * i}")
-        `),
-      },
-      {
-        id: 'l07e2',
-        prompt: "The cannery's fish counts for the week are in a list. Print the total for the week, then on the next line how many days were over 500.",
-        starter: dd(`
-          counts = [420, 615, 380, 702, 510, 299, 640]
-        `),
-        check: { kind: 'stdout', expected: '3566\n4' },
-        hints: [
-          'Two variables before the loop: total = 0 and busy = 0.',
-          'Inside the loop add each count to total, and add 1 to busy when the count is over 500.',
-          'total = 0\nbusy = 0\nfor c in counts:\n    total += c\n    if c > 500:\n        busy += 1\nprint(total)\nprint(busy)',
-        ],
-        solution: dd(`
-          counts = [420, 615, 380, 702, 510, 299, 640]
-          total = 0
-          busy = 0
-          for c in counts:
-              total += c
-              if c > 500:
-                  busy += 1
-          print(total)
-          print(busy)
-        `),
-      },
-      {
-        id: 'l07e3',
-        prompt: "A streetlight camera reports brightness readings. Build a new list with only the readings above 50 (50 itself doesn't count) and print it.",
-        starter: dd(`
-          readings = [12, 88, 51, 50, 97, 3, 64]
-          bright = []
-        `),
-        check: { kind: 'stdout', expected: '[88, 51, 97, 64]' },
-        hints: [
-          'Loop over readings and test each one with if r > 50:',
-          'Inside the if, bright.append(r). Print after the loop.',
-          'for r in readings:\n    if r > 50:\n        bright.append(r)\nprint(bright)',
-        ],
-        solution: dd(`
-          readings = [12, 88, 51, 50, 97, 3, 64]
-          bright = []
-          for r in readings:
-              if r > 50:
-                  bright.append(r)
-          print(bright)
-        `),
-      },
-    ],
-  },
-  // -------------------------------------------------------------------------
-  {
-    id: 'l08',
-    day: 8,
-    title: 'Cutting Strings',
-    ru: { line: 'Строку можно резать, переворачивать и склеивать — прямо как колбасу.', en: 'You can slice a string, flip it and glue it back together, just like sausage.' },
-    pages: [
-      {
-        text: "A string is a sequence of characters, so it behaves a lot like a list. s[0] is the first character, s[-1] the last. A slice s[a:b] cuts out the characters from position a up to, but not including, b. Leave out a to start at the beginning; leave out b to go all the way to the end.",
-        code: dd(`
-          code = "ZARYA-1822"
-          print(code[0], code[-1])
-          print(code[0:5])
-          print(code[6:])
-          print(code[:5])
-        `),
-      },
-      {
-        text: "A slice can take a third number, the step. s[::2] takes every second character. A step of -1 walks backwards, so s[::-1] is the whole string reversed. Northstar's engineers love storing things backwards and calling it security. It isn't. Remember this one, Rybka; it comes back on a very important night.",
-        code: dd(`
-          word = "AURORA"
-          print(word[::2])
-          print(word[::-1])
-          print("droffats"[::-1])
-        `),
-      },
-      {
-        text: "Strings have methods, little functions you call with a dot. .upper() and .lower() change case, .title() capitalises each word, .strip() cuts spaces off both ends, .replace(old, new) swaps text. .startswith(x) and .endswith(x) answer True or False. A method never changes the original string; it hands you a new one, so store it.",
-        code: dd(`
-          name = "  hank brubaker  "
-          clean = name.strip().title()
-          print(clean)
-          print(clean.upper(), clean.lower())
-          print("frame 12: PERSON at lamp".replace("PERSON", "nobody"))
-          print("#x9".startswith("#"))
-        `),
-      },
-      {
-        text: ".split() chops a string into a list of words; .split(\",\") chops at commas instead. The opposite is join: \" / \".join(names) glues a list of strings into one, with \" / \" between them. Split, fix, join: that's how we read Northstar's logs and put them back without anyone noticing.",
-        code: dd(`
-          line = "Dolly,Hank,Ruth,Ray,Lyle"
-          names = line.split(",")
-          print(names)
-          print(len(names))
-          print(" / ".join(names))
-        `),
-      },
-    ],
-    exercises: [
-      {
-        id: 'l08e1',
-        prompt: "Mr. Grey dropped a page from his notebook. He writes backwards. Print it the right way round.",
-        starter: dd(`
-          page = ".thgin ta rewot lleb eht stisiv tcejbuS"
-        `),
-        check: { kind: 'stdout', expected: 'Subject visits the bell tower at night.' },
-        hints: [
-          'A slice with a step of -1 reverses a string.',
-          'page[::-1]',
-          'print(page[::-1])',
-        ],
-        solution: dd(`
-          page = ".thgin ta rewot lleb eht stisiv tcejbuS"
-          print(page[::-1])
-        `),
-      },
-      {
-        id: 'l08e2',
-        prompt: 'A camera log line has four parts separated by spaces. Print just the camera name (the third part), then on the next line YES if the line mentions PERSON, otherwise NO.',
-        starter: dd(`
-          line = "DAY08 03:14 CAM07 PERSON"
-        `),
-        check: { kind: 'stdout', expected: 'CAM07\nYES' },
-        hints: [
-          'line.split() gives a list of the four parts. The third part is at index 2.',
-          'For the second line, use if "PERSON" in line:',
-          'parts = line.split()\nprint(parts[2])\nif "PERSON" in line:\n    print("YES")\nelse:\n    print("NO")',
-        ],
-        solution: dd(`
-          line = "DAY08 03:14 CAM07 PERSON"
-          parts = line.split()
-          print(parts[2])
-          if "PERSON" in line:
-              print("YES")
-          else:
-              print("NO")
-        `),
-      },
-      {
-        id: 'l08e3',
-        prompt: "Koshkin's old ledger shouts the names in capitals, separated by commas. Print them neatly: each name in Title Case, joined with ' | ' between them.",
-        starter: dd(`
-          raw = "DOLLY FINCH,HANK BRUBAKER,RUTH AQPIK"
-        `),
-        check: { kind: 'stdout', expected: 'Dolly Finch | Hank Brubaker | Ruth Aqpik' },
-        hints: [
-          '.title() fixes the capitals and .split(",") makes a list of names.',
-          'Then " | ".join(the_list) glues them back together.',
-          'names = raw.title().split(",")\nprint(" | ".join(names))',
-        ],
-        solution: dd(`
-          raw = "DOLLY FINCH,HANK BRUBAKER,RUTH AQPIK"
-          names = raw.title().split(",")
-          print(" | ".join(names))
-        `),
-      },
-    ],
-  },
-  // -------------------------------------------------------------------------
-  {
     id: 'l09',
-    day: 9,
+    day: 10,
     title: 'Recipes',
     ru: { line: 'Функция — это рецепт: пишешь один раз, а готовишь сколько хочешь.', en: 'A function is a recipe: you write it once and cook it as often as you like.' },
     pages: [
@@ -1056,7 +1174,7 @@ export const LESSONS = [
   // -------------------------------------------------------------------------
   {
     id: 'l10',
-    day: 10,
+    day: 11,
     title: 'Whose Is This?',
     ru: { line: 'Словарь знает ответ на вопрос «чьё это?», а в нашем деле это очень полезно.', en: "A dictionary knows the answer to 'whose is this?', and in our line of work that's very useful." },
     pages: [
@@ -1174,7 +1292,7 @@ export const LESSONS = [
   // -------------------------------------------------------------------------
   {
     id: 'l11',
-    day: 11,
+    day: 12,
     title: 'Matryoshka Data',
     ru: { line: 'Данные «Нортстара» — как матрёшка: список, в нём словари, а в них ещё что-то.', en: "Northstar's data is like a matryoshka: a list, dictionaries inside it, and more inside those." },
     pages: [
@@ -1318,7 +1436,7 @@ export const LESSONS = [
   // -------------------------------------------------------------------------
   {
     id: 'l12',
-    day: 12,
+    day: 13,
     title: "Baba Valya's Codes",
     ru: { line: 'Сегодня урок ведёт Баба Валя, так что слушай внимательно: она шифровала, когда меня ещё на свете не было.', en: 'Tonight Baba Valya teaches, so listen closely: she was encrypting before I was even born.' },
     pages: [
@@ -1441,7 +1559,7 @@ export const LESSONS = [
   // -------------------------------------------------------------------------
   {
     id: 'l13',
-    day: 13,
+    day: 14,
     title: 'Reading Errors',
     ru: { line: 'Ошибка — не враг, Рыбка, а записка о том, где искать.', en: "An error isn't the enemy, Rybka. It's a note telling you where to look." },
     pages: [
@@ -1562,120 +1680,6 @@ export const LESSONS = [
               for p in prices:
                   total += p
               return total // len(prices)
-        `),
-      },
-    ],
-  },
-  // -------------------------------------------------------------------------
-  {
-    id: 'l14',
-    day: 14,
-    title: 'Dress Rehearsal',
-    ru: { line: 'Скоро у тебя будет всего десять минут, поэтому сегодня у нас репетиция.', en: "Soon you'll have just ten minutes, so tonight we rehearse." },
-    pages: [
-      {
-        text: "Here's what we know about the drive. The Root Key is split into shards: a list of strings. Some shards are decoys. Every real shard is stored backwards, and every character in it is shifted. On the night the rules will be different, because Halloran isn't stupid, but the shape will be the same. Tonight, my rules: decoys end with \"!\", and every character is shifted up by 1.",
-        code: dd(`
-          shards = ["NPE", "GO!", ".F", "OP"]
-          print(len(shards), "shards")
-          print(shards[1].endswith("!"))
-        `),
-      },
-      {
-        text: "Break the problem into small steps and check each one before the next. Step one: keep only the real shards. A loop, an if and .endswith() build a new list. Never delete from a list while you're looping over it; build a new one instead. Step two: flip each real shard with [::-1] and glue them together in order.",
-        code: dd(`
-          shard = "CBA"
-          print(shard[::-1])
-          glued = ""
-          for piece in ["ab", "cd"]:
-              glued += piece
-          print(glued)
-        `),
-      },
-      {
-        text: "Step three: walk through the glued string and shift every character back down: chr(ord(c) - 1). Build the answer in a new string. Then return it; don't print it. The dish only listens to return. Print is for you to peek while you work. Take the peeks out before the end.",
-        code: dd(`
-          word = "EPNF"
-          plain = ""
-          for c in word:
-              plain += chr(ord(c) - 1)
-          print(plain)
-        `),
-      },
-      {
-        text: "On the night: breathe. Read the rules twice. Write the function in small steps and run it after each step. Check the edge cases: no decoys at all, only one real shard. If an error appears, read the last line. And if for some reason I'm not on the radio, you won't need me, Rybka. You've done every piece of this already.",
-      },
-    ],
-    exercises: [
-      {
-        id: 'l14e1',
-        prompt: 'Step one. Write keep_real(shards): return a new list with only the real shards. Decoys end with "!".',
-        starter: dd(`
-          def keep_real(shards):
-              real = []
-              return real
-        `),
-        check: { kind: 'call', fn: 'keep_real', cases: [{ args: [['NPE', 'GO!', '.F', 'OP']], expect: ['NPE', '.F', 'OP'] }, { args: [['A!', 'B!']], expect: [] }, { args: [['ABC']], expect: ['ABC'] }, { args: [[]], expect: [] }] },
-        hints: [
-          'Loop over shards and check each one with .endswith("!").',
-          'Append only the shards that do NOT end with "!".',
-          'for s in shards:\n    if not s.endswith("!"):\n        real.append(s)\nreturn real',
-        ],
-        solution: dd(`
-          def keep_real(shards):
-              real = []
-              for s in shards:
-                  if not s.endswith("!"):
-                      real.append(s)
-              return real
-        `),
-      },
-      {
-        id: 'l14e2',
-        prompt: 'Step two. Write glue(shards): reverse every shard and join them, in order, into one string. (No decoys in this step.)',
-        starter: dd(`
-          def glue(shards):
-              joined = ""
-              return joined
-        `),
-        check: { kind: 'call', fn: 'glue', cases: [{ args: [['NPE', '.F', 'OP']], expect: 'EPNF.PO' }, { args: [['CBA']], expect: 'ABC' }, { args: [['21', '43']], expect: '1234' }, { args: [[]], expect: '' }] },
-        hints: [
-          'Loop over shards. s[::-1] is a shard reversed.',
-          'Add each reversed shard to joined with +=.',
-          'for s in shards:\n    joined += s[::-1]\nreturn joined',
-        ],
-        solution: dd(`
-          def glue(shards):
-              joined = ""
-              for s in shards:
-                  joined += s[::-1]
-              return joined
-        `),
-      },
-      {
-        id: 'l14e3',
-        prompt: 'The full rehearsal. Write unwrap(shards): drop the decoys (they end with "!"), reverse each real shard, join them in order, then shift every character DOWN by 1. Return the code.',
-        starter: dd(`
-          def unwrap(shards):
-              code = ""
-              return code
-        `),
-        check: { kind: 'call', fn: 'unwrap', cases: [{ args: [['NPE', 'GO!', '.F', 'OP']], expect: 'DOME-ON' }, { args: [['BMBH', 'JO.', 'UIH']], expect: 'GALA-NIGHT' }, { args: [['DECOY!', 'UMVBW', 'X!', '!!']], expect: 'VAULT' }, { args: [['!', 'L', '.ZF!', '.ZF', '52']], expect: 'KEY-14' }] },
-        hints: [
-          'Do it in two loops. First loop: skip decoys and glue the reversed real shards into one string.',
-          'Second loop: go through the glued string and add chr(ord(c) - 1) for each character.',
-          'joined = ""\nfor s in shards:\n    if not s.endswith("!"):\n        joined += s[::-1]\ncode = ""\nfor c in joined:\n    code += chr(ord(c) - 1)\nreturn code',
-        ],
-        solution: dd(`
-          def unwrap(shards):
-              joined = ""
-              for s in shards:
-                  if not s.endswith("!"):
-                      joined += s[::-1]
-              code = ""
-              for c in joined:
-                  code += chr(ord(c) - 1)
-              return code
         `),
       },
     ],

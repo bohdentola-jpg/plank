@@ -2,9 +2,9 @@
 // attention, the town's repairs, missions, lessons, inventory, flags.
 import { store } from '../core/settings.js';
 
-export const DAYS = 14;
+export const DAYS = 5;
 // Bump when the story changes shape: older saves are then ignored, not half-loaded.
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export function newState(profile) {
   return {

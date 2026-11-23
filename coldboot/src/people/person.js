@@ -71,6 +71,19 @@ export class Character {
       }
     });
     this.skeleton = skeleton;
+    // hair: the soft-edged second pass
+    const hair = this.meshes.hair;
+    if (hair?.material.userData.fringe) {
+      const fr = new THREE.SkinnedMesh(hair.geometry, hair.material.userData.fringe);
+      fr.name = 'hairFringe';
+      fr.bind(skeleton, hair.bindMatrix);
+      fr.renderOrder = 2;
+      fr.frustumCulled = hair.frustumCulled;
+      fr.castShadow = false;
+      fr.receiveShadow = true;
+      hair.add(fr);   // a child: hiding the hair hides both (same transform: the root's)
+      this.meshes.hairFringe = fr;
+    }
     // optional parts (hats) start shown; keep: listed parts are hideable via setPart
     // clothes tint (per person: its own copy of the cloth material)
     if (dna.tint && this.meshes.body) this.setClothTint(dna.tint, dna.tintAmt ?? 0.75);
