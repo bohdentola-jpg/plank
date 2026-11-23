@@ -19,7 +19,11 @@ export async function run(seconds = 300, o = {}) {
   let last = '', same = 0, lastDay = G.state.day, focus = null, ticks = 0;
   const tried = new Set();
   const key = (code) => input._pendingKeys.push(code);
-  const note = (s) => { log.push(`${((performance.now() - t0) / 1000).toFixed(0)}s d${G.state.day} ${G.state.hour.toFixed(1)}h  ${s}`); };
+  const note = (s) => {
+    const line = `${((performance.now() - t0) / 1000).toFixed(0)}s d${G.state.day} ${G.state.hour.toFixed(1)}h  ${s}`;
+    log.push(line);
+    console.log('[ap] ' + line);
+  };
   const errs = [];
   window.addEventListener('error', (e) => errs.push(e.message));
   while (performance.now() - t0 < seconds * 1000) {
@@ -32,6 +36,7 @@ export async function run(seconds = 300, o = {}) {
     }
     if (s.day !== lastDay) { note(`=== DAY ${s.day} ===`); lastDay = s.day; }
     if (o.stopDay && s.day >= o.stopDay) break;
+    if (window.__game?.screen?.name && window.__game.screen.name !== 'town') { note(`=== reached the ${window.__game.screen.name} screen ===`); break; }
     if (d.choice) { const c = d.choice; d.choice = null; c.r(0); continue; }
     if (d.lineHandle && d.lineHandle.h.t > 0.15) { d._skipResolve?.(); continue; }
     if (G.minigames?.cur) { G.minigames._end(true); continue; }

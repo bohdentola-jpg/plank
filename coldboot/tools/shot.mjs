@@ -43,7 +43,11 @@ await mkdir(join(root, 'qa'), { recursive: true });
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--enable-webgl', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
 const page = await browser.newPage({ viewport: { width, height } });
 const logs = [];
-page.on('console', (m) => { if (!quiet || m.type() === 'error') logs.push(`[${m.type()}] ${m.text()}`); });
+const live = rest.includes('--live'); // print console lines as they happen (long QA runs)
+page.on('console', (m) => {
+  const line = `[${m.type()}] ${m.text()}`;
+  if (live) { if (m.type() !== 'warning') console.log(line); } else if (!quiet || m.type() === 'error') logs.push(line);
+});
 page.on('pageerror', (e) => logs.push(`[pageerror] ${e.message}\n${e.stack}`));
 
 const t0 = Date.now();
