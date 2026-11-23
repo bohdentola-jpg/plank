@@ -645,7 +645,7 @@ export function place(G, id, p, activity = 'stand') {
 /** …or put them there right away. */
 export function warp(G, id, p, activity = 'stand') {
   const n = place(G, id, p, activity);
-  if (n?.pos) { n.pos.x = p.x; n.pos.z = p.z; }
+  if (n?.pos) { n.pos.x = p.x; n.pos.z = p.z; if (p.y !== undefined) n.pos.y = p.y; }
   return n;
 }
 /** Hand people back to their schedules. */

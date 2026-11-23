@@ -18,7 +18,7 @@ corner store whose cameras see everything. Fourteen November days. Get a job, ma
 friends, fix the town, learn Python on Lyosha's laptop at night, climb the town's
 politics to the mayor's key and the council's vault — while Northstar watches.
 
-Then a stolen chopper across the Bering Strait under fire, an empty warehouse, ten
+Then Wade's little chopper across the Bering Strait under fire, an empty warehouse, ten
 minutes to write the code that saves the world, and a jail cell at sunset.
 
 ## Run it

@@ -65,7 +65,7 @@ registerScreen('town', () => {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(58, 16 / 9, 0.1, 6000);
   let ready = false, progress = 0, paused = false, pauseSel = 0, opts = null;
-  let musicT = 0, theme = null, stepK = 0;
+  let musicT = 0, theme = null, stepK = 0, tipT = 0;
   let env, sky, snow, pool, world, orbit, hud;
   let saveT = 0, occT = 0;
 
@@ -256,7 +256,7 @@ registerScreen('town', () => {
     d.bring = async (id, where, o = {}) => {
       if (id === 'player') {
         const p = G.missions.where(where);
-        if (p) G.player.place(p.x, p.z, o.face ?? p.rot ?? G.player.yaw);
+        if (p) G.player.place(p.x, p.z, o.face ?? p.rot ?? G.player.yaw, p.y);
         G.player.anim.setPosture(o.sit ? 'sit' : 'stand');
         return;
       }
@@ -265,7 +265,7 @@ registerScreen('town', () => {
       const p = G.missions.where(where) || { x: G.player.pos.x + 2, z: G.player.pos.z + 2 };
       npc.scripted = true;
       npc.hidden = false;
-      npc.pos.set(p.x, G.world.groundAt(p.x, p.z), p.z);
+      npc.pos.set(p.x, G.world.groundNear(p.x, p.z, p.y), p.z);
       npc.yaw = o.face ?? p.rot ?? npc.yaw;
       npc.goal = { x: p.x, z: p.z, yaw: npc.yaw, activity: o.sit ? 'sit' : 'stand' };
       if (!npc.ch) await G.npcs._build(npc);
@@ -281,7 +281,7 @@ registerScreen('town', () => {
       const p = typeof where === 'object' ? where : G.missions.where(where);
       if (!p) return null;
       const m = kind === 'truck' || kind === 'pickup' ? buildPickup(o) : buildSUV({ color: o.color || (kind === 'car' ? '#4a4e54' : undefined) });
-      m.group.position.set(p.x, G.world.groundAt(p.x, p.z), p.z);
+      m.group.position.set(p.x, G.world.groundNear(p.x, p.z, p.y), p.z);
       m.group.rotation.y = o.yaw ?? o.face ?? p.rot ?? 0;
       scene.add(m.group);
       props.push(m.group);
@@ -414,6 +414,20 @@ registerScreen('town', () => {
       if (!P.vehicle && P.speed > 0.4 && P.onGround !== false) {
         const k = Math.floor(P.anim.phase * 2);
         if (k !== stepK) { stepK = k; try { sfx.footstep(indoors ? 'wood' : 'snow', Math.min(1, 0.25 + P.speed / 5)); } catch { /* */ } }
+      }
+      // first-time tips, one at a time, when nothing else is happening
+      if (!s.flags.tipsDone && !G.cinematic && !G.overlay && !G.dialog.active) {
+        tipT += dt;
+        const TIPS = [
+          [4, 'MOVE', 'WASD or the left stick · Shift runs · the mouse looks around'],
+          [16, 'TALK & USE', 'E (✕) when a prompt appears · Space skips a line'],
+          [30, 'YOUR PHONE', 'Tab: map, journal, people, town, wallet · M map · J journal'],
+          [46, 'BEING WATCHED', 'The eye bottom-left opens when a camera or a person sees you. Spy work in sight raises ATTENTION.'],
+          [64, 'WHEELS', 'F (△) gets you in and out of vehicles once you have one'],
+        ];
+        const k = s.flags.tipN || 0;
+        if (k < TIPS.length && tipT > TIPS[k][0]) { hud.toast(TIPS[k][1], TIPS[k][2], '#7fe6ff'); s.flags.tipN = k + 1; }
+        if (k >= TIPS.length) s.flags.tipsDone = true;
       }
       musicT -= dt;
       if (musicT <= 0) {

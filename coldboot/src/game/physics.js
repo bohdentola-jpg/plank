@@ -74,6 +74,15 @@ export class CollisionWorld {
   }
 
   /**
+   * The walkable surface at (x, z) closest to a height hint: the floor you'd be
+   * standing on there, not the top of the bell tower above it. No hint = ground level.
+   */
+  groundNear(x, z, yHint) {
+    const base = yHint ?? Math.max(-0.3, groundY(x, z));
+    return this.groundAt(x, z, base + 0.6);
+  }
+
+  /**
    * Move a circle (feet at y, height h) by (dx, dz); resolve against boxes.
    * Returns the new {x, z} and whether something was hit.
    */

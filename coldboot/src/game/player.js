@@ -28,8 +28,8 @@ export class Player {
     this.moveIntent = 0;
   }
 
-  place(x, z, yaw = 0) {
-    this.pos.set(x, this.world.groundAt(x, z), z);
+  place(x, z, yaw = 0, yHint) {
+    this.pos.set(x, this.world.groundNear(x, z, yHint), z);
     this.yaw = yaw;
     this._sync(0);
   }
@@ -122,7 +122,7 @@ export class OrbitCamera {
     this.curDist = d < this.curDist ? d : damp(this.curDist, d, 3, dt);
     const cam = this.camera;
     cam.position.copy(pivot).addScaledVector(dir, this.curDist);
-    const ground = this.world.groundAt(cam.position.x, cam.position.z) + 0.3;
+    const ground = this.world.groundNear(cam.position.x, cam.position.z, player.pos.y) + 0.3;
     if (cam.position.y < ground) cam.position.y = ground;
     cam.lookAt(pivot);
     cam.fov = damp(cam.fov, this.fovBase + Math.min(8, player.speed * 1.2), 3, dt);

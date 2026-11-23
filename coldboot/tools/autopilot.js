@@ -44,7 +44,7 @@ export async function run(seconds = 300, o = {}) {
       if (dist > 2.2) {
         const a = Math.atan2(P.x - tg.x, P.z - tg.z);
         const x = tg.x + Math.sin(a) * 1.3, z = tg.z + Math.cos(a) * 1.3;
-        G.player.place(x, z, Math.atan2(tg.x - x, tg.z - z));
+        G.player.place(x, z, Math.atan2(tg.x - x, tg.z - z), tg.y);
         continue;
       }
     }

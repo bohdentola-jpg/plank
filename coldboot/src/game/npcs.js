@@ -99,7 +99,7 @@ export class NPCs {
     npc.anim.fidget = Math.random();
     this.G.scene.add(ch.group);
     npc.building = false;
-    npc.pos.y = this.G.world.groundAt(npc.pos.x, npc.pos.z);
+    npc.pos.y = this.G.world.groundNear(npc.pos.x, npc.pos.z, npc.pos.y || undefined);
     ch.group.position.copy(npc.pos);
     ch.group.rotation.y = npc.yaw;
   }
@@ -130,7 +130,7 @@ export class NPCs {
             if (p && (!npc.goal || npc.goal.x !== p.x || npc.goal.z !== p.z)) {
               npc.goal = { x: p.x, z: p.z, yaw: p.rot ?? npc.yaw, activity: b.do || 'stand' };
               // far from the player: just be there
-              if (!npc.ch && Math.hypot(npc.pos.x - P.x, npc.pos.z - P.z) > SPAWN_R) npc.pos.set(p.x, 0, p.z);
+              if (!npc.ch && Math.hypot(npc.pos.x - P.x, npc.pos.z - P.z) > SPAWN_R) npc.pos.set(p.x, G.world.groundNear(p.x, p.z, p.y), p.z);
             }
           }
         }
@@ -200,7 +200,7 @@ export class NPCs {
       npc.yaw += wrap(g.yaw - npc.yaw) * Math.min(1, dt * 3);
     }
     if (npc.ch) {
-      npc.pos.y += (G.world.groundAt(npc.pos.x, npc.pos.z, npc.pos.y) - npc.pos.y) * Math.min(1, dt * 12);
+      npc.pos.y += (G.world.groundAt(npc.pos.x, npc.pos.z, npc.pos.y + 0.5) - npc.pos.y) * Math.min(1, dt * 12);
       npc.ch.group.position.copy(npc.pos);
       npc.ch.group.rotation.y = npc.yaw;
       npc.anim.targetSpeed = npc.speed;
