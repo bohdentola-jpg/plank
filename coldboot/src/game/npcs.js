@@ -143,7 +143,7 @@ export class NPCs {
       }
       const d = Math.hypot(npc.pos.x - P.x, npc.pos.z - P.z);
       if (!npc.hidden && d < SPAWN_R && !npc.ch && !npc.building && !this.queue.includes(npc)) this.queue.push(npc);
-      if ((npc.hidden || d > DESPAWN_R) && npc.ch && !npc.talking) this._release(npc);
+      if ((npc.hidden || d > DESPAWN_R) && npc.ch && !npc.talking && !npc.scripted) this._release(npc);
       this._move(npc, dt);
       if (npc.ch) {
         npc.ch.group.visible = !npc.hidden;

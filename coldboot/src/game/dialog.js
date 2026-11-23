@@ -87,46 +87,56 @@ export class Dialog {
   /** Run any conversation with an NPC (missions call this too). */
   async run(npc, fn) {
     const G = this.G, d = G.director;
-    if (this.active) return;
+    if (this.active || !npc) return;
     this.active = npc;
-    npc.talking = true;
+    npc.talking = true;   // also keeps their body from being released mid-conversation
     G.player.locked = true;
     G.cinematic = true;
-    // face each other
-    const P = G.player;
-    P.yaw = Math.atan2(npc.pos.x - P.pos.x, npc.pos.z - P.pos.z);
-    P.ch.group.rotation.y = P.yaw;
-    d.addActor('player', P.ch, P.anim, { external: true });
-    d.addActor(npc.id, npc.ch, npc.anim, { external: true });
-    npc.anim.lookAt = d.headPos('player');
-    P.anim.lookAt = d.headPos(npc.id);
-    // keep the camera on the side of the line it's already on: no jump across the pair
-    const toNpc = Math.atan2(npc.pos.x - P.pos.x, npc.pos.z - P.pos.z);
-    const camRight = Math.sin((G.orbit?.lookYaw ?? toNpc) - toNpc) > 0;
-    this.side = camRight ? 1 : -1;
-    this._shot = npc.id;
-    game.renderer.tweakPost({ letterbox: 1 });
     G.hud.prompt = null;
-    // a soft key from near the lens so faces read even against a bright window or the sky
-    d.setFill(WU.night.value > 0.5 ? 0.9 : 0.6, 0xffe8d0, 3.6);
-    // ease from the gameplay camera into the first shot
-    d.cam({ ...d.overShoulder('player', npc.id, { side: this.side, fov: 30 }), dur: 0.55 });
+    const P = G.player;
     try {
+      // bodies load in the background, one at a time: a conversation can start
+      // before this person's has arrived, so fetch it now (and don't wait forever)
+      if (!npc.ch && G.npcs?._build) {
+        npc.hidden = false;
+        await Promise.race([G.npcs._build(npc).catch((e) => console.error(e)), new Promise((r) => setTimeout(r, 8000))]);
+      }
+      // face each other
+      P.yaw = Math.atan2(npc.pos.x - P.pos.x, npc.pos.z - P.pos.z);
+      P.ch.group.rotation.y = P.yaw;
+      d.addActor('player', P.ch, P.anim, { external: true });
+      if (npc.ch && npc.anim) {
+        npc.ch.group.visible = true;
+        d.addActor(npc.id, npc.ch, npc.anim, { external: true });
+        npc.anim.lookAt = d.headPos('player');
+        P.anim.lookAt = d.headPos(npc.id);
+      }
+      // keep the camera on the side of the line it's already on: no jump across the pair
+      const toNpc = Math.atan2(npc.pos.x - P.pos.x, npc.pos.z - P.pos.z);
+      const camRight = Math.sin((G.orbit?.lookYaw ?? toNpc) - toNpc) > 0;
+      this.side = camRight ? 1 : -1;
+      this._shot = npc.id;
+      game.renderer.tweakPost({ letterbox: 1 });
+      // a soft key from near the lens so faces read even against a bright window or the sky
+      d.setFill(WU.night.value > 0.5 ? 0.9 : 0.6, 0xffe8d0, 3.6);
+      // ease from the gameplay camera into the first shot
+      if (d.actors[npc.id]) d.cam({ ...d.overShoulder('player', npc.id, { side: this.side, fov: 30 }), dur: 0.55 });
       await fn(this._ctx(npc));
-    } catch (e) { console.error(e); }
-    d.removeActor('player');
-    d.removeActor(npc.id);
-    npc.talking = false;
-    npc.anim.lookAt = null;
-    P.anim.lookAt = null;
-    G.player.locked = false;
-    G.cinematic = false;
-    d.release();
-    d.setFill(0);
-    game.renderer.tweakPost({ letterbox: 0 });
-    G.orbit?.snapBehind(P);
-    this.active = null;
-    G.state.met[npc.id] = true;
+    } catch (e) { console.error(e); } finally {
+      d.removeActor('player');
+      d.removeActor(npc.id);
+      npc.talking = false;
+      if (npc.anim) npc.anim.lookAt = null;
+      if (P.anim) P.anim.lookAt = null;
+      G.player.locked = false;
+      G.cinematic = false;
+      d.release();
+      d.setFill(0);
+      game.renderer.tweakPost({ letterbox: 0 });
+      G.orbit?.snapBehind(P);
+      this.active = null;
+      G.state.met[npc.id] = true;
+    }
   }
 
   /** A passing remark from a townsperson. */

@@ -319,7 +319,8 @@ registerScreen('town', () => {
       npc.pos.set(p.x, G.world.groundNear(p.x, p.z, p.y), p.z);
       npc.yaw = o.face ?? p.rot ?? npc.yaw;
       npc.goal = { x: p.x, z: p.z, yaw: npc.yaw, activity: o.sit ? 'sit' : 'stand' };
-      if (!npc.ch) await G.npcs._build(npc);
+      if (!npc.ch) await Promise.race([G.npcs._build(npc).catch((e) => console.error(e)), new Promise((r) => setTimeout(r, 8000))]);
+      if (!npc.ch) return;   // their body never arrived: the scene plays on without them
       npc.ch.group.position.copy(npc.pos);
       npc.ch.group.rotation.y = npc.yaw;
       npc.ch.group.visible = true;
