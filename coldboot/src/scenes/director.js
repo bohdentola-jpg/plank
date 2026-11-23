@@ -167,6 +167,16 @@ export class Director {
     return len;
   }
 
+  /**
+   * Can the lens at `cam` see the face at `head`? Checked both ways: outward from
+   * the face (something between them) and inward from the lens (the face is
+   * inside something — a person half inside a car or a shelf).
+   */
+  sees(head, cam) {
+    const full = head.distanceTo(cam);
+    return this.clearDist(head, cam) >= full - 0.05 && this.clearDist(cam, head) >= full - 0.12;
+  }
+
   /** Is this mesh thin in two dimensions (under 12 cm), like a bar or a pole? (cached) */
   _thin(ob) {
     if (ob.userData._thin !== undefined) return ob.userData._thin;
@@ -217,12 +227,11 @@ export class Director {
           const hp = this.headPos(id);
           const want = at(a, side, 1);
           const full = hp.distanceTo(want);
-          const c1 = this.clearDist(hp, want);
-          if (c1 < full - 0.05) {
+          if (!this.sees(hp, want)) {
             const alt = at(a, -side, 1);
-            const c2 = this.clearDist(hp, alt);
-            if (c2 >= full - 0.05) side = -side;
+            if (this.sees(hp, alt)) side = -side;
             else {
+              const c1 = this.clearDist(hp, want), c2 = this.clearDist(hp, alt);
               if (c2 > c1) side = -side;
               pull = Math.max(0.55, (Math.max(c1, c2) - 0.15) / full);
             }
@@ -257,7 +266,7 @@ export class Director {
       cu ||= this.closeUp(to, { side: o.side ?? 1 });
       return true;
     };
-    let side = o.side ?? 1, pull = 1, decided = false;
+    let side = o.side ?? 1, pull = 1, decided = false, cramped = false;
     const at = (sd, k) => {
       const a = this.headPos(from), b = this.headPos(to);
       const gap = a.distanceTo(b);
@@ -274,20 +283,26 @@ export class Director {
         if (far()) return cu.pos();
         if (!decided) {
           // the lens sits behind someone's head: if that's inside a shelf or a wall,
-          // try the other shoulder, then come in closer
+          // try the other shoulder; if both are walled in, a cramped shot from right
+          // behind a head is no shot at all — take a close-up of the speaker instead
           decided = true;
-          const a = this.headPos(from), want = at(side, 1), full = a.distanceTo(want);
-          const c1 = this.clearDist(a, want);
-          if (c1 < full - 0.03) {
-            const c2 = this.clearDist(a, at(-side, 1));
-            if (c2 >= full - 0.03) side = -side;
-            else { if (c2 > c1) side = -side; pull = Math.max(0.25, (Math.max(c1, c2) - 0.08) / full); }
+          const a = this.headPos(from), b = this.headPos(to), want = at(side, 1), full = a.distanceTo(want);
+          const ok = (p) => this.clearDist(a, p) >= full - 0.03 && this.sees(b, p);
+          if (!ok(want)) {
+            if (ok(at(-side, 1))) side = -side;
+            else {
+              const c1 = this.clearDist(a, want), c2 = this.clearDist(a, at(-side, 1));
+              if (c2 > c1) side = -side;
+              pull = (Math.max(c1, c2) - 0.08) / full;
+              if (pull < 0.6) { cramped = true; cu ||= this.closeUp(to, { side: o.side ?? 1 }); }
+            }
           }
         }
+        if (cramped) return cu.pos();
         return at(side, pull);
       },
       look: () => {
-        if (this.actors[to] && far()) return cu.look();
+        if (this.actors[to] && (cramped || far())) return cu.look();
         return this.actors[to] ? this.headPos(to) : this._look?.clone() || new THREE.Vector3();
       },
       fov, dofOn: this.actors[to] ? to : undefined, aperture: 6,

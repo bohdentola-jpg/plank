@@ -399,7 +399,8 @@ async function greyCar(m, d) {
   const fx = tx / L, fz = tz / L;
   const spot = { x: P.x + fx * 18 + fz * 6, z: P.z + fz * 18 - fx * 6 };
   const look = yawTo(spot, P);
-  d.prop?.('car', { x: spot.x + Math.cos(look) * 2.2, z: spot.z - Math.sin(look) * 2.2 }, { yaw: look + Math.PI / 2 });
+  // parked a few steps to his side (far enough that he isn't standing inside it)
+  d.prop?.('car', { x: spot.x + Math.cos(look) * 4.2, z: spot.z - Math.sin(look) * 4.2 }, { yaw: look });
   await d.bring('okafor', { ...spot, rot: look });
   await d.bring('player', { x: P.x, z: P.z, rot: yawTo(P, spot) });
   const over = d.actors?.okafor ? d.overShoulder('player', 'okafor', { fov: 30 }) : undefined;
