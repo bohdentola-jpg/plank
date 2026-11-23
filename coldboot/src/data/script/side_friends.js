@@ -1251,7 +1251,11 @@ async function race(m, n) {
     if (n === 1) await d.say('grisha', 'sf.g.race', { radio: true });
   });
   const R = [{ k: 'wire', title: 'LOON LAKE · RACE ONE', len: 6, time: 9 }, { k: 'lock', title: 'LOON LAKE · RACE TWO', len: 7, time: 8 }, { k: 'wire', title: 'THE LOON LAKE CUP', len: 9, time: 9 }][n - 1];
-  const won = await m.minigame(R.k, { title: R.title, len: R.len, time: R.time });
+  // a real race on the ice when there are snowmobiles; the old minigame otherwise
+  const loop = Array.from({ length: 8 }, (_, i) => { const a = (i / 8) * Math.PI * 2; return { x: LAKE.x + Math.cos(a) * 44, z: LAKE.z + Math.sin(a) * 36 }; });
+  const won = G.vehicles?.sledRace
+    ? await G.vehicles.sledRace({ course: loop, laps: n, rival: 'tommy', pace: [10.5, 11.5, 12.5][n - 1], title: R.title })
+    : await m.minigame(R.k, { title: R.title, len: R.len, time: R.time });
   f['sf.tommy.r' + n] = G.state.day;
   if (won) f['sf.tommy.won' + n] = true;
   if (won && n === 3) f['tommy.champ'] = true;

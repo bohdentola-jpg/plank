@@ -881,9 +881,9 @@ const SHOTS = {
 // vehicle engines: rpm range, strokes per cycle (4-stroke = 2 revolutions), exhaust-pulse shape,
 // harmonics, tone filters, levels. truck = old V8 pickup, snowmobile = two-stroke twin, suv = quiet V6.
 const ENGINES = {
-  truck: { idle: 650, max: 4600, stroke: 2, pulses: 8, width: 0.011, jitter: 0.02, ampVar: 0.4, K: 96, lp0: 220, lpR: 900, lpL: 1400, bodyF: 110, bodyG: 6, level: 0.36, noise: 0.06, nf0: 700, nfR: 1600 },
-  snowmobile: { idle: 1900, max: 8200, stroke: 1, pulses: 2, width: 0.03, jitter: 0.01, ampVar: 0.18, K: 64, lp0: 900, lpR: 3500, lpL: 2500, bodyF: 1300, bodyG: 8, pipe: 2600, level: 0.24, noise: 0.09, nf0: 1500, nfR: 3000 },
-  suv: { idle: 720, max: 5800, stroke: 2, pulses: 6, width: 0.025, jitter: 0.004, ampVar: 0.06, K: 64, lp0: 160, lpR: 500, lpL: 600, bodyF: 90, bodyG: 4, level: 0.22, noise: 0.035, nf0: 500, nfR: 1500 },
+  truck: { idle: 650, max: 4600, stroke: 2, pulses: 8, width: 0.011, jitter: 0.02, ampVar: 0.4, K: 96, lp0: 220, lpR: 900, lpL: 1400, bodyF: 110, bodyG: 6, level: 0.17, noise: 0.06, nf0: 700, nfR: 1600 },
+  snowmobile: { idle: 1900, max: 8200, stroke: 1, pulses: 2, width: 0.03, jitter: 0.01, ampVar: 0.18, K: 64, lp0: 900, lpR: 3500, lpL: 2500, bodyF: 1300, bodyG: 8, pipe: 2600, level: 0.14, noise: 0.06, nf0: 1500, nfR: 3000 },
+  suv: { idle: 720, max: 5800, stroke: 2, pulses: 6, width: 0.025, jitter: 0.004, ampVar: 0.06, K: 64, lp0: 160, lpR: 500, lpL: 600, bodyF: 90, bodyG: 4, level: 0.09, noise: 0.018, nf0: 500, nfR: 1500 },
 };
 
 // warm-up order: menu sounds first, then race essentials, then beds
@@ -1583,6 +1583,490 @@ class Sfx {
   engineStart() { if (this._ok()) this._play('engineStart', { gain: 0.6, rev: 0.06 }); }
   airWrench() { if (this._ok()) this._play('airWrench', { gain: 0.5, rate: 0.95 + Math.random() * 0.1, rev: 0.08 }); }
   spray() { if (this._ok()) this._play('spray', { gain: 0.45, rate: 0.97 + Math.random() * 0.06, rev: 0.05 }); }
+
+  // ===========================================================================
+  // COLD BOOT
+  //
+  // Continuous (call every frame or whenever the state changes; level 0 fades out and
+  // the graph is released after ~2.5 s of silence):
+  //   rotor(rpm01, level01, id = 'main')     helicopter: blade whup + tail rotor + turbine
+  //   ambienceArctic(level01, night01)       wind over snow, the sea under the ice, creaks
+  //   engine(rpm01, load01, kind, level = 1) 'truck' | 'snowmobile' | 'suv' — call every
+  //       frame while driving; it fades by itself ~0.35 s after the last call. engineStop().
+  // One-shots: gunfire, explosion, missile, flare, bell, bells, footstep, rollDoor, keyClick,
+  //   typing, register, shutter, buzz, earClick, doorKnock, thud, ice, sting.
+
+  /** PeriodicWave cached per context. */
+  _wave(key, make) {
+    let w = this._waves.get(key);
+    if (!w) {
+      const { real, imag } = make();
+      w = this._ctx.createPeriodicWave(real, imag);
+      this._waves.set(key, w);
+    }
+    return w;
+  }
+
+  /** Dead-man's switch: hold `v` while being called, fade out ~0.35 s after the last call. */
+  _alive(L, v) {
+    const t = this._ctx.currentTime;
+    const a = L.alive.gain;
+    a.cancelScheduledValues(t);
+    a.setTargetAtTime(v, t, 0.03);
+    a.setTargetAtTime(0, t + 0.35, 0.1);
+    L.last = t;
+    this._watch();
+  }
+
+  /** Release dead-man loops nobody has called for a while (realtime contexts only). */
+  _watch() {
+    const ctx = this._ctx;
+    if (this._watchT || typeof setInterval !== 'function' || typeof ctx.startRendering === 'function') return;
+    this._watchT = setInterval(() => {
+      if (ctx !== this._ctx) return;
+      let any = false;
+      for (const L of Object.values(this._loops)) {
+        if (L.last == null) continue;
+        any = true;
+        if (ctx.currentTime - L.last > 2.5) this._drop(L, 0.1);
+      }
+      if (!any) { clearInterval(this._watchT); this._watchT = null; }
+    }, 500);
+  }
+
+  /**
+   * Helicopter. rpm01: rotor speed (0 stopped … 1 flight rpm; blade rate and turbine pitch
+   * follow), level01: loudness (distance / camera). A second machine can run beside it
+   * with its own id, e.g. rotor(1, 0.4, 'them').
+   */
+  rotor(rpm01 = 0, level01 = 1, id = 'main') {
+    if (!this._ok()) return;
+    const r = clamp(+rpm01 || 0, 0, 1);
+    const lv = clamp(level01 == null ? 1 : +level01 || 0, 0, 1);
+    const name = `rotor:${id}`;
+    let L = this._loops[name];
+    if (!L) {
+      if (lv < 0.002) return;
+      L = this._loop(name, audio.sfxBus, (L) => {
+        L.blade = L.osc('sine', 1);
+        L.blade.setPeriodicWave(this._wave('blade', () => seriesOf(bladeShape, 48)));
+        // whup: the blade-pass harmonics themselves, low-passed
+        L.thLp = L.filt('lowpass', 170, 0.9);
+        L.gTh = L.gain(0);
+        L.blade.connect(L.thLp).connect(L.gTh).connect(L.out);
+        // slap: band-passed noise chopped by the same wave (gain = 0.14 + wave ≈ 0 … 1.14)
+        L.am = L.gain(0.14);
+        L.blade.connect(L.gain(1)).connect(L.am.gain);
+        L.sbp = L.filt('bandpass', 420, 0.75);
+        L.gSl = L.gain(0);
+        L.noise('pink').connect(L.sbp).connect(L.am).connect(L.gSl).connect(L.out);
+        // tail rotor buzz
+        L.tail = L.osc('sawtooth', 60);
+        L.tbp = L.filt('bandpass', 520, 1.2);
+        L.gTail = L.gain(0);
+        L.tail.connect(L.tbp).connect(L.gTail).connect(L.out);
+        // turbine whine + jet hiss
+        L.w1 = L.osc('sine', 3000);
+        L.w2 = L.osc('sine', 4600);
+        L.gW = L.gain(0);
+        L.w1.connect(L.gW);
+        L.w2.connect(L.gain(0.5)).connect(L.gW);
+        L.gW.connect(L.out);
+        L.jbp = L.filt('bandpass', 6500, 0.6);
+        L.gJ = L.gain(0);
+        L.noise('white').connect(L.jbp).connect(L.gJ).connect(L.out);
+        // gearbox / engine rumble
+        L.gR = L.gain(0);
+        L.noise('brown').connect(L.filt('lowpass', 140, 0.7)).connect(L.gR).connect(L.out);
+        L.wob = 0;
+      });
+    }
+    L.wob = clamp(L.wob * 0.97 + (Math.random() - 0.5) * 0.05, -1, 1);
+    const bpf = 0.6 + 13.4 * r; // blade passes per second: two blades at ~400 rpm
+    const turb = 0.32 + 0.68 * r;
+    const k = Math.pow(r, 1.2);
+    this._set(L, 0, L.blade.frequency, bpf * (1 + 0.006 * L.wob), 0.08, 0.002);
+    this._set(L, 1, L.tail.frequency, bpf * 5.8, 0.08, 0.002);
+    this._set(L, 2, L.w1.frequency, 3150 * turb, 0.15, 0.002);
+    this._set(L, 3, L.w2.frequency, 4720 * turb, 0.15, 0.002);
+    this._set(L, 4, L.gTh.gain, lv * 0.4 * k, 0.06);
+    this._set(L, 5, L.gSl.gain, lv * 0.36 * k, 0.06);
+    this._set(L, 6, L.gTail.gain, lv * 0.045 * k, 0.06);
+    this._set(L, 7, L.gW.gain, lv * 0.012 * (0.25 + 0.75 * r), 0.1);
+    this._set(L, 8, L.gJ.gain, lv * 0.05 * (0.2 + 0.8 * r), 0.1);
+    this._set(L, 9, L.gR.gain, lv * 0.22 * (0.3 + 0.7 * r), 0.1);
+    this._set(L, 10, L.sbp.frequency, 340 + 260 * r, 0.1, 0.02);
+    this._idle(L, lv >= 0.002);
+  }
+
+  /** Arctic outdoors: wind over snow with gusts and blowing snow, the sea far off, ice creaks. night01 → a stiller, colder hush. */
+  ambienceArctic(level01 = 0, night01 = 0) {
+    if (!this._ok()) return;
+    const a = clamp(+level01 || 0, 0, 1), nt = clamp(+night01 || 0, 0, 1);
+    let L = this._loops.arctic;
+    if (!L) {
+      if (a < 0.002) return;
+      L = this._loop('arctic', audio.sfxBus, (L) => {
+        L.mix = L.gain(0);
+        L.mix.connect(L.out);
+        L.wbp = L.filt('bandpass', 380, 0.5);
+        L.gust = L.gain(0.7);
+        L.osc('sine', 0.071).connect(L.gain(0.22)).connect(L.gust.gain);
+        L.osc('sine', 0.19).connect(L.gain(0.12)).connect(L.gust.gain);
+        L.osc('sine', 0.043).connect(L.gain(140)).connect(L.wbp.frequency);
+        L.gW = L.gain(0);
+        L.noise('pink').connect(L.wbp).connect(L.gust).connect(L.gW).connect(L.mix);
+        const hs = L.gain(0.6); // blowing snow rides the same gusts
+        L.osc('sine', 0.071).connect(L.gain(0.35)).connect(hs.gain);
+        L.gH = L.gain(0);
+        L.noise('white').connect(L.filt('highpass', 3800, 0.6)).connect(L.filt('lowpass', 9500, 0.6)).connect(hs).connect(L.gH).connect(L.mix);
+        L.gR = L.gain(0);
+        L.noise('brown').connect(L.filt('lowpass', 110, 0.7)).connect(L.gR).connect(L.mix);
+        L.gS = L.gain(0);
+        L.src(this._get('water')[0]).connect(L.filt('lowpass', 700, 0.7)).connect(L.gS).connect(L.mix);
+        L.gN = L.gain(0);
+        L.noise('pink').connect(L.filt('bandpass', 5200, 0.45)).connect(L.gN).connect(L.mix);
+        L.wh = L.filt('bandpass', 1250, 14);
+        L.osc('sine', 0.05).connect(L.gain(180)).connect(L.wh.frequency);
+        L.gWh = L.gain(0);
+        L.noise('white').connect(L.wh).connect(L.gWh).connect(L.mix);
+        L.ev = L.gain(1);
+        L.ev.connect(L.mix);
+        L.rev = L.gain(0);
+        L.rev.connect(audio.reverbSend);
+        L.pending = new Set();
+      });
+      this._arcticEvent(L, 2 + Math.random() * 5);
+    }
+    this._set(L, 0, L.gW.gain, 0.42 * (1 - 0.45 * nt), 0.4);
+    this._set(L, 1, L.gH.gain, 0.06 * (1 - 0.4 * nt), 0.4);
+    this._set(L, 2, L.gR.gain, 0.3 * (1 - 0.5 * nt), 0.4);
+    this._set(L, 3, L.gS.gain, 0.14 * (1 - 0.6 * nt), 0.4);
+    this._set(L, 4, L.gN.gain, 0.05 * nt, 0.4);
+    this._set(L, 5, L.gWh.gain, 0.012 + 0.03 * nt, 0.4);
+    this._set(L, 6, L.wbp.frequency, 380 - 90 * nt, 0.5, 0.02);
+    this._set(L, 7, L.mix.gain, a * 0.5, 0.3);
+    this._set(L, 8, L.rev.gain, a * 0.3, 0.3);
+    this._idle(L, a >= 0.002);
+  }
+
+  // one distant creak / crack, then the next one a while later (stopped with the loop)
+  _arcticEvent(L, delay) {
+    if (L.dead) return;
+    const ctx = this._ctx;
+    const crack = Math.random() < 0.3;
+    const s = ctx.createBufferSource();
+    s.buffer = this._pick(crack ? 'ice' : 'creak');
+    s.playbackRate.value = crack ? 0.7 + Math.random() * 0.3 : 0.85 + Math.random() * 0.3;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = crack ? 1800 + Math.random() * 1500 : 1200 + Math.random() * 1500;
+    const g = ctx.createGain();
+    g.gain.value = (crack ? 0.1 : 0.16) * (0.5 + 0.5 * Math.random());
+    const p = ctx.createStereoPanner();
+    p.pan.value = Math.random() * 1.6 - 0.8;
+    s.connect(lp).connect(g).connect(p);
+    p.connect(L.ev);
+    p.connect(L.rev);
+    L.pending.add(s);
+    s.onended = () => {
+      L.pending.delete(s);
+      for (const x of [s, lp, g, p]) x.disconnect();
+      this._arcticEvent(L, 5 + Math.random() * 14);
+    };
+    s.start(ctx.currentTime + delay);
+  }
+
+  /**
+   * Vehicle engine, every frame while driving. rpm01: 0 idle … 1 redline, load01: throttle.
+   * kind: 'truck' (old V8 burble) | 'snowmobile' (buzzy two-stroke) | 'suv' (quiet purr).
+   * Fades out on its own ~0.35 s after the last call; engineStop() ends it at once.
+   */
+  engine(rpm01 = 0, load01 = 0, kind = 'truck', level = 1) {
+    if (!this._ok()) return;
+    const c = ENGINES[kind] ? kind : 'truck';
+    const cfg = ENGINES[c];
+    const lv = clamp(level == null ? 1 : +level || 0, 0, 1);
+    let L = this._loops.engine;
+    if (L && L.kind !== c) { this._drop(L, 0.15); L = null; }
+    if (!L) {
+      if (lv < 0.002) return;
+      L = this._loop('engine', audio.sfxBus, (L) => {
+        L.kind = c;
+        L.alive = L.gain(0);
+        L.alive.connect(L.out);
+        L.eng = L.osc('sine', 10);
+        L.eng.setPeriodicWave(this._wave(`eng:${c}`, () => seriesOf(engineShape(rng(hash(`engine:${c}`)), cfg.pulses, cfg.width, cfg.jitter, cfg.ampVar), cfg.K)));
+        L.lp = L.filt('lowpass', cfg.lp0, 0.7);
+        L.body = L.filt('peaking', cfg.bodyF, 1.1);
+        L.body.gain.value = cfg.bodyG;
+        L.gT = L.gain(0);
+        let tone = L.eng.connect(L.lp).connect(L.body);
+        if (cfg.pipe) { L.pipe = L.filt('peaking', cfg.pipe, 1.4); tone = tone.connect(L.pipe); }
+        tone.connect(L.gT).connect(L.alive);
+        // intake / mechanical noise, chopped by the firing
+        L.am = L.gain(0.45);
+        L.eng.connect(L.gain(0.5)).connect(L.am.gain);
+        L.nbp = L.filt('bandpass', cfg.nf0, 0.9);
+        L.gN = L.gain(0);
+        L.noise('pink').connect(L.nbp).connect(L.am).connect(L.gN).connect(L.alive);
+      });
+    }
+    const r = clamp(+rpm01 || 0, 0, 1), ld = clamp(+load01 || 0, 0, 1);
+    const rpm = cfg.idle + (cfg.max - cfg.idle) * r;
+    this._set(L, 0, L.eng.frequency, rpm / 60 / cfg.stroke, 0.05, 0.002);
+    this._set(L, 1, L.lp.frequency, cfg.lp0 + cfg.lpR * r + cfg.lpL * ld * (0.5 + 0.5 * r), 0.07, 0.02);
+    this._set(L, 2, L.gT.gain, cfg.level * (0.55 + 0.3 * r + 0.3 * ld), 0.06);
+    this._set(L, 3, L.gN.gain, cfg.noise * (0.25 + 0.75 * ld) * (0.4 + 0.6 * r), 0.06);
+    this._set(L, 4, L.nbp.frequency, cfg.nf0 + cfg.nfR * r, 0.08, 0.02);
+    if (L.pipe) this._set(L, 5, L.pipe.gain, 2 + 8 * ld * smoothstep(0.35, 0.75, r), 0.1, 0.02); // "on the pipe"
+    this._alive(L, lv);
+  }
+
+  /** Stop the engine loop now (the crank is engineStart()). */
+  engineStop(fade = 0.3) {
+    if (!this._ok()) return;
+    const L = this._loops.engine;
+    if (L) this._drop(L, Math.max(0.03, +fade || 0.3));
+  }
+
+  // ---- one-shots ----------------------------------------------------------------
+
+  /** Machine-gun burst: n rounds (~11/s); dist01 0 = close and sharp … 1 = far, dull, echoing. */
+  gunfire(n = 12, dist01 = 0.5) {
+    if (!this._ok()) return;
+    const count = clamp(Math.round(+n || 1), 1, 80);
+    const d = clamp(+dist01 || 0, 0, 1);
+    const t0 = this._ctx.currentTime + 0.005;
+    const iv = 0.083 + Math.random() * 0.012;
+    const pan = (Math.random() - 0.5) * 0.6;
+    const gain = 0.62 * Math.pow(1 - d, 1.3) + 0.1;
+    const lp = 16000 * Math.pow(1500 / 16000, d);
+    for (let i = 0; i < count; i++) {
+      const t = t0 + i * iv + (Math.random() - 0.5) * 0.012;
+      this._play('gun', { gain: gain * (0.82 + 0.18 * Math.random()), rate: 0.95 + Math.random() * 0.1, lp, pan: pan + (Math.random() - 0.5) * 0.1, rev: 0.08 + 0.35 * d, when: t });
+      if (d > 0.25 && i % 2 === 0) { // slapback off the water and ice
+        this._play('gun', { gain: gain * 0.22 * d, rate: 0.9, lp: lp * 0.4, pan: -pan, rev: 0.3, when: t + 0.11 + 0.15 * d });
+      }
+    }
+  }
+
+  /** Explosion; size01 0 = small and sharp … 1 = huge, deep and long. */
+  explosion(size01 = 0.7) {
+    if (!this._ok()) return;
+    const s = clamp(size01 == null ? 0.7 : +size01 || 0, 0, 1);
+    this._play('explosion', {
+      gain: 0.3 + 0.62 * s, rate: 1.3 - 0.42 * s + Math.random() * 0.06, lp: 2500 + 16000 * s * s,
+      pan: (Math.random() - 0.5) * 0.4, rev: 0.2 + 0.25 * s,
+    });
+  }
+
+  /** Missile: launch, motor roar closing in, the pass. */
+  missile() { if (this._ok()) this._play('missile', { gain: 0.8, rate: 0.96 + Math.random() * 0.08, rev: 0.15 }); }
+
+  /** Flares: n pops + fizz, a salvo when n > 1. */
+  flare(n = 1) {
+    if (!this._ok()) return;
+    const t = this._ctx.currentTime;
+    const k = clamp(Math.round(+n || 1), 1, 8);
+    for (let i = 0; i < k; i++) {
+      this._play('flare', { gain: 0.42, rate: 0.92 + Math.random() * 0.16, pan: (i % 2 ? 1 : -1) * (0.15 + 0.2 * Math.random()), rev: 0.18, when: t + i * (0.11 + Math.random() * 0.04) });
+    }
+  }
+
+  /** The big Orthodox bell, once. strike 0..1: how hard (softer = darker, quieter). */
+  bell(strike = 1) {
+    if (!this._ok()) return;
+    const s = clamp(strike == null ? 1 : +strike || 0, 0.05, 1);
+    this._play('bell:big', { gain: 0.22 + 0.45 * s, lp: 1800 + 14000 * s, rev: 0.4, rate: 0.995 + Math.random() * 0.01 });
+  }
+
+  /** A short festive peal (trezvon): small bells running, middle bells answering, the big bell on the bars. */
+  bells() {
+    if (!this._ok()) return;
+    const sm = this._get('bell:small'), md = this._get('bell:mid'), big = this._get('bell:big')[0];
+    const t0 = this._ctx.currentTime + 0.02, e = 0.18;
+    const fig = [0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 3, 2, 3, 2, 1, 0, 1, 2, 3, 0];
+    const jit = () => (Math.random() - 0.5) * 0.014;
+    fig.forEach((b, i) => this._play(sm[b], { gain: (i % 4 === 0 ? 0.17 : 0.12) * (0.85 + 0.3 * Math.random()), pan: [-0.5, -0.2, 0.25, 0.55][b], rev: 0.3, when: t0 + i * e + jit() }));
+    for (let i = 2; i < fig.length; i += 4) this._play(md[(i >> 2) & 1], { gain: 0.19, pan: (i >> 2) & 1 ? 0.3 : -0.3, rev: 0.35, when: t0 + i * e + jit() });
+    for (const i of [0, 8, 16, 24]) this._play(big, { gain: i === 24 ? 0.36 : 0.28, rev: 0.4, when: t0 + i * e });
+  }
+
+  /** One footstep. surface 'snow' | 'wood' | 'concrete', weight01 0 light … 1 heavy. */
+  footstep(surface = 'snow', weight01 = 0.5) {
+    if (!this._ok()) return;
+    const t = this._ctx.currentTime;
+    if (t - this._lastStep < 0.06) return;
+    this._lastStep = t;
+    const sf = surface === 'wood' || surface === 'concrete' ? surface : 'snow';
+    const w = clamp(weight01 == null ? 0.5 : +weight01 || 0, 0, 1);
+    this._play(`step:${sf}`, {
+      gain: 0.14 + 0.32 * w, rate: (1.1 - 0.18 * w) * (0.96 + Math.random() * 0.08), lp: 7000 + 9000 * w,
+      pan: (Math.random() - 0.5) * 0.12, rev: sf === 'wood' ? 0.04 : 0.02,
+    });
+  }
+
+  /** Roll-up metal door (warehouse / garage). */
+  rollDoor(open = true) { if (this._ok()) this._play(open ? 'door:open' : 'door:close', { gain: 0.55, rev: 0.12 }); }
+
+  /** One laptop key (big = space / enter). */
+  keyClick(big = false) {
+    if (this._ok()) this._play(big ? 'key:big' : 'key', { gain: 0.24 + Math.random() * 0.06, rate: 0.95 + Math.random() * 0.1 });
+  }
+
+  /** Someone typing for `seconds` (words, spaces, pauses). Returns { stop() }. */
+  typing(seconds = 2) {
+    if (!this._ok()) return { stop() {} };
+    const ctx = this._ctx, t0 = ctx.currentTime + 0.01;
+    const end = t0 + clamp(+seconds || 0, 0, 30);
+    const srcs = [];
+    let t = t0;
+    while (t < end) {
+      const word = 2 + Math.floor(Math.random() * 6);
+      for (let i = 0; i < word && t < end; i++) {
+        srcs.push(this._play('key', { gain: 0.2 + Math.random() * 0.08, rate: 0.95 + Math.random() * 0.1, when: t }));
+        t += 0.06 + Math.random() * 0.09;
+      }
+      if (t >= end) break;
+      t += 0.03 + Math.random() * 0.06;
+      srcs.push(this._play(Math.random() < 0.1 ? 'key' : 'key:big', { gain: 0.24, rate: 0.97 + Math.random() * 0.06, when: t }));
+      t += 0.12 + Math.random() * 0.22;
+    }
+    return {
+      stop: () => {
+        const now = ctx.currentTime;
+        for (const s of srcs) { try { s.stop(now); } catch { /* ended */ } }
+      },
+    };
+  }
+
+  /** Old cash register: key, crank, bell, drawer. */
+  register() { if (this._ok()) this._play('register', { gain: 0.4, rev: 0.06 }); }
+
+  /** Camera shutter (wind = with the motor winder). */
+  shutter(wind = true) { if (this._ok()) this._play(wind ? 'shutter:wind' : 'shutter', { gain: 0.5, rev: 0.03 }); }
+
+  /** Phone vibrating on a table. */
+  buzz() { if (this._ok()) this._play('buzz', { gain: 0.35 }); }
+
+  /** Earpiece channel opening / closing: click + squelch. */
+  earClick(on = true) { if (this._ok()) this._play(on ? 'ear:on' : 'ear:off', { bus: audio.uiBus, gain: 0.5 }); }
+
+  /** Knuckles on a wooden door, n knocks. */
+  doorKnock(n = 3) {
+    if (!this._ok()) return;
+    let t = this._ctx.currentTime + 0.01;
+    const k = clamp(Math.round(+n || 3), 1, 8);
+    for (let i = 0; i < k; i++) {
+      this._play('knock', { gain: (i === 0 ? 0.62 : 0.52) * (0.9 + 0.2 * Math.random()), rate: 0.96 + Math.random() * 0.08, rev: 0.06, when: t });
+      t += 0.17 + Math.random() * 0.05;
+    }
+  }
+
+  /** A body or a box hitting the floor. */
+  thud() { if (this._ok()) this._play('thud', { gain: 0.6, rate: 0.92 + Math.random() * 0.16, rev: 0.05 }); }
+
+  /** Sea ice cracking. */
+  ice() { if (this._ok()) this._play('ice', { gain: 0.5, rate: 0.9 + Math.random() * 0.2, rev: 0.35, pan: (Math.random() - 0.5) * 0.5 }); }
+
+  // ---- stingers: short cues in the key of whatever music is playing --------------------
+
+  _stingOut() {
+    if (this._sting) return this._sting;
+    const ctx = this._ctx;
+    const g = ctx.createGain();
+    g.gain.value = 0.6;
+    g.connect(audio.sfxBus);
+    const r = ctx.createGain();
+    r.gain.value = 0.3;
+    g.connect(r).connect(audio.reverbSend);
+    this._sting = g;
+    return g;
+  }
+
+  _snote(kind, t, midi, dur, vel, o = {}) {
+    const ctx = this._ctx;
+    const { buf, rate, loop } = bank(ctx).ms(kind, midi);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = rate;
+    src.loop = loop;
+    const g = ctx.createGain();
+    const atk = o.atk ?? 0.004, rel = o.rel ?? 0.2;
+    g.gain.setValueAtTime(0, t);
+    if (atk <= 0.006) g.gain.linearRampToValueAtTime(vel, t + 0.003);
+    else g.gain.setTargetAtTime(vel, t, atk / 3);
+    g.gain.setTargetAtTime(0, t + dur, rel / 3.5);
+    src.connect(g).connect(this._stingOut());
+    src.start(t, loop ? Math.random() * buf.duration * 0.9 : 0);
+    src.stop(loop ? t + dur + rel * 2 : Math.min(t + dur + rel * 2, t + buf.duration / rate));
+    this._live++;
+    src.onended = () => { this._live--; src.disconnect(); g.disconnect(); };
+  }
+
+  _shit(name, t, vel) {
+    const ctx = this._ctx;
+    const src = ctx.createBufferSource();
+    src.buffer = bank(ctx).get(name);
+    const g = ctx.createGain();
+    g.gain.value = vel;
+    src.connect(g).connect(this._stingOut());
+    src.start(t);
+    this._live++;
+    src.onended = () => { this._live--; src.disconnect(); g.disconnect(); };
+  }
+
+  /**
+   * Attention-system stinger: 'spotted' | 'cleared' | 'success' | 'fail'. In the key of the
+   * current music (and on its 16th grid when that is a hair away); E minor when silent.
+   */
+  sting(kind = 'spotted') {
+    if (!this._ok()) return;
+    const ctx = this._ctx;
+    const d = music.deck && !music.deck.dying && music.ctx === ctx ? music.deck : null;
+    const pc = d ? (((d.keyPc + d.transpose) % 12) + 12) % 12 : 4;
+    const minor = d ? !['major', 'mixolydian'].includes(d.scale) : true;
+    let t = ctx.currentTime + 0.012;
+    if (d) { const q = d.nextStepTime(t); if (q - t < 0.07) t = q; }
+    const R = 48 + pc - (pc > 7 ? 12 : 0); // the tonic in octave 3
+    const third = minor ? 3 : 4;
+    switch (kind) {
+      case 'spotted': // a cold hit: low boom, brass cluster (b9 + tritone), a scraping string second
+        this._shit('boom', t, 0.55);
+        this._shit('hat_o', t, 0.22);
+        for (const iv of [12, 13, 18, 24]) this._snote('brass', t, R + iv, 0.22, 0.24);
+        this._snote('stab', t, R, 0.3, 0.3);
+        this._snote('strings', t + 0.02, R + 24, 0.9, 0.2, { atk: 0.05, rel: 0.4 });
+        this._snote('strings', t + 0.02, R + 25, 0.9, 0.16, { atk: 0.05, rel: 0.4 });
+        break;
+      case 'cleared': // relief: a suspended chord settles, the celesta steps down to the tonic
+        for (const iv of [12, 17, 19]) this._snote('pad', t, R + iv, 0.55, 0.15, { atk: 0.08, rel: 0.3 });
+        for (const iv of [12, 12 + third, 19]) this._snote('pad', t + 0.5, R + iv, 1.1, 0.15, { atk: 0.12, rel: 0.8 });
+        this._snote('celesta', t + 0.02, R + 31, 0.5, 0.3);
+        this._snote('celesta', t + 0.3, R + 24 + third, 0.5, 0.26);
+        this._snote('celesta', t + 0.55, R + 24, 1.2, 0.3);
+        break;
+      case 'success': // bright: a major arpeggio (picardy in minor keys), strings and brass, a sparkle
+        [0, 4, 7, 12].forEach((iv, i) => this._snote('celesta', t + i * 0.075, R + 24 + iv, 1.1, 0.32 - i * 0.02));
+        this._snote('glass', t + 0.3, R + 36, 1.6, 0.22);
+        for (const iv of [12, 16, 19, 24]) this._snote('strings', t + 0.22, R + iv, 1.0, 0.13, { atk: 0.06, rel: 0.6 });
+        for (const iv of [12, 24]) this._snote('brass', t + 0.22, R + iv, 0.7, 0.17, { rel: 0.4 });
+        this._shit('ride_bell', t + 0.22, 0.22);
+        break;
+      case 'fail': // a falling minor line in the brass over a low minor chord, a boom
+        this._shit('boom', t, 0.45);
+        this._shit('down', t, 0.22);
+        this._snote('brass', t, R + 19, 0.38, 0.22);
+        this._snote('brass', t + 0.38, R + 15, 0.38, 0.22);
+        this._snote('brass', t + 0.76, R + 12, 1.1, 0.24, { rel: 0.6 });
+        for (const iv of [0, 3, 7]) this._snote('strings', t + 0.76, R + iv, 1.3, 0.14, { atk: 0.08, rel: 0.8 });
+        this._snote('piano', t + 0.76, R - 12, 2, 0.3);
+        break;
+      default:
+        break;
+    }
+  }
 }
 
 export const sfx = new Sfx();

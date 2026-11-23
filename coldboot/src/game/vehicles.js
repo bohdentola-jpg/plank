@@ -318,6 +318,7 @@ export class Vehicles {
     }
     // the plough route, riders
     if (this.route) this._route(dt);
+    if (this.race) this._race(dt);
     if (this.riders?.size) this._riders();
   }
 
@@ -363,7 +364,7 @@ export class Vehicles {
 
   _drive(dt, v) {
     const G = this.G, S = v.spec;
-    const thr = input.throttle, brk = input.brake;
+    const thr = this.hold ? 0 : input.throttle, brk = this.hold ? 0 : input.brake;
     // longitudinal
     if (thr > 0.01) {
       if (v.speed < -0.3) v.speed += S.brake * thr * dt;
@@ -374,6 +375,7 @@ export class Vehicles {
       else v.speed = Math.max(-S.reverse, v.speed - S.accel * 0.6 * brk * dt);
     }
     if (thr <= 0.01 && brk <= 0.01) v.speed *= Math.exp(-dt * (Math.abs(v.speed) < 1 ? 2.5 : 0.25));
+    if (this.hold) v.speed = 0;   // on the start line
     if (input.handbrake) v.speed *= Math.exp(-dt * 2.2);
     // steering (less lock at speed)
     const lock = S.steer * (1 - Math.min(0.65, Math.abs(v.speed) / S.maxSpeed * 0.7));
@@ -507,6 +509,84 @@ export class Vehicles {
     }
   }
 
+  /**
+   * A snowmobile race against a rival on a sled of their own.
+   * o: { course: [{x, z}…] (a loop), laps, rival: cast id, pace: rival m/s, title } → Promise<won>
+   */
+  async sledRace(o) {
+    const G = this.G;
+    const seq = [];
+    for (let l = 0; l < (o.laps || 1); l++) seq.push(...o.course);
+    seq.push(o.course[0]);
+    let len = 0;
+    for (let i = 1; i < seq.length; i++) len += Math.hypot(seq[i].x - seq[i - 1].x, seq[i].z - seq[i - 1].z);
+    const yaw0 = Math.atan2(seq[1].x - seq[0].x, seq[1].z - seq[0].z);
+    const side = V(Math.cos(yaw0), 0, -Math.sin(yaw0));
+    const at = { x: seq[0].x + side.x * 2.5, z: seq[0].z + side.z * 2.5 };
+    await G.fadeTeleport?.({ x: at.x, z: at.z, yaw: yaw0 }, 0.6);
+    this.lendSled(at, yaw0);
+    const npc = G.npcs.get(o.rival) || G.npcs.ensure(o.rival);
+    if (npc) {
+      npc.scripted = true; npc.hidden = false; npc.goal = null;
+      npc.pos.set(seq[0].x - side.x * 2.5, 0, seq[0].z - side.z * 2.5);
+      npc.yaw = yaw0;
+      if (!npc.ch) await G.npcs._build(npc);
+      this.npcRide(o.rival, true);
+    }
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(4.5, 0.22, 8, 40), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.4, 2.2, 2.6) }));
+    ring.rotation.x = Math.PI / 2;
+    this.scene.add(ring);
+    return new Promise((resolve) => {
+      this.race = { seq, i: 1, t: -3.5, len, pace: o.pace || 11, rival: npc, ring, resolve, title: o.title || 'RACE', side };
+    });
+  }
+
+  _race(dt) {
+    const G = this.G, R = this.race;
+    R.t += dt;
+    this.hold = R.t < 0;
+    // the rival rides the line
+    if (R.rival) {
+      const d = Math.max(0, Math.min(R.len, R.t * R.pace));
+      let acc = 0;
+      for (let i = 1; i < R.seq.length; i++) {
+        const a = R.seq[i - 1], b = R.seq[i];
+        const L = Math.hypot(b.x - a.x, b.z - a.z);
+        if (acc + L >= d || i === R.seq.length - 1) {
+          const k = Math.min(1, (d - acc) / L);
+          const lane = R.t < 2 ? (1 - Math.max(0, R.t) / 2) * 2.5 : 0;
+          R.rival.pos.x = a.x + (b.x - a.x) * k - R.side.x * lane;
+          R.rival.pos.z = a.z + (b.z - a.z) * k - R.side.z * lane;
+          R.rival.yaw = Math.atan2(b.x - a.x, b.z - a.z);
+          break;
+        }
+        acc += L;
+      }
+    }
+    const g = R.seq[R.i];
+    R.ring.position.set(g.x, groundY(g.x, g.z) + 0.6, g.z);
+    R.ring.rotation.z += dt;
+    G.hud.objective = { text: `${R.title}  ·  gate ${R.i} / ${R.seq.length - 1}`, sub: R.t > 0 ? `${R.t.toFixed(1)} s` : 'Get ready…', target: { x: g.x, z: g.z } };
+    const v = this.driving;
+    if (v && Math.hypot(v.pos.x - g.x, v.pos.z - g.z) < 9) {
+      R.i++;
+      G.sfx?.ui?.('select');
+      if (R.i >= R.seq.length) return this._raceEnd(R.t < R.len / R.pace);
+    }
+    if (!v || R.t > R.len / R.pace + 25) this._raceEnd(false);
+  }
+
+  _raceEnd(won) {
+    const G = this.G, R = this.race;
+    this.race = null;
+    this.hold = false;
+    this.scene.remove(R.ring);
+    G.hud.objective = null;
+    if (R.rival) { this.npcRide(R.rival.id, false); R.rival.scripted = false; }
+    G.hud.toast(won ? 'FIRST ACROSS THE LINE' : 'SECOND', `${Math.max(0, R.t).toFixed(1)} s`, won ? '#9fe8b0' : '#ffb21e');
+    R.resolve(won);
+  }
+
   // ---------------------------------------------------------------- the plough route
   /** Job: drive the plough over the town's streets. Resolves to dollars earned. */
   plowRoute() {
@@ -575,6 +655,10 @@ export class Vehicles {
   draw(ctx) {
     const v = this.driving;
     if (!v || this.G.cinematic) return;
+    if (this.race && this.race.t < 0.8) {
+      const n = Math.ceil(-this.race.t);
+      vText(ctx, n > 0 ? String(Math.min(3, n)) : 'GO!', W / 2, H / 2 - 40, 90, { align: 'center', color: n > 0 ? '#fff' : C.green, weight: 0.18, glow: 18, glowColor: 'rgba(120,230,255,0.6)' });
+    }
     const metric = settings.get('units') === 'metric';
     const sp = Math.abs(v.speed) * (metric ? 3.6 : 2.237);
     panel(ctx, W - 230, H - 118, 190, 72, { accentLen: 80 });
