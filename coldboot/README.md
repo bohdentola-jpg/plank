@@ -87,10 +87,10 @@ or Firefox with WebGL2. A controller is welcome (DualSense first, any standard p
   Northstar's black SUVs patrol at night, and they see.
 - **Your phone** (Tab): a map with waypoints, the journal, everyone you know and
   how close you are, the town's restoration projects, your wallet.
-- **A score that follows you.** Generative music in the same engine as Midnight
-  Frequency's radio: a spy-synth title theme, a quiet cue under the warehouse
-  table, folk for Port Zarya's days, aurora ambience for its nights, tension
-  that rises as Northstar's attention does, the chase, and the credits.
+- **A score that follows you.** Generative music, synthesized live: strings,
+  piano and a cello over a low drone for the title, a quiet cue under the
+  warehouse table, folk for Port Zarya's days, aurora ambience for its nights,
+  tension that rises as Northstar's attention does, the chase, and the credits.
   Procedural sound for everything else — rotors, engines, gunfire, church
   bells, footsteps in snow, the till, the earpiece clicking on.
 - **The finale**: a chopper chase QTE across the strait, a landing by hand, the
