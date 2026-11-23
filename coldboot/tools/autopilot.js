@@ -33,6 +33,7 @@ export async function run(seconds = 300, o = {}) {
     if (d.lineHandle && d.lineHandle.h.t > 0.15) { d._skipResolve?.(); continue; }
     if (G.minigames?.cur) { G.minigames._end(true); continue; }
     if (G.overlay) {
+      if (G.overlay.finish) { G.overlay.finish(30); note('  (finished a job/shop)'); continue; }
       const L = LESSONS.find((l) => l.day === s.day) || LESSONS[Math.min(LESSONS.length - 1, s.day - 1)];
       if (L) s.lessons[L.id] = true;
       key('Escape');
@@ -65,6 +66,12 @@ export async function run(seconds = 300, o = {}) {
         G.player.place(x, z, Math.atan2(tg.x - x, tg.z - z), tg.y);
         continue;
       }
+    }
+    // an objective that won't move: let time pass (evenings, "until dark", "at 7 pm")
+    if (same > 14 && same % 2 === 0) {
+      s.hour = Math.min(23.4, s.hour + 0.5);
+      if (same % 10 === 0) note(`  (waiting… ${s.hour.toFixed(1)}h)`);
+      if (s.hour < 23.3) continue;
     }
     if (G.hud.prompt && G.hud.prompt.action === 'interact') {
       // generic things (sleep, shops, ladders) only when the objective is about them

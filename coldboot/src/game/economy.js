@@ -24,9 +24,11 @@ export const SHOPS = {
 function overlay(G, impl) {
   return new Promise((resolve) => {
     G.player.locked = true;
+    const close = (v) => { G.overlay = null; G.player.locked = false; saveGame(); resolve(v); };
     G.overlay = {
-      update: (dt) => impl.update(dt, (v) => { G.overlay = null; G.player.locked = false; saveGame(); resolve(v); }),
+      update: (dt) => impl.update(dt, close),
       draw: (ctx, dt) => impl.draw(ctx, dt),
+      finish: close,   // QA: end the job with this result
     };
   });
 }
