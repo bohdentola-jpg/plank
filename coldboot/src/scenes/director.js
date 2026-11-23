@@ -168,11 +168,23 @@ export class Director {
     // head-and-shoulders, never a nose-to-lens extreme close-up
     const dist = Math.max(1.0, (o.dist ?? 0.75) * 1.35), h = o.h ?? 0.03, fov = Math.max(28, o.fov ?? 28);
     let side = o.side ?? 1, pull = 1, decided = false;
+    let fwdFix = null;   // where the face points when the shot starts (held for the shot)
+    const faceDir = (a) => {
+      const q = a.ch.group.getWorldQuaternion(new THREE.Quaternion());
+      const body = new THREE.Vector3(0, 0, 1).applyQuaternion(q);
+      const hb = a.ch.bones?.Bip01_Head, hf = a.anim?.headFwd;
+      if (hb && hf) {
+        const head = hf.clone().applyQuaternion(hb.getWorldQuaternion(new THREE.Quaternion()));
+        head.y = 0;
+        if (head.lengthSq() > 1e-4) body.multiplyScalar(0.4).addScaledVector(head.normalize(), 0.6);
+      }
+      body.y = 0;
+      return body.lengthSq() > 1e-6 ? body.normalize() : new THREE.Vector3(0, 0, 1);
+    };
     const at = (a, sd, k) => {
       const hp = this.headPos(id);
-      const q = a.ch.group.getWorldQuaternion(new THREE.Quaternion());
-      const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(q);
-      const left = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+      const fwd = fwdFix || faceDir(a);
+      const left = new THREE.Vector3(fwd.z, 0, -fwd.x);   // the subject's left
       return hp.clone().addScaledVector(fwd, dist * k).addScaledVector(left, sd * dist * k * (o.angle ?? 0.45)).add(new THREE.Vector3(0, h, 0));
     };
     return {
@@ -183,6 +195,7 @@ export class Director {
           // keep the face clear: if scenery sits between face and lens, take the other
           // side; if both are blocked, come in closer than the obstruction
           decided = true;
+          fwdFix = faceDir(a);
           const hp = this.headPos(id);
           const want = at(a, side, 1);
           const full = hp.distanceTo(want);
