@@ -114,7 +114,7 @@ export const CHALLENGES = {
   // -------------------------------------------------------------------------
   keypad: {
     id: 'keypad',
-    day: 4,
+    day: 3,
     title: 'Ears Everywhere',
     briefing: "Nadia: \"While you mopped City Hall, the bug on the keypad logged every code anyone typed today. People fat-finger it, so the log is noisy. The real door code is the one typed most often.\"\nLyosha: \"I count the codes in a dictionary, you'll learn those on day ten. Then we walk through the counts and keep the biggest. That second loop is yours. If two codes tie, keep the one we met first.\"",
     timeLimit: null,
@@ -177,7 +177,7 @@ export const CHALLENGES = {
   // -------------------------------------------------------------------------
   camloop: {
     id: 'camloop',
-    day: 8,
+    day: 3,
     title: 'Counter-Surveillance',
     briefing: "Lyosha: \"The streetlight on Bering Street points straight at your cabin. I can't switch it off without Northstar noticing, but I can feed it a loop. Every frame with a PERSON in it gets swapped for the last clean frame before it, so the picture just shows an empty street for a bit longer. The first frame is always clean; I checked. Def and return are tomorrow's lesson; everything between them is yours.\"",
     timeLimit: null,
@@ -228,7 +228,7 @@ export const CHALLENGES = {
   // -------------------------------------------------------------------------
   petition: {
     id: 'petition',
-    day: 9,
+    day: 4,
     title: 'The Vacant Seat',
     briefing: "Nadia: \"Ruth's petition to put you on the ballot. Half the town signed twice, some in capitals, Tommy signed three times. Pearl won't file it like that, and Lyle Pruitt would love an excuse to throw it out. One signature per person, capitals don't make a different person, keep the spelling they used first, and sort it alphabetically.\"",
     timeLimit: null,
@@ -280,7 +280,7 @@ export const CHALLENGES = {
   // -------------------------------------------------------------------------
   ledger: {
     id: 'ledger',
-    day: 12,
+    day: 4,
     title: 'Debate Night',
     briefing: "Lyosha: \"Ivan photographed Northstar's payment ledger. Tonight Lyle Pruitt will stand up in the town hall and swear Northstar never paid him a cent. Each row is a dictionary: payer, payee, amount, memo. I want, for every payee, the total Northstar Dynamics paid them, counting only payments over 1000 dollars. Small stuff is lunches. Big stuff is bribes. Then we put it on the projector.\"",
     timeLimit: null,
@@ -349,7 +349,7 @@ export const CHALLENGES = {
   // -------------------------------------------------------------------------
   shares: {
     id: 'shares',
-    day: 13,
+    day: 5,
     title: 'Continuity Cards',
     briefing: "Baba Valya, on speaker: \"Shamir's trick. Five cards, any three open the door. Each card holds a share like '3:7F1A': the number of the card, a colon, a piece of the key. Put the pieces in the order of the numbers and glue them. Numbers, Rybka, not letters: ten comes after nine.\"\nLyosha: \"Halloran also printed spare cards. They go above ten. She's right.\"",
     timeLimit: null,
@@ -392,7 +392,7 @@ export const CHALLENGES = {
   // -------------------------------------------------------------------------
   vault: {
     id: 'vault',
-    day: 14,
+    day: 5,
     title: 'The Vault Terminal',
     briefing: "Nadia, whispering: \"You're in. The terminal is showing gibberish. Valya says Halloran's people XOR everything with 23 and call it encryption. Decode the screen so we know what it's asking for. Quickly, Rybka. The Gala speech ends in six minutes.\"",
     timeLimit: 360,
@@ -431,7 +431,7 @@ export const CHALLENGES = {
   // -------------------------------------------------------------------------
   final: {
     id: 'final',
-    day: 15,
+    day: 6,
     title: 'Cold Boot',
     briefing: "Bely Mys. The warehouse is empty: chairs knocked over, Lyosha's tea still warm. The border guards took them all. The drive is in the laptop and Grisha's dish is humming on the roof. Dawn in ten minutes. On the screen, a note in Lyosha's handwriting font: \"Halloran's rules: decoy shards START with #. Every real shard is written backwards. Every character is shifted UP by 3. You know this shape, Rybka. Write unwrap(shards), then send(unwrap(shards)).\"",
     timeLimit: 600,
@@ -480,4 +480,6 @@ export const CHALLENGES = {
 };
 
 /** Challenge ids in story order. */
-export const CHALLENGE_ORDER = ['faces', 'keypad', 'camloop', 'petition', 'ledger', 'shares', 'vault', 'final'];
+// the field hacks the five-day story runs, in order (keypad, petition and vault stay
+// in CHALLENGES for the laptop's practice list but no mission asks for them)
+export const CHALLENGE_ORDER = ['faces', 'camloop', 'ledger', 'shares', 'final'];

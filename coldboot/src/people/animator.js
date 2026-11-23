@@ -31,7 +31,7 @@ const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t
 const rand = (a, b) => a + Math.random() * (b - a);
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-const LOCO = ['walk', 'walkFast', 'jog', 'run', 'sprint'];
+const LOCO = ['walk', 'walkFast', 'jog', 'run', 'sprint'];   // gaits, slowest first
 const IDLES = ['idle', 'idle', 'idle2', 'idle3', 'waiting'];
 const LISTENS = ['listen1', 'listen2', 'idle'];
 const TALKS = { neutral: ['talk1', 'talk2', 'talk3'], happy: ['talk3', 'talkExcited'], sad: ['talkSad'], worry: ['talkNervous', 'talkSad'], angry: ['talkAngry'], surprise: ['talkExcited'] };
@@ -255,14 +255,9 @@ export class Animator {
     const add = (map, n, w) => { if (w > 1e-4 && n) map.set(n, (map.get(n) || 0) + w); };
     const moveK = smooth(0.06, 0.6, v) * (1 - seated);
     const loco = this._loco(v, dt);
-    if (stand > 0) {
-      add(lo, this.standClip, stand * (1 - moveK));
-      for (const [n, w] of loco) add(lo, n, stand * moveK * w);
-    }
-    if (crouch > 0) {
-      add(lo, 'crouch', crouch * (1 - moveK));
-      add(lo, 'walkSlow', crouch * moveK);
-    }
+    if (stand > 0) add(lo, this.standClip, stand * (1 - moveK));
+    for (const [n, w] of loco) add(lo, n, (stand + crouch) * moveK * w);
+    if (crouch > 0) add(lo, 'crouch', crouch * (1 - moveK));
     const hot = clamp(this.handsOnTable, 0, 1);
     if (sit > 0) {
       add(lo, this.sitClip.table, sit * hot);
@@ -270,9 +265,9 @@ export class Animator {
     }
     if (drive > 0) add(lo, 'sitChair', drive);
     for (const [n, w] of lo) up.set(n, w);
-    // arms crossed (standing still or seated): the arms of the arms-crossed clip
-    const ac = clamp(this.armsCrossed, 0, 1) * (1 - moveK) * (this.standClip === this.talkClip ? 0.3 : 1) * (1 - drive);
-    if (ac > 0.01 && this.standClip !== 'armsCrossed') scaleIn(up, 'armsCrossed', ac);
+    // arms crossed (standing still or seated): procedural, after the mocap (see _armsCrossed)
+    const ac = clamp(this.armsCrossed, 0, 1) * (1 - moveK) * (this.talkHold > 0 ? 0.25 : 1) * (1 - drive);
+    this._acTarget = this.shots.some((x) => x.w > 0.2) ? 0 : ac;
     // one-shots
     for (const s of this.shots) {
       const upper = s.upper ?? (seated > 0.5 || moveK > 0.3 || crouch > 0.5);
@@ -303,9 +298,18 @@ export class Animator {
     this._seat(seated, sit, drive);
     this._lean(moveK, dt);
     this._look(dt, seated);
+    this._armsCrossed(dt);
     this._handsUp(dt);
     this._drive(drive, dt);
-    if (!(far > 22 || unseen)) this._face(dt);
+    // faces only up close (a frozen half-blink at 30 m would be the only tell)
+    if (!(far > 22 || unseen)) { this._face(dt); this._faceOn = true; }
+    else if (this._faceOn) { this._faceOn = false; ch.influences.fill(0); }
+    // shadows: far away only the body casts one
+    const shadows = far < 40;
+    if (shadows !== this._shadows) {
+      this._shadows = shadows;
+      for (const m of Object.values(ch.meshes)) if (m.name !== 'body' && m.name !== 'hairFringe' && m.name !== 'glasses') m.castShadow = shadows;
+    }
   }
 
   /** Which idle / talk / sit clips should be playing now. */
@@ -322,9 +326,7 @@ export class Animator {
       this.seatTalkClip = this.talkClip === 'talkAngry' || this.talkClip === 'talkExcited' ? 'talk2' : this.talkClip;
     } else {
       this.talkClip = null;
-      const wantArms = this.armsCrossed > 0.5;
-      if (wantArms) this.standClip = 'armsCrossed';
-      else if (this.standClip === 'armsCrossed' || this.idleT <= 0 || !this.layers.lo.acts.has(this.standClip) && this.standClip !== 'idle') {
+      if (this.idleT <= 0 || !this.layers.lo.acts.has(this.standClip) && this.standClip !== 'idle') {
         const next = pick(this.lookAt ? LISTENS : IDLES);
         if (next !== this.standClip) this._restart(next);
         this.standClip = next;
@@ -339,6 +341,12 @@ export class Animator {
       this.sitT = rand(10, 22);
       this.sitClip = { table: pick(SIT_TABLE), chair: pick(SIT_CHAIR) };
     }
+    // a laughing face gets a laughing body (the director's 'laugh' emotion)
+    this.laughCool = Math.max(0, (this.laughCool || 0) - dt);
+    if (e.smile > 0.85 && e.squint > 0.3 && this.laughCool <= 0 && !this.shots.some((x) => x.w > 0.3)) {
+      this.laughCool = 9;
+      this.play(Math.random() < 0.6 ? 'laughLow' : 'laugh', { upper: seated > 0.5 ? true : undefined, fade: 0.5 });
+    }
     // listening: an occasional nod
     if (this.lookAt && !talking && this.talkHold <= 0) {
       this.nodT -= dt;
@@ -351,24 +359,35 @@ export class Animator {
 
   _restart(name) { if (!this.meta(name).loop || !this.clock.has(name)) this.clock.set(name, 0); }
 
-  /** Locomotion: [[clip, weight]…] for this speed; advances the gait phase. */
+  /**
+   * Locomotion: [[clip, weight]…] for this speed, and the gait phase advanced.
+   * Each gait plays alone from its own capture speed up to ~1.2× (cadence
+   * scaled), then crossfades into the next one: walk → brisk walk → jog → run →
+   * sprint, covering 0–6+ m/s. The phase advances by distance / stride, so the
+   * planted foot moves exactly with the ground (no skating).
+   */
   _loco(v, dt) {
     const L = [];
-    const sp = LOCO.map((n) => [n, this.meta(n)]).filter(([, m]) => m.speed > 0.2).sort((a, b) => a[1].speed - b[1].speed);
-    if (!sp.length) return L;
-    let cyc;
-    if (v <= sp[0][1].speed) { L.push([sp[0][0], 1]); cyc = sp[0][1].speed * sp[0][1].dur; }
-    else if (v >= sp[sp.length - 1][1].speed) {
-      const m = sp[sp.length - 1][1];
-      L.push([sp[sp.length - 1][0], 1]);
-      cyc = m.speed * m.dur * Math.pow(v / m.speed, 0.35);
-    } else {
-      let i = 0;
-      while (i < sp.length - 2 && v > sp[i + 1][1].speed) i++;
-      const a = sp[i][1], b = sp[i + 1][1];
-      const f = (v - a.speed) / (b.speed - a.speed);
-      L.push([sp[i][0], 1 - f], [sp[i + 1][0], f]);
-      cyc = lerp(a.speed * a.dur, b.speed * b.dur, f);
+    const gs = LOCO.map((n) => [n, this.meta(n)]).filter(([n, m]) => m.speed > 0.2 && this.lib.clips[n]).sort((a, b) => a[1].speed - b[1].speed);
+    if (!gs.length) return L;
+    const top = (m) => Math.max(m.speed * 1.2, m.speed + 0.2);
+    const stride = (m) => m.speed * m.dur;
+    let cyc = stride(gs[0][1]);
+    for (let i = 0; i < gs.length; i++) {
+      const [na, a] = gs[i];
+      const nb = gs[i + 1];
+      if (!nb || v <= top(a)) {
+        L.push([na, 1]);
+        cyc = stride(a) * (nb ? 1 : Math.pow(Math.max(1, v / a.speed), 0.35));
+        break;
+      }
+      const end = Math.max(top(a) + 0.25, nb[1].speed * 0.95);
+      if (v < end) {
+        const f = smooth(top(a), end, v);
+        L.push([na, 1 - f], [nb[0], f]);
+        cyc = lerp(stride(a), stride(nb[1]), f);
+        break;
+      }
     }
     if (v > 0.02) this.phase = (this.phase + (v * dt) / Math.max(0.3, cyc)) % 1;
     return L;
@@ -409,7 +428,7 @@ export class Animator {
     for (const n of set) {
       const m = this.meta(n);
       let t;
-      if (LOCO.includes(n) || n === 'walkSlow') t = (((this.phase + (m.phase || 0)) % 1) + 1) % 1 * m.dur;
+      if (LOCO.includes(n)) t = (((this.phase + (m.phase || 0)) % 1) + 1) % 1 * m.dur;
       else {
         const shot = this.shots.find((s) => s.name === n);
         const r = shot ? shot.rate : 1;
@@ -480,7 +499,7 @@ export class Animator {
     // talking: little head beats; headTilt
     const tk = Math.min(1, this.talkHold) * (0.4 + 0.6 * this.voice.open);
     const beat = Math.sin(this.t * 5.3 + this.fidget * 9) * 0.035 * tk * (seated > 0.5 ? 1 : 0.5);
-    const lw = this.lookW;
+    const lw = this.lookW * 0.92;   // a little of the mocap's own head motion stays
     if (lw < 0.005 && Math.abs(beat) < 1e-4 && !this.headTilt) { this._eyeAim = null; return; }
     // where the animation already points the head (body space)
     head.getWorldQuaternion(_q2);
@@ -500,6 +519,26 @@ export class Animator {
     if (this.headTilt) { head.getWorldDirection(_v); rotateWorld(head, _q.setFromAxisAngle(_v.set(0, 0, 1).applyQuaternion(bodyQ), this.headTilt * D2R)); }
     // the eyes lead: aim them at the target itself
     this._eyeAim = this.lookAt && lw > 0.05 ? this.lookAt : null;
+  }
+
+  /** Arms folded across the chest: the left forearm over the right, hands at the opposite elbows. */
+  _armsCrossed(dt) {
+    this.acW = damp(this.acW || 0, this._acTarget || 0, 3.5, dt);
+    const w = smooth(0, 1, this.acW);
+    if (w < 0.003 || !this.B.Bip01_Spine2) return;
+    const bodyQ = this.ch.group.getWorldQuaternion(new THREE.Quaternion());
+    const chest = this.B.Bip01_Spine2.getWorldPosition(new THREE.Vector3());
+    const s = this.ch.holder.scale.y;
+    for (const [side, k] of [['R', -1], ['L', 1]]) {
+      const A = this.arm[side];
+      if (!A) continue;
+      // the left arm lies on top (further forward), the right hand tucks under it
+      const t = side === 'L' ? new THREE.Vector3(-0.055, -0.085, 0.21) : new THREE.Vector3(0.045, -0.045, 0.165);
+      const target = chest.clone().add(t.multiplyScalar(s).applyQuaternion(bodyQ));
+      const sh = A.u.getWorldPosition(new THREE.Vector3());
+      const pole = sh.clone().add(new THREE.Vector3(k * 0.45, -0.55, 0.1).applyQuaternion(bodyQ));
+      this._ik(A, target, pole, w);
+    }
   }
 
   /** Arms up, palms out (the arrest). */

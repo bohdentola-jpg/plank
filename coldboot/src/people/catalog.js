@@ -23,24 +23,31 @@ export const AVATARS = {
   Business_Male_05: { src: 'Professions/Business_Male_05', sex: 'm', tier: 'hero', look: { cloth: { grey: 0.92, val: 1.25, lift: 0.16 } } },
   Construction_Male_02: { src: 'Professions/Construction_Male_02', sex: 'm', tier: 'named', drop: ['helmet'] },
   Male_Adult_13: { src: 'Adults/Male_Adult_13', sex: 'm', tier: 'named', look: { hair: { grey: 0.3 } } },
-  Male_Adult_14: { src: 'Adults/Male_Adult_14', sex: 'm', tier: 'named', look: { hair: { white: 0.9 }, age: 0.5 } },
+  Male_Adult_14: { src: 'Adults/Male_Adult_14', sex: 'm', tier: 'named', look: { hair: { grey: 0.55, white: 0.3 }, age: 0.7 } },
   Female_Adult_02: { src: 'Adults/Female_Adult_02', sex: 'f', tier: 'named', look: { hair: { grey: 0.2 }, age: 0.25 } },
   Male_Adult_12: { src: 'Adults/Male_Adult_12', sex: 'm', tier: 'named' },
-  Female_Adult_03: { src: 'Adults/Female_Adult_03', sex: 'f', tier: 'named', look: { hair: { grey: 0.65 }, age: 0.45 } },
+  Female_Adult_03: { src: 'Adults/Female_Adult_03', sex: 'f', tier: 'named', look: { hair: { grey: 0.55, white: 0.35 }, age: 0.5 } },
   Business_Male_03: { src: 'Professions/Business_Male_03', sex: 'm', tier: 'named' },
   Security_Female_01: { src: 'Professions/Security_Female_01', sex: 'f', tier: 'named', look: { age: 0.25 }, keep: ['hat'] },
   Business_Male_02: { src: 'Professions/Business_Male_02', sex: 'm', tier: 'named' },
   Business_Male_07: { src: 'Professions/Business_Male_07', sex: 'm', tier: 'named', look: { age: 0.3 } },
   Male_Adult_03: { src: 'Adults/Male_Adult_03', sex: 'm', tier: 'named', look: { hair: { white: 0.5 }, cloth: { grey: 0.85, val: 0.55 } } },
   Male_Adult_08: { src: 'Adults/Male_Adult_08', sex: 'm', tier: 'named' },
-  Male_Adult_15: { src: 'Adults/Male_Adult_15', sex: 'm', tier: 'named', look: { cloth: { grey: 1, val: 0.16 } } },
+  // the kufi's two atlas patches dyed black: an Orthodox skufia over a black cassock
+  Male_Adult_15: { src: 'Adults/Male_Adult_15', sex: 'm', tier: 'named', look: { cloth: { grey: 1, val: 0.16 }, regions: [{ rect: [0.112, 0.63, 0.875, 0.775], grey: 1, val: 0.14 }, { rect: [0.7, 0.71, 1, 1], grey: 1, val: 0.14 }] } },
   Female_Adult_12: { src: 'Adults/Female_Adult_12', sex: 'f', tier: 'named' },
   Female_Adult_05: { src: 'Adults/Female_Adult_05', sex: 'f', tier: 'named', look: { cloth: { hue: 160, sat: 0.7, val: 0.5 } } },
   Male_Adult_10: { src: 'Adults/Male_Adult_10', sex: 'm', tier: 'named' },
   Medical_Female_02: { src: 'Professions/Medical_Female_02', sex: 'f', tier: 'named', look: { hair: { grey: 0.6 }, age: 0.35 } },
-  Business_Female_01: { src: 'Professions/Business_Female_01', sex: 'f', tier: 'named', look: { hair: { grey: 0.7 }, age: 0.3 } },
-  Military_Male_05: { src: 'Professions/Military_Male_05', sex: 'm', tier: 'named' },
-  Police_Male_03: { src: 'Professions/Police_Male_03', sex: 'm', tier: 'named', drop: ['pistol'] },
+  Business_Female_01: { src: 'Professions/Business_Female_01', sex: 'f', tier: 'named', look: { hair: { grey: 0.6, white: 0.3 }, age: 0.45 } },
+  // US flag, rank, unit and name patches subdued (a border guard, not a GI)
+  Military_Male_05: { src: 'Professions/Military_Male_05', sex: 'm', tier: 'named', look: { regions: [
+    { part: 'body', rect: [0.14, 0.505, 0.205, 0.59], grey: 1, val: 0.75 }, { part: 'body', rect: [0.795, 0.505, 0.865, 0.61], grey: 1, val: 0.75 },
+    { part: 'body', rect: [0.39, 0.54, 0.465, 0.57], grey: 1, val: 0.8 }, { part: 'body', rect: [0.53, 0.54, 0.605, 0.575], grey: 1, val: 0.8 }] } },
+  // the POLICE lettering (back, chest, cap band) painted out: a border service officer
+  Police_Male_03: { src: 'Professions/Police_Male_03', sex: 'm', tier: 'named', drop: ['pistol'], look: { regions: [
+    { part: 'body', rect: [0.415, 0.18, 0.585, 0.255], grey: 1, val: 0.12 }, { part: 'body', rect: [0.57, 0.54, 0.645, 0.595], grey: 1, val: 0.12 },
+    { part: 'head', rect: [0.65, 0.905, 0.74, 0.965], grey: 1, val: 0.1 }] } },
   // ---------------------------------------------------------------- yours (the character creator) and the townsfolk
   Male_Adult_02: { src: 'Adults/Male_Adult_02', sex: 'm', tier: 'hero', label: 'Sweater' },
   Male_Adult_04: { src: 'Adults/Male_Adult_04', sex: 'm', tier: 'hero', label: 'Leather jacket' },
@@ -82,14 +89,13 @@ export const CLIPS = {
   waiting: ['static/m_idle_waiting_01', 'static/f_idle_waiting_01', { loop: 1 }],
   scratchHead: ['static/m_idle_scratch_head_01', 'static/f_idle_scratch_head_01', {}],
   touchFace: ['static/m_idle_touch_face_01', 'static/f_idle_touch_face_01', {}],
-  armsCrossed: ['static/m_idle_angry_01', 'static/f_gestic_listen_self-assured_01', { loop: 1 }],
+  impatient: ['static/m_idle_angry_01', 'static/f_gestic_listen_self-assured_01', { loop: 1 }],
   // locomotion (in place)
   walk: ['xy/m_walk_neutral_01', 'xy/f_walk_neutral_01', { loop: 1, loco: 1 }],
   walkFast: ['xy/m_walk_fast_01', 'xy/f_walk_fast_01', { loop: 1, loco: 1 }],
   jog: ['xy/m_run_slow_01', 'xy/f_run_slow_01', { loop: 1, loco: 1 }],
   run: ['xy/m_run_neutral_01', 'xy/f_run_neutral_01', { loop: 1, loco: 1 }],
   sprint: ['xy/m_run_fast_01', 'xy/f_run_fast_01', { loop: 1, loco: 1 }],
-  walkSlow: ['xy/m_walk_slow_01', 'xy/f_walk_slow_01', { loop: 1, loco: 1 }],
   crouch: ['static/m_crouch_idle', 'static/f_crouch_idle', { loop: 1 }],
   // talking and listening, standing
   talk1: ['static/m_gestic_talk_neutral_01', 'static/f_gestic_talk_neutral_01', { loop: 1, max: 16 }],

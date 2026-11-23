@@ -259,7 +259,7 @@ export const LINES = {
   'sf.evan.gift': { who: 'evan', en: "For me? Oh wow. Nobody gives me things. People take things. From the shelves. And pay. Thank you. I'm going to log this. I mean, love this.", emo: 'smile' },
   'sf.l.evan': { who: 'lyosha', ru: 'Слепая зона в подсобке? Запомни. Пригодится.', en: "A blind spot in the stockroom? Remember that. It'll come in handy." },
 
-  // ================================================================ Mayor Walt, Gideon Shaw, Halloran, Mr. Grey
+  // ================================================================ Mayor Walt, Gideon Shaw, Mr. Grey
   'sf.walt.g0': { who: 'walt', en: "Walt Hennessey, mayor. Don't hold it against me. Nobody else wanted the job." },
   'sf.walt.g1': { who: 'walt', en: "Well, if it isn't the fixer. Folks are talking you up. That's dangerous in a small town. Next thing you know, they make you mayor.", emo: 'smile' },
   'sf.walt.t0': { who: 'walt', en: "Ask me in spring. In winter, the answer's always the same. Cold, broke, and still here." },
@@ -273,10 +273,6 @@ export const LINES = {
   'sf.gideon.t1': { who: 'gideon', en: 'Port Zarya is a fine town with a fine future. Its future simply arrived before it was ready.' },
   'sf.gideon.t2': { who: 'gideon', en: "I relax by making sure nothing surprises me. You, for instance, surprised me. I've relaxed less this month." },
   'sf.gideon.gift': { who: 'gideon', en: "I don't accept gifts. Ethics policy. Northstar's, not the city's. Theirs is stricter." },
-  'sf.halloran.g0': { who: 'halloran', en: "We haven't been introduced. I know who you are, of course. I make a point of knowing who fixes things." },
-  'sf.halloran.t0': { who: 'halloran', en: "Nothing it doesn't already want for itself. Quiet. Warmth. A future. I simply intend to deliver it on schedule." },
-  'sf.halloran.t1': { who: 'halloran', en: "I like the cold. It's honest. It tells you exactly how long you'll last." },
-  'sf.halloran.gift': { who: 'halloran', en: "Keep it. You'll need everything you have." },
   'sf.okafor.g0': { who: 'okafor', en: 'Afternoon. Cold one.' },
   'sf.okafor.g1': { who: 'okafor', en: 'Agent Okafor. You can still call me Mr. Grey. Everybody else does, behind my back.' },
   'sf.okafor.t0': { who: 'okafor', en: "You don't. That's fine. Most people don't." },
@@ -290,7 +286,6 @@ export const LINES = {
   'sf.n.card2': { who: 'nadia', ru: 'Вторая. Осталась одна. Не торопись, но и не медли.', en: "The second. One to go. Don't rush — but don't dawdle." },
   'sf.d.card3': { who: 'dmitri', ru: 'Три карты. Этого хватит, чтобы открыть хранилище. Молодец, Рыбка.', en: 'Three cards. Enough to open the vault. Well done, Rybka.', emo: 'smile' },
   'sf.v.card4': { who: 'valya', ru: 'Четвёртая? Запас карман не тянет. Так моя мама говорила.', en: 'A fourth? A spare never weighs down a pocket. My mother used to say that.', emo: 'smile' },
-  'sf.l.card5': { who: 'lyosha', ru: 'Все пять! Полный комплект! Хэллоран бы заплакал.', en: 'All five! The full set! Halloran would cry.', emo: 'laugh' },
 };
 
 // ------------------------------------------------------------------ shared bits
@@ -506,11 +501,6 @@ const P = {
     greet: ['sf.gideon.g0', 'sf.gideon.g1'], cold: true,
     chat: [T('What does a city manager do?', 'sf.gideon.t0'), T('What do you think of Port Zarya?', 'sf.gideon.t1'), T('Do you ever relax?', 'sf.gideon.t2', 1)],
     gift: { decline: 'sf.gideon.gift' },
-  },
-  halloran: {
-    greet: ['sf.halloran.g0'], cold: true,
-    chat: [T('What do you want with Port Zarya?', 'sf.halloran.t0'), T('Do you like it here?', 'sf.halloran.t1')],
-    gift: { decline: 'sf.halloran.gift' },
   },
   okafor: {
     greet: (c) => (revealed(c) ? 'sf.okafor.g1' : 'sf.okafor.g0'), cold: true,

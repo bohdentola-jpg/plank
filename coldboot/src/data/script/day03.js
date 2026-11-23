@@ -164,11 +164,9 @@ export const LINES = {
   'd3.k.yes': { who: 'koshkin', en: "'Sounds great,' you said? Hm. Well. Young people like free things. I was young once. Around nineteen sixty." },
   'd3.k.none': { who: 'koshkin', en: 'Pearl says you sat in the back like a mouse. Good. Smart mice live longer.' },
   'd3.k.idle': { who: 'koshkin', en: "Pearl's board, eh? Good. Fix the town and the town feeds you. That's how it worked when I was a boy." },
-  'd3.d.idle': { who: 'dolly', en: "Wednesday's meatloaf day. Nobody knows why. It's always been meatloaf day." },
   'd8.d.ray': { who: 'dolly', en: "Ray Moody sat right there last night and swore if the council leases the cannery dock to Northstar, he's done. I've never seen him like that.", emo: 'worry' },
   'd3.h.fix': { who: 'hank', en: "That thing you said last night. Free things break. I've been saying that for twenty years and nobody listened. Here. Box of nails. Don't get used to it." },
   'd3.h.jobs': { who: 'hank', en: "Pearl's board, huh? Lumber's twelve, nails four, wire eight. I don't haggle and I don't gift-wrap." },
-  'd3.h.idle': { who: 'hank', en: 'Measure twice, cut once, and buy your nails from me.' },
   'd4.h.janitor': { who: 'hank', en: "Heard you're mopping City Hall now. Handyman, shopkeeper, janitor. You collecting jobs like stamps?" },
   'd3.r.cams': { who: 'ruth', en: 'You asked about the cameras. Good. Somebody had to, and I was tired of being the only one.', emo: 'smile' },
   'd3.r.yes': { who: 'ruth', en: "'Sounds great.' Hm. I've heard that before. From people who left when it stopped sounding great.", emo: 'frown' },
@@ -616,7 +614,7 @@ export const DIALOG = {
       c.emit('talk:dolly');
       return;
     }
-    return idle(c, prev, 'dolly', c.flag('d4.d.job') ? 'd8.d.ray' : 'd3.d.idle');
+    return idle(c, prev, 'dolly', c.flag('d4.d.job') ? 'd8.d.ray' : null);
   },
 
   walt: async (c, prev) => {

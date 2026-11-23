@@ -38,12 +38,12 @@ export function skinMaterial(src, o = {}) {
     roughnessMap: texOf(src, 'roughnessMap'),
     roughness: o.roughness ?? 1.0,
     metalness: 0,
-    specularIntensity: 0.62,
-    sheen: 0.22,
-    sheenRoughness: 0.42,
-    sheenColor: new THREE.Color(0.95, 0.62, 0.52),
+    specularIntensity: 0.6,
+    sheen: 0.16,
+    sheenRoughness: 0.45,
+    sheenColor: new THREE.Color(0.9, 0.72, 0.64),
   });
-  const wrap = o.wrap || [0.38, 0.16, 0.1];
+  const wrap = o.wrap || [0.3, 0.15, 0.11];
   m.onBeforeCompile = (sh) => {
     sh.fragmentShader = `#define SKIN_WRAP vec3(${wrap.map((v) => v.toFixed(3)).join(',')})\n` +
       sh.fragmentShader.replace('#include <lights_physical_pars_fragment>', skinLightsChunk());

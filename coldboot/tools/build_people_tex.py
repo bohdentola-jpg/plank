@@ -32,6 +32,12 @@ def load_rgb(path):
 def resize(im, size):
     if im.size[0] == size and im.size[1] == size:
         return im
+    if im.mode == 'RGBA':
+        # Pillow resamples RGBA premultiplied: colour under (near-)zero alpha comes back as noise.
+        # Our alpha is a mask (cloth / hair coverage), not opacity of the colour: resample apart.
+        rgb = im.convert('RGB').resize((size, size), Image.LANCZOS)
+        a = im.getchannel('A').resize((size, size), Image.LANCZOS)
+        return Image.merge('RGBA', (*rgb.split(), a))
     return im.resize((size, size), Image.LANCZOS)
 
 
@@ -81,15 +87,29 @@ def face_skin_stats(head_rgb):
 
 
 def hair_mask(head_rgb, hair_rgba, skin_st):
+    """Soft mask of hair (scalp, brows, beard, hair cards) in the head colour map."""
     lab = rgb_to_lab(head_rgb)
-    h = to_f(hair_rgba)
-    st_hair = stats(rgb_to_lab(h[..., :3]), h[..., 3] > 0.7)
-    H = lab.shape[0]
+    H, W = lab.shape[:2]
+    if hair_rgba is not None:
+        h = to_f(hair_rgba)
+        st_hair = stats(rgb_to_lab(h[..., :3]), h[..., 3] > 0.7)
+    else:
+        # no hair cards: learn the hair colour from the back/sides of the head (the map's top corners)
+        reg = np.zeros((H, W), bool)
+        reg[int(H * 0.03):int(H * 0.2), int(W * 0.03):int(W * 0.22)] = True
+        reg[int(H * 0.03):int(H * 0.2), int(W * 0.78):int(W * 0.97)] = True
+        reg &= lab[..., 0] > 3
+        if skin_st is not None:
+            reg &= mahal(lab, skin_st) > 12
+        st_hair = stats(lab, reg)
     if st_hair is None or skin_st is None:
-        return np.zeros(lab.shape[:2], np.float32)
+        return np.zeros((H, W), np.float32)
     dh, ds = mahal(lab, st_hair), mahal(lab, skin_st)
     m = 1.0 / (1.0 + np.exp(-np.clip((ds - dh) * 0.35, -30, 30)))
-    m[int(H * 0.66):, :] = 0          # the mouth/eye atlas at the bottom is never hair
+    m[int(H * 0.6):, :int(W * 0.3)] = 0     # the mouth/eye atlas is never hair
+    for x0, y0, x1, y1 in ((0.34, 0.24, 0.48, 0.335), (0.52, 0.24, 0.66, 0.335), (0.4, 0.355, 0.6, 0.43)):
+        m[int(H * y0):int(H * y1), int(W * x0):int(W * x1)] = 0   # eye sockets, lips
+    m[lab[..., 0] < 2] = 0                   # nor the empty atlas
     return m.astype(np.float32)
 
 
@@ -184,7 +204,7 @@ def main():
             part = m.get('part')
             if part == 'head' and skin_st is not None:
                 hl = look.get('hair') or {}
-                if (hl.get('grey') or hl.get('white')) and hair_ref is not None:
+                if hl.get('grey') or hl.get('white'):
                     hm = blur(hair_mask(arr, hair_ref, skin_st), 2)
                     arr = grey_hair(arr, hm, hl.get('grey', 0), hl.get('white', 0))
                     if dbg:
@@ -192,6 +212,14 @@ def main():
                 if look.get('age'):
                     sm = blur(skin_mask(arr, skin_st), 3)
                     arr = age_skin(arr, sm, look['age'])
+            for rg in look.get('regions', []):
+                if rg.get('part', 'head') != part:
+                    continue
+                H, W = arr.shape[:2]
+                x0, y0, x1, y1 = rg['rect']
+                mk = np.zeros((H, W), np.float32)
+                mk[int(H * y0):int(H * y1), int(W * x0):int(W * x1)] = 1
+                arr = recolor_cloth(arr, blur(mk, 2), rg)
             cloth = None
             if part == 'body' and skin_st is not None:
                 cloth = 1 - blur(skin_mask(arr, skin_st), 2)
@@ -201,7 +229,7 @@ def main():
                     to_im(cloth).resize((512, 512)).save(os.path.join(dbg, 'clothmask.png'))
             if cloth is not None:
                 # alpha = cloth mask (the game tints clothes, never hands)
-                resize(to_im(np.concatenate([arr, cloth[..., None]], -1), 'RGBA'), size).save(m['out'], quality=q, method=6, alpha_quality=60)
+                resize(to_im(np.concatenate([arr, cloth[..., None]], -1), 'RGBA'), size).save(m['out'], quality=q, method=6, alpha_quality=60, exact=True)
             else:
                 resize(to_im(arr), size).save(m['out'], quality=q, method=6)
         elif kind == 'normal':
@@ -230,12 +258,22 @@ def main():
                 wsum = wsum + blur(alpha[..., 0], r)[..., None]
             filled = np.where(alpha > 0.5, rgb, acc / np.maximum(wsum, 1e-3))
             im = to_im(np.concatenate([np.clip(filled, 0, 1), alpha], -1), 'RGBA')
-            resize(im, size).save(m['out'], quality=q, method=6, alpha_quality=92)
+            resize(im, size).save(m['out'], quality=q, method=6, alpha_quality=92, exact=True)
         elif kind == 'thumb':
-            # a portrait for the character creator, cut from Rocketbox's T-pose render
-            im = load_rgb(m['src']).convert('RGB')
-            x, y, w, h = m['crop']
-            im = im.crop((x, y, x + w, y + h)).resize(tuple(m['px']), Image.LANCZOS)
+            # a portrait for the character creator, cut from Rocketbox's T-pose render (head found by its alpha)
+            im = load_rgb(m['src']).convert('RGBA')
+            a = np.asarray(im)[..., 3] > 40
+            W0 = a.shape[1]
+            rows = np.where(a[:, W0 // 4:W0 * 3 // 4].any(1))[0]
+            top = int(rows[0]) if len(rows) else 40
+            band = a[top:top + 70, W0 // 4:W0 * 3 // 4]
+            xs = np.where(band.any(0))[0] + W0 // 4
+            cx = int(xs.mean()) if len(xs) else W0 // 2
+            w, h = m.get('cut', [150, 177])
+            x0, y0 = cx - w // 2, max(0, top - 14)
+            bg = Image.new('RGBA', im.size, (27, 31, 36, 255))
+            im = Image.alpha_composite(bg, im).convert('RGB')
+            im = im.crop((x0, y0, x0 + w, y0 + h)).resize(tuple(m['px']), Image.LANCZOS)
             im.save(m['out'], quality=q, optimize=True)
         else:
             raise SystemExit('unknown map kind ' + kind)

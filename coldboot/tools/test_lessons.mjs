@@ -103,7 +103,9 @@ ok('14 lessons', LESSONS.length === 14, LESSONS.length);
 const ids = new Set();
 LESSONS.forEach((L, i) => {
   const where = L.id;
-  ok(`${where} id/day`, L.id === `l${String(i + 1).padStart(2, '0')}` && L.day === i + 1, J({ id: L.id, day: L.day }));
+  // the story runs five lessons (l01 l04 l07 l08 l14) on days 1–5; the rest follow as extras,
+  // so the array is in play order and the days count up 1..14
+  ok(`${where} id/day`, /^l(0[1-9]|1[0-4])$/.test(L.id) && L.day === i + 1, J({ id: L.id, day: L.day }));
   ok(`${where} title`, typeof L.title === 'string' && L.title.length > 3);
   ok(`${where} ru line`, L.ru && /[А-Яа-яЁё]/.test(L.ru.line) && typeof L.ru.en === 'string' && L.ru.en.length > 10, J(L.ru));
   ok(`${where} ru line is one sentence`, !/[.!?…]\s+[А-ЯЁA-Z]/.test(L.ru.line) && L.ru.line.length < 140, L.ru.line);
@@ -141,7 +143,8 @@ const LIVE_EXPECT = {
   final: [['send', 'AURORA-ABORT-0415']],
 };
 const REQUIRED = ['faces', 'keypad', 'camloop', 'petition', 'ledger', 'shares', 'vault', 'final'];
-ok('all challenges present', REQUIRED.every((k) => CHALLENGES[k]) && J(CHALLENGE_ORDER) === J(REQUIRED), J(Object.keys(CHALLENGES)));
+ok('all challenges present', REQUIRED.every((k) => CHALLENGES[k]), J(Object.keys(CHALLENGES)));
+ok('the story runs faces, camloop, ledger, shares, final', J(CHALLENGE_ORDER) === J(['faces', 'camloop', 'ledger', 'shares', 'final']), J(CHALLENGE_ORDER));
 for (const id of Object.keys(CHALLENGES)) {
   const ch = CHALLENGES[id];
   const where = `challenge ${id}`;
@@ -165,7 +168,7 @@ for (const id of Object.keys(CHALLENGES)) {
 }
 ok('final has a 10-minute clock and 4 cases', CHALLENGES.final.timeLimit === 600 && CHALLENGES.final.check.cases.length === 4);
 ok('final cases include no-decoy and all-but-one-decoy', CHALLENGES.final.check.cases.some((c) => c.args[0].every((s) => !s.startsWith('#'))) && CHALLENGES.final.check.cases.some((c) => c.args[0].filter((s) => !s.startsWith('#')).length === 1));
-ok('lesson 14 rehearses the finale shape', LESSONS[13].exercises[2].check.fn === CHALLENGES.final.check.fn);
+ok('lesson 14 rehearses the finale shape', LESSONS.find((l) => l.id === 'l14').exercises[2].check.fn === CHALLENGES.final.check.fn);
 
 // a wrong finale answer gets a helpful message
 {

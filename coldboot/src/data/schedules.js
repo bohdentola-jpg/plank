@@ -83,6 +83,16 @@ export const SCHEDULES = {
     { t: [9, 17], at: 'post', do: 'stand' },
     { t: [17, 9], away: true },
   ],
+  // Mr. Grey: everywhere, from day 2 (a parked car the night of the council
+  // meeting). Lunch across from NORTHSTAR 24, the square in the afternoon, a
+  // booth at the Midnight Sun in the evening. Never in town on the last night.
+  okafor: (day) => (day < 2 ? [{ t: [0, 24], away: true }] : [
+    ...(day >= 5 ? [{ t: [17, 24], away: true }] : []),
+    { t: [11, 14], at: 'northstar.parking', do: 'arms' },
+    { t: [14, 17], at: { x: -8, z: 6, rot: Math.PI / 2 }, do: 'stand' },
+    { t: [17, 22], at: 'diner.booth5', do: 'sit' },
+    { t: [22, 11], away: true },
+  ]),
   wade: (day) => [
     ...(day === 1 ? [{ t: [6, 12], at: 'terminal', do: 'arms' }] : []),
     { t: [8, 16], at: 'hangar', do: 'arms' },

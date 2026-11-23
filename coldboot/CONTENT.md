@@ -15,9 +15,10 @@ Read `DESIGN.md` first (story bible, cast, the day-by-day spine). Then read
 | `DIALOG_OVERRIDE = true` | your DIALOG wraps earlier modules': call `return prev(c)` when your content doesn't apply |
 | `DAY` | (day modules only) `{ n, start: [mission ids started that morning], mustFinish: [missions that must be done before sleeping] }` |
 
-Modules are already registered in `src/data/script/index.js` (day02 … day14,
-side_friends, side_jobs, side_town). **Only edit your own files.** Order of
-composition: day01 → side_jobs → side_town → side_friends → day02 → … → day14.
+Modules are registered in `src/data/script/index.js` (prologue, folk, lessons,
+day01 … day05, side_friends, side_jobs, side_town, finale; shared helpers in
+kit.js). **Only edit your own files.** Order of composition: prologue → folk →
+lessons → day01 → side_jobs → side_town → side_friends → day02 → … → day05 → finale.
 
 ## Lines
 

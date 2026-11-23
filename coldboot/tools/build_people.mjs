@@ -116,11 +116,12 @@ function partOf(matName) {
   for (const w of PART_WORDS) if (toks.includes(w)) return w;
   return toks.slice(1).join('_') || 'body';
 }
+const TYPOS = { equpiment: 'equipment' };   // material names in a few Rocketbox files
 function texFor(files, matName, kind) {
   const toks = matName.toLowerCase().split('_');
   const prefix = toks[0];
   const part = partOf(matName);
-  const word = part === 'hair' ? 'opacity' : part;
+  const word = part === 'hair' ? 'opacity' : TYPOS[part] || part;
   let c = files.filter((f) => {
     const l = f.toLowerCase();
     return l.startsWith(prefix + '_') && l.includes('_' + word) && l.includes(kind) && l.endsWith('.tga');
@@ -603,7 +604,7 @@ if (doAvatars) {
 if (doAvatars) {
   // creator portraits, cut from Rocketbox's preview renders
   const maps = PLAYER_AVATARS.filter((id) => existsSync(join(RB, thumbFile(AVATARS[id])))).map((id) => ({
-    kind: 'thumb', src: join(RB, thumbFile(AVATARS[id])), out: join(OUT, 'thumbs', id + '.jpg'), crop: [555, 8, 170, 200], px: [156, 184], quality: 82 }));
+    kind: 'thumb', src: join(RB, thumbFile(AVATARS[id])), out: join(OUT, 'thumbs', id + '.jpg'), cut: [150, 177], px: [156, 184], quality: 84 }));
   mkdirSync(join(OUT, 'thumbs'), { recursive: true });
   const job = join(WORK, 'thumbs.json');
   writeFileSync(job, JSON.stringify({ maps }));

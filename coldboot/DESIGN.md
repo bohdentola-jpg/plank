@@ -13,7 +13,7 @@ bloom, scanlines, a synthesized soundtrack. Three.js r160, plain ES modules, no 
 ### Premise
 Northstar Dynamics sold the world **AURORA**, an "AI grid-stability" controller now
 inside power grids on every continent. Hidden in it is **WORMWOOD (ПОЛЫНЬ)**, a dormant
-payload that wakes at dawn on day 15 and shuts the grids down for good. Northstar's
+payload that wakes at dawn in five days and shuts the grids down for good. Northstar's
 founder **Cyrus Halloran** believes civilisation needs a *cold boot*. He runs it from
 **the Dome**, a Cold War radar station on Kettle Hill above **Port Zarya, Alaska**
 (pop. 1,140), a fishing town on the Bering Strait founded in 1822 as a Russian-American
@@ -24,7 +24,8 @@ The abort code, the **Root Key**, sits on an air-gapped drive in the Dome's vaul
 Halloran's paranoia split access across the town's political tree: the vault opens with
 the **Mayor's municipal key** plus **3 of 5 council "continuity cards"** (Shamir shares
 the council members signed without knowing what they were), and only someone the
-Development Board trusts gets inside the Dome — at the **Winter Gala** on day 14.
+Development Board trusts gets inside the Dome — at the **Winter Gala** on Friday night,
+day 5.
 
 Across the strait in **Bely Mys (Белый Мыс), Chukotka**, a fish-warehouse crew of
 ex-engineers found WORMWOOD in strange traffic from Alaska. They are not a government.
@@ -64,11 +65,11 @@ The player is a silent protagonist in voiced scenes (choices are text).
 
 ### Others in town
 - **Sasha Koshkin** (82) — Koshkin's General Merchandise, est. 1911 by his grandfather.
-  Speaks old Alaskan Russian. Rents you his late brother's cabin, gives you a job, and
-  when his heart gives out on day 5 he leaves you the store to run.
+  Speaks old Alaskan Russian. Rents you his late brother's cabin, puts you on his 1952
+  till, and on the last day dresses you for the Gala from his back room.
 - **Evan Pike** — manager of NORTHSTAR 24. Perfect smile, knows your name before you say
   it. The town's eyes.
-- **"Mr. Grey"** — grey parka, on your plane, everywhere after. Revealed day 10 as
+- **"Mr. Grey"** — grey parka, on your plane, everywhere after. Revealed on day 3 as
   **Special Agent Daniel Okafor**, FBI Anchorage, investigating Northstar *and* you.
 - **Father Gabriel Popov** — priest of Holy Transfiguration (blue onion domes). Chess, old radios.
 - **Wade Tolliver** — bush pilot at the airstrip, owns the little helicopter *Dragonfly*,
@@ -79,25 +80,22 @@ The player is a silent protagonist in voiced scenes (choices are text).
 - **Doc Ellen Haverford** — the clinic. **Pearl Jessup** — the post office.
 
 ### Day by day
-| Day | Title | Spine |
-|---|---|---|
-| 0 | **Тихо** (prologue) | Character creator → the warehouse table at Bely Mys (voiced, Russian) → the plane cabin (earpiece check, Mr. Grey takes your photo) → rural airstrip → town reveal → Koshkin's cabin. |
-| 1 | Hello, Port Zarya | Meet Koshkin, Dolly, Hank (buy the truck), Evan greets you by name. Fix Father Gabriel's bell rope → plant the relay antenna in the bell tower. Lesson 1. |
-| 2 | Work Ethic | First shift at Koshkin's. Council meeting at 7 pm: photograph the five members. Lesson 2. |
-| 3 | The Fixer | Job board repairs; tail Gideon Shaw to the Dome road. Mr. Grey. Lesson 3. |
-| 4 | Ears Everywhere | Bug City Hall during a cleaning job. Hear about the "continuity cards". Lesson 4. |
-| 5 | Fish Fry | Church hall fish fry: council members' troubles (personal quests open). Koshkin collapses; the store is yours. Lesson 5. |
-| 6 | Open for Business | Run Koshkin's against NORTHSTAR 24. Snowmobile race. Lesson 6. |
-| 7 | Sunday | Liturgy and bells. A call home. Your cabin was searched — a camera in the smoke alarm. Lesson 7. |
-| 8 | Counter-Surveillance | Sweep the cabin; loop the streetlight cameras with code. Mr. Grey warns you. Lesson 8. |
-| 9 | The Vacant Seat | A council seat falls vacant; special election day 13. Petition, posters. Lesson 9. |
-| 10 | Mr. Grey | Okafor reveals himself; interrogation; a deal. Lesson 10. |
-| 11 | The Mayor's Ear | Walt's personal quest; the Gala; the municipal key. Lesson 11. |
-| 12 | Debate Night | Town hall debate vs Lyle Pruitt with evidence you decoded. Lesson 12. |
-| 13 | Election Day | Win the seat (or the mayor's appointment) → Gala invitation. Last shares. Lesson 13. |
-| 14 | The Winter Gala | Dress up, mingle, slip away, vault (key + 3 shares), the drive. Alarm. Wade's chopper. |
-| 14→15 | **Cold Boot** | Flight across the strait under fire (QTE), land at Bely Mys. The warehouse is empty — border guards took the team. Plug in the drive. **Ten minutes.** Write the code. The lights stay on. Guards burst in. |
-| — | Epilogue | A jail cell, the sun going down over the strait, the team in the next cells. Credits. |
+Five days, Monday to Friday, about 35–45 minutes each (3–4 hours in all). Each day is
+one `src/data/script/dayNN.js` with `DAY = { n, start, mustFinish }`: a short spine of
+concrete objectives (a named place and a person), one or two clock gates (`m.waitUntil`;
+T skips ahead), one field hack, and one Night School lesson. You can't sleep until the
+day's `mustFinish` missions are done.
+
+| Day | Title | Spine | ~Time |
+|---|---|---|---|
+| 0 | **Тихо** (prologue) | Character creator → the warehouse table at Bely Mys (voiced, Russian: Wormwood wakes "in five days, at dawn") → the plane (earpiece check, Mr. Grey takes your photo). | 8 min |
+| 1 Mon | Arrival | The airstrip and Wade → the town reveal → Koshkin rents you his brother's cabin → Father Gabriel's frayed bell rope (rope from Hank's) → ring the bell, wire the relay in the belfry → home. Lesson 1 (print). | 30 min |
+| 2 Tue | Cover | A shift on Koshkin's till → meet the council before tonight (Dolly at the diner, Ruth at the post office, Lyle at City Hall) → 7 pm council meeting: Gideon Shaw's "Phase Two", photograph the dais, Chief Kowalczyk at the door → a grey car with its lights off → field hack **faces**. Lesson 2 (conditions). Pearl's job board opens. | 35 min |
+| 3 Wed | Ears and Eyes | A call home → Walt hires you to clean City Hall: mop, sweep, a bug under the council table and one in the mayor's office → home: the cabin was searched, a lens in the smoke alarm → sweep it → 5:30 pm loop the square's streetlight cameras (field hack **camloop**) → 8 pm the bug catches Shaw on the "continuity cards": the mayor's key plus any 3 of 5 → outside the diner, Mr. Grey is FBI Special Agent Okafor → three questions at the police station: a deal, or not. Lesson 3 (loops). | 40 min |
+| 4 Thu | The Seat | Ray quits the council at the Rusty Anchor (his card) → at City Hall the charter sends the seat to a town meeting tonight; Ruth nominates you against Lyle Pruitt → the petition round (Hank, Dolly, Father Gabriel) doubles as the parts run for Walt's late wife's music box → file with Pearl → fix the music box: Walt hands you the mayor's key, or you press it into wax → Northstar's ledger at Pruitt Realty → 7 pm debate at the Parish Hall (field hack **ledger** on the projector), ballots, the count → Gala invitation (the council seat, the Board, or Halloran himself), Ruth's card, Gideon's threat. Lesson 4 (strings). | 45 min |
+| 5 Fri | The Winter Gala | Dress rehearsal (Lesson 5: the shape of the finale's `unwrap(shards)`) → the third card if one is still missing → Wade and his helicopter → a 1962 suit or dress from Koshkin's back room → goodbyes → 7 pm Walt drives you up Kettle Hill → the Dome, Halloran's speech → the service door, the server room panel, the vault door: brass key + three cards (field hack **shares**) → the drive → alarm → a snowmobile down to Wade's hangar → Okafor looks the other way → `G.finale()`. | 35 min |
+| 5→6 | **Cold Boot** | Flight across the strait under fire (QTE; each of Wade's lessons widens the window). Bely Mys: the warehouse is empty, border guards took the team. Plug in the drive. **Ten minutes:** write `unwrap(shards)` (field hack **final**). The lights stay on. Guards burst in. | 15 min |
+| — | Epilogue | A jail cell, the sun going down over the strait, the team in the next cells. Credits. | |
 
 ### Being watched
 Northstar's attention is a meter (**ATTENTION**). Cameras (NORTHSTAR 24, City Hall, smart
@@ -106,20 +104,29 @@ sight (trespass, lockpicks, bugs, hacking, tailing too close, restricted areas) 
 honest work, church, friends lower it. 100% = **BURNED**: the mission fails and restarts
 from its checkpoint. An eye in the HUD opens when something is watching you.
 
-### Long game (target 10+ hours)
-Fourteen days, each with a story mission plus far more than one day can hold:
-- **Friendships**: every named NPC has levels 0–5, likes/dislikes, a schedule and a
-  personal quest line whose end helps the main story.
-- **Fixing the town** (**TOWN SPIRIT**): ~24 restoration projects (church dome gilding,
-  houses, the dock, streetlights, the school, the radio transmitter…) with materials from
-  Hank's and repair minigames. Buildings visibly change. Spirit and standing gate the
-  political climb.
-- **Work**: shifts at Koshkin's (till, stocking), snowplow route, cannery line, KZRY radio;
-  from day 5 you run Koshkin's: stock, prices, customers, NORTHSTAR undercutting you.
-- **Lyosha's Night School**: 14 Python lessons on the cabin laptop + field hacks. The
-  finale is a real program written in 10 minutes.
-- Fishing, darts, chess, snowmobile races, flight lessons, banya, cooking, 40 hidden
-  matryoshkas, Nadia's dead drops.
+### Side content (small, curated, and it pays off)
+Optional, and every piece of it shows up later in the story:
+- **The council's cards.** Ray hands his over when he quits (day 4), Ruth hers after the
+  count (day 4). Dolly and Hank part with theirs once you're friends (level 2) or once
+  you've fixed the diner sign / Hank's yard fence. Still short of three on day 5? The
+  morning sends you to the nearest card holder. Friendship topics (Dolly's loan, Ray's cannery, Lyle's
+  insurance, Ruth's history of the town) are the quickest way to those levels, and
+  Ruth's debate prep is worth points on night four.
+- **The mayor's key.** Walt hands it over if he has reason to trust you (Okafor's deal,
+  standing in town, a friendly word); otherwise it's candle wax and a file.
+- **Fixing the town** (**TOWN SPIRIT**): eight repairs, each with a visible result: the
+  diner sign, Hank's yard fence, the school gym roof, the cannery loading door, the cabin
+  roof and Koshkin's shop sign, the post office steps, the church domes. Pearl's job board
+  (from day 2) and Koshkin's roof deal hand them out; materials from Hank's.
+- **Work**: Koshkin's till (the story shift on day 2, then days 3–4), the cannery line
+  (ask Ray), the plough route (Hank's old Ford, $300).
+- **Wade's flying lessons** (from day 2, $60, three of them): each widens the finale's
+  QTE window, and any lesson makes sure Wade leaves the hangar open on day 5.
+- **Tommy's sled race** on Loon Lake (days 2–4).
+- **Lyosha's Night School**: one lesson a night — print, conditions, loops, strings, then
+  the dress rehearsal of `unwrap(shards)`. The other nine lessons unlock one by one after
+  the rehearsal, as extra credit. Field hacks: faces (2), camloop (3), ledger (4),
+  shares (5), final (finale). The finale is a real program written in 10 minutes.
 
 ---
 

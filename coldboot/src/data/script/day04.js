@@ -203,7 +203,6 @@ export const LINES = {
   'd9.m.sign': { who: 'marta', en: "I don't sign petitions. A police chief signs warrants. Different pen." },
   'd9.m.luck': { who: 'marta', en: 'But. Good luck. Somebody ought to make Lyle sweat.', emo: 'smile' },
   // ---- around town on Thursday
-  'd9.r.chat': { who: 'ruth', en: "Clipboards where people sit. Names from people who know you. And smile, even when Lyle's looking. Especially then.", emo: 'smile' },
   'd12.r.pre': { who: 'ruth', en: 'Remember. When he says the future, you ask him whose.', emo: 'smile' },
   'd9.ry.after': { who: 'ray', en: "Don't look at me like that. I signed. Now go get the rest. And don't let Gideon count them." },
   'd12.ry.after': { who: 'ray', en: "I haven't heard the hall that loud since the strike. Whatever happens tomorrow, you made them listen." },
@@ -212,7 +211,6 @@ export const LINES = {
   'd12.ly.after': { who: 'lyle', en: "Good debate. Really. Tomorrow decides. And Northstar's carrying the coffee.", emo: 'smile' },
   'd12.ly.afterHurt': { who: 'lyle', en: "You ruined me. In front of everybody. And the strange thing is, I slept better already. Don't tell anyone.", emo: 'frown' },
   'd9.w.neutral': { who: 'walt', en: 'The mayor stays neutral, friend. Officially. Unofficially, Ray was right about the dock.' },
-  'd12.w.pre': { who: 'walt', en: "I'll be there. I have to be. Mayor. Front row, smiling. I've got a lot of practice smiling." },
   'd12.w.after': { who: 'walt', en: "Well, the hall's still standing. That's more than I expected. Get some sleep, friend." },
   'd12.w.hurt': { who: 'walt', en: "You could have warned me. No. You couldn't have. June would have done the same thing, and laughed doing it. Keep the key.", emo: 'worry' },
   'd12.w.afterCopied': { who: 'walt', en: 'Everybody knows now. Strange. I thought it would feel like dying. It feels like putting down a suitcase.', emo: 'worry' },
@@ -220,7 +218,6 @@ export const LINES = {
   'd9.ev.dog': { who: 'evan', en: "Weird morning! Our security team spent two hours following Pearl's husky. Don't tell anyone I told you. Ha!", emo: 'laugh' },
   'd9.ev.sign': { who: 'evan', en: "A petition? Oh, I'd love to, but company policy says Northstar team members stay neutral. Neutral! Like Switzerland. Have a great day!", emo: 'smile' },
   'd12.ev.pre': { who: 'evan', en: 'Refreshments are on Northstar tonight! Sparkling water with a hint of community!', emo: 'smile' },
-  'd12.m.pre': { who: 'marta', en: "I'll be on the door tonight. Anybody throws a chair, it's my chair to throw." },
   'd11.m.deal': { who: 'marta', en: "Okafor says the gala guest list is longer this year. Says he's on it. Consultant. He didn't say for whom." },
   'd11.m.hostile': { who: 'marta', en: "Okafor asked me for your cabin's address. I told him to look it up. He already had.", emo: 'frown' },
   'd12.p.pre': { who: 'pearl', en: 'Ballots came on the morning plane. Four hundred and twelve, numbered and sealed. Nobody touches them but me. Nobody.' },
@@ -861,7 +858,7 @@ export const DIALOG = {
     if (c.flag('d11.walt.met') && !c.flag('musicBoxFixed')) { await c.say('walt', 'd11.w.chat'); return; }
     if (after(c)) return idle(c, prev, 'walt', c.flag('ledgerUsed') ? (c.flag('mayorKeyGiven') ? 'd12.w.hurt' : 'd12.w.afterCopied') : 'd12.w.after');
     if (c.flag('knowsGala')) return idle(c, prev, 'walt', c.flag('mayorKeyGiven') ? 'd11.w.after' : 'd11.w.afterCopy');
-    return idle(c, prev, 'walt', c.flag('running') ? 'd12.w.pre' : 'd9.w.neutral');
+    return idle(c, prev, 'walt', c.flag('running') ? 'd9.w.neutral' : null);
   },
 
   ruth: async (c, prev) => {
@@ -877,11 +874,11 @@ export const DIALOG = {
       c.rel(5);
       return;
     }
-    return idle(c, prev, 'ruth', after(c) ? null : c.flag('ruthPrep') ? 'd12.r.pre' : 'd9.r.chat');
+    return idle(c, prev, 'ruth', !after(c) && c.flag('ruthPrep') ? 'd12.r.pre' : null);
   },
 
   ray: async (c, prev) => (c.day === 4 ? idle(c, prev, 'ray', after(c) ? 'd12.ry.after' : c.flag('running') ? 'd9.ry.after' : null) : prev(c)),
-  lyle: async (c, prev) => (c.day === 4 ? idle(c, prev, 'lyle', after(c) ? (c.flag('ledgerUsed') ? 'd12.ly.afterHurt' : 'd12.ly.after') : c.flag('running') ? 'd9.ly.cute' : 'd12.ly.pre') : prev(c)),
+  lyle: async (c, prev) => (c.day === 4 ? idle(c, prev, 'lyle', after(c) ? (c.flag('ledgerUsed') ? 'd12.ly.afterHurt' : 'd12.ly.after') : c.flag('petitionFiled') ? 'd12.ly.pre' : c.flag('running') ? 'd9.ly.cute' : null) : prev(c)),
   gideon: async (c, prev) => (c.day === 4 && !after(c) ? idle(c, prev, 'gideon', 'd12.gi.pre') : prev(c)),
   evan: async (c, prev) => (c.day === 4 && !after(c) ? idle(c, prev, 'evan', c.flag('trackerOnDog') ? 'd9.ev.dog' : c.flag('running') ? 'd9.ev.sign' : 'd12.ev.pre') : prev(c)),
   marta: async (c, prev) => {
@@ -893,7 +890,7 @@ export const DIALOG = {
       if (c.flag('martaTrust') || c.level >= 2) { await c.say('marta', 'd9.m.luck'); c.rel(3); }
       return;
     }
-    return idle(c, prev, 'marta', after(c) ? null : c.flag('okaforDeal') ? 'd11.m.deal' : c.flag('okaforHostile') ? 'd11.m.hostile' : 'd12.m.pre');
+    return idle(c, prev, 'marta', after(c) ? null : c.flag('okaforDeal') ? 'd11.m.deal' : c.flag('okaforHostile') ? 'd11.m.hostile' : null);
   },
   koshkin: async (c, prev) => {
     if (c.day !== 4) return prev(c);

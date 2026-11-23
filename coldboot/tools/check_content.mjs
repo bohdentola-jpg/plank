@@ -111,7 +111,7 @@ for (const [id, def] of Object.entries(ALL_MISSIONS)) {
     id, G, state: G.state, cancelled: false,
     cp(n, from) { if (++steps > 500) throw new Error('too many checkpoints'); return n >= from; },
     obj() {}, clear() {},
-    until: async () => {}, reach: async () => {}, talk: async (npc) => { if (!CAST[npc]) errors.push(`${where}: talk to unknown "${npc}"`); },
+    until: async () => {}, waitUntil: async () => {}, reach: async () => {}, talk: async (npc) => { if (!CAST[npc]) errors.push(`${where}: talk to unknown "${npc}"`); },
     event: async () => {}, hour: async () => {}, wait: async () => {},
     ear: async (line) => lineCheck(line, where), ears: async (ls) => ls.forEach((l) => lineCheck(l, where)),
     spot: async () => {}, flag(k, v) { if (v === undefined) return G.state.flags[k]; G.state.flags[k] = v; return v; },

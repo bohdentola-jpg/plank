@@ -447,7 +447,7 @@ const CREDITS = [
   ['COLD BOOT', 'title'], ['ХОЛОДНЫЙ ПУСК', 'sub'], ['', ''],
   ['Six people at a table in a fish warehouse.', ''],
   ['One stranger they pulled out of the sea.', ''],
-  ['Fourteen days. One small town. The whole world.', ''],
+  ['Five days. One small town. The whole world.', ''],
   ['Nobody will ever know.', ''], ['', ''],
   ['— THE TEAM —', 'head'],
   ['Dmitri Volkov', ''], ['Nadia Sokolova', ''], ['Lyosha Orlov', ''], ['Grisha Bondarenko', ''], ['Baba Valya', ''], ['Ivan Tikhonov', ''],
@@ -1052,7 +1052,7 @@ registerScreen('finale', () => {
     await wait(0.4);
     game.renderer.tweakPost({ fade: 0 });
     try { music.play('cb_credits', { fade: 4 }); } catch { /* */ }
-    msg = { text: 'BORDER SERVICE HOLDING CELLS  ·  CHUKOTKA', sub: 'Day 15 · 14:21', t: 0 };
+    msg = { text: 'BORDER SERVICE HOLDING CELLS  ·  CHUKOTKA', sub: 'Day 6 · 14:21', t: 0 };
     await wait(6.5);
     msg = null;
     if (from !== 'credits') {

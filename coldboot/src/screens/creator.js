@@ -137,14 +137,16 @@ registerScreen('creator', () => {
     update(dt) {
       t += dt;
       if (ch) { ch.group.rotation.y = yaw + Math.sin(t * 0.3) * 0.05; anim?.update(dt); }
-      const wantFace = camMode === 'face' || ROWS[row] === 'name';
-      camK += ((wantFace ? 1 : 0) - camK) * Math.min(1, dt * 4);
+      // full body, or head and shoulders (the C key; and while typing a name)
+      const wantK = camMode === 'face' ? 1 : ROWS[row] === 'name' ? 0.75 : 0;
+      camK += (wantK - camK) * Math.min(1, dt * 4);
       const h = ch?.height || 1.75;
       const eye = ch ? ch.bones.head.getWorldPosition(new THREE.Vector3()).y + 0.06 : h - 0.1;
       // the person stands left of centre (the panel takes the right half)
-      camera.position.set(0.62 * (1 - camK) + 0.2 * camK, 1.05 * (1 - camK) + (eye - 0.02) * camK, 3.9 - 3.0 * camK);
-      camera.lookAt(0.62 * (1 - camK) + 0.2 * camK, 0.95 * (1 - camK) + (eye - 0.05) * camK, 0);
-      camera.fov = 30 - 8 * camK;
+      const cx = 0.62 * (1 - camK) + 0.3 * camK;
+      camera.position.set(cx, 1.05 * (1 - camK) + (eye - 0.06) * camK, 3.9 - 2.35 * camK);
+      camera.lookAt(cx, 0.95 * (1 - camK) + (eye - 0.12) * camK, 0);
+      camera.fov = 30 - 6 * camK;
       camera.updateProjectionMatrix();
       if (anim) anim.lookAt = camera.position.clone().add(new THREE.Vector3(0, -0.05, 0));
 

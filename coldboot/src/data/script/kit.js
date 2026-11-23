@@ -133,7 +133,7 @@ export function release(G, ...ids) {
 export function keepTime(m) {
   const G = m.G;
   const p = m.until(() => {
-    if (G.missions?.isActive && !G.missions.isActive(m.id)) return true;
+    if (m.cancelled || !(m.id in (G.state.missions?.active || {}))) return true;
     const s = G.state, c = G._cap;
     if (c != null && s.hour > c && s.hour - c < 6) s.hour = c;
     return false;
@@ -230,7 +230,7 @@ export function drop(G, id, spots = []) {
 export const SHARE_IDS = ['dolly', 'hank', 'ruth', 'ray', 'lyle'];
 export const hasShare = (s, id) => !!(s.flags || {})['share.' + id] || !!(s.shares || {})[id];
 export const shareCount = (s) => SHARE_IDS.filter((k) => hasShare(s, k)).length;
-const CARD_EARS = ['sf.n.card1', 'sf.n.card2', 'sf.d.card3', 'sf.v.card4', 'sf.l.card5'];
+const CARD_EARS = ['sf.n.card1', 'sf.n.card2', 'sf.d.card3', 'sf.v.card4'];
 /** Hand over a council member's card (in a conversation `c`, or a scene through `m`). */
 export function takeShare(G, id, ear) {
   const s = G.state;
@@ -241,7 +241,7 @@ export function takeShare(G, id, ear) {
   const n = shareCount(s);
   G.hud?.toast?.('CONTINUITY CARD', `${CAST[id]?.short || id}'s card · ${n} of 3`, '#ffd166');
   G.missions?.emit?.('share:' + id);
-  (ear || ((l) => G.missions?.ear?.(l)))(CARD_EARS[Math.max(0, Math.min(4, n - 1))]);
+  (ear || ((l) => G.missions?.ear?.(l)))(CARD_EARS[Math.max(0, Math.min(3, n - 1))]);
 }
 
 // ------------------------------------------------------------------ conversations

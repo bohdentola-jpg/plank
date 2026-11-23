@@ -7,16 +7,17 @@ code that has to be found before dawn.
 
 **Bely Mys, Chukotka.** Six Russians sit around a table in a fish warehouse under
 one lamp: Dmitri, Nadia, Lyosha, Grisha, Baba Valya and Ivan. A man named Cyrus
-Halloran has built *Wormwood*, a payload that wakes at dawn on day 15 and shuts
+Halloran has built *Wormwood*, a payload that wakes at dawn in five days and shuts
 the world's power grids down. The abort code is locked in a vault in a small
 Alaskan town across the strait, held by its mayor and its council. They can't go.
 You can. You are **Rybka**, the stranger with a clean passport and an earpiece.
 
 **Port Zarya, Alaska** (pop. 1,140): a run-down fishing town with an Orthodox church,
 an old general store, a diner, a bar, a cannery — and a brand-new NORTHSTAR 24
-corner store whose cameras see everything. Fourteen November days. Get a job, make
-friends, fix the town, learn Python on Lyosha's laptop at night, climb the town's
-politics to the mayor's key and the council's vault — while Northstar watches.
+corner store whose cameras see everything. Five November days. Get a job, make
+friends, fix what you can, learn Python on Lyosha's laptop at night, climb the
+town's politics from a cleaning job at City Hall to a council seat, the mayor's
+key and the vault at Halloran's Winter Gala — while Northstar watches.
 
 Then Wade's little chopper across the Bering Strait under fire, an empty warehouse, ten
 minutes to write the code that saves the world, and a jail cell at sunset.
@@ -69,19 +70,19 @@ or Firefox with WebGL2. A controller is welcome (DualSense first, any standard p
 - **Port Zarya.** Terrain, sea ice and harbour, streets and snowbanks, 23 building
   types with interiors (run-down until you fix them), chimney smoke, sodium
   streetlights and Northstar's camera lights, a low Arctic sun, aurora nights.
-- **Fourteen days of story**, an earpiece that tells you what to do, and far more
-  than one day can hold: friendship lines with everyone in town (levels, gifts,
-  personal quests that end up mattering), 41 restoration projects (Town Spirit),
-  jobs (Koshkin's till, the cannery line, KZRY radio, the snow plough), running
-  Koshkin's store against Northstar, flight lessons with Wade, Tommy's snowmobile
-  races, and the political climb: council, petition, debate night, election,
-  the Winter Gala.
+- **Five days of story, about three and a half hours**, with an earpiece that
+  tells you what to do: Arrival, Cover, Ears and Eyes, The Seat, The Winter Gala.
+  Around it: friendships in town (the council's troubles, the cards you'll
+  need), eight repairs, three jobs (Koshkin's till, the cannery line, the snow
+  plough), Wade's flying lessons (they decide how the finale's flight goes)
+  and Tommy's snowmobile race.
 - **Being watched.** ATTENTION rises when cameras, Evan, Mr. Grey or the black
   SUVs see you do spy things. At 100% you're burned and the mission restarts.
-- **Lyosha's Night School.** Fourteen Python lessons on the cabin laptop with a
-  real in-game Python interpreter, then field hacks with real mission data
-  (loop a camera, clean a petition, decode a ledger, combine the vault key) —
-  and the finale is a real program written against a ten-minute clock.
+- **Lyosha's Night School.** A Python lesson each night on the cabin laptop
+  with a real in-game Python interpreter (nine more unlock as extras after the
+  rehearsal), and field hacks with real mission data (match faces, loop a
+  camera, decode a ledger, combine the vault key's shares) — and the finale is
+  a real program written against a ten-minute clock.
 - **Wheels and skis.** Buy Hank's old pickup (and drive the city's snow-plough
   route for money), ride your snowmobile, race Tommy across frozen Loon Lake.
   Northstar's black SUVs patrol at night, and they see.

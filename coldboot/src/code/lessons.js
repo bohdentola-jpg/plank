@@ -132,7 +132,7 @@ export const LESSONS = [
     ru: { line: 'Программа умеет выбирать: если камера смотрит — молчим, иначе — работаем.', en: 'A program can choose: if the camera is watching, we keep quiet; otherwise, we work.' },
     pages: [
       {
-        text: "Comparisons ask a question and answer True or False. == means 'is equal to', with two equals signs, because a single = is for storing values. != means 'is not equal'. <, >, <= and >= work like at school. True and False are called booleans, after George Boole, who never saw a computer but would have loved this one.",
+        text: "First, the catch-up: fish = 3 stores 3 under the name fish, and print(fish) shows it. Now, comparisons ask a question and answer True or False. == means 'is equal to', with two equals signs, because a single = is for storing values. != means 'is not equal'. <, >, <= and >= work like at school. True and False are called booleans, after George Boole, who never saw a computer but would have loved this one.",
         code: dd(`
           print(5 > 3)
           print(5 == 5)
@@ -264,7 +264,7 @@ export const LESSONS = [
     ru: { line: 'Сегодня один цикл пройдёт по всему списку за нас.', en: 'Tonight one loop walks through the whole list for us.' },
     pages: [
       {
-        text: "for item in my_list: runs its block once for every item, and each time the variable holds the next one. No counter to manage, no n += 1 to forget. It's my favourite loop. The name after for is yours to choose, so pick one that says what the thing is: for place in houses reads almost like English.",
+        text: "A list is several values in square brackets: houses = ['church', 'store', 'cabin']. for item in my_list: runs its block once for every item, and each time the variable holds the next one. No counter to manage, no n += 1 to forget. It's my favourite loop. The name after for is yours to choose, so pick one that says what the thing is: for place in houses reads almost like English.",
         code: dd(`
           houses = ["church", "diner", "hardware", "cabin"]
           for place in houses:
@@ -283,7 +283,7 @@ export const LESSONS = [
         `),
       },
       {
-        text: "Same trick as with while: make a total before the loop, add to it inside, print it after. Here we add up the crab traps. You can count things the same way: start a counter at 0 and add 1 whenever an item passes a test. Total and counter, the two oldest tools in the box.",
+        text: "The running-total trick: make a total before the loop, add to it inside, print it after. Here we add up the crab traps. You can count things the same way: start a counter at 0 and add 1 whenever an item passes a test. Total and counter, the two oldest tools in the box.",
         code: dd(`
           traps = [3, 0, 5, 2, 0, 4]
           total = 0
@@ -491,7 +491,7 @@ export const LESSONS = [
     ru: { line: 'Скоро у тебя будет всего десять минут, поэтому сегодня у нас репетиция.', en: "Soon you'll have just ten minutes, so tonight we rehearse." },
     pages: [
       {
-        text: "Here's what we know about the drive. The Root Key is split into shards: a list of strings. Some shards are decoys. Every real shard is stored backwards, and every character in it is shifted. On the night the rules will be different, because Halloran isn't stupid, but the shape will be the same. Tonight, my rules: decoys end with \"!\", and every character is shifted up by 1.",
+        text: "Here's what we know about the drive. The Root Key is split into shards: a list of strings. Some shards are decoys. Every real shard is stored backwards, and every character in it is shifted. On the night the rules will be different, because Halloran isn't stupid, but the shape will be the same. Tonight, my rules: decoys end with \"!\", and every character is shifted up by 1. You'll write it as a function: def unwrap(shards): starts it, and return hands the answer back.",
         code: dd(`
           shards = ["NPE", "GO!", ".F", "OP"]
           print(len(shards), "shards")

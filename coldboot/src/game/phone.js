@@ -299,8 +299,10 @@ export class Phone {
     if (mains.length) { rows.push({ kind: 'head', text: 'ASSIGNMENTS' }); for (const x of mains) rows.push({ kind: 'mission', text: x.def.title, main: true }); }
     if (sides.length) { rows.push({ kind: 'head', text: 'ALSO' }); for (const x of sides) rows.push({ kind: 'mission', text: x.def.title }); }
     rows.push({ kind: 'head', text: 'NIGHT SCHOOL' });
-    const nl = LESSONS.filter((l) => s.lessons[l.id]).length;
-    rows.push({ kind: 'meter', text: `Lessons  ${nl} / ${LESSONS.length}`, v: nl / LESSONS.length, color: C.green });
+    const story = LESSONS.filter((l) => l.day <= DAYS);
+    const nl = story.filter((l) => s.lessons[l.id]).length;
+    const extra = LESSONS.filter((l) => l.day > DAYS && s.lessons[l.id]).length;
+    rows.push({ kind: 'meter', text: `Lessons  ${nl} / ${story.length}${extra ? `   ·   +${extra} extra` : ''}`, v: nl / story.length, color: C.green });
     const nh = CHALLENGE_ORDER.filter((c) => s.challenges[c]).length;
     rows.push({ kind: 'meter', text: `Field hacks  ${nh} / ${CHALLENGE_ORDER.length}`, v: nh / CHALLENGE_ORDER.length, color: C.green });
     rows.push({ kind: 'head', text: 'STANDING' });
