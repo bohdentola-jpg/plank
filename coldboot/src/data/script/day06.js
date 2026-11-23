@@ -159,6 +159,10 @@ export const MISSIONS = {
         rel(G, 'koshkin', 4);
       }
       if (m.cp(4, from)) {
+        const text = 'Mind the store';
+        m.obj(text, 'koshkin.counter', 'Somebody is coming in');
+        await hold(m, () => dist(G, 'koshkin.counter') < 7, text, 'koshkin.counter');
+        m.clear();
         await m.scene(async (d) => {
           await d.bring('player', at(G, 'koshkin.clerk'));
           await d.bring('evan', at(G, 'koshkin.counter'));

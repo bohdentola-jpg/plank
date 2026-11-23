@@ -117,6 +117,9 @@ export const LINES = {
   'd10.ry.chat': { who: 'ray', en: "My last week at the cannery. Come by if you want to see what forty-one jobs look like before they're gone." },
 };
 
+/** The square's looped cameras stay looped after a reload (the loop lives in Lyosha's tap, not in the save). */
+const reloop = (m) => { const A = m.G.attention; if (!m.flag('camsLooped') || !A) return; (A.watchers || []).forEach((w, i) => { if (w.owner === 'smartlight' && Math.hypot(w.x, w.z) < 80) A.looped?.add(i); }); };
+
 // ---------------------------------------------------------------- missions
 const NIGHT = (h) => h >= 17 || h < 3;
 
@@ -124,6 +127,7 @@ export const MISSIONS = {
   'd10.grey': {
     title: 'Mr. Grey', main: true, day: 10,
     async run(m, from) {
+      reloop(m);
       const G = m.G;
       const store = !!m.flag('runStore');
       if (m.cp(1, from)) {
@@ -228,6 +232,7 @@ export const MISSIONS = {
   'd10.radio': {
     title: 'On the Air', main: true, day: 10,
     async run(m, from) {
+      reloop(m);
       const G = m.G;
       if (m.cp(1, from)) {
         m.obj('Go on the air at KZRY', 'radio.mic', 'Nina — from 17:00');
@@ -279,6 +284,7 @@ export const MISSIONS = {
   'd10.night': {
     title: 'Night School: Dictionaries', main: true, day: 10,
     async run(m, from) {
+      reloop(m);
       if (m.cp(1, from)) {
         await m.ear('d10.n.lesson');
         m.obj("Lyosha's lesson — the laptop in your cabin", 'cabin.laptop', 'Lesson 10: Whose Is This?');

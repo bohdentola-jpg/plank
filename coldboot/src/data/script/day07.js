@@ -23,6 +23,8 @@
 //   cabinSearched     true — someone entered the cabin with a key while Rybka was at supper (day 8 reads it)
 //   cameraInSmokeAlarm  true — a pinhole camera in the smoke alarm, left in place; it sees the table and the door
 //   d7.wantedRipOut   Rybka wanted to rip the camera out (Nadia stopped it)
+//   d7.toldMartaGrey  Rybka told Chief Kowalczyk about the man in the grey parka
+// (The lock is NOT forced: whoever came in had a key — day 8 picks that up.)
 import {
   at, dist, cu, shot, rel, standing, spirit, place, release, hold, idle,
 } from './day02.js';
@@ -126,6 +128,7 @@ export const LINES = {
   'd7.ly.sunday': { who: 'lyle', en: 'Lovely service. I come for the community. And the networking. Mostly the community.', emo: 'smile' },
   'd7.wt.sunday': { who: 'walt', en: 'My wife makes me come. I sleep through the long prayers. Father knows. He prays louder.', emo: 'laugh' },
   'd7.gi.sunday': { who: 'gideon', en: 'Sunday? I work. Northstar never closes, and neither do I. Enjoy your day of rest.', emo: 'smile' },
+  'd7.e.out': { who: 'evan', en: "Happy Sunday! No hard feelings about yesterday. Northstar doesn't hold grudges. We hold data! Kidding.", emo: 'smile' },
   'd7.e.sunday': { who: 'evan', en: "Happy Sunday! Northstar's doing a free brunch. Oh, you're church people? So wholesome. Love that for you.", emo: 'smile' },
   'd7.p.sunday': { who: 'pearl', en: 'Sasha called me this morning from Nome. He said, and I quote, tell the kid the cooler is humming wrong.', emo: 'laugh' },
   'd7.el.sunday': { who: 'ellen', en: 'Sunday is my day off. Which means I only see half the patients.' },
@@ -405,7 +408,7 @@ export const DIALOG = {
   lyle: async (c, prev) => (c.day === 7 ? idle(c, prev, 'lyle', 'd7.ly.sunday') : prev(c)),
   walt: async (c, prev) => (c.day === 7 ? idle(c, prev, 'walt', 'd7.wt.sunday') : prev(c)),
   gideon: async (c, prev) => (c.day === 7 ? idle(c, prev, 'gideon', 'd7.gi.sunday') : prev(c)),
-  evan: async (c, prev) => (c.day === 7 ? idle(c, prev, 'evan', 'd7.e.sunday') : prev(c)),
+  evan: async (c, prev) => (c.day === 7 ? idle(c, prev, 'evan', c.flag('d6.evanOffer') === 'out' ? 'd7.e.out' : 'd7.e.sunday') : prev(c)),
   pearl: async (c, prev) => (c.day === 7 ? idle(c, prev, 'pearl', 'd7.p.sunday') : prev(c)),
   ellen: async (c, prev) => (c.day === 7 ? idle(c, prev, 'ellen', 'd7.el.sunday') : prev(c)),
   wade: async (c, prev) => (c.day === 7 ? idle(c, prev, 'wade', 'd7.wd.sunday') : prev(c)),

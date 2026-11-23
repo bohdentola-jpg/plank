@@ -108,7 +108,7 @@ export const LINES = {
   // ---------------------------------------------------------------- the back corridors
   'd14.l.shifts': { who: 'lyosha', ru: 'Две минуты девятого. Смена караула. Коридоры пустые — у тебя окно.', en: 'Two minutes past eight. The guard change. The corridors are empty — you have a window.' },
   'd14.l.tunnel': { who: 'lyosha', ru: 'По чертежам Рут: генераторная, люк, туннель. Прямо к хранилищу.', en: "By Ruth's blueprints: the generator shed, a hatch, a tunnel. Straight to the vault." },
-  'd14.l.door': { who: 'lyosha', ru: 'Служебная дверь с восточной стороны. Замок старый, армейский. Ты такие уже открываешь.', en: "The service door on the east side. An old army lock. You can open those by now." },
+  'd14.l.door': { who: 'lyosha', ru: 'Служебная дверь с восточной стороны. Замок старый, армейский. Такие ты открываешь с закрытыми глазами.', en: 'The service door on the east side. An old army lock. You open those with your eyes closed by now.' },
   'd14.m2.guard': { who: 'm2', en: "Excuse me. Guests can't be back here. The party's in the main hall." },
   'd14.m2.rest': { who: 'm2', en: "Back the way you came, second door on the left. And don't touch the art. Mr. Halloran knows when you touch the art." },
   'd14.l.panel': { who: 'lyosha', ru: 'Охранная панель. Красный к белому, синий никуда. Тихо.', en: 'The security panel. Red to white, blue to nothing. Quietly.' },
@@ -123,7 +123,7 @@ export const LINES = {
   'd14.l.radio': { who: 'lyosha', ru: 'Я в их рации. Слушай.', en: "I'm in their radio. Listen." },
   'd14.gi.radio': { who: 'gideon', en: 'Seal the hill. Nobody leaves. Find the carpenter. Alive, if it is convenient.', emo: 'angry' },
   'd14.g.run': { who: 'grisha', ru: 'Вниз по дороге, к аэродрому! Не оглядывайся! Я с тобой!', en: "Down the road, to the airstrip! Don't look back! I'm with you!", emo: 'angry' },
-  'd14.g.truck': { who: 'grisha', ru: 'Грузовик на стоянке! Ключ в кармане — гони!', en: "The truck's in the lot! Key's in your pocket — drive!" },
+  'd14.g.road': { who: 'grisha', ru: 'Дорога вниз, километр. Держись обочины — в темноте тебя не видно.', en: "It's a kilometre down the road. Keep to the edge — they can't see you in the dark." },
   'd14.h.pa': { who: 'halloran', en: 'Ladies and gentlemen, a small technical matter. Please, enjoy the music. Nothing is going to happen tonight.', emo: 'smile' },
   'd14.h.call': { who: 'halloran', en: "Carpenter. You've taken something of mine. Keep it. It won't matter. At dawn the world turns off, and you'll be standing in the dark with a little drive in your hand.", emo: 'serious' },
   'd14.h.call2': { who: 'halloran', en: "I liked you, you know. I still do. That's the terrible thing about a cold boot. It doesn't care who you like." },
@@ -142,6 +142,9 @@ export const LINES = {
   'd14.n.fly': { who: 'nadia', ru: 'Лети домой, Рыбка.', en: 'Fly home, Rybka.', emo: 'smile' },
 };
 
+/** The square's looped cameras stay looped after a reload (the loop lives in Lyosha's tap, not in the save). */
+const reloop = (m) => { const A = m.G.attention; if (!m.flag('camsLooped') || !A) return; (A.watchers || []).forEach((w, i) => { if (w.owner === 'smartlight' && Math.hypot(w.x, w.z) < 80) A.looped?.add(i); }); };
+
 // ---------------------------------------------------------------- missions
 async function hack(m, id, where, retryLine, retryText) {
   for (;;) {
@@ -158,6 +161,7 @@ export const MISSIONS = {
   'd14.morning': {
     title: 'The Last Day', main: true, day: 14,
     async run(m, from) {
+      reloop(m);
       const G = m.G, F = G.state.flags, inv = G.state.inv;
       if (m.cp(1, from)) {
         // nothing upstream should leave these unset, but the last day must never dead-end
@@ -175,18 +179,20 @@ export const MISSIONS = {
         const text = who === 'koshkin' ? "Ask Koshkin for something to wear tonight" : 'Ask Dolly for something to wear tonight';
         const sub = who === 'koshkin' ? "Koshkin's store" : 'The Midnight Sun Diner';
         m.obj(text, who, sub);
-        await hold(m, () => (inv.gala_clothes || 0) > 0 || !!F.galaOutfit, text, who, sub);
+        const late = () => G.state.hour >= 18.5 || G.state.hour < 6;
+        await hold(m, () => (inv.gala_clothes || 0) > 0 || !!F.galaOutfit || late(), text, who, sub);
+        if (!F.galaOutfit && !((inv.gala_clothes || 0) > 0)) { m.flag('galaOutfit', 'own'); G.hud.toast('NO TIME', 'Your own clothes, brushed clean. They will have to do.', '#ffb21e'); }
       }
       if (m.cp(3, from)) {
         m.obj('Dress for the Gala', 'cabin.wardrobe', 'Your cabin');
         await m.spot('dress', 'cabin.wardrobe', 'Dress for the Gala', 2.4);
         m.flag('dressed', true);
-        G.hud.toast('DRESSED', F.galaOutfit === 'dress' ? 'Green velvet, 1962' : 'Black suit, 1962', '#ffd166');
+        G.hud.toast('DRESSED', F.galaOutfit === 'dress' ? 'Green velvet, 1962' : F.galaOutfit === 'own' ? 'Clean boots, best sweater' : 'Black suit, 1962', '#ffd166');
         await m.ear('d14.n.dress');
       }
       if (m.cp(4, from)) {
         m.obj('Talk to Wade about tonight', 'wade', 'The hangar until 16:00 · the diner after');
-        await hold(m, () => !!F['d14.wadeAsked'], 'Talk to Wade about tonight', 'wade', 'The hangar until 16:00 · the diner after');
+        await hold(m, () => !!F['d14.wadeAsked'] || G.state.hour >= 18.5 || G.state.hour < 6, 'Talk to Wade about tonight', 'wade', 'The hangar until 16:00 · the diner after');
         await m.ear('d14.g.plan');
       }
       if (m.cp(5, from)) {
@@ -199,6 +205,7 @@ export const MISSIONS = {
   'd14.gala': {
     title: 'The Winter Gala', main: true, day: 14,
     async run(m, from) {
+      reloop(m);
       const G = m.G, F = G.state.flags, inv = G.state.inv;
       const pa = (ids) => { for (const id of ids) m.ear(id); };   // the speech goes on, over the Dome's speakers
       if (m.cp(1, from)) {
@@ -211,6 +218,7 @@ export const MISSIONS = {
         m.clear();
         G.missions.cancel?.('d14.goodbyes');
         G.missions.cancel?.('d14.liturgy');
+        G.missions.cancel?.('d13.rehearsal');
         await m.scene(async (d) => {
           await d.bring('walt', { x: SQUARE.x + 2, z: SQUARE.z + 1.5 }, { face: 'player' });
           await d.say('walt', 'd14.w.pickup', { cam: d.closeUp('walt') });
@@ -327,7 +335,7 @@ export const MISSIONS = {
         await m.ear('d14.l.radio');
         await m.ear('d14.gi.radio');
         m.ear('d14.g.run');
-        if (F.hasTruck) m.ear('d14.g.truck');
+        m.ear('d14.g.road');
         m.ear('d14.h.pa');
         m.obj("Get to Wade's hangar", 'hangar', 'Down Kettle Hill Road — run');
         await m.until(() => Math.hypot((G.player?.pos?.x ?? D.x + 200) - D.x, (G.player?.pos?.z ?? D.z) - D.z) > 120);
@@ -364,7 +372,10 @@ export const MISSIONS = {
         await m.ear('d14.dm.fly');
         await m.ear('d14.v.fly');
         await m.ear('d14.n.fly');
-        m.done();
+        // No m.done(): the mission stays active at this checkpoint, so a reload
+        // during the finale replays the hand-off instead of stranding Rybka in town.
+        m.flag('toFinale', true);
+        m.clear();
         await m.G.finale?.();
       }
     },

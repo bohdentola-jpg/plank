@@ -12,6 +12,9 @@ import { CAST } from '../data/cast.js';
 
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
+/** Accept THREE vectors or plain {x, y, z}. */
+function vec(v) { return v && !v.isVector3 && typeof v === 'object' && 'x' in v ? new THREE.Vector3(v.x, v.y ?? 0, v.z ?? 0) : v; }
+
 export class Director {
   constructor(scene, camera) {
     this.scene = scene;
@@ -54,7 +57,7 @@ export class Director {
     this.shot = {
       from, spec, t: 0,
       dur: spec.dur || 0,
-      to: () => ({ pos: resolve(spec.pos), look: resolve(spec.look), fov: spec.fov ?? from.fov }),
+      to: () => ({ pos: vec(resolve(spec.pos)) || cam.position.clone(), look: vec(resolve(spec.look)) || from.look, fov: spec.fov ?? from.fov }),
     };
     if (!spec.dur) this._applyShot(1);
     return new Promise((r) => { this.shot.resolve = r; if (!spec.dur) r(); });
@@ -99,14 +102,15 @@ export class Director {
     return {
       pos: () => {
         const a = this.actors[id];
+        if (!a) return this.camera.position.clone();   // not on stage: hold the shot
         const hp = this.headPos(id);
         const q = a.ch.group.getWorldQuaternion(new THREE.Quaternion());
         const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(q);
         const left = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
         return hp.clone().addScaledVector(fwd, dist).addScaledVector(left, side * dist * (o.angle ?? 0.45)).add(new THREE.Vector3(0, h, 0));
       },
-      look: () => this.headPos(id).add(new THREE.Vector3(0, -0.02, 0)),
-      fov, dofOn: id, aperture: o.aperture ?? 9, drift: 0.006,
+      look: () => (this.actors[id] ? this.headPos(id).add(new THREE.Vector3(0, -0.02, 0)) : this._look?.clone() || new THREE.Vector3()),
+      fov, dofOn: this.actors[id] ? id : undefined, aperture: o.aperture ?? 9, drift: 0.006,
     };
   }
 
@@ -115,14 +119,68 @@ export class Director {
     const fov = o.fov ?? 32;
     return {
       pos: () => {
+        if (!this.actors[from] || !this.actors[to]) return this.camera.position.clone();
         const a = this.headPos(from), b = this.headPos(to);
         const dir = b.clone().sub(a).normalize();
         const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
         return a.clone().addScaledVector(dir, -0.45).addScaledVector(right, (o.side ?? 1) * 0.32).add(new THREE.Vector3(0, 0.1, 0));
       },
-      look: () => this.headPos(to),
-      fov, dofOn: to, aperture: 6,
+      look: () => (this.actors[to] ? this.headPos(to) : this._look?.clone() || new THREE.Vector3()),
+      fov, dofOn: this.actors[to] ? to : undefined, aperture: 6,
     };
+  }
+
+  // -------------------------------------------------------------- video calls
+  /** The team on a video call (top right). ids: one or several cast ids. */
+  call(ids, o = {}) {
+    this.callers = (Array.isArray(ids) ? ids : [ids]).map((id) => ({ id }));
+    this.callT = 0;
+    this.callLabel = o.label || 'BELY MYS  ·  ENCRYPTED';
+    return Promise.resolve();
+  }
+
+  hangUp() { this.callers = null; return Promise.resolve(); }
+
+  _drawCall(ctx) {
+    const n = this.callers.length;
+    const tw = n > 2 ? 150 : 210, th = n > 2 ? 112 : 150, cols = n > 2 ? 3 : n;
+    const x0 = W - 24 - cols * (tw + 8), y0 = 232;
+    const k = Math.min(1, this.callT * 4);
+    ctx.save();
+    ctx.globalAlpha = k;
+    text(ctx, '◉ ' + this.callLabel, W - 24, y0 - 8, { size: 11, weight: 800, color: '#ff6a5a', align: 'right', spacing: 2 });
+    this.callers.forEach((c, i) => {
+      const x = x0 + (i % cols) * (tw + 8), y = y0 + Math.floor(i / cols) * (th + 8);
+      const L = CAST[c.id] || {};
+      const talking = voice.subtitle?.who === c.id;
+      const g = ctx.createLinearGradient(0, y, 0, y + th);
+      g.addColorStop(0, '#141a1e'); g.addColorStop(1, '#06080a');
+      ctx.fillStyle = g;
+      ctx.fillRect(x, y, tw, th);
+      // a head and shoulders against the warehouse lamp
+      ctx.fillStyle = 'rgba(255,190,120,0.12)';
+      ctx.beginPath(); ctx.arc(x + tw * 0.5, y + th * 0.18, th * 0.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = L.color || '#8899aa';
+      ctx.globalAlpha = k * 0.85;
+      ctx.beginPath(); ctx.ellipse(x + tw / 2, y + th * 0.42, th * 0.15, th * 0.19, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x + tw / 2, y + th * 1.02, th * 0.42, th * 0.36, 0, Math.PI, 0); ctx.fill();
+      ctx.globalAlpha = k;
+      for (let yy = y; yy < y + th; yy += 3) { ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(x, yy, tw, 1); }
+      ctx.strokeStyle = talking ? '#5dffb0' : 'rgba(255,255,255,0.18)';
+      ctx.lineWidth = talking ? 2 : 1;
+      ctx.strokeRect(x + 0.5, y + 0.5, tw - 1, th - 1);
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(x, y + th - 22, tw, 22);
+      text(ctx, (L.short || L.name || c.id).toUpperCase(), x + 8, y + th - 7, { size: 11, weight: 800, color: '#fff', spacing: 1 });
+      if (talking) {
+        for (let b = 0; b < 6; b++) {
+          const hgt = 3 + Math.abs(Math.sin(this.t * 13 + b * 1.7)) * 10 * (this.lineHandle?.h?.features?.open ?? 0.5 + 0.3);
+          ctx.fillStyle = '#5dffb0';
+          ctx.fillRect(x + tw - 48 + b * 6, y + th - 11 - hgt / 2, 3, hgt);
+        }
+      }
+    });
+    ctx.restore();
   }
 
   // -------------------------------------------------------------- lines
@@ -229,6 +287,7 @@ export class Director {
 
   // -------------------------------------------------------------- UI
   draw(ctx) {
+    if (this.callers) { this.callT = (this.callT || 0) + 1 / 60; this._drawCall(ctx); }
     const sub = voice.subtitle;
     if (sub && this.subsOn) {
       const L = CAST[sub.who];

@@ -95,9 +95,9 @@ export function buildPickup(o = {}) {
 }
 
 /** Northstar's black SUV: dark glass, a light bar, a camera dome. */
-export function buildSUV() {
+export function buildSUV(o = {}) {
   const b = new GeoBuilder();
-  const black = '#0c0d0f';
+  const black = o.color || '#0c0d0f';
   b.box('paint_gloss', 0, 0.42, 0, 1.98, 0.75, 5.0, { color: black });
   b.box('paint_gloss', 0, 1.17, -0.55, 1.9, 0.7, 3.4, { color: black });
   for (const s of [-1, 1]) b.poly('glass_dark', [[s * 0.96, 1.2, -2.15], [s * 0.96, 1.2, 1.0], [s * 0.94, 1.8, 0.75], [s * 0.94, 1.8, -2.15]], { color: [0.02, 0.025, 0.03], want: [s, 0, 0] });

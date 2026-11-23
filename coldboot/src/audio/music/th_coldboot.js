@@ -62,21 +62,20 @@ export class CBTitle extends CBSong {
     };
     const D4 = 62;
     this.motif = tune(MOTIF.minor, D4, 'minor');
-    this.harm = tune(MOTIF.minor, D4, 'minor', -2); // a diatonic third below, for the celesta
     this.counter = tune(TITLE_COUNTER, D4, 'minor');
     this.mix = {
-      kick: { v: 0.34 }, snare: { v: 0.3, rev: 0.12 }, hats: { v: 0.2 }, perc: { v: 0.16 },
+      kick: { v: 0.34 }, snare: { v: 0.3, rev: 0.12 }, hats: { v: 0.3 }, perc: { v: 0.2 },
       bass: { v: 0.46 }, pad: { v: 0.36, rev: 0.3 }, chords: { v: 0.26, rev: 0.35 },
       arp: { v: 0.2, dly: 0.45, rev: 0.2 }, gtr: { v: 0.42, rev: 0.45, dly: 0.25 },
       lead: { v: 0.62, rev: 0.32, dly: 0.24 }, fx: { v: 0.6 },
     };
-    this.trim = 0.98;
+    this.trim = 0.8;
   }
 
   setup() {
     this.dlyTime = this.beatDur * 0.75;
     this.dlyFb = 0.34;
-    this.tapeFx({ hiss: 0.006, lp: 10500, drive: 1.3 });
+    this.tapeFx({ hiss: 0.006, lp: 13000, drive: 1.3 });
     this.bass = new Mono(this, 'bass', {
       oscs: [{ type: 'sawtooth', gain: 0.5 }, { type: 'square', gain: 0.28, detune: -6 }], cut: 300, q: 4.5, env: 900,
       fatk: 0.003, fdec: 0.16, keytrack: 0.6, atk: 0.004, dec: 0.3, sus: 0.55, rel: 0.06, glide: 0.04, level: 0.42,
@@ -87,7 +86,7 @@ export class CBTitle extends CBSong {
     this.arp = new Poly(this, 'arp', 'pluck', { level: 0.32, rel: 0.08, cut: 3000 });
     this.cel = new Poly(this, 'gtr', 'celesta', { level: 0.42, rel: 0.6 });
     this.lead = new Breath(this, 'lead', {
-      wave: 'square', wave2: 'sawtooth', level: 0.22, lp: 2300, vib: 15, vibRate: 5.1, breath: 0.035,
+      wave: 'square', wave2: 'sawtooth', level: 0.22, lp: 2700, vib: 15, vibRate: 5.1, breath: 0.035,
       glide: 0.06, atk: 0.035, rel: 0.28,
     });
   }
@@ -116,7 +115,7 @@ export class CBTitle extends CBSong {
     if (this.on('arp')) this.arpPlay(this.arp, s, t, { rate: 2, pat: [0, 2, 1, 3, 2, 1, 3, 2], lo: 62, hi: 81, vel: 0.45, gate: 0.45 });
     if (this.on('gtr')) {
       if (ty === 'break') this.tunePlay(this.cel, this.motif, s, t, { vel: 0.55, oct: 1 });
-      else if (ty === 'B' && !v) this.tunePlay(this.cel, this.harm, s, t, { vel: 0.4, oct: 1, orn: false });
+      else if (ty === 'B' && !v) this.tunePlay(this.cel, this.motif, s, t, { vel: 0.4, oct: 1, harm: 3 }); // second voice under the lead
       else if (ty === 'B') this.tunePlay(this.cel, this.counter, s, t, { vel: 0.34, oct: 1, orn: false });
     }
     if (this.on('lead')) {
@@ -163,13 +162,13 @@ export class CBWarehouse extends CBSong {
       bass: { v: 0.42 }, pad: { v: 0.3 }, chords: { v: 0.36, rev: 0.6 },
       arp: { v: 0.3, rev: 0.55, dly: 0.28 }, lead: { v: 0.34, rev: 0.5, dly: 0.18 }, gtr: { v: 0.26, rev: 0.7, dly: 0.35 },
     };
-    this.trim = 0.55;
+    this.trim = 0.5;
   }
 
   setup() {
     this.dlyTime = this.beatDur * 1.5;
     this.dlyFb = 0.3;
-    this.drone = new Drone(this, 'bass', { level: 0.34, cut: 300, lfoDepth: 80, lfoRate: 0.037, sub: 0.55, atk: 3 });
+    this.drone = new Drone(this, 'bass', { level: 0.24, cut: 280, lfoDepth: 80, lfoRate: 0.037, sub: 0.25, atk: 3 });
     this.fifth = new Drone(this, 'pad', { level: 0.2, cut: 380, lfoDepth: 110, lfoRate: 0.029, detune: 9, sub: 0, atk: 5 });
     this.acc = new Accordion(this, 'chords', { level: 0.3, atk: 1.1, rel: 2.2, cut: 1150, bellows: 0.12, bellowsRate: 0.13 });
     this.celesta = new Poly(this, 'arp', 'celesta', { level: 0.34, rel: 0.8, cut: 5200 });
@@ -246,7 +245,7 @@ export class CBCredits extends CBSong {
       bass: { v: 0.42, rev: 0.15 }, gtr: { v: 0.26, rev: 0.5 }, arp: { v: 0.3, rev: 0.5, dly: 0.3 },
       cym: { v: 0.2, rev: 0.4 }, perc: { v: 0.26, rev: 0.35 },
     };
-    this.trim = 0.92;
+    this.trim = 1.45;
   }
 
   setup() {
@@ -256,11 +255,11 @@ export class CBCredits extends CBSong {
     this.rh = new Poly(this, 'lead', 'piano', { level: 0.44, rel: 0.6 });
     this.vln = new Poly(this, 'lead', 'strings', { level: 0.3, atk: 0.16, rel: 0.6, cut: 4600 });
     this.cello = new Breath(this, 'lead', {
-      wave: 'sawtooth', level: 0.24, lp: 1500, vib: 13, vibRate: 5.2, breath: 0.03, glide: 0.07, atk: 0.12, rel: 0.35,
+      wave: 'sawtooth', level: 0.15, lp: 1500, vib: 13, vibRate: 5.2, breath: 0.03, glide: 0.07, atk: 0.12, rel: 0.35,
     });
     this.strings = new Poly(this, 'pad', 'strings', { level: 0.24, atk: 1.4, rel: 2, cut: 3400 });
     this.contra = new Poly(this, 'bass', 'strings', { level: 0.34, atk: 0.5, rel: 1.4, cut: 900 });
-    this.choir = new Poly(this, 'gtr', 'choir', { level: 0.24, atk: 1.6, rel: 2.2 });
+    this.choir = new Poly(this, 'gtr', 'choir', { level: 0.3, atk: 1.6, rel: 2.2 });
     this.cel = new Poly(this, 'arp', 'celesta', { level: 0.36, rel: 0.7 });
   }
 
@@ -299,25 +298,27 @@ export class CBCredits extends CBSong {
     }
     const seq = [R, R + 7, R + 12, R + 12 + third, R + 19, R + 12 + third, R + 12, R + 7];
     const i = s >> 1;
-    const vel = (i === 0 ? 0.5 : 0.38) * (ty === 'intro' ? 0.85 : 1);
+    const v = this.sec.var || 0;
+    const vel = (i === 0 ? 0.5 : 0.38) * (ty === 'intro' ? 0.68 : ty === 'B' ? 0.78 : ty === 'A' ? [0.82, 1, 1.15][v] : 1);
     this.lh.note(this.sw(s, t), seq[i], this.stepDur * 2 * (i === 0 ? 4 : 2.6), vel);
   }
 
   onStep(s, t) {
     const ty = this.sec.type, v = this.sec.var || 0;
     if (this.on('chords')) this.leftHand(s, t);
-    if (this.on('pad')) this.padPlay(this.strings, s, t, { n: 4, lo: 50, hi: 74, vel: ty === 'intro' ? 0.32 : 0.42 });
+    if (this.on('pad')) this.padPlay(this.strings, s, t, { n: 4, lo: 50, hi: 74, vel: ty === 'intro' ? 0.26 : ty === 'B' ? 0.34 : ty === 'A' ? [0.34, 0.42, 0.56][v] : 0.42 });
     if (this.on('bass') && (s & 3) === 0) {
       const b = s >> 2;
       if (this.changes[b]) this.contra.note(t, this.rootIn(this.barChords[b], 33), this.chordBeats(b) * this.beatDur + 0.1, 0.5);
     }
     if (this.on('gtr')) this.padPlay(this.choir, s, t, { n: 3, lo: 57, hi: 76, key: 'choir', vel: 0.4 });
     if (this.on('lead')) {
-      if (ty === 'A' && v === 0) this.tunePlay(this.rh, this.melA, s, t, { vel: 0.62, gate: 1.2 });
+      if (ty === 'A' && v === 0) this.tunePlay(this.rh, this.melA, s, t, { vel: 0.5, gate: 1.2 });
       else if (ty === 'A' && v === 1) this.tunePlay(this.vln, this.melLow, s, t, { vel: 0.7, gate: 0.98 });
       else if (ty === 'A') {
-        this.tunePlay(this.vln, this.melA, s, t, { vel: 0.72, gate: 0.98 });
-        this.tunePlay(this.rh, this.melA, s, t, { vel: 0.36, gate: 1.1 });
+        this.tunePlay(this.vln, this.melA, s, t, { vel: 0.9, gate: 0.98 });
+        this.tunePlay(this.vln, this.melLow, s, t, { vel: 0.55, gate: 0.98, orn: false });
+        this.tunePlay(this.rh, this.melA, s, t, { vel: 0.42, gate: 1.1 });
       } else if (ty === 'B') this.tunePlay(this.cello, this.memory, s, t, { vel: 0.85, legato: true });
       else if (ty === 'outro') this.tunePlay(this.rh, this.coda, s, t, { vel: 0.56, gate: 1.4 });
     }

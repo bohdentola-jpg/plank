@@ -13,6 +13,8 @@ const hold = (m, test, text, where, sub) => m.until(() => { if (text && !m.G.hud
 const SHARE_IDS = ['dolly', 'hank', 'ruth', 'ray', 'lyle'];
 const shareCount = (s) => SHARE_IDS.filter((k) => s.flags['share.' + k] === true || (s.shares || {})[k]).length;
 const STAGE = { x: -40, z: -42 };
+/** Cancel a side task and take its leftover interaction spots out of the world. */
+function drop(G, id, spots = []) { for (const sp of spots) G.interact?.remove?.(`${id}:${sp}`); G.missions.cancel?.(id); }
 const lvl = (G, id) => Math.min(5, Math.floor((G.state.rel[id] || 0) / 20));
 const FRIENDS = ['koshkin', 'dolly', 'hank', 'ruth', 'ray', 'marta', 'walt', 'gabriel', 'nina', 'lou', 'tommy', 'ellen', 'pearl', 'wade'];
 
@@ -107,6 +109,9 @@ export const LINES = {
   'd13.ry.chat': { who: 'ray', en: "Never thought I'd be nervous about somebody else's election. Go shake hands. Even the cold ones." },
 };
 
+/** The square's looped cameras stay looped after a reload (the loop lives in Lyosha's tap, not in the save). */
+const reloop = (m) => { const A = m.G.attention; if (!m.flag('camsLooped') || !A) return; (A.watchers || []).forEach((w, i) => { if (w.owner === 'smartlight' && Math.hypot(w.x, w.z) < 80) A.looped?.add(i); }); };
+
 // ---------------------------------------------------------------- missions
 async function hack(m, id, where, retryLine, retryText) {
   for (;;) {
@@ -123,6 +128,7 @@ export const MISSIONS = {
   'd13.vote': {
     title: 'Election Day', main: true, day: 13,
     async run(m, from) {
+      reloop(m);
       const G = m.G;
       if (m.cp(1, from)) {
         await m.wait(1.0);
@@ -160,6 +166,7 @@ export const MISSIONS = {
   'd13.shares': {
     title: 'Continuity Cards', main: true, day: 13,
     async run(m, from) {
+      reloop(m);
       const G = m.G;
       if (m.cp(1, from)) {
         const text = () => `Continuity cards: ${shareCount(G.state)} / 3`;
@@ -194,6 +201,7 @@ export const MISSIONS = {
   'd13.count': {
     title: 'The Count', main: true, day: 13,
     async run(m, from) {
+      reloop(m);
       const G = m.G, s = G.state;
       if (m.cp(1, from)) {
         m.obj('The count at the Parish Hall', 'hall', 'Polls close at 20:00');
@@ -202,6 +210,8 @@ export const MISSIONS = {
       }
       if (m.cp(2, from)) {
         m.clear();
+        drop(G, 'd9.posters', ['poster.store', 'poster.hall', 'poster.diner']); drop(G, 'd9.fax', ['phone']); drop(G, 'd9.darts', ['darts']);
+        drop(G, 'd11.lyle', ['listen']); drop(G, 'd13.gotv', ['ride.ivanoff', 'ride.kaplan', 'ride.petrov']); drop(G, 'd13.boxes', ['boxes']);
         const F = s.flags;
         const friends = FRIENDS.filter((id) => lvl(G, id) >= 2).length;
         let net = (s.standing || 0) + Math.floor((s.spirit || 0) / 2) + friends * 2
@@ -278,6 +288,7 @@ export const MISSIONS = {
   'd13.night': {
     title: 'Night School: Reading Errors', main: true, day: 13,
     async run(m, from) {
+      reloop(m);
       if (m.cp(1, from)) {
         await m.ear('d13.n.lesson');
         m.obj("Lyosha's lesson — the laptop in your cabin", 'cabin.laptop', 'Lesson 13: Reading Errors');
@@ -322,6 +333,7 @@ export const MISSIONS = {
         if (m.cp(2 + i, from) && !G.missions.isDone('d13.count')) {
           m.obj(`Offer a ride to the polls: ${name}`, where, `${i} / 3 voters`);
           await Promise.race([m.spot('ride.' + k, where, 'Offer a ride to the polls', 2.8), m.until(() => G.missions.isDone('d13.count'))]);
+          G.interact?.remove?.(`${m.id}:ride.${k}`);
           if (!G.missions.isDone('d13.count')) await m.scene(async (d) => { await d.say(voice, line); });
         }
       }
@@ -352,6 +364,7 @@ export const MISSIONS = {
         m.obj('Watch the ballot boxes', 'hall', 'The Parish Hall, from 17:00');
         await hold(m, () => { const h = G.state.hour; return h >= 17 || h < 3 || G.missions.isDone('d13.count'); }, 'Watch the ballot boxes', 'hall', 'The Parish Hall, from 17:00');
         if (!G.missions.isDone('d13.count')) await Promise.race([m.spot('boxes', 'hall.tables', 'Keep an eye on the boxes', 3), m.until(() => G.missions.isDone('d13.count'))]);
+        G.interact?.remove?.(`${m.id}:boxes`);
       }
       if (m.cp(2, from)) {
         if (!G.missions.isDone('d13.count')) {

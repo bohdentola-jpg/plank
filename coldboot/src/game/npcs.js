@@ -56,6 +56,17 @@ export class NPCs {
 
   get(id) { return this.list.get(id); }
 
+  /** An NPC record for any cast member (Mr. Grey, Halloran…) — hidden unless a scene brings them. */
+  ensure(id) {
+    let npc = this.list.get(id);
+    if (!npc && CAST[id]) {
+      npc = new NPC(id, { name: CAST[id].name });
+      npc.hidden = true;
+      this.list.set(id, npc);
+    }
+    return npc;
+  }
+
   /** Where a named NPC should be at this hour (from data/schedules.js). */
   scheduleFor(id, hour, day) {
     const sch = SCHEDULES[id];
@@ -74,7 +85,7 @@ export class NPCs {
     if (typeof place === 'object') return place;
     const p = this.G.town.points[place];
     if (p) return p;
-    const b = this.G.town.buildings[place];
+    const b = this.G.town.buildings[place] || (place.includes('.') ? this.G.town.buildings[place.split('.')[0]] : null);
     if (b) return { x: b.x + Math.sin(b.rot) * 6, z: b.z + Math.cos(b.rot) * 6, rot: b.rot + Math.PI };
     return null;
   }

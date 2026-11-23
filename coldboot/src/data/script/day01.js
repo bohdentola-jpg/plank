@@ -143,14 +143,14 @@ export const MISSIONS = {
         await m.until(() => (G.state.inv.hemp_rope || 0) > 0);
       }
       if (m.cp(4, from)) {
-        m.obj('Fix the bell rope', 'church.ropeHook', 'In the church, under the tower');
-        await m.spot('rope', 'church.ropeHook', 'Fix the bell rope', 2.2);
+        m.obj('Fix the bell rope', 'church.ladderBottom', 'In the church, under the tower');
+        await m.spot('rope', 'church.ladderBottom', 'Fix the bell rope', 2.2);
         const ok = await m.minigame('rope', { title: 'SPLICE THE BELL ROPE' });
         G.state.inv.hemp_rope = 0;
         G.state.spirit += 5;
         G.hud.toast('TOWN SPIRIT', '+5  The bell rope is fixed', '#ffd166');
-        m.obj('Ring the bell', 'church.ropeHook');
-        await m.spot('ring', 'church.ropeHook', 'Ring the bell', 2.2);
+        m.obj('Ring the bell', 'church.ladderBottom');
+        await m.spot('ring', 'church.ladderBottom', 'Ring the bell', 2.2);
         G.sfx?.bell?.();
         G.state.flags.bellFixed = true;
         await m.wait(2.5);

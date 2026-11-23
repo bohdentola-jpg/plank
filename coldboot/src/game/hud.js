@@ -2,6 +2,7 @@
 // current objective, a heading-up radar (top-right), interaction prompts,
 // Northstar's attention eye, and incoming messages.
 import { C, W, H, text, panel, actionGlyph, roundRect, vText } from '../core/ui.js';
+import { vWidth } from '../core/ui.js';
 import { TOWN } from '../world/townplan.js';
 
 const DOW = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
@@ -34,7 +35,7 @@ export class HUD {
     const h = Math.floor(s.hour) % 24, m = Math.floor((s.hour % 1) * 60);
     panel(ctx, 24, 22, 286, 66, { accentLen: 90 });
     vText(ctx, `DAY ${s.day}`, 44, 52, 22, { color: '#fff', weight: 0.17 });
-    text(ctx, DOW[(s.day - 1) % 7], 124, 52, { size: 15, weight: 800, color: C.dim, spacing: 2 });
+    text(ctx, DOW[(s.day - 1) % 7], 44 + vWidth(`DAY ${s.day}`, 22) + 10, 52, { size: 15, weight: 800, color: C.dim, spacing: 2 });
     vText(ctx, `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`, 290, 52, 22, { color: C.accent, weight: 0.17, align: 'right' });
     text(ctx, `$${Math.floor(s.money)}`, 44, 76, { size: 15, weight: 800, color: '#9fe8b0' });
     const left = 14 - s.day;

@@ -5,17 +5,17 @@
 
 export const SCHEDULES = {
   koshkin: (day, s) => (s.flags.koshkinHospital && !s.flags.koshkinBack ? [{ t: [0, 24], away: true }] : [
-    { t: [8, 18.5], at: 'koshkin.counter', do: 'stand' },
+    { t: [8, 18.5], at: 'koshkin.clerk', do: 'stand' },
     { t: [18.5, 20], at: 'church', do: 'stand' },
     { t: [20, 8], away: true },
   ]),
   dolly: [
-    { t: [6, 21], at: 'diner.counter', do: 'stand' },
+    { t: [6, 21], at: 'diner.waitress', do: 'stand' },
     { t: [21, 23], at: 'bar.stool2', do: 'sit' },
     { t: [23, 6], away: true },
   ],
   hank: [
-    { t: [7, 18], at: 'hardware.counter', do: 'arms' },
+    { t: [7, 18], at: 'hardware.door', do: 'arms' },
     { t: [18, 21], at: 'bar.stool1', do: 'sit' },
     { t: [21, 7], away: true },
   ],
@@ -38,23 +38,23 @@ export const SCHEDULES = {
     { t: [20, 9], away: true },
   ],
   marta: [
-    { t: [8, 18], at: 'police.desk', do: 'stand' },
+    { t: [8, 18], at: 'police.chiefDesk', do: 'stand' },
     { t: [18, 22], at: { x: 4, z: -4, rot: 0 }, do: 'arms' },
     { t: [22, 8], away: true },
   ],
   gideon: [
-    { t: [8, 18], at: 'cityhall.office', do: 'stand' },
+    { t: [8, 18], at: 'cityhall.clerk', do: 'stand' },
     { t: [18, 19.5], at: 'northstar', do: 'stand' },
     { t: [19.5, 8], away: true },
   ],
   walt: [
-    { t: [9, 12], at: 'cityhall.mayor', do: 'stand' },
+    { t: [9, 12], at: 'cityhall.mayorDesk', do: 'stand' },
     { t: [12, 13], at: 'diner.booth3', do: 'sit' },
-    { t: [13, 17], at: 'cityhall.mayor', do: 'stand' },
+    { t: [13, 17], at: 'cityhall.mayorDesk', do: 'stand' },
     { t: [17, 9], away: true },
   ],
   evan: [
-    { t: [0, 24], at: 'northstar.register', do: 'stand' },
+    { t: [0, 24], at: 'northstar.clerk', do: 'stand' },
   ],
   gabriel: [
     { t: [7, 12], at: 'church.altar', do: 'stand' },
@@ -67,12 +67,12 @@ export const SCHEDULES = {
     { t: [21, 15], away: true },
   ],
   lou: [
-    { t: [15, 2], at: 'bar.counter', do: 'stand' },
+    { t: [15, 2], at: 'bar.bartender', do: 'stand' },
     { t: [2, 15], away: true },
   ],
   tommy: [
     { t: [9, 17], at: 'hardware', do: 'stand' },
-    { t: [17, 22], at: 'bar.pool', do: 'stand' },
+    { t: [17, 22], at: 'bar.poolTable', do: 'stand' },
     { t: [22, 9], away: true },
   ],
   ellen: [

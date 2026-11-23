@@ -15,7 +15,7 @@
 
 import { CBSong, tune, MOTIF, MOTIF_PROG, Plucker, Drone } from './cb_common.js';
 import { Mono, Poly } from './inst.js';
-import { pat, makeChase } from './util.js';
+import { pat, makeChase, clamp } from './util.js';
 
 const ALL = 'pad fx cym hats kick snare bass chords arp gtr lead perc';
 
@@ -45,19 +45,19 @@ export class CBTension extends CBSong {
     this.drums = {}; // all drums are played by intensity in onStep
     this.chase = makeChase(r, this.keyPc, 64);
     this.mix = {
-      pad: { v: 0.45 }, bass: { v: 0.5 }, hats: { v: 0.2 }, perc: { v: 0.22, rev: 0.15 },
-      chords: { v: 0.3, rev: 0.4 }, gtr: { v: 0.16, rev: 0.35 }, kick: { v: 0.36 }, arp: { v: 0.2, dly: 0.3, rev: 0.12 },
+      pad: { v: 0.32 }, bass: { v: 0.5 }, hats: { v: 0.34 }, perc: { v: 0.26, rev: 0.15 },
+      chords: { v: 0.3, rev: 0.4 }, gtr: { v: 0.16, rev: 0.35 }, kick: { v: 0.3 }, arp: { v: 0.2, dly: 0.3, rev: 0.12 },
       snare: { v: 0.3, rev: 0.18 }, cym: { v: 0.22 }, lead: { v: 0.42, rev: 0.2 }, fx: { v: 0.5, rev: 0.3 },
     };
     this.pumpBass = 0.25;
     this.pumpRel = 0.2;
-    this.trim = 0.86;
+    this.trim = 0.78;
   }
 
   setup() {
     this.dlyTime = this.stepDur * 3;
     this.dlyFb = 0.3;
-    this.drone = new Drone(this, 'pad', { level: 0.34, cut: 220, lfoDepth: 70, lfoRate: 0.06, detune: 11, sub: 0.7, atk: 2 });
+    this.drone = new Drone(this, 'pad', { level: 0.3, cut: 220, lfoDepth: 70, lfoRate: 0.06, detune: 11, sub: 0.35, atk: 2 });
     this.bass = new Mono(this, 'bass', {
       oscs: [{ type: 'sawtooth', gain: 0.5 }, { type: 'square', gain: 0.3, detune: 7 }], cut: 220, q: 5, env: 1100,
       fatk: 0.002, fdec: 0.09, keytrack: 0.4, atk: 0.002, dec: 0.12, sus: 0.45, rel: 0.04, glide: 0.03, level: 0.42,
@@ -91,19 +91,19 @@ export class CBTension extends CBSong {
     const I = this.intensity, iS = this.iS;
     const T = this.sw(s, t);
     const E2 = 40;
-    this.drone.cutoff(t, 160 + 420 * iS, 0.4);
+    if ((s & 3) === 0) { this.drone.cutoff(t, 160 + 420 * iS, 0.4); this.drone.set(t, 40, 0.6 + 0.4 * iS, 0.1); }
     // --- bass ostinato
     if (this.on('bass')) {
       const cut = 150 + 1300 * Math.pow(iS, 1.4);
       if (I >= 0.82) this.rolePlay(this.bass, 'RrorRrorRrorRrOr', s, t, { lo: 28, gate: 0.6, vel: 0.9, slides: false, nopts: () => ({ cut }) });
-      else if (I >= 0.5) this.ostinato(this.bass, this.sec.type === 'C' ? 'R.rrb.rrR.rrt.rb' : 'R.rrr.rbR.rrt.rb', s, t, E2, { gate: 0.55, vel: 0.82, nopts: { cut } });
-      else this.ostinato(this.bass, this.sec.type === 'C' ? 'R...r.b.R...t.b.' : 'R.r.r.b.R.r.t.b.', s, t, E2, { gate: 0.45, vel: 0.7 + 0.2 * I, nopts: { cut } });
+      else if (I >= 0.5) this.ostinato(this.bass, this.sec.type === 'C' ? 'R.rrb.rrR.rrt.rb' : 'R.rrr.rbR.rrt.rb', s, t, E2, { gate: 0.55, vel: 0.5 + 0.4 * I, nopts: { cut } });
+      else this.ostinato(this.bass, this.sec.type === 'C' ? 'R...r.b.R...t.b.' : 'R.r.r.b.R.r.t.b.', s, t, E2, { gate: 0.45, vel: 0.45 + 0.5 * I, nopts: { cut } });
     }
     // --- ticking hats
     if (this.on('hats')) {
       if (I >= 0.8) this.hit('hat', T, (s & 3) === 2 ? 0.75 : (s & 1) ? 0.32 : 0.5);
       else if (I >= 0.5) { if (!(s & 1)) this.hit('hat', T, (s & 3) === 2 ? 0.7 : 0.38); }
-      else if ((s & 3) === 2) this.hit('hat', T, 0.42 + 0.3 * I);
+      else if ((s & 3) === 2) this.hit('hat', T, 0.55 + 0.3 * I);
     }
     if (this.on('perc')) {
       if ((s & 7) === 0) this.hit('rim', T, 0.32 + 0.2 * I, { layer: 'perc' });
@@ -113,7 +113,8 @@ export class CBTension extends CBSong {
     if (this.on('kick')) {
       const p = I >= 0.82 ? 'X...X...X...X.x.' : 'X..x....X..x....';
       const c = p[s];
-      if (c !== '.') this.hit('kick', T, c === 'X' ? 0.95 : 0.6);
+      const k = I >= 0.82 ? 1 : 0.42 + 0.5 * clamp((I - 0.5) / 0.32, 0, 1); // the heartbeat grows with the danger
+      if (c !== '.') this.hit('kick', T, (c === 'X' ? 0.95 : 0.6) * k);
     }
     if (this.on('snare')) {
       if (I >= 0.85) {
@@ -207,7 +208,7 @@ export class CBChase extends CBSong {
       gtr: { v: 0.3, rev: 0.2 }, pad: { v: 0.34, rev: 0.4 }, fx: { v: 0.5, rev: 0.3 },
     };
     this.buildHP = 380;
-    this.trim = 0.9;
+    this.trim = 0.6;
   }
 
   setup() {

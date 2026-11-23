@@ -115,6 +115,9 @@ export const LINES = {
   'd9.lo.lose': { who: 'lou', en: "Close. Not close enough. Poster goes up anyway. Nobody in here can read after nine o'clock.", emo: 'laugh' },
 };
 
+/** The square's looped cameras stay looped after a reload (the loop lives in Lyosha's tap, not in the save). */
+const reloop = (m) => { const A = m.G.attention; if (!m.flag('camsLooped') || !A) return; (A.watchers || []).forEach((w, i) => { if (w.owner === 'smartlight' && Math.hypot(w.x, w.z) < 80) A.looped?.add(i); }); };
+
 // ---------------------------------------------------------------- missions
 async function hack(m, id, where, retryLine, retryText) {
   for (;;) {
@@ -131,6 +134,7 @@ export const MISSIONS = {
   'd9.seat': {
     title: 'The Vacant Seat', main: true, day: 9,
     async run(m, from) {
+      reloop(m);
       const G = m.G;
       if (m.cp(1, from)) {
         await m.wait(1.0);
@@ -223,6 +227,7 @@ export const MISSIONS = {
   'd9.petition': {
     title: 'Twenty-Five Names', main: true, day: 9,
     async run(m, from) {
+      reloop(m);
       const G = m.G;
       if (m.cp(1, from)) {
         const total = () => named(m) + folkSigs(m);
@@ -246,6 +251,7 @@ export const MISSIONS = {
           }
           return named(m) >= 8 && total() >= 25;
         });
+        for (const cl of CLIPS) G.interact?.remove?.(`${m.id}:clip.${cl.k}`);
         G.hud.toast('PETITION', 'Enough names to file', '#b98cff');
         await m.ear('d9.n.enough');
       }
@@ -275,6 +281,7 @@ export const MISSIONS = {
   'd9.night': {
     title: 'Night School: Recipes', main: true, day: 9,
     async run(m, from) {
+      reloop(m);
       const G = m.G;
       if (m.cp(1, from)) {
         await m.ear('d9.n.lesson');
@@ -418,7 +425,6 @@ export const DIALOG = {
     c.rel(3);
   },
   nina: async (c, prev) => {
-    if (c.day !== 9) return prev(c);
     const posters = c.G.missions.isActive('d9.posters') && !c.flag('d9.posters.got') && !c.hasItem('poster');
     const opts = [];
     if (canSign(c, 'nina')) opts.push(ASK);
@@ -445,7 +451,6 @@ export const DIALOG = {
     c.rel(3);
   },
   pearl: async (c, prev) => {
-    if (c.day !== 9) return prev(c);
     const opts = [];
     if (c.G.missions.isActive('d9.fax') && c.flag('d9.fax.called') && !c.flag('d9.sig.koshkin')) opts.push({ label: 'Did a fax come in from Nome?', key: 'fax' });
     if (canSign(c, 'pearl')) opts.push(ASK);

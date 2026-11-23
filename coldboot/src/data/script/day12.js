@@ -11,6 +11,8 @@ const passed = (r) => r === true || !!(r && r.pass);
 const pt = (G, name, fb, dx = 0, dz = 0) => { const q = G.town?.points?.[name]; return q ? { x: q.x + dx, z: q.z + dz } : { x: fb.x + dx, z: fb.z + dz }; };
 const hold = (m, test, text, where, sub) => m.until(() => { if (text && !m.G.hud?.objective) m.obj(text, where, sub); return test(); });
 const STAGE = { x: -40, z: -42 };      // hall.stage fallback
+/** Cancel a side task and take its leftover interaction spots out of the world. */
+function drop(G, id, spots = []) { for (const sp of spots) G.interact?.remove?.(`${id}:${sp}`); G.missions.cancel?.(id); }
 const EVENING = (h) => h >= 18.5 || h < 3;
 
 export const LINES = {
@@ -19,7 +21,7 @@ export const LINES = {
   'd12.l.ledger': { who: 'lyosha', ru: 'Лайл будет клясться, что «Нордстар» не платил ему ни цента. А у Лайла в конторе лежит гроссбух. Бумажный! Они не доверяют компьютерам. Смешно, правда?', en: "Lyle will swear Northstar never paid him a cent. And there's a ledger in Lyle's office. A paper one! They don't trust computers. Funny, isn't it?", emo: 'smile' },
   'd12.n.office': { who: 'nadia', ru: 'Контора «Прюитт Риэлти», Третья авеню. Днём Лайл сидит в мэрии. Сфотографируй страницы — Иван сделает из них таблицу.', en: "Pruitt Realty, Third Avenue. In the daytime Lyle sits at City Hall. Photograph the pages — Ivan will turn them into a table." },
   'd12.n.ask': { who: 'nadia', ru: 'Лайл тебе должен. Сам сказал. Может, не надо ничего взламывать — просто попроси.', en: "Lyle owes you. He said so himself. Maybe we don't need to break in at all. Just ask." },
-  'd12.l.yourlock': { who: 'lyosha', ru: 'Ха. Это же твой замок. Ты его ставишь — ты его и открываешь.', en: "Ha. That's your own lock. You put it in — you know how to get it open.", emo: 'laugh' },
+  'd12.l.yourlock': { who: 'lyosha', ru: 'Ха. Это же твоя работа. Кто замок ставит, тот его и открывает.', en: "Ha. That's your own handiwork. Whoever puts a lock in knows how to get it open.", emo: 'laugh' },
   'd12.i.photos': { who: 'ivan', ru: 'Фотографии чёткие. Через час будет таблица.', en: "The photos are sharp. In an hour you'll have a table." },
   'd12.l.projector': { who: 'lyosha', ru: 'Я подключусь к проектору в зале. Нина ведёт прямой эфир. Если решишь — одно слово, и таблица будет на экране.', en: "I'll hook into the hall's projector. Nina's broadcasting live. If you decide to — one word, and the table goes up on the screen." },
   'd12.dm.choice': { who: 'dmitri', ru: 'Подумай. В этой таблице не только Лайл. Там и мэр.', en: "Think about it. Lyle isn't the only name in that table. The mayor is there too.", emo: 'serious' },
@@ -109,6 +111,9 @@ export const LINES = {
   'd12.k.after': { who: 'koshkin', en: 'Front row! I saw everything! I only hit Lyle with my stick in my mind. Twice.', emo: 'laugh' },
 };
 
+/** The square's looped cameras stay looped after a reload (the loop lives in Lyosha's tap, not in the save). */
+const reloop = (m) => { const A = m.G.attention; if (!m.flag('camsLooped') || !A) return; (A.watchers || []).forEach((w, i) => { if (w.owner === 'smartlight' && Math.hypot(w.x, w.z) < 80) A.looped?.add(i); }); };
+
 // ---------------------------------------------------------------- missions
 async function hack(m, id, where, retryLine, retryText) {
   for (;;) {
@@ -124,6 +129,7 @@ export const MISSIONS = {
   'd12.ledger': {
     title: 'The Ledger', main: true, day: 12,
     async run(m, from) {
+      reloop(m);
       const G = m.G;
       if (m.cp(1, from)) {
         await m.wait(1.0);
@@ -133,14 +139,14 @@ export const MISSIONS = {
         if (m.flag('koshkinHospital') && !m.flag('koshkinBack')) m.start('d12.home');
       }
       if (m.cp(2, from)) {
-        if (freed(m)) {
-          await m.ear('d12.n.ask');
-          m.obj('Ask Lyle for the ledger', 'lyle', 'City Hall by day, the diner after five');
-          await hold(m, () => m.flag('ledgerPhotos'), 'Ask Lyle for the ledger', 'lyle', 'City Hall by day, the diner after five');
-        } else {
-          await m.ear('d12.n.office');
-          m.obj("Photograph Northstar's ledger at Pruitt Realty", 'house22.door', 'Third Avenue, by City Hall — while Lyle is out');
+        const ask = freed(m);
+        await m.ear(ask ? 'd12.n.ask' : 'd12.n.office');
+        const text = ask ? 'Ask Lyle for the ledger — or photograph it at his office' : "Photograph Northstar's ledger at Pruitt Realty";
+        const sub = ask ? 'Lyle: City Hall by day, the diner after five' : 'Third Avenue, by City Hall — while Lyle is out';
+        m.obj(text, ask ? 'lyle' : 'house22.door', sub);
+        (async () => {
           await m.spot('door', 'house22.door', 'Pick the lock', 2.6);
+          if (m.flag('ledgerPhotos')) return;
           if (m.flag('sf.lyle.lock')) await m.ear('d12.l.yourlock');
           G.attention.act(1.2, 8);
           const ok = await m.minigame('lock', { title: 'PRUITT REALTY' });
@@ -148,9 +154,12 @@ export const MISSIONS = {
           m.obj('Photograph the ledger', 'house22.door', 'The shelf behind the desk');
           await m.spot('ledger', 'house22.door', 'Photograph the ledger', 2.6);
           G.attention.act(0.8, 4);
-          G.hud.toast('PHOTOGRAPHED', "Northstar's payment ledger, 14 pages", '#7fe6ff');
+          G.hud.toast('PHOTOGRAPHED', "Northstar's payment ledger, fourteen pages", '#7fe6ff');
           m.flag('ledgerPhotos', true);
-        }
+        })();
+        await hold(m, () => !!m.flag('ledgerPhotos'), text, ask ? 'lyle' : 'house22.door', sub);
+        G.interact?.remove?.(`${m.id}:door`);
+        G.interact?.remove?.(`${m.id}:ledger`);
       }
       if (m.cp(3, from)) {
         await m.ear('d12.i.photos');
@@ -165,6 +174,7 @@ export const MISSIONS = {
   'd12.debate': {
     title: 'Debate Night', main: true, day: 12,
     async run(m, from) {
+      reloop(m);
       const G = m.G;
       if (m.cp(1, from)) {
         m.obj('The debate at the Parish Hall', 'hall', 'Doors at 18:30 · KZRY live at 19:00');
@@ -172,7 +182,7 @@ export const MISSIONS = {
         await m.reach('hall', 12);
       }
       if (m.cp(2, from)) {
-        G.missions.cancel?.('d12.hall');
+        drop(G, 'd12.hall', ['pa']); drop(G, 'd11.ruth'); drop(G, 'd10.cannery');
         m.clear();
         const S = pt(G, 'hall.stage', STAGE);
         await G.fadeTeleport({ x: S.x + 1.6, z: S.z, yaw: 0 }, 1.4);
@@ -312,6 +322,7 @@ export const MISSIONS = {
   'd12.night': {
     title: "Night School: Baba Valya's Codes", main: true, day: 12,
     async run(m, from) {
+      reloop(m);
       if (m.cp(1, from)) {
         await m.ear('d12.v.lesson');
         m.obj("Baba Valya's lesson — the laptop in your cabin", 'cabin.laptop', "Lesson 12: Baba Valya's Codes");

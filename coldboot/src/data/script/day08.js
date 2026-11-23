@@ -16,6 +16,8 @@ function ensureNpc(G, id, name = id) {
   try { if (proto) list.set(id, new proto.constructor(id, { name })); } catch { /* none to borrow */ }
 }
 /** m.until() that puts this mission's objective back if a side task cleared it. */
+/** A named point at ground level (spots hide prompts more than 2.2 m above the player). */
+const flatPt = (G, name, fb) => { const q = G.town?.points?.[name]; return q ? { x: q.x, z: q.z } : fb; };
 const hold = (m, test, text, where, sub) => m.until(() => { if (text && !m.G.hud?.objective) m.obj(text, where, sub); return test(); });
 
 export const LINES = {
@@ -52,6 +54,7 @@ export const LINES = {
   'd8.o.know': { who: 'okafor', en: "No. But you've been learning a lot about this town lately. So have I. We're reading the same book, you and me." },
   'd8.o.walk': { who: 'okafor', en: "Don't go. I'll be quick. It's too cold for a long conversation, and too many people listen to the short ones." },
   'd8.o.plane': { who: 'okafor', en: 'Good memory. I took your picture. Bad habit. I photograph everyone who flies in. Hardly anybody flies in.', emo: 'smile' },
+  'd8.o.stare': { who: 'okafor', en: 'You looked right at me last Wednesday. Most people look away. I remembered that.' },
   'd8.o.lights': { who: 'okafor', en: 'Funny thing, tonight. Every camera on that square fell asleep at the same moment. Nineteen of them. Like somebody sang them a lullaby.' },
   'd8.o.wouldnt': { who: 'okafor', en: 'No. Of course not. You fix roofs.', emo: 'smile' },
   'd8.o.who': { who: 'okafor', en: 'Somebody who notices things. Like you do.' },
@@ -116,6 +119,9 @@ export const LINES = {
   'd8.wa.chat': { who: 'wade', en: "Hey there. Weather's clearing Thursday. If you still want that flying lesson, come by the hangar." },
 };
 
+/** The square's looped cameras stay looped after a reload (the loop lives in Lyosha's tap, not in the save). */
+const reloop = (m) => { const A = m.G.attention; if (!m.flag('camsLooped') || !A) return; (A.watchers || []).forEach((w, i) => { if (w.owner === 'smartlight' && Math.hypot(w.x, w.z) < 80) A.looped?.add(i); }); };
+
 // ---------------------------------------------------------------- missions
 /** A field hack that can be retried at a spot instead of trapping the player in the laptop. */
 async function hack(m, id, where, retryLine, retryText) {
@@ -141,7 +147,7 @@ export const MISSIONS = {
       }
       if (m.cp(2, from)) {
         m.obj('Sweep the cabin: the smoke alarm', 'cabin.smokeAlarm', 'Phone scanner: 0 / 3 found');
-        await m.spot('alarm', 'cabin.smokeAlarm', 'Check the smoke alarm', 2.8);
+        await m.spot('alarm', flatPt(G, 'cabin.smokeAlarm', { x: -150, z: 92 }), 'Check the smoke alarm', 2.8);
         let keep = true;
         await m.scene(async (d) => {
           await d.say('lyosha', 'd8.l.alarm', { radio: true });
@@ -192,6 +198,7 @@ export const MISSIONS = {
   'd8.loop': {
     title: 'Eyes on the Square', main: true, day: 8,
     async run(m, from) {
+      reloop(m);
       const G = m.G;
       if (m.cp(1, from)) {
         await m.ear('d8.l.lights');
@@ -237,6 +244,7 @@ export const MISSIONS = {
           await d.say('okafor', 'd8.o.hello', { cam: d.closeUp('okafor') });
           const k = await d.choose(['Do I know you?', '(Say nothing. Keep walking.)', 'You were on my plane.'], { prompt: 'MR. GREY' });
           await d.say('okafor', ['d8.o.know', 'd8.o.walk', 'd8.o.plane'][k] || 'd8.o.know', { cam: d.closeUp('okafor', { side: -1 }) });
+          if (m.flag('d3.lookedAtGrey')) await d.say('okafor', 'd8.o.stare');
           await d.say('okafor', 'd8.o.lights', { cam: d.overShoulder('player', 'okafor') });
           const k2 = await d.choose(["I wouldn't know anything about cameras.", 'Who are you?', 'Maybe they were tired.'], { prompt: 'MR. GREY' });
           await d.say('okafor', ['d8.o.wouldnt', 'd8.o.who', 'd8.o.tired'][k2] || 'd8.o.who');
@@ -258,6 +266,7 @@ export const MISSIONS = {
   'd8.night': {
     title: 'Night School: Strings', main: true, day: 8,
     async run(m, from) {
+      reloop(m);
       const G = m.G;
       if (m.cp(1, from)) {
         await m.ear('d8.n.lesson');
@@ -351,7 +360,6 @@ const chat = (npc, key, lines, rel = 2) => async (c, prev) => {
 
 export const DIALOG = {
   ellen: async (c, prev) => {
-    if (c.day !== 8) return prev(c);
     if (c.G.missions.isActive('d8.key') && !c.flag('d8.key.ellen')) {
       await c.say('ellen', 'd8.e.koshkin');
       await c.say('ellen', 'd8.e.key');
@@ -363,7 +371,6 @@ export const DIALOG = {
     return chat('ellen', 'd8.e.chatted', ['d8.e.chat'])(c, prev);
   },
   pearl: async (c, prev) => {
-    if (c.day !== 8) return prev(c);
     if (c.G.missions.isActive('d8.key') && c.flag('d8.key.nail') && !c.flag('d8.key.pearl')) {
       await c.you('Has anyone been hanging around Shore Road? Or the store?');
       await c.say('pearl', 'd8.p.suv');
@@ -376,10 +383,9 @@ export const DIALOG = {
     return chat('pearl', 'd8.p.chatted', ['d8.p.chat'])(c, prev);
   },
   hank: async (c, prev) => {
-    if (c.day !== 8) return prev(c);
     const opts = [];
     if (c.G.missions.isActive('d8.key') && c.flag('d8.key.pearl') && !c.hasItem('deadbolt') && !c.flag('newLock')) opts.push({ label: 'A deadbolt. The good kind. ($35)', key: 'bolt' });
-    if (!c.flag('d8.h.chatted')) opts.push({ label: "How's business?", key: 'chat' });
+    if (c.day === 8 && !c.flag('d8.h.chatted')) opts.push({ label: "How's business?", key: 'chat' });
     if (!opts.length) return prev(c);
     opts.push({ label: 'Something else.', key: 'prev' });
     const k = await c.choose(opts);
@@ -400,7 +406,6 @@ export const DIALOG = {
     return prev(c);
   },
   gabriel: async (c, prev) => {
-    if (c.day !== 8) return prev(c);
     if (c.G.missions.isActive('d8.numbers') && !c.flag('d8.num.asked')) {
       await c.say('gabriel', 'd8.g.radio');
       const k = await c.choose(["I'd like to hear that.", 'Numbers? Probably a fishing fleet.']);

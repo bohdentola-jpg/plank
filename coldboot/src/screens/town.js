@@ -35,11 +35,21 @@ import { Economy } from '../game/economy.js';
 import { optionsPanel } from './options.js';
 import { Phone } from '../game/phone.js';
 import { ChimneySmoke } from '../world/smoke.js';
-import { Vehicles } from '../game/vehicles.js';
+import { Vehicles, buildSUV, buildPickup } from '../game/vehicles.js';
 
 export const G = {
   // the live game, for every system to reach: G.state, G.player, G.town, G.hud …
 };
+
+/** Dressed for the Winter Gala. */
+function galaDNA() {
+  const dna = { ...playerDNA() };
+  const fem = (dna.sex ?? 1) < 0.5;
+  dna.outfit = fem
+    ? [{ slot: 'top', pattern: 'plain', color: '#4a1426', thick: 0.004, hem: 'hip', sleeves: 0.2 }, { slot: 'skirt', pattern: 'plain', color: '#4a1426', thick: 0.006, hem: 'calf' }, { slot: 'boots', pattern: 'leather', color: '#0a0806', thick: 0.008, shaft: 0.05 }]
+    : [{ slot: 'top', pattern: 'plain', color: '#e8e6e0', thick: 0.004, hem: 'hip', neckUp: 0.02 }, { slot: 'coat', pattern: 'wool', color: '#16181e', thick: 0.008, hem: 'hip' }, { slot: 'bottom', pattern: 'wool', color: '#16181e', thick: 0.005 }, { slot: 'boots', pattern: 'leather', color: '#0a0806', thick: 0.008, shaft: 0.06 }];
+  return dna;
+}
 
 /** The player's outdoor outfit: their own clothes under a parka. */
 function outdoorDNA(profile) {
@@ -83,7 +93,7 @@ registerScreen('town', () => {
     G.world = world;
     G.buildingRects = Object.values(town.buildings).filter((b) => b.type !== 'harbor').map((b) => ({ x: b.x, z: b.z, rot: b.rot, w: b.b.footprint?.w || 8, d: b.b.footprint?.d || 8, color: b.type === 'cornerStore' ? 'rgba(80,220,255,0.85)' : undefined }));
     // the player
-    const ch = await buildCharacter(outdoorDNA(profile));
+    const ch = await buildCharacter(s.flags.outfit === 'gala' ? galaDNA() : outdoorDNA(profile));
     scene.add(ch.group);
     const anim = new Animator(ch);
     const player = new Player(ch, anim, world);
@@ -110,6 +120,21 @@ registerScreen('town', () => {
     G.minigames = new Minigames(G);
     G.economy = new Economy(G);
     G.phone = new Phone(G);
+    G.director.you = async (t) => { G.dialog.youLine = { s: t, t: 0 }; await G.director.wait(Math.min(3.2, 0.9 + t.length / 28)); };
+    G.setOutfit = async (kind = 'outdoor') => {
+      const old = G.player.ch;
+      const nc = await buildCharacter(kind === 'gala' ? galaDNA() : outdoorDNA(store.load('profile') || {}));
+      nc.group.position.copy(old.group.position);
+      nc.group.rotation.copy(old.group.rotation);
+      scene.add(nc.group);
+      const na = new Animator(nc);
+      na.setPosture(G.player.anim.posture || 'stand');
+      G.player.ch = nc; G.player.anim = na;
+      scene.remove(old.group);
+      old.dispose?.();
+      if (G.director.actors.player) G.director.addActor('player', nc, na, { external: true });
+      G.state.flags.outfit = kind;
+    };
     G.vehicles = new Vehicles(G, scene);
     if (game.query.has('ff')) window.__cb = { game, G, input };   // QA handle
     G.cutscene = cutscene;
@@ -126,7 +151,15 @@ registerScreen('town', () => {
     }
     progress = 1;
     input.wantPointerLock = true;
-    if (!params.load || !Object.keys(s.missions.active).length) {
+    // QA: &day=N jumps straight into that day's morning
+    const qaDay = +game.query.get('day');
+    if (qaDay > 1 && game.query.has('ff')) {
+      s.day = qaDay; s.hour = +(game.query.get('hour') || 8.5);
+      for (let d = 1; d < qaDay; d++) for (const id of DAY_START[d]?.mustFinish || []) s.missions.done[id] = true;
+      s.missions.done['d1.arrival'] = s.missions.done['d1.koshkin'] = s.missions.done['d1.cabin'] = true;
+      s.flags.hasCabin = true;
+      for (const id of DAY_START[qaDay]?.start || []) G.missions.start(id);
+    } else if (!params.load || !Object.keys(s.missions.active).length) {
       if (s.day === 1 && !s.missions.done['d1.arrival'] && !game.query.has('free')) {
         const t = town.buildings.terminal;
         player.place(t.x + 4, t.z + 14, Math.PI);
@@ -223,7 +256,7 @@ registerScreen('town', () => {
         G.player.anim.setPosture(o.sit ? 'sit' : 'stand');
         return;
       }
-      const npc = G.npcs.get(id);
+      const npc = G.npcs.get(id) || G.npcs.ensure(id);
       if (!npc) return;
       const p = G.missions.where(where) || { x: G.player.pos.x + 2, z: G.player.pos.z + 2 };
       npc.scripted = true;
@@ -238,10 +271,23 @@ registerScreen('town', () => {
       d.addActor(id, npc.ch, npc.anim, { external: true });
       brought.push(npc);
     };
-    d.you = async (t) => { G.dialog.youLine = { s: t, t: 0 }; await d.wait(Math.min(3.2, 0.9 + t.length / 28)); };
+    // scene props: Mr. Grey's car, a truck… removed when the scene ends
+    const props = [];
+    d.prop = (kind, where, o = {}) => {
+      const p = typeof where === 'object' ? where : G.missions.where(where);
+      if (!p) return null;
+      const m = kind === 'truck' || kind === 'pickup' ? buildPickup(o) : buildSUV({ color: o.color || (kind === 'car' ? '#4a4e54' : undefined) });
+      m.group.position.set(p.x, G.world.groundAt(p.x, p.z), p.z);
+      m.group.rotation.y = o.yaw ?? o.face ?? p.rot ?? 0;
+      scene.add(m.group);
+      props.push(m.group);
+      return m.group;
+    };
     try {
       await fn(d);
     } catch (e) { console.error(e); }
+    for (const g of props) scene.remove(g);
+    d.hangUp?.();
     for (const npc of brought) { d.removeActor(npc.id); npc.scripted = false; npc.goal = null; }
     d.removeActor('player');
     G.player.anim.setPosture('stand');
@@ -256,6 +302,7 @@ registerScreen('town', () => {
     const need = DAY_START[s.day]?.mustFinish || [];
     const open = need.filter((m) => !s.missions.done[m]);
     if (open.length && s.day < 14) { G.missions.ear('d1.n.notyet'); return; }
+    if (s.day >= 14) { G.hud.toast('NOT TONIGHT', 'The Winter Gala. Wormwood wakes at dawn.', '#ff6a5a'); return; }
     G.player.locked = true;
     await fade(1, 0.8);
     s.day += 1;
@@ -311,6 +358,8 @@ registerScreen('town', () => {
         }
         return;
       }
+      // the Gala: dressed for it once the story says so
+      if (s.flags.galaOutfit && s.flags.outfit !== 'gala' && !G._dressing) { G._dressing = true; G.setOutfit('gala').finally(() => { G._dressing = false; }); }
       // the phone: Tab, or straight to the map (M) / journal (J)
       if (!G.cinematic && !G.dialog.active && !G.minigames.active) {
         if (input.pressed('phone')) G.phone.toggle();

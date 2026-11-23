@@ -9,7 +9,7 @@ export const DAY = { n: 11, start: ['d11.key'], mustFinish: ['d11.night'] };
 
 const pt = (G, name, fb, dx = 0, dz = 0) => { const q = G.town?.points?.[name]; return q ? { x: q.x + dx, z: q.z + dz } : { x: fb.x + dx, z: fb.z + dz }; };
 const MAYOR = { x: 22, z: -64 };       // fallback for cityhall.mayorOffice
-const LOT = { x: -26, z: 14 };         // behind NORTHSTAR 24, by the dumpsters
+const LOT = { x: -46, z: 9 };          // behind NORTHSTAR 24, by the dumpsters
 const hold = (m, test, text, where, sub) => m.until(() => { if (text && !m.G.hud?.objective) m.obj(text, where, sub); return test(); });
 const lvl = (G, id) => Math.min(5, Math.floor((G.state.rel[id] || 0) / 20));
 
@@ -21,6 +21,7 @@ export const LINES = {
   'd11.l.key': { who: 'lyosha', ru: 'Хранилище открывается двумя вещами. Три карточки совета — это код. Но код без замка — просто цифры. А замок открывает муниципальный ключ.', en: "The vault opens with two things. Three council cards: that's the code. But a code without a lock is just numbers. The lock takes the municipal key." },
   'd11.v.key': { who: 'valya', ru: 'Старый латунный ключ, рыбка. От бомбоубежища, с пятидесятых. Мэр носит его на связке, как талисман.', en: 'An old brass key, little fish. To the fallout shelter, from the fifties. The mayor wears it on his key ring like a charm.' },
   'd11.dm.key': { who: 'dmitri', ru: 'Хэллоран любит символы. Ключ от города открывает его сейф. Ему это кажется остроумным.', en: 'Halloran loves symbols. The key to the town opens his safe. He thinks that is witty.', emo: 'serious' },
+  'd11.n.debt': { who: 'nadia', ru: 'Про его долг «Нордстару» мы уже знаем. Не дави на это. Он и так раздавлен.', en: "We already know about his debt to Northstar. Don't press on it. He's crushed enough as it is.", emo: 'serious' },
   'd11.n.ways': { who: 'nadia', ru: 'Есть два пути. Мэр может отдать ключ сам — если поверит тебе. Или мы снимем слепок. Первый путь лучше. Второй быстрее.', en: 'There are two ways. The mayor can give you the key himself, if he trusts you. Or we take an impression. The first way is better. The second is faster.' },
   // ---------------------------------------------------------------- Walt and June's music box
   'd11.w.box': { who: 'walt', en: "Oh. It's you. Sorry. Sit, sit. Don't mind me. I knocked June's music box off the shelf last night. Thirty-eight years, it never had a scratch.", emo: 'worry' },
@@ -50,7 +51,13 @@ export const LINES = {
   'd11.w.thanks': { who: 'walt', en: "Go on, now. And thank you. You gave me back her waltz. I don't know what that's worth. More than twenty-five thousand." },
   // ---------------------------------------------------------------- the key: given or copied
   'd11.n.given': { who: 'nadia', ru: 'Он отдал его сам. Рыбка… он тебе поверил. Не подведи его.', en: "He gave it to you himself. Rybka… he believed you. Don't let him down.", emo: 'smile' },
-  'd11.n.wax': { who: 'nadia', ru: 'Значит, слепок. В пять он ещё раз заводит шкатулку и кладёт ключи на стол. Воск у тебя есть.', en: 'Then an impression. At five he winds the music box again and puts his keys on the desk. You have the wax.', emo: 'serious' },
+  'd11.i.given': { who: 'ivan', ru: 'Хороший ключ. Береги его.', en: 'A good key. Look after it.' },
+  'd11.dm.given': { who: 'dmitri', ru: 'Человек отдал тебе ключ от своего города. Это доверие. Доверие не скопируешь.', en: "A man gave you the key to his own town. That is trust. Trust can't be copied.", emo: 'serious' },
+  'd11.i.copied': { who: 'ivan', ru: 'Копия хорошая. Я бы не отличил.', en: "A good copy. I couldn't tell the difference." },
+  'd11.dm.copied': { who: 'dmitri', ru: 'Мы взяли то, что нам не давали. Иногда так надо. Но не привыкай.', en: "We took what wasn't given to us. Sometimes it has to be done. But don't get used to it.", emo: 'serious' },
+  'd11.w.after': { who: 'walt', en: 'Lost my keys fishing today. Can you believe it? Fishing. In November. Ellen says I should get my head looked at.', emo: 'smile' },
+  'd11.w.afterCopy': { who: 'walt', en: "Thanks again for June's box. I wound it twice tonight. Don't tell anybody. They'll think I've gone soft.", emo: 'smile' },
+  'd11.n.wax': { who: 'nadia', ru: 'Значит, слепок. Смотри: он снова заводит шкатулку, а ключи положил на стол. Воск у тебя есть.', en: "Then an impression. Look: he's winding the box again, and he's put his keys down on the desk. You have the wax.", emo: 'serious' },
   'd11.n.window': { who: 'nadia', ru: 'Он у окна. Слушает. Сейчас. Тихо.', en: "He's at the window. Listening. Now. Quietly.", emo: 'serious' },
   'd11.g.smudge': { who: 'grisha', ru: 'Смазано… но жить можно. Я и не с таким работал.', en: "Smudged… but we can live with it. I've worked from worse." },
   'd11.g.blank': { who: 'grisha', ru: 'Теперь заготовка. У Хэнка есть болванки. Напильник, терпение — и никакой спешки.', en: 'Now a blank. Hank has key blanks. A file, patience — and no rushing.' },
@@ -90,11 +97,15 @@ export const LINES = {
   'd11.p.chat': { who: 'pearl', en: "Gala invitations went out this morning. Thick cream envelopes, gold edges. None for you, hon. Yet.", emo: 'smile' },
 };
 
+/** The square's looped cameras stay looped after a reload (the loop lives in Lyosha's tap, not in the save). */
+const reloop = (m) => { const A = m.G.attention; if (!m.flag('camsLooped') || !A) return; (A.watchers || []).forEach((w, i) => { if (w.owner === 'smartlight' && Math.hypot(w.x, w.z) < 80) A.looped?.add(i); }); };
+
 // ---------------------------------------------------------------- missions
 export const MISSIONS = {
   'd11.key': {
     title: "The Mayor's Ear", main: true, day: 11,
     async run(m, from) {
+      reloop(m);
       const G = m.G, inv = G.state.inv;
       if (m.cp(1, from)) {
         await m.wait(1.0);
@@ -102,6 +113,7 @@ export const MISSIONS = {
         await m.ear('d11.l.ad');
         await m.ear('d11.n.morning');
         await m.ears(['d11.l.key', 'd11.v.key', 'd11.dm.key', 'd11.n.ways']);
+        if (m.flag('intel.mayorDebt')) await m.ear('d11.n.debt');
         m.start('d11.ruth');
         m.start('d11.lyle');
       }
@@ -173,14 +185,15 @@ export const MISSIONS = {
           inv.municipal_key = 1;
           G.hud.toast('ITEM', "The mayor's brass key", '#ffd166');
           await m.ear('d11.n.given');
+          await m.ear('d11.i.given');
+          await m.ear('d11.dm.given');
         }
       }
       if (m.cp(7, from)) {
         if (!m.flag('mayorKeyGiven')) {
           await m.ear('d11.n.wax');
-          m.obj('Take a wax impression of the brass key', 'cityhall.mayorOffice', 'City Hall, 17:00 — when Walt winds the box');
-          await hold(m, () => { const h = G.state.hour; return h >= 16.9 && h < 21; }, 'Take a wax impression of the brass key', 'cityhall.mayorOffice', 'City Hall, 17:00 — when Walt winds the box');
-          await m.spot('wax', 'cityhall.mayorDesk', 'Press the key into the wax', 2.2);
+          m.obj('Take a wax impression of the brass key', 'cityhall.mayorDesk', 'His keys are on the desk — while the waltz plays');
+          await m.spot('wax', 'cityhall.mayorDesk', 'Press the key into the wax', 2.4);
           const p = pt(G, 'cityhall.mayorDesk', MAYOR);
           await m.ear('d11.n.window');
           G.attention.zone('d11.mayor', p.x, p.z, 6, 8, 'City Hall');
@@ -196,8 +209,10 @@ export const MISSIONS = {
       }
       if (m.cp(8, from)) {
         if (!m.flag('mayorKeyGiven')) {
-          m.obj('Buy a brass key blank', 'hank', "Brubaker Hardware, $2");
-          await m.until(() => (inv.key_blank || 0) > 0);
+          m.obj('Get a brass key blank', 'hank', "Brubaker Hardware, $2 — or the key drawer in Koshkin's back room");
+          m.spot('drawer', 'koshkin.backroom', "Search Koshkin's key drawer", 2.4).then(() => { if (!(inv.key_blank > 0) && !m.flag('mayorKey')) { inv.key_blank = 1; G.hud.toast('ITEM', 'An old brass key blank'); } });
+          await hold(m, () => (inv.key_blank || 0) > 0, 'Get a brass key blank', 'hank', "Brubaker Hardware, $2 — or the key drawer in Koshkin's back room");
+          G.interact?.remove?.(`${m.id}:drawer`);
         }
       }
       if (m.cp(9, from)) {
@@ -212,6 +227,8 @@ export const MISSIONS = {
           G.hud.toast('ITEM', 'A copy of the brass key', '#ffd166');
           await m.ear('d11.g.copied');
           await m.ear('d11.n.copied');
+          await m.ear('d11.i.copied');
+          await m.ear('d11.dm.copied');
         }
       }
       if (m.cp(10, from)) {
@@ -225,6 +242,7 @@ export const MISSIONS = {
   'd11.night': {
     title: 'Night School: Matryoshka Data', main: true, day: 11,
     async run(m, from) {
+      reloop(m);
       if (m.cp(1, from)) {
         await m.ear('d11.n.lesson');
         m.obj("Lyosha's lesson — the laptop in your cabin", 'cabin.laptop', 'Lesson 11: Matryoshka Data');
@@ -263,8 +281,8 @@ export const MISSIONS = {
         G.attention.zone('d11.lot', LOT.x, LOT.z, 7, 5, 'Northstar lot');
         G.attention.act(0.8, 12);
         await m.scene(async (d) => {
-          await d.bring('lyle', { x: -42, z: 2 }, { face: 'gideon' });
-          await d.bring('gideon', { x: -41, z: 0 }, { face: 'lyle' });
+          await d.bring('lyle', { x: -45, z: 2 }, { face: 'gideon' });
+          await d.bring('gideon', { x: -44.5, z: 0 }, { face: 'lyle' });
           await d.say('lyle', 'd11.ly.over1', { cam: d.closeUp('lyle') });
           await d.say('gideon', 'd11.gi.over1', { cam: d.closeUp('gideon') });
           await d.say('lyle', 'd11.ly.over2', { cam: d.closeUp('lyle', { side: -1 }) });
@@ -305,6 +323,12 @@ export const DIALOG = {
       return;
     }
     if (boxQuest(c)) { await c.say('walt', 'd11.w.chat'); return; }
+    if (c.flag('knowsGala') && !c.flag('d11.w.afterChat')) {
+      c.flag('d11.w.afterChat', true);
+      await c.say('walt', c.flag('mayorKeyGiven') ? 'd11.w.after' : 'd11.w.afterCopy');
+      c.rel(2);
+      return;
+    }
     return prev(c);
   },
   gabriel: async (c, prev) => {
@@ -332,7 +356,7 @@ export const DIALOG = {
     return prev(c);
   },
   ruth: async (c, prev) => {
-    if (c.day !== 11 || !c.G.missions.isActive('d11.ruth') || c.flag('ruthPrep')) return prev(c);
+    if (!c.G.missions.isActive('d11.ruth') || c.flag('ruthPrep')) return prev(c);
     await c.say('ruth', 'd11.r.prep');
     await c.say('ruth', 'd11.r.prep2');
     await c.say('ruth', 'd11.r.prep3');

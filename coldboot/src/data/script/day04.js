@@ -18,9 +18,12 @@
 //   knowsContinuityCards / knowsShares  the team knows: the mayor's key + any 3 of the 5 council
 //                   continuity cards (Shamir shares) open Halloran's vault
 //   doorCode        '4471' — the City Hall upstairs keypad code (from the 'keypad' hack)
+//   d4.paintingHint Walt said the painting behind his desk is "crooked on purpose" (the wall safe)
+//   d4.fish.<id>    Rybka gave Grisha's smoked salmon to dolly / koshkin / pearl / ruth (side task 'd4.fish')
 //   (Wade only shows off the Dragonfly today; his lessons are side_friends.js: flight1..3.)
+//   inv after today: bug ×1 spare (three came in the crate, two are planted), mop.
 import {
-  at, yawTo, dist, cu, rel, place, warp, release, hold, hack, idle,
+  at, yawTo, dist, cu, spirit, place, warp, release, hold, hack, idle,
 } from './day02.js';
 
 export const DAY = { n: 4, start: ['d4.crate'], mustFinish: ['d4.crate', 'd4.cityhall', 'd4.ears'] };
@@ -36,6 +39,7 @@ export const LINES = {
   'd4.l.bugs': { who: 'lyosha', ru: 'Под рыбой — три жучка и логгер для кодового замка. Я их сам паял. Только не урони в рыбу.', en: "Under the fish: three bugs and a logger for a keypad. I soldered them myself. Just don't drop them in the fish." },
   'd4.n.reason': { who: 'nadia', ru: 'Теперь нам нужен повод войти в мэрию. Надолго и без лишних вопросов.', en: 'Now we need a reason to be inside City Hall. For a long time, with no questions asked.' },
   'd4.n.dolly': { who: 'nadia', ru: 'Спроси у Долли. Долли знает всё и про всех.', en: 'Ask Dolly. Dolly knows everything about everyone.' },
+  'd4.gr.share': { who: 'grisha', ru: 'И рыбу людям раздай. Кто ел твою рыбу — тот тебе друг. Это закон.', en: "And share the fish around. Whoever has eaten your fish is your friend. That's the law.", emo: 'smile' },
   'd4.gr.door': { who: 'grisha', ru: 'Правильно! Рыба открывает любые двери!', en: 'That\'s it! Fish opens every door!', emo: 'laugh' },
 
   // ---- the earpiece: City Hall
@@ -118,6 +122,9 @@ export const LINES = {
   'd4.p.crate': { who: 'pearl', en: 'A crate of fish from Nome for you. Wade told me. Wade tells me everything. So who is your fish friend?' },
   'd4.p.ship': { who: 'pearl', en: "Shipmates. The best kind. They've seen you at your worst, and they still send fish.", emo: 'smile' },
   'd4.p.admirer': { who: 'pearl', en: 'Ooh. Fish is serious up here, sugar. Fish means somebody is thinking about you.', emo: 'laugh' },
+  'd4.p.fish': { who: 'pearl', en: 'For me? Oh, sugar. Smoked sockeye. Now I have to like you. Those are the rules.', emo: 'laugh' },
+  'd4.r.fish': { who: 'ruth', en: "Alder-smoked. My mother smoked fish like this out on the point. I haven't tasted it since nineteen seventy. Thank you, dear.", emo: 'smile' },
+  'd4.lo.won': { who: 'lou', en: "You took the trivia pot last night! Ray hasn't stopped sulking. Best night of my week.", emo: 'laugh' },
   'd4.p.idle': { who: 'pearl', en: 'Thursday. The Nome plane brings the mail, and I bring the news. Somebody has to.' },
   'd4.g.hello': { who: 'gabriel', en: "Thursday I visit the sick. Today it's Mrs. Ivanoff's knees and Sasha Koshkin's pride. The knees are getting better." },
   'd4.el.koshkin': { who: 'ellen', en: "Sasha came in this morning. Finally. His heart sounds like a washing machine full of shoes. He laughed. I didn't.", emo: 'worry' },
@@ -196,6 +203,7 @@ export const MISSIONS = {
         m.flag('d4.crateOpened', true);
         await m.ears(['d4.gr.fish', 'd4.l.bugs', 'd4.n.reason', 'd4.n.dolly']);
         m.done();
+        m.start('d4.fish');
         m.start('d4.cityhall');
       }
     },
@@ -283,6 +291,24 @@ export const MISSIONS = {
     },
   },
 
+  // optional: share Grisha's three smoked sockeye (Dolly, Koshkin, Pearl, Ruth — offered in conversation)
+  'd4.fish': {
+    title: "Grisha's Fish", day: 4,
+    async run(m, from) {
+      const G = m.G, s = G.state;
+      if (m.cp(1, from)) {
+        await m.wait(6);
+        m.ear('d4.gr.share');
+        const given = () => ['dolly', 'koshkin', 'pearl', 'ruth'].filter((id) => m.flag('d4.fish.' + id)).length;
+        await m.until(() => given() >= 3 || !(s.inv.fish > 0) || s.day > 4);
+        if (given() >= 2) {
+          m.ear('d4.gr.door');
+          spirit(G, 3, "Grisha's fish");
+        }
+        m.done();
+      }
+    },
+  },
 };
 
 // The mayor steps out (for pie). His office locks; the bug goes under his desk
@@ -370,10 +396,7 @@ export const DIALOG = {
     if (c.flag('d4.crateOpened') && !c.flag('d4.d.job')) {
       await c.say('dolly', 'd4.d.job1');
       await c.say('dolly', 'd4.d.job2');
-      if (c.hasItem('fish')) {
-        const k = await c.choose(['Here — smoked salmon. From a friend.', 'Thanks, Dolly.']);
-        if (k === 0 && c.take('fish')) { await c.say('dolly', 'd4.d.fish'); c.rel(8); c.G.missions.ear('d4.gr.door'); }
-      }
+      await offerFish(c, 'dolly', 'd4.d.fish');
       c.flag('d4.d.job', true);
       c.emit('talk:dolly');
       return;
@@ -414,10 +437,7 @@ export const DIALOG = {
 
   koshkin: async (c, prev) => {
     if (c.day !== 4) return prev(c);
-    if (c.hasItem('fish') && !c.flag('d4.k.fish')) {
-      const k = await c.choose(['Have some smoked salmon. From a friend.', 'Just saying good morning.']);
-      if (k === 0 && c.take('fish')) { c.flag('d4.k.fish', true); await c.say('koshkin', 'd4.k.fish'); c.rel(8); return; }
-    }
+    if (await offerFish(c, 'koshkin', 'd4.k.fish')) return;
     return idle(c, prev, 'koshkin', 'd4.k.idle');
   },
 
@@ -429,15 +449,18 @@ export const DIALOG = {
       const k = await c.choose(['An old shipmate.', 'A secret admirer.']);
       await c.say('pearl', k === 0 ? 'd4.p.ship' : 'd4.p.admirer');
       c.rel(3);
+      await offerFish(c, 'pearl', 'd4.p.fish');
       return;
     }
+    if (await offerFish(c, 'pearl', 'd4.p.fish')) return;
     return idle(c, prev, 'pearl', 'd4.p.idle');
   },
 
   hank: async (c, prev) => (c.day === 4 ? idle(c, prev, 'hank', c.flag('cityhallJanitor') ? 'd4.h.janitor' : 'd4.h.idle') : prev(c)),
   ruth: async (c, prev) => {
     if (c.day !== 4) return prev(c);
-    if (!c.flag('d4.r.hi')) { c.flag('d4.r.hi', true); await c.say('ruth', 'd4.r.gideon'); c.rel(2); return; }
+    if (!c.flag('d4.r.hi')) { c.flag('d4.r.hi', true); await c.say('ruth', 'd4.r.gideon'); c.rel(2); await offerFish(c, 'ruth', 'd4.r.fish'); return; }
+    if (await offerFish(c, 'ruth', 'd4.r.fish')) return;
     return idle(c, prev, 'ruth', 'd4.r.idle');
   },
   ray: async (c, prev) => (c.day === 4 ? idle(c, prev, 'ray', 'd4.ra.hello') : prev(c)),
@@ -448,7 +471,20 @@ export const DIALOG = {
   ellen: async (c, prev) => (c.day === 4 ? idle(c, prev, 'ellen', 'd4.el.koshkin') : prev(c)),
   nina: async (c, prev) => (c.day === 4 ? idle(c, prev, 'nina', 'd4.ni.hello') : prev(c)),
   tommy: async (c, prev) => (c.day === 4 ? idle(c, prev, 'tommy', 'd4.t.hello') : prev(c)),
-  lou: async (c, prev) => (c.day === 4 ? idle(c, prev, 'lou', 'd4.lo.hello') : prev(c)),
+  lou: async (c, prev) => (c.day === 4 ? idle(c, prev, 'lou', c.flag('d3.trivia') === 'won' ? 'd4.lo.won' : 'd4.lo.hello') : prev(c)),
 };
+
+// Grisha's smoked sockeye: offered once to each of Dolly, Koshkin, Pearl and Ruth (three to go round).
+async function offerFish(c, id, line) {
+  if (!c.hasItem('fish') || c.flag('d4.fish.' + id) || c.flag('d4.fishAsked.' + id)) return false;
+  c.flag('d4.fishAsked.' + id, true);
+  const k = await c.choose(['Have some smoked salmon. From a friend.', 'Not now.']);
+  if (k !== 0 || !c.take('fish')) return false;
+  await c.say(id, line);
+  c.rel(8);
+  c.flag('d4.fish.' + id, true);
+  c.emit('fish:' + id);
+  return true;
+}
 
 export const DIALOG_OVERRIDE = true;

@@ -159,11 +159,12 @@ export class CBSong extends Song {
     const T = this.sw(s, t);
     const len = nt.len * this.stepDur;
     const vel = (o.vel ?? 0.8) * nt.v;
-    const m = nt.m + (o.oct ?? 0) * 12;
+    let m = nt.m + (o.oct ?? 0) * 12;
+    if (o.harm) m = this.below(m, this.chordAt(s), o.harm);
     const gate = o.gate ?? 0.92;
     const legato = (nt.slide || o.legato) && inst._lastEnd != null && Math.abs(T - inst._lastEnd) < this.stepDur * 0.7;
     inst._lastEnd = T + len;
-    if (nt.orn && o.orn !== false && len > this.stepDur * 1.5) {
+    if (nt.orn && o.orn !== false && !o.harm && len > this.stepDur * 1.5) {
       const g = Math.min(0.07, this.stepDur * 0.33);
       inst.note(T, m, g, vel * 0.85, { atk: 0.004, noTrem: true, slide: legato });
       inst.note(T + g, m + nt.up, g, vel * 0.75, { atk: 0.004, noTrem: true, slide: true });
@@ -172,6 +173,14 @@ export class CBSong extends Song {
       inst.note(T, m, len * gate, vel, { slide: legato });
     }
     return nt;
+  }
+
+  /** Highest tone of chord ch at least `gap` semitones under m (a consonant second voice). */
+  below(m, ch, gap = 3) {
+    if (!ch) return m - 3;
+    const pcs = ch.iv.map((i) => (this.keyPc + ch.root + i) % 12);
+    for (let x = m - Math.max(3, gap === true ? 3 : gap); x > m - 10; x--) if (pcs.includes(((x % 12) + 12) % 12)) return x;
+    return m - 5;
   }
 
   /** Pedal ostinato: pattern chars r b t 4 f s o (root, b2, b3, 4th, 5th, b7, octave), '-' holds. */

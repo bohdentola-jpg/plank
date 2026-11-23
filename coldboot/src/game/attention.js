@@ -12,7 +12,7 @@ export class Attention {
     this.zones = [];         // {x, z, r, rate, label}
     this.seenBy = null;
     this.watched = 0;
-    this.looped = new Set(); // camera indices looped by a hack
+    this.looped = new Set(G.state.looped || []); // camera indices looped by a hack (saved)
     for (const c of G.town.cameras || []) {
       this.watchers.push({ kind: 'camera', x: c.x, y: c.y ?? 4, z: c.z, yaw: c.yaw || 0, fov: c.fov || 1.2, range: c.range || 22, owner: c.owner });
     }
@@ -47,6 +47,7 @@ export class Attention {
 
   update(dt) {
     const G = this.G, P = G.player.pos;
+    if (this.looped.size !== (G.state.looped?.length || 0)) G.state.looped = [...this.looped];
     let best = 0, by = null;
     const eye = P.y + (G.player.crouch ? 1.0 : 1.5);
     this.watchers.forEach((w, i) => {

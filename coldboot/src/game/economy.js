@@ -83,6 +83,12 @@ export class Economy {
   // -------------------------------------------------------------- jobs
   /** Run a paid job; resolves to dollars earned. */
   job(kind, opts = {}) {
+    const p = this._job(kind, opts);
+    if (!opts.hours) return p;
+    return p.then((n) => { const s = this.G.state; s.hour = Math.min(23.5, s.hour + opts.hours); return n; });
+  }
+
+  _job(kind, opts = {}) {
     if (kind === 'store' || kind === 'shop') return this._till(kind, opts);
     if (kind === 'cannery') return this._cannery(opts);
     if (kind === 'radio') return this._radio(opts);

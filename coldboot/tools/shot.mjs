@@ -77,11 +77,11 @@ if (series) {
   const [nRaw, gapRaw] = series.split('@');
   const n = parseInt(nRaw, 10), gap = parseInt(gapRaw || '1000', 10);
   for (let i = 0; i < n; i++) {
-    await page.screenshot({ path: join(root, 'qa', `${out.replace('.png', '')}_${i}.png`) });
+    await page.screenshot({ path: join(root, 'qa', `${out.replace('.png', '')}_${i}.png`), timeout: 180000 });
     if (i < n - 1) await page.waitForTimeout(gap);
   }
 } else {
-  await page.screenshot({ path: join(root, 'qa', out) });
+  await page.screenshot({ path: join(root, 'qa', out), timeout: 180000 });
 }
 for (const l of logs.slice(0, 40)) console.log(l);
 console.log('saved', out, `(${Date.now() - t0}ms)`);

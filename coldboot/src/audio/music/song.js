@@ -146,7 +146,7 @@ export class Song {
         inst[fn] = (t, midi, a, b, o) => {
           const opts = fn === 'play' && typeof a === 'object' ? a : o || {};
           if (this.isOn(inst.layer) || opts.force) {
-            const ch = this.barChords ? this.chordAt(Math.floor(((t - this.anchorT) / this.stepDur) % 16)) : null;
+            const ch = this.barChords ? this.chordAt(Math.round((t - this.anchorT) / this.stepDur) % 16) : null;
             log.push([this.id, name, inst.layer, +t.toFixed(3), midi + this.transpose, typeof a === 'number' ? a : 0, typeof b === 'number' ? b : 0,
               ch ? (this.keyPc + ch.root + this.transpose) % 12 : -1, ch ? ch.iv.map((i) => (this.keyPc + ch.root + i + this.transpose) % 12) : [], this.mode, this.sec?.type]);
           }

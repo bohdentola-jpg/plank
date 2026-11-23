@@ -55,7 +55,11 @@ export class Missions {
   /** Earpiece: Nadia & co. through the radio filter, one after another. */
   ear(id, opts = {}) {
     const G = this.G;
+    // urgent lines (alarms…) cut in: drop whatever is queued and speak now
+    if (opts.now) { this.earGen = (this.earGen || 0) + 1; voice.stopAll(); this.earQueue = Promise.resolve(); }
+    const gen = this.earGen || 0;
     this.earQueue = this.earQueue.then(async () => {
+      if (gen !== (this.earGen || 0)) return;
       const L = voice.line(id);
       if (!L) return;
       await G.director.say(L.who, id, { radio: true, listeners: [] });
@@ -113,6 +117,7 @@ export class Missions {
       rel(npcId, n) { s.met[npcId] = true; return addRel(s, npcId, n); },
       money(n, why) { s.money += n; G.hud.toast(n >= 0 ? 'PAID' : 'SPENT', `${n >= 0 ? '+' : '−'}$${Math.abs(n)}${why ? '  ' + why : ''}`, n >= 0 ? '#9fe8b0' : '#ffb21e'); },
       start(other) { self.start(other); },
+      cancel(other) { self.cancel(other ?? id); },
       async minigame(kind, opts) { return G.minigames ? G.minigames.run(kind, opts) : true; },
       async job(kind, opts) { const n = await G.economy.job(kind, opts); return n || 0; },
       async repair(id) { return G.economy.repair(id); },
