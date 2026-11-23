@@ -1,7 +1,7 @@
 // Collision for people and vehicles on foot-level: oriented boxes (walls,
 // lamp posts, crates) in a spatial hash, walkable floors and ramps on top of
 // the terrain (porches, raised floors, docks, stairs). Circles slide along walls.
-import { groundY } from '../world/terrain.js';
+import { groundY, terrainMeshY } from '../world/terrain.js';
 
 const CELL = 16;
 
@@ -60,7 +60,8 @@ export class CollisionWorld {
    * at yFeet (floors more than stepUp above the feet are ceilings, ignored).
    */
   groundAt(x, z, yFeet = Infinity, stepUp = 0.55) {
-    let y = groundY(x, z);
+    // the ground as drawn (the 4 m terrain mesh can sit above the finer height field)
+    let y = Math.max(groundY(x, z), terrainMeshY(x, z));
     if (y < 0) y = Math.max(y, -0.3); // shallow beach / ice
     for (const f of this._near(this.fgrid, x, z)) {
       const [lx, lz] = CollisionWorld.local(f, x, z);

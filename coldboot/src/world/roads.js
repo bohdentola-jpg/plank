@@ -5,7 +5,10 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { TOWN } from './townplan.js';
-import { groundY } from './terrain.js';
+import { groundY, terrainMeshY } from './terrain.js';
+
+/** Lay things on the ground as drawn: above both the true height field and the 4 m mesh. */
+const surfaceY = (x, z) => Math.max(groundY(x, z), terrainMeshY(x, z));
 
 function resample(pts, step) {
   // Catmull-Rom through the street points, every `step` metres
@@ -16,11 +19,12 @@ function resample(pts, step) {
   return curve.getSpacedPoints(n);
 }
 
-function ribbon(pts, width, y0, uvScale = 1) {
-  const n = pts.length;
-  const pos = new Float32Array(n * 2 * 3);
-  const uv = new Float32Array(n * 2 * 2);
-  const uv1 = new Float32Array(n * 2 * 2);   // metres (across, along) for tiling detail maps
+function ribbon(pts, width, y0, uvScale = 1, across = 8) {
+  // `across` segments over the width so the strip follows the ground's crown
+  const n = pts.length, m = across + 1;
+  const pos = new Float32Array(n * m * 3);
+  const uv = new Float32Array(n * m * 2);
+  const uv1 = new Float32Array(n * m * 2);   // metres (across, along) for tiling detail maps
   const idx = [];
   let dist = 0;
   for (let i = 0; i < n; i++) {
@@ -30,15 +34,21 @@ function ribbon(pts, width, y0, uvScale = 1) {
     const l = Math.hypot(dx, dz) || 1;
     const nx = -dz / l, nz = dx / l;
     if (i > 0) dist += pts[i].distanceTo(pts[i - 1]);
-    for (let s = 0; s < 2; s++) {
-      const o = (s ? 1 : -1) * width / 2;
+    for (let s = 0; s < m; s++) {
+      const t = s / across;
+      const o = (t - 0.5) * width;
       const x = p.x + nx * o, z = p.z + nz * o;
-      const k = i * 2 + s;
-      pos[k * 3] = x; pos[k * 3 + 1] = groundY(x, z) + y0; pos[k * 3 + 2] = z;
-      uv[k * 2] = s; uv[k * 2 + 1] = dist / uvScale;
-      uv1[k * 2] = s * width; uv1[k * 2 + 1] = dist;
+      const k = i * m + s;
+      pos[k * 3] = x; pos[k * 3 + 1] = surfaceY(x, z) + y0; pos[k * 3 + 2] = z;
+      uv[k * 2] = t; uv[k * 2 + 1] = dist / uvScale;
+      uv1[k * 2] = t * width; uv1[k * 2 + 1] = dist;
     }
-    if (i < n - 1) { const k = i * 2; idx.push(k, k + 2, k + 1, k + 1, k + 2, k + 3); }
+    if (i < n - 1) {
+      for (let s = 0; s < across; s++) {
+        const k = i * m + s;
+        idx.push(k, k + m, k + 1, k + 1, k + m, k + m + 1);
+      }
+    }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -65,7 +75,7 @@ function bank(pts, side, width, h) {
       const t = s / segs;
       const o = width / 2 + t * 1.6;
       const x = p.x + nx * o, z = p.z + nz * o;
-      const y = groundY(x, z) + Math.sin(t * Math.PI) * hh;
+      const y = surfaceY(x, z) + Math.sin(t * Math.PI) * hh;
       pos.push(x, y, z);
     }
     if (i < n - 1) for (let s = 0; s < segs; s++) {
@@ -193,9 +203,9 @@ export function buildRoads() {
   group.name = 'roads';
   const roads = [], banks = [], trails = [];
   for (const st of TOWN.streets) {
-    const pts = resample(st.pts, 3);
-    if (st.dirt) { trails.push(ribbon(pts, st.width * 0.6, 0.05, 8)); continue; }
-    roads.push(ribbon(pts, st.width, 0.06, ROAD_TILE));
+    const pts = resample(st.pts, 1.5);
+    if (st.dirt) { trails.push(ribbon(pts, st.width * 0.6, 0.035, 8, 3)); continue; }
+    roads.push(ribbon(pts, st.width, 0.04, ROAD_TILE));
     banks.push(bank(pts, 1, st.width, 0.55), bank(pts, -1, st.width, 0.55));
   }
   const D = roadDetail();

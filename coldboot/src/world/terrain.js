@@ -146,6 +146,23 @@ export function groundY(x, z) {
   return sampleRaw(field.H, x, z);
 }
 
+const MESH_STEP = 4;   // the rendered terrain's grid (buildTerrainMesh)
+/**
+ * Height of the terrain as it is DRAWN at (x, z): the 4 m mesh, triangle by
+ * triangle (cells split along the (i+1, j)–(i, j+1) diagonal). Things laid on the
+ * ground (roads) sit on this, or the mesh pokes through them between vertices.
+ */
+export function terrainMeshY(x, z) {
+  if (!field) bakeTerrain();
+  const fx = (x - MAP.x0) / MESH_STEP, fz = (z - MAP.z0) / MESH_STEP;
+  const i = Math.floor(fx), j = Math.floor(fz);
+  const u = fx - i, v = fz - j;
+  const X = (ii) => MAP.x0 + ii * MESH_STEP, Z = (jj) => MAP.z0 + jj * MESH_STEP;
+  const ha = groundY(X(i), Z(j)), hb = groundY(X(i + 1), Z(j)), hc = groundY(X(i), Z(j + 1)), hd = groundY(X(i + 1), Z(j + 1));
+  if (u + v <= 1) return ha + (hb - ha) * u + (hc - ha) * v;
+  return hd + (hc - hd) * (1 - u) + (hb - hd) * (1 - v);
+}
+
 export function groundNormal(x, z, out = new THREE.Vector3()) {
   const e = 1.0;
   const hx = groundY(x + e, z) - groundY(x - e, z);
@@ -166,7 +183,7 @@ float tn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
 
 export function buildTerrainMesh() {
   if (!field) bakeTerrain();
-  const step = 4;
+  const step = MESH_STEP;
   const nx = Math.floor((MAP.x1 - MAP.x0) / step) + 1;
   const nz = Math.floor((MAP.z1 - MAP.z0) / step) + 1;
   const pos = new Float32Array(nx * nz * 3);
