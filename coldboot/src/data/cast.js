@@ -276,4 +276,10 @@ export const CAST = {
       hair: { style: 'bob', color: '#d8d4cc' }, brows: { color: '#4a4440', density: 0.5, thickness: 0.3 }, eyes: { color: '#3a2412' }, lips: { color: '#7a3038' },
       outfit: [{ slot: 'top', pattern: 'knit', color: '#7a3a6a', thick: 0.009, hem: 'hip' }, { slot: 'bottom', pattern: 'wool', color: '#2a2430', thick: 0.005 }, { slot: 'boots', pattern: 'leather', color: '#2a1a14', thick: 0.01, shaft: 0.2 }] },
   },
+  guard: {
+    name: 'Border Guard', short: 'Guard', color: '#c8d0a0',
+    dna: { seed: 211, sex: 1, age: 26, muscle: 0.62, weight: 0.48, ethnic: { caucasian: 0.85, asian: 0.15 }, skin: { tone: 0.17, rosy: 0.55 },
+      hair: { style: 'buzz', color: '#6a5038' }, brows: { color: '#3a2a1a', density: 0.8, thickness: 0.5 }, eyes: { color: '#4a5a6a' }, beard: { style: 'none', stubble: 0.5 },
+      outfit: [{ slot: 'top', pattern: 'camo', color: '#4a5240', color2: '#272c22', color3: '#5c5e4c', thick: 0.007, hem: 'hip' }, { slot: 'coat', pattern: 'camo', color: '#3e4636', color2: '#272c22', color3: '#5c5e4c', thick: 0.014, puff: 0.01, hem: 'hip', neckUp: 0.03 }, { slot: 'bottom', pattern: 'camo', color: '#3e4636', color2: '#272c22', color3: '#5c5e4c', thick: 0.007 }, { slot: 'boots', pattern: 'leather', color: '#0e0c0a', thick: 0.014, shaft: 0.32 }] },
+  },
 };

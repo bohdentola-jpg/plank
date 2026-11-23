@@ -3,7 +3,8 @@
 //   &variant=ranch&snow=1&yaw=0.4&dist=1.0
 //   type=props  → a grid of every prop
 //   type=street → a row of six houses with old sodium + new smart streetlights
-// Keys: ←/→ orbit, ↑/↓ zoom, C next camera, Q/E state −/+, R reseed.
+//   &camPoint=<point name> frames a gameplay point (e.g. camPoint=vault&interior=1)
+// Keys: ←/→ orbit, ↑/↓ zoom, C next camera.
 import * as THREE from 'three';
 import { registerScreen, game } from '../main.js';
 import { input } from '../core/input.js';
@@ -150,7 +151,8 @@ registerScreen('buildlab', () => {
   function presetsFor(box, fp, interiorBox) {
     const c = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
-    const R = Math.max(size.x, size.z, size.y * 1.2);
+    let R = Math.max(size.x, size.z, size.y * 1.2);
+    if (R > 30) R = 30 + (R - 30) * 0.35; // big sites: frame the middle
     const h = Math.max(size.y, 3);
     const list = [
       { pos: [c.x - R * 0.75, Math.min(h * 0.45, 6) + 1.2, box.max.z + R * 0.9], look: [c.x, h * 0.4, c.z], fov: 45 },
@@ -171,6 +173,8 @@ registerScreen('buildlab', () => {
       for (const [name, p] of Object.entries(pts)) {
         if (/^door|ladderTop|belfry|bells|domeTop|relay|steps|oilTank|yard|gate$/.test(name)) continue;
         if (p.y < interiorBox.min.y - 0.5) continue;
+        const inside = new THREE.Box3().copy(interiorBox).expandByScalar(0.3).containsPoint(new THREE.Vector3(p.x, p.y + 0.5, p.z));
+        if (!inside) continue;
         const fx = Math.sin(p.rot), fz = Math.cos(p.rot);
         ins.push({ name, pos: [p.x - fx * 2.2, p.y + 1.7, p.z - fz * 2.2], look: [p.x + fx * 1.2, p.y + 1.0, p.z + fz * 1.2], fov: 68 });
       }
@@ -184,6 +188,7 @@ registerScreen('buildlab', () => {
     const r = buildBuilding(type, { seed: p.seed, state: p.state, interior: p.interior, variant: p.variant || undefined, name: p.name || undefined });
     const ms = performance.now() - t0;
     res = r;
+    window.__buildlab = { res: r, root };
     root.add(r.group);
     if (r.interior) root.add(r.interior);
     root.updateMatrixWorld(true);
@@ -202,31 +207,29 @@ registerScreen('buildlab', () => {
   }
 
   function buildProps(p) {
-    const types = PROP_TYPES;
-    const cols = 8;
-    const sp = 6.5;
+    const types = PROP_TYPES.filter((t) => t !== 'fishingBoat');
+    const cols = 6;
+    const sp = 5.5, rowSp = 7.0;
+    const rows = Math.ceil(types.length / cols);
     types.forEach((ty, i) => {
-      const g = makeProp(ty, { seed: p.seed, names: ['Front St', 'Main St'], name: 'MARGARET ROSE II', lit: true, light: true, transformer: i % 2 === 0 });
-      const x = ((i % cols) - (cols - 1) / 2) * sp, z = -Math.floor(i / cols) * sp;
+      const g = makeProp(ty, { seed: p.seed, names: ['Front St', 'Main St'], light: true, transformer: i % 2 === 0 });
+      const x = ((i % cols) - (cols - 1) / 2) * sp, z = -Math.floor(i / cols) * rowSp;
       g.position.set(x, 0, z);
-      if (ty === 'fishingBoat') { g.position.set(0, 0, 9); g.rotation.y = Math.PI / 2; }
       root.add(g);
-      labels.push({ text: ty, pos: new THREE.Vector3(g.position.x, -0.3, g.position.z + 2.2) });
+      labels.push({ text: ty, pos: new THREE.Vector3(x, -0.2, z + 1.8) });
       root.updateMatrixWorld(true);
       for (const l of g.userData.lights) dynLights.push({ pos: new THREE.Vector3(l.x, l.y, l.z).applyMatrix4(g.matrixWorld), color: l.color, intensity: l.intensity, distance: l.distance });
     });
-    info = `props: ${types.length} types`;
-    const rows = Math.ceil(types.length / cols);
-    const box = new THREE.Box3(new THREE.Vector3(-cols * sp / 2, 0, -rows * sp), new THREE.Vector3(cols * sp / 2, 4, 3));
-    presets = [
-      { pos: [0, 26, 28], look: [0, 0, -12], fov: 50 },
-      { pos: [-14, 6, 10], look: [-12, 1, -2], fov: 45 },
-      { pos: [10, 6, 10], look: [12, 1, -2], fov: 45 },
-      { pos: [-14, 6, -4], look: [-12, 1, -15], fov: 45 },
-      { pos: [10, 6, -4], look: [12, 1, -15], fov: 45 },
-      { pos: [-14, 6, -16], look: [-12, 1, -28], fov: 45 },
-      { pos: [10, 6, -16], look: [12, 1, -28], fov: 45 },
-    ];
+    const boat = makeProp('fishingBoat', { seed: p.seed, name: 'MARGARET ROSE II', lit: true });
+    boat.position.set(0, 0, -rows * rowSp - 6);
+    boat.rotation.y = Math.PI / 2;
+    root.add(boat);
+    labels.push({ text: 'fishingBoat', pos: new THREE.Vector3(0, -0.2, -rows * rowSp - 2) });
+    info = `props: ${PROP_TYPES.length} types`;
+    const box = new THREE.Box3(new THREE.Vector3(-cols * sp / 2, 0, -rows * rowSp - 10), new THREE.Vector3(cols * sp / 2, 4, 3));
+    presets = [{ pos: [0, 30, 22], look: [0, 0, -rows * rowSp / 2], fov: 50, name: 'overview' }];
+    for (let r = 0; r < rows; r++) presets.push({ pos: [0, 4.2, -r * rowSp + 11], look: [0, 1.0, -r * rowSp], fov: 62, name: 'row ' + r });
+    presets.push({ pos: [9, 5, -rows * rowSp - 6], look: [0, 2, -rows * rowSp - 6], fov: 55, name: 'boat' });
     return box;
   }
 
@@ -334,6 +337,13 @@ registerScreen('buildlab', () => {
       key.shadow.camera.updateProjectionMatrix();
       flushLights(c);
       camIdx = Math.min(camIdx, presets.length - 1);
+      if (q.camPoint && res && res.points[q.camPoint]) {
+        // frame a named gameplay point: stand behind it, look the way it faces
+        const pt = res.points[q.camPoint];
+        const fx = Math.sin(pt.rot), fz = Math.cos(pt.rot);
+        presets.unshift({ name: q.camPoint, pos: [pt.x - fx * 2.6, pt.y + 1.75, pt.z - fz * 2.6], look: [pt.x + fx * 1.5, pt.y + 1.0, pt.z + fz * 1.5], fov: 70 });
+        camIdx = 0;
+      }
     },
     exit() {
       scene.traverse((o) => { if (o.isPoints) { o.geometry.dispose(); o.material.dispose(); } });

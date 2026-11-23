@@ -70,14 +70,24 @@ export class GeoBuilder {
 
   /** Resolve a key: untextured materials all go to the shared 'solid' bucket. */
   _target(key) {
-    const isInt = key.charCodeAt(0) === 105 && key.charCodeAt(1) === 58; // 'i:'
+    let isInt = key.charCodeAt(0) === 105 && key.charCodeAt(1) === 58; // 'i:'
+    let sheltered = false;
+    if (isInt && this.forceExterior) {
+      // interior furniture that must be seen from outside (e.g. diner booths):
+      // exterior buckets, but never snowed on
+      const mat = this.materials.get(key);
+      key = key.slice(2);
+      isInt = false;
+      sheltered = true;
+      if (mat && !this.materials.has(key)) this.materials.set(key, mat);
+    }
     const name = isInt ? key.slice(2) : key;
     const sd = SOLID[name];
     if (sd && !this.materials.has(key)) {
       if (!sd.mul) sd.mul = sd[2] ? rgb(sd[2]) : null;
-      return { B: this.bucket(isInt ? 'i:solid' : 'solid'), rm: sd, mul: sd.mul };
+      return { B: this.bucket(isInt ? 'i:solid' : 'solid'), rm: sd, mul: sd.mul, sheltered };
     }
-    return { B: this.bucket(key), rm: null, mul: null };
+    return { B: this.bucket(key), rm: null, mul: null, sheltered };
   }
 
   // ---------------------------------------------------------------- transform
@@ -166,7 +176,7 @@ export class GeoBuilder {
       const p = P[i];
       B.pos.push(p[0], p[1], p[2]);
       B.nrm.push(nx, ny, nz);
-      const sa = o.noSnow ? 0 : 1;
+      const sa = o.noSnow || tg.sheltered ? 0 : 1;
       if (vg) {
         const t = Math.max(0, Math.min(1, (p[1] - vg[0]) / (vg[1] - vg[0])));
         const k = vg[2] + (vg[3] - vg[2]) * t;
@@ -216,8 +226,9 @@ export class GeoBuilder {
       B.nrm.push(nx / l, ny / l, nz / l);
       if (tg.rm) B.uv.push(tg.rm[0], tg.rm[1]);
       else B.uv.push(uv ? uv[i * 2] * su + ou : 0, uv ? uv[i * 2 + 1] * sv + ov : 0);
-      if (col) B.col.push(col[0], col[1], col[2], o.noSnow ? 0 : 1);
-      else B.col.push(o.colors[i * 3], o.colors[i * 3 + 1], o.colors[i * 3 + 2], o.noSnow ? 0 : 1);
+      const sa = o.noSnow || tg.sheltered ? 0 : 1;
+      if (col) B.col.push(col[0], col[1], col[2], sa);
+      else B.col.push(o.colors[i * 3], o.colors[i * 3 + 1], o.colors[i * 3 + 2], sa);
     }
     if (idx) for (let i = 0; i < idx.length; i++) B.idx.push(base + idx[i]);
     else for (let i = 0; i < count; i++) B.idx.push(base + i);

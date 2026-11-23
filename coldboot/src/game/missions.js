@@ -112,7 +112,14 @@ export class Missions {
       money(n, why) { s.money += n; G.hud.toast(n >= 0 ? 'PAID' : 'SPENT', `${n >= 0 ? '+' : '−'}$${Math.abs(n)}${why ? '  ' + why : ''}`, n >= 0 ? '#9fe8b0' : '#ffb21e'); },
       start(other) { self.start(other); },
       async minigame(kind, opts) { return G.minigames ? G.minigames.run(kind, opts) : true; },
-      async code(challengeId) { return G.coding ? G.coding.challenge(challengeId) : true; },
+      async job(kind, opts) { const n = await G.economy.job(kind, opts); return n || 0; },
+      async repair(id) { return G.economy.repair(id); },
+      async shop(id) { return G.economy.shop(id); },
+      async code(challengeId) {
+        const { openLaptop } = await import('../screens/laptop.js');
+        const r = await openLaptop(G, { challenge: challengeId });
+        return r || { pass: false };
+      },
       async scene(fn) { return G.cutscene ? G.cutscene(fn) : fn(G.director); },
       done() {
         delete s.missions.active[id];

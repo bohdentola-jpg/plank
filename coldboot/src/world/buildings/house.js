@@ -15,7 +15,7 @@ const VARIANTS = [['ranch', 0.3], ['twostory', 0.18], ['frontgable', 0.17], ['sh
 export function build(opts = {}) {
   const ctx = makeCtx('house', opts);
   const r = ctx.rng;
-  let variant = opts.variant;
+  let variant = ctx.o.variant;
   if (!variant) {
     let x = r();
     for (const [v, p] of VARIANTS) { if ((x -= p) <= 0) { variant = v; break; } }
@@ -24,9 +24,9 @@ export function build(opts = {}) {
   ctx.variant = variant;
   const wear = ctx.wear;
   // palette
-  const baseColor = opts.color || pick(ctx, SIDING_COLORS);
+  const baseColor = ctx.o.color || pick(ctx, SIDING_COLORS);
   ctx.paint = weather(baseColor, Math.max(0, wear - 0.15) * 1.1);
-  ctx.trim = weather(opts.trim || (chance(ctx, 0.75) ? '#efeadc' : pick(ctx, TRIM_COLORS)), wear * 0.6);
+  ctx.trim = weather(ctx.o.trim || (chance(ctx, 0.75) ? '#efeadc' : pick(ctx, TRIM_COLORS)), wear * 0.6);
   ctx.roofColor = pick(ctx, ROOF_COLORS);
   ctx.doorColor = pick(ctx, DOOR_COLORS);
   if (variant === 'trailer') trailer(ctx);
@@ -381,6 +381,7 @@ function yard(ctx) {
     b.at(sideX * (W / 2 + 0.9), 0, tz, sideX > 0 ? HALF_PI : -HALF_PI);
     addProp(b, 'oilTank', { rust: wear, color: pick(ctx, ['#7a2a22', '#4a5a4a', '#8a8a84', '#c8c0a8', '#3a4a5a']) }, r);
     b.pop();
+    ctx.col(sideX * (W / 2 + 0.9), tz, 0.9, 1.7, 1.6);
     b.beam('metal', [sideX * (W / 2 + 0.55), 0.35, tz], [sideX * (W / 2 + 0.02), (H.floorY || 0.5) + 0.1, tz], 0.012, 0.012, { color: '#b87333' });
     ctx.point('oilTank', sideX * (W / 2 + 2.2), 0, tz, sideX > 0 ? -HALF_PI : HALF_PI);
   }
@@ -412,11 +413,15 @@ function yard(ctx) {
     [-sideX * (W / 2 + 2.0), -D / 3], [sideX * (W / 3), -D / 2 - 2.0], [-sideX * (W / 4), -D / 2 - 2.4],
   ];
   const pool = ['snowmobile', 'fuelDrums', 'crabPots', 'woodpile', 'pallets', 'dogSled', 'fishRack', 'propane', 'atv', 'boatTrailer', 'snowmobile', 'crates'];
+  const SIZE = { snowmobile: [1.3, 3.0, 1.2], fuelDrums: [1.4, 0.8, 0.9], crabPots: [2.2, 2.2, 1.8], woodpile: [2.6, 0.9, 1.5], pallets: [1.3, 1.3, 0.3], dogSled: [0.8, 2.6, 1.0], fishRack: [3.4, 1.6, 2.2], propane: [0.9, 0.5, 1.3], atv: [1.2, 2.0, 1.2], boatTrailer: [2.0, 7.0, 1.6], crates: [1.0, 0.8, 0.7] };
   for (let i = 0; i < Math.min(n, spots.length); i++) {
     const [x, z] = spots[i];
     let type = pick(ctx, pool);
     if (type === 'boatTrailer' && wear < 0.3) type = 'snowmobile';
-    b.at(x, 0, z, range(ctx, -PI, PI));
+    const rot = range(ctx, -PI, PI);
+    const sz = SIZE[type];
+    if (sz) ctx.col(x, z, sz[0], sz[1], sz[2], rot);
+    b.at(x, 0, z, rot);
     if (type === 'fuelDrums') { addProp(b, 'fuelDrum', { rust: wear }, r); b.translate(0.65, 0, 0.1); addProp(b, 'fuelDrum', { rust: wear, tipped: chance(ctx, 0.3) }, r); }
     else if (type === 'crabPots') { addProp(b, 'crabPot', {}, r); b.translate(0, 0.62, 0).rotateY(0.3); addProp(b, 'crabPot', {}, r); }
     else if (type === 'pallets') { addProp(b, 'pallet', {}, r); b.translate(0, 0.14, 0).rotateY(0.2); addProp(b, 'pallet', {}, r); }
@@ -424,4 +429,18 @@ function yard(ctx) {
     b.pop();
   }
   ctx.point('yard', spots[0][0], 0, spots[0][1], 0);
+  // wind-blown drifts against a couple of walls (not in front of the door)
+  if (!H.quonset) {
+    const nd = 1 + ((r() * 3) | 0);
+    for (let i = 0; i < nd; i++) {
+      const s = 1 + ((r() * 3) | 0); // right, back or left side
+      const len = s === 2 ? W : D;
+      const u = range(ctx, -len * 0.25, len * 0.25);
+      const dl = range(ctx, 2.0, Math.min(5.0, len * 0.6));
+      const p = s === 1 ? [W / 2 + 0.45, u] : s === 3 ? [-W / 2 - 0.45, u] : [u, -D / 2 - 0.45];
+      b.at(p[0], 0, p[1], s === 2 ? 0 : HALF_PI);
+      addProp(b, 'snowbank', { len: dl, w: 1.1, h: range(ctx, 0.35, 0.7) }, r);
+      b.pop();
+    }
+  }
 }

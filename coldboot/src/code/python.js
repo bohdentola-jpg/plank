@@ -9,7 +9,20 @@
 //   bool → JS boolean    None → null    str → JS string    list → JS Array
 //   tuple → PyTuple      dict → PyDict  set/frozenset → PySet
 //
-// Public API: PyVM, runPython, toJS, toPy, pyRepr, pyFloat (see the bottom of this file).
+// Public API (see section 25 at the bottom):
+//   new PyVM({ maxSteps = 500000, maxDepth = 150, onPrint(line), input, seed, maxOutputLines })
+//   vm.load(source)            -> { ok, output: [lines], error, stdout, steps }
+//   vm.call(name, args = [])   -> { ok, value, output, error, stdout, steps }   (args/value are JS values)
+//   vm.has(name) / vm.get(name) / vm.set(name, jsValue)
+//   vm.defineNative(name, fn, { doc, params })          fn gets JS values, returns a JS value
+//   vm.defineModuleObject(name, { method: fn, attr: value }, { doc, docs, params })
+//   runPython(source, opts), toJS(pyValue), toPy(jsValue), pyRepr(jsValue), pyFloat(x)
+//   error = { type, message, line, col, endLine, endCol, hint, text, trace? }   (line/col 1-based)
+// onPrint is called once per finished line (no '\n'); a trailing partial line is flushed at the end.
+// Modules: math, random (seeded), string, time, sys. Not supported (friendly NotImplementedError):
+// class, yield/generators, with, async, decorators, match, bytes, complex numbers.
+// Known differences from CPython: str is UTF-16 (len('😀') == 2); sets of ints iterate in CPython's
+// order when freshly built, but may differ after removals; sets of strings iterate in insertion order.
 
 /* eslint-disable no-fallthrough, no-control-regex */
 
@@ -325,7 +338,6 @@ function bigGuard(b) {
   return b;
 }
 const toBig = (v) => (typeof v === 'bigint' ? v : BigInt(v));
-const isIntV = (v) => typeof v === 'number' || typeof v === 'bigint';
 const isIntLike = (v) => typeof v === 'number' || typeof v === 'bigint' || typeof v === 'boolean';
 const intOf = (v) => (typeof v === 'boolean' ? (v ? 1 : 0) : v); // bool -> int
 
@@ -378,7 +390,7 @@ function iPow(a, b) {
   if (b < 0) {
     const fa = fval(a);
     if (fa === 0) throw ZeroDiv('0.0 cannot be raised to a negative power');
-    return F(Math.pow(fa, fval(b)));
+    return F(floatPow(fa, fval(b)));
   }
   if (typeof a === 'number' && typeof b === 'number') {
     if (a === 0 || a === 1) return b === 0 ? 1 : a;
@@ -447,8 +459,34 @@ function floatDivMod(vx, wx) {
   return [floordiv, mod];
 }
 
+function exactIntPow(x, n) { // x finite nonzero double, n integer with 2 <= |n| <= 1100
+  const neg = x < 0 && n % 2 !== 0;
+  const [m, e] = decompose(Math.abs(x));
+  const k = Math.abs(n);
+  const mk = m ** BigInt(k);
+  let v;
+  if (n > 0) v = scaleToDouble(mk, e * k);
+  else { // 2^(-e*k) / m^k
+    const shift = 56 + bitLen(mk);
+    const num = 1n << BigInt(shift);
+    const q = num / mk, r = num % mk;
+    v = scaleToDouble(q, -shift - e * k, r !== 0n);
+  }
+  return neg ? -v : v;
+}
 function floatPow(x, y) {
   if (x === 0 && y < 0) throw ZeroDiv('0.0 cannot be raised to a negative power');
+  if (Number.isInteger(y) && isFinite(x) && x !== 0) {
+    if (y === 1) return x;
+    if (y === 2) { const r = x * x; if (!isFinite(r)) throw OverflowErr("(34, 'Numerical result out of range')"); return r; }
+    if (y === -1) return 1 / x;
+    if (Math.abs(y) >= 2 && Math.abs(y) <= 1100) {
+      const r = exactIntPow(x, y);
+      if (!isFinite(r)) throw OverflowErr("(34, 'Numerical result out of range')");
+      return r;
+    }
+  }
+  if (y === 0.5 && x >= 0) return Math.sqrt(x);
   if (x < 0 && isFinite(x) && y !== Math.floor(y) && isFinite(y)) {
     throw ValueErr('negative number cannot be raised to a fractional power (that would be a complex number)');
   }
@@ -997,7 +1035,6 @@ function percentFormat(fmt, arg) {
   while (i < n) {
     const c = fmt[i];
     if (c !== '%') { out += c; i++; continue; }
-    const start = i;
     i++;
     if (i >= n) throw ValueErr('incomplete format');
     let key = null;
@@ -1077,7 +1114,6 @@ function percentFormat(fmt, arg) {
       default:
         throw ValueErr(`unsupported format character '${t}' (0x${t.charCodeAt(0).toString(16)}) at index ${i - 1}`);
     }
-    void start;
     out += body;
   }
   if (ai < args.length && !usedDict && !(args.length === 1 && dict)) throw TypeErr('not all arguments converted during string formatting');
@@ -1227,7 +1263,8 @@ function contains(container, item) {
 
 const OP_NAMES = { add: '+', sub: '-', mul: '*', truediv: '/', floordiv: '//', mod: '%', pow: '**', lshift: '<<', rshift: '>>', and: '&', or: '|', xor: '^', matmul: '@' };
 function opError(op, a, b, inplace) {
-  return TypeErr(`unsupported operand type(s) for ${OP_NAMES[op]}${inplace ? '=' : ''}: '${tname(a)}' and '${tname(b)}'`);
+  const sym = inplace ? OP_NAMES[op] + '=' : op === 'pow' ? '** or pow()' : OP_NAMES[op];
+  return TypeErr(`unsupported operand type(s) for ${sym}: '${tname(a)}' and '${tname(b)}'`);
 }
 
 function checkLen(n) { if (n > MAX_SEQ) throw MemoryErr(); }
@@ -1238,7 +1275,7 @@ function charge(n) {
 
 function repeatCount(n) {
   if (typeof n === 'boolean') return n ? 1 : 0;
-  if (typeof n === 'bigint') { if (n <= 0n) return 0; throw OverflowErr("cannot fit 'int' into an index-sized integer"); }
+  if (typeof n === 'bigint') throw OverflowErr("cannot fit 'int' into an index-sized integer");
   return n < 0 ? 0 : n;
 }
 function seqRepeat(seq, n) {
@@ -1345,18 +1382,42 @@ function binop(op, a, b, inplace = false) {
   throw opError(op, a, b, inplace);
 }
 
+const bitLen = (b) => (b === 0n ? 0 : b.toString(2).length);
+// m * 2^e (m >= 0 BigInt) as the nearest double; `sticky` marks a nonzero remainder below m
+function scaleToDouble(m, e, sticky = false) {
+  if (m === 0n) return 0;
+  const L = bitLen(m);
+  if (L > 55) { const k = L - 55; const low = m & ((1n << BigInt(k)) - 1n); m >>= BigInt(k); e += k; if (low !== 0n) sticky = true; }
+  if (sticky) m |= 1n;
+  // keep the result exact while scaling: avoid going through subnormals twice
+  const top = bitLen(m) + e;
+  if (top > 1025) return Infinity;
+  if (top < -1075) return 0;
+  if (e < -1022 + 3 - 55) { // result is subnormal: round once at the subnormal boundary
+    const drop = -1074 - e;
+    if (drop > 0) {
+      const lowMask = (1n << BigInt(drop)) - 1n, low = m & lowMask, half = 1n << BigInt(drop - 1);
+      let q = m >> BigInt(drop);
+      if (low > half || (low === half && ((q & 1n) === 1n || sticky))) q += 1n;
+      return Number(q) * 2 ** -1074;
+    }
+  }
+  let v = Number(m);
+  while (e > 1000) { v *= 2 ** 1000; e -= 1000; }
+  while (e < -1000) { v /= 2 ** 1000; e += 1000; }
+  return v * 2 ** e;
+}
 function bigTrueDiv(x, y) {
-  const fx = Number(x), fy = Number(y);
-  if (isFinite(fx) && isFinite(fy)) return fx / fy;
-  // scale down both so they fit in doubles
   const neg = (x < 0n) !== (y < 0n);
-  let ax = x < 0n ? -x : x, ay = y < 0n ? -y : y;
-  const shift = BigInt(Math.max(0, Math.max(ax.toString(2).length, ay.toString(2).length) - 1000));
-  ax >>= shift; ay >>= shift;
-  if (ay === 0n) throw OverflowErr('integer division result too large for a float');
-  const r = Number(ax) / Number(ay);
-  if (!isFinite(r)) throw OverflowErr('integer division result too large for a float');
-  return neg ? -r : r;
+  const a = x < 0n ? -x : x, b = y < 0n ? -y : y;
+  if (a === 0n) return neg ? -0 : 0;
+  const shift = 56 - (bitLen(a) - bitLen(b));
+  let q, r;
+  if (shift >= 0) { const n = a << BigInt(shift); q = n / b; r = n % b; }
+  else { const d = b << BigInt(-shift); q = a / d; r = a % d; }
+  const v = scaleToDouble(q, -shift, r !== 0n);
+  if (!isFinite(v)) throw OverflowErr('integer division result too large for a float');
+  return neg ? -v : v;
 }
 
 // in-place variants: lists/dicts/sets mutate
@@ -3072,7 +3133,6 @@ function mathArg(v) {
   if (isNum(v)) return fval(v);
   throw TypeErr(`must be real number, not ${tname(v)}`);
 }
-function domain(x) { if (x !== x) throw ValueErr('math domain error'); return x; }
 function mf(fn) {
   return (a, kw) => {
     noKw(fn.name || 'math', kw);
@@ -3610,11 +3670,11 @@ class Tokenizer {
         e.line = line; e.col = col + 1;
         throw e;
       }
-      if (end < s.length && RE_AFTER_NUM.test(s[end]) && !this.kwAfterNumber(end)) {
-        this.err('invalid decimal literal', line, s[end] === '_' ? end - this.ls : col);
-      }
       if (!isFloat && text.length > 1 && text[0] === '0' && /[1-9]/.test(text)) {
         this.err('leading zeros in decimal integer literals are not permitted; use an 0o prefix for octal integers', line, col);
+      }
+      if (end < s.length && RE_AFTER_NUM.test(s[end]) && !this.kwAfterNumber(end)) {
+        this.err('invalid decimal literal', line, s[end] === '_' ? end - this.ls : col);
       }
       const clean = text.replace(/_/g, '');
       if (isFloat) value = F(parseFloat(clean));
@@ -3752,9 +3812,13 @@ class Tokenizer {
       if (p >= n) expecting();
       const c = s[p];
       if (c === "'" || c === '"') {
-        if (c === q && !triple && stack.length === 0) expecting();
+        const qLine = this.line, qCol = p - this.ls;
+        const tq = s[p + 1] === c && s[p + 2] === c;
         const e = this.skipNestedString(p);
-        if (e < 0) expecting();
+        if (e < 0) {
+          if (c === q && tq === triple) this.err("f-string: expecting '}'", qLine, qCol);
+          this.err(tq ? `unterminated triple-quoted string literal (detected at line ${this.line})` : `unterminated string literal (detected at line ${this.line})`, qLine, qCol);
+        }
         p = e;
         continue;
       }
@@ -3812,7 +3876,8 @@ class Tokenizer {
           p = f.end;
           continue;
         }
-        if ((c === '\n' && !triple) || (c === q && !triple)) expecting();
+        if (c === '\n' && !triple) this.err('f-string: newlines are not allowed in format specifiers for single quoted f-strings', this.line, p - this.ls);
+        if (c === q && !triple) expecting();
         if (c === '\\' && !raw && s[p + 1] !== '{' && s[p + 1] !== '}') {
           const [t, k] = decodeEscape(s, p, (msg) => this.err(msg, this.line, p - this.ls));
           lit += t;
@@ -3919,7 +3984,8 @@ class Parser {
   }
   errAt(at, msg, type = 'SyntaxError') {
     // The parser reached the tokenizer's error token: that error is what CPython reports.
-    if (this.tokErr && Math.max(this.i, this.far) >= this.tokErrIdx) throw this.tokErr;
+    const reach = Math.max(this.i, this.far);
+    if (this.tokErr && (reach > this.tokErrIdx || (reach === this.tokErrIdx && !this.tokErr.inF))) throw this.tokErr;
     let e = synErr(type, msg, at.line, at.col + 1);
     // CPython raises "unexpected indent" straight away; everything else gets a full-source re-scan
     // in which a later tokenizer error (or an unclosed bracket) takes priority.
@@ -3928,7 +3994,7 @@ class Parser {
     if (this.unclosed.length) {
       const b = this.unclosed[this.unclosed.length - 1];
       const farTok = this.t[Math.min(Math.max(this.i, this.far), this.t.length - 1)];
-      if (this.tok.type === 'eof' || at.line > b.line || farTok.line > b.line) e = synErr('SyntaxError', `'${b.ch}' was never closed`, b.line, b.col + 1);
+      if (this.tok.type === 'eof' || farTok.type === 'eof' || at.line > b.line || farTok.line > b.line) e = synErr('SyntaxError', `'${b.ch}' was never closed`, b.line, b.col + 1);
     }
     throw e;
   }
@@ -4012,7 +4078,10 @@ class Parser {
       out.push(this.parseSimpleStmt());
     }
     if (this.at('nl')) this.i++;
-    else if (!this.at('eof')) this.fail();
+    else if (!this.at('eof')) {
+      if (this.canStartExpr()) this.tryParse(() => this.parseExpr());
+      this.fail();
+    }
     return out;
   }
   colon(forced) {
@@ -4074,10 +4143,12 @@ class Parser {
     return this.mk('Tuple', t, { elts });
   }
   forTargetError(startIdx) {
-    const errTok = this.tok;
+    const errTok = this.tok, errIdx = this.i;
     this.i = startIdx;
     let e = null;
     try { e = this.parseStarExprs(); } catch (err) { if (!(err instanceof PyException)) throw err; e = null; }
+    if (this.i > this.far) this.far = this.i;
+    this.i = errIdx;
     if (e) {
       const bad = invalidTarget(e, 'for');
       if (bad) this.errAt(bad, `cannot assign to ${exprName(bad)}`);
@@ -4367,7 +4438,10 @@ class Parser {
       const followOk = () => {
         const save = this.i;
         this.i++;
-        try { this.parseBitOr(); return !this.atOp('=') && !this.atOp(':='); } catch (err) { if (!(err instanceof PyException)) throw err; return false; } finally { this.i = save; }
+        try { this.parseBitOr(); return !this.atOp('=') && !this.atOp(':='); } catch (err) { if (!(err instanceof PyException)) throw err; return false; } finally {
+          if (this.i > this.far) this.far = this.i;
+          this.i = save;
+        }
       };
       if (e.type === 'Name' && !e.paren) {
         if (followOk()) this.errAt(e, "invalid syntax. Maybe you meant '==' or ':=' instead of '='?");
@@ -4547,12 +4621,16 @@ class Parser {
   }
   parseSlices() {
     const t = this.tok;
+    const si = this.i;
     const first = this.parseSliceItem();
-    if (!this.atOp(',')) return first;
+    if (!this.atOp(',')) { if (first.type !== 'Slice') this.commaHint(first, si, ']'); return first; }
     const elts = [first];
     while (this.eatOp(',')) {
       if (this.atOp(']')) break;
-      elts.push(this.parseSliceItem());
+      const s2 = this.i;
+      const e = this.parseSliceItem();
+      elts.push(e);
+      if (e.type !== 'Slice') this.commaHint(e, s2, ']');
     }
     return this.mk('Tuple', t, { elts });
   }
@@ -4577,6 +4655,7 @@ class Parser {
   }
   parseAtom() {
     const t = this.tok;
+    if (t.type === 'error' && this.tokErr) throw this.tokErr;
     switch (t.type) {
       case 'name': this.i++; return this.mkName(t);
       case 'num': this.i++; return this.mk('Const', t, { value: t.v });
@@ -4762,11 +4841,7 @@ class Parser {
       throw synErr('SyntaxError', 'f-string: lambda expressions are not allowed without parentheses', f.line, f.col + k + 1);
     }
     const tz = new Tokenizer(f.src, { line: f.line, col: f.col, expr: true });
-    let toks;
-    try { toks = tz.run(); } catch (e) {
-      if (e instanceof PyException && e.isSyntax && !String(e.args[0]).startsWith('f-string')) e.args = ['f-string: ' + e.args[0]];
-      throw e;
-    }
+    const toks = tz.run();
     const p = new Parser(toks, [], true);
     const node = p.parseStarExprs();
     if (!p.at('eof')) {
@@ -5695,7 +5770,15 @@ class Compiler {
         for (const it of items) {
           if (it.star) {
             let arr;
-            try { arr = iterToArray(it.fn(f)); } catch (x) { throw locate(x, it.node, where); }
+            const v0 = it.fn(f);
+            try { arr = iterToArray(v0); } catch (x) {
+              if (x instanceof PyException && x.cls === EXC.TypeError && /is not iterable/.test(x.args[0])) {
+                const y = TypeErr(`Value after * must be an iterable, not ${tname(v0)}`);
+                setLoc(y, it.node, where);
+                throw y;
+              }
+              throw locate(x, it.node, where);
+            }
             for (const v of arr) out.push(v);
           } else out.push(it.fn(f));
         }

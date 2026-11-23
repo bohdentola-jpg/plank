@@ -687,10 +687,10 @@ P.graveHouse = (b, o, r) => {
   if (roofed) {
     // small house-shaped enclosure: picket walls + gable roof
     const h = 0.75;
-    const n = Math.floor(L / 0.12);
-    for (let i = 0; i <= n; i++) for (const s of [-1, 1]) b.box('paint', -L / 2 + i * (L / n), 0, s * W / 2, 0.04, h, 0.04, { color: c });
-    const m = Math.floor(W / 0.12);
-    for (let i = 0; i <= m; i++) for (const s of [-1, 1]) b.box('paint', s * L / 2, 0, -W / 2 + i * (W / m), 0.04, h, 0.04, { color: c });
+    const n = Math.floor(L / 0.17);
+    for (let i = 0; i <= n; i++) for (const s of [-1, 1]) { const x = -L / 2 + i * (L / n); b.quad2('paint', [x - 0.025, 0, s * W / 2], [x + 0.025, 0, s * W / 2], [x + 0.025, h, s * W / 2], [x - 0.025, h, s * W / 2], { color: c }); }
+    const m = Math.floor(W / 0.17);
+    for (let i = 0; i <= m; i++) for (const s of [-1, 1]) { const z = -W / 2 + i * (W / m); b.quad2('paint', [s * L / 2, 0, z + 0.025], [s * L / 2, 0, z - 0.025], [s * L / 2, h, z - 0.025], [s * L / 2, h, z + 0.025], { color: c }); }
     for (const s of [-1, 1]) b.box('paint', 0, h, s * W / 2, L + 0.06, 0.05, 0.06, { color: c });
     for (const s of [-1, 1]) b.box('paint', s * L / 2, h, 0, 0.06, 0.05, W + 0.06, { color: c });
     b.push().translate(0, h + 0.03, 0);
@@ -705,7 +705,8 @@ P.graveHouse = (b, o, r) => {
       const [ax, az] = pts[e], [bx, bz] = pts[(e + 1) % 4];
       const len = Math.hypot(bx - ax, bz - az);
       const k = Math.floor(len / 0.14);
-      for (let i = 0; i < k; i++) b.box('paint', ax + (bx - ax) * i / k, 0, az + (bz - az) * i / k, 0.035, 0.55, 0.035, { color: c });
+      const ex = (bx - ax) / len, ez = (bz - az) / len;
+      for (let i = 0; i < k; i++) { const px = ax + (bx - ax) * i / k, pz = az + (bz - az) * i / k; b.quad2('paint', [px - ex * 0.02, 0, pz - ez * 0.02], [px + ex * 0.02, 0, pz + ez * 0.02], [px + ex * 0.02, 0.55, pz + ez * 0.02], [px - ex * 0.02, 0.55, pz - ez * 0.02], { color: c }); }
       b.beam('paint', [ax, 0.5, az], [bx, 0.5, bz], 0.04, 0.04, { color: c });
     }
     void n;
@@ -715,7 +716,7 @@ P.graveHouse = (b, o, r) => {
   orthodoxCross(b, 'paint', 1.6, weather('#f0ece2', o.wear ?? 0.3), { t: 0.06 });
   b.pop();
   // plastic flowers (bright, very Alaskan cemetery)
-  if (r() < 0.7) for (let i = 0; i < 5; i++) b.sphere('plastic', -L / 2 + 0.25 + r() * 0.3, 0.12 + r() * 0.1, (r() - 0.5) * W * 0.6, 0.05, { rings: 3, segs: 5, color: ['#e8203a', '#f0c020', '#e860a0', '#4080e0', '#ffffff'][(r() * 5) | 0] });
+  if (r() < 0.7) for (let i = 0; i < 3; i++) b.sphere('plastic', -L / 2 + 0.25 + r() * 0.3, 0.12 + r() * 0.1, (r() - 0.5) * W * 0.6, 0.05, { rings: 2, segs: 4, color: ['#e8203a', '#f0c020', '#e860a0', '#4080e0', '#ffffff'][(r() * 5) | 0] });
 };
 
 P.snowbank = (b, o, r) => {

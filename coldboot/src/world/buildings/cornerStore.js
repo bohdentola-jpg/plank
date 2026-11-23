@@ -237,7 +237,7 @@ function interior(ctx, { W, D, fy }) {
   });
   // register counter by the door with a POS + acrylic shield + gum rack
   counter(ctx, iw / 2 - 2.2, fy, D / 2 - 2.6, PI, { w: 3.2, register: 'pos', key: 'sheet_metal', color: '#f0f2f4', top: '#d8dcde', topKey: 'stone', panels: false });
-  b.box('i:glass_dark', iw / 2 - 2.6, fy + 0.95, D / 2 - 2.9, 1.0, 0.7, 0.02, { color: [0, 0, 0] });
+  b.box('i:glass_clear', iw / 2 - 2.6, fy + 0.95, D / 2 - 2.9, 1.0, 0.7, 0.02, { color: '#ffffff' });
   shelf(ctx, iw / 2 - 2.2, fy, D / 2 - 4.0, 0, { w: 2.8, h: 2.2, d: 0.35, levels: 6, key: 'sheet_metal', color: '#2a2d30', palette: ['#e8c020', '#c81a2a', '#f0f0f0', '#1a6ad8'], sparse: 0.0 });
   ctx.point('register', iw / 2 - 2.2, fy, D / 2 - 1.8, PI);
   ctx.point('clerk', iw / 2 - 2.2, fy, D / 2 - 3.3, 0);

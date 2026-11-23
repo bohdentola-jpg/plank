@@ -4,7 +4,8 @@
 import { input } from '../core/input.js';
 import { C, W, H, text, panel, vText, roundRect, MONO_FONT, measure, hit } from '../core/ui.js';
 import { LESSONS } from '../code/lessons.js';
-import { CHALLENGES, NATIVES } from '../code/challenges.js';
+import { CHALLENGES } from '../code/challenges.js';
+import { buildNatives, installNatives } from '../code/natives.js';
 import { checkExercise } from '../code/check.js';
 import { PyVM } from '../code/python.js';
 import { CodeEditor } from '../code/editor.js';
@@ -65,12 +66,13 @@ export function openLaptop(G, opts = {}) {
       ui.challenge = CHALLENGES[opts.challenge];
       ui.timer = ui.challenge?.timeLimit || null;
       startExercise(0);
+      if (opts.code) ed.value = opts.code;
     }
 
     const run = () => {
       const vm = new PyVM({ maxSteps: 400000 });
       const ex = ui.mode === 'ex' ? currentEx() : null;
-      if (ex?.natives) for (const n of ex.natives) if (NATIVES[n]) vm.defineNative(n, NATIVES[n].fn || NATIVES[n]);
+      if (ex) installNatives(vm, buildNatives(ex.natives), ex.data);
       const r = vm.load(ed.value);
       ui.out = (r.output || []).slice(-14);
       ui.err = r.error || null;
@@ -78,9 +80,7 @@ export function openLaptop(G, opts = {}) {
     };
     const check = () => {
       const ex = currentEx();
-      const natives = {};
-      for (const n of ex.natives || []) if (NATIVES[n]) natives[n] = NATIVES[n].fn || NATIVES[n];
-      const res = checkExercise(ex, ed.value, { natives });
+      const res = checkExercise(ex, ed.value, { natives: buildNatives(ex.natives), data: ex.data });
       ui.out = (res.output || []).slice(-14);
       ui.err = res.error || null;
       ui.msg = res.message || (res.pass ? 'All tests pass.' : 'Not quite yet.');
@@ -90,11 +90,22 @@ export function openLaptop(G, opts = {}) {
         if (ui.challenge) {
           s.challenges[opts.challenge] = true;
           saveGame();
+          // the live run: the player's code against the real mission data; the
+          // natives record what reached the world
+          ui.received = [];
+          const vm = new PyVM({ maxSteps: 400000 });
+          installNatives(vm, buildNatives(ex.natives, ui.received), ex.data);
+          const r1 = vm.load(ed.value);
+          const r2 = r1.ok && ex.live ? vm.load(ex.live) : r1;
+          ui.out = [...(r1.output || []), ...(r2 !== r1 ? r2.output || [] : []), ...ui.received.map(([n, v]) => `>> ${n}(${typeof v === 'string' ? JSON.stringify(v) : JSON.stringify(v)?.slice(0, 60)})`)].slice(-14);
+          if (!r2.ok) ui.err = r2.error;
+          ui.msg = 'All tests pass — and it ran on the real thing.';
         }
       }
     };
 
     const close = (result) => {
+      result = { ...result, code: ed.value };
       ed.dispose();
       voice.stopAll();
       G.overlay = null;
@@ -138,12 +149,12 @@ export function openLaptop(G, opts = {}) {
           const ex = currentEx();
           if (act('run')) run();
           if (act('check')) check();
-          if (act('hint')) ui.hints = Math.min((ex.hints || []).length, ui.hints + 1);
+          if (act('hint') && ui.hints < (ex.hints || []).length) { ui.hints++; if (ui.timer !== null) { ui.timer = Math.max(1, ui.timer - 30); ui.msg = 'Hint: −0:30'; } }
           if (act('reset')) { ed.value = ex.starter || ''; ui.out = []; ui.err = null; }
-          if (act('answer')) { ed.value = ex.solution || ''; ui.msg = 'Lyosha typed it for you. Read it, then CHECK.'; }
+          if (act('answer') && ui.timer === null) { ed.value = ex.solution || ''; ui.msg = 'Lyosha typed it for you. Read it, then CHECK.'; }
           if (act('edit')) ed.focus();
           if ((act('nextex') || input.pressed('confirm')) && ui.passed) {
-            if (ui.challenge) { close({ pass: true }); return; }
+            if (ui.challenge) { close({ pass: true, received: ui.received || [], left: ui.timer }); return; }
             const L = ui.lesson;
             if (ui.ex < L.exercises.length - 1) startExercise(ui.ex + 1);
             else {
@@ -237,9 +248,9 @@ export function openLaptop(G, opts = {}) {
         const by = H - 116;
         button(ctx, 'run', 500, by, 100, 'RUN');
         button(ctx, 'check', 610, by, 110, 'CHECK', ui.passed);
-        button(ctx, 'hint', 730, by, 90, 'HINT');
+        button(ctx, 'hint', 730, by, 90, ui.timer !== null ? 'HINT −30s' : 'HINT');
         button(ctx, 'reset', 830, by, 90, 'RESET');
-        if (ui.hints >= (ex.hints || []).length && ex.solution) button(ctx, 'answer', 930, by, 130, 'SHOW ME');
+        if (ui.hints >= (ex.hints || []).length && ex.solution && ui.timer === null) button(ctx, 'answer', 930, by, 130, 'SHOW ME');
         if (ui.passed) button(ctx, 'nextex', 1070, by, 130, ui.challenge ? 'DONE ▶' : 'NEXT ▶', true, C.green);
         text(ctx, ed.focused ? 'typing · CTRL+ENTER runs · ESC stops typing' : 'click the code to type', 500, by + 54, { size: 12, color: C.dim });
       },

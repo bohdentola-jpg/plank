@@ -881,6 +881,14 @@ export function stovepipe(ctx, x, yBase, z, yTop, o = {}) {
   }
   b.pop();
   if (o.brace) b.beam('galv', [x, yBase + h * 0.7, z], [x + o.brace[0], yBase + o.brace[1], z + o.brace[2]], 0.02, 0.02, { color: '#8a8e90' });
+  smokePoint(ctx, x, yTop + 0.3, z);
+}
+
+/** Register a smoke emitter point (stovepipe / chimney top): smoke, smoke2, … */
+export function smokePoint(ctx, x, y, z) {
+  let name = 'smoke', i = 1;
+  while (ctx.points[name]) name = 'smoke' + ++i;
+  ctx.pointLocal(name, x, y, z, 0);
 }
 
 /** Brick or block chimney box from y0 to y1 at (x, z). */
@@ -890,6 +898,7 @@ export function chimney(ctx, x, y0, z, y1, o = {}) {
   b.box(o.key || 'brick', x, y0, z, w, y1 - y0, d, { color: o.color || '#b8a090' });
   b.box('concrete', x, y1, z, w + 0.08, 0.08, d + 0.08, { color: '#8a8a84' });
   b.cyl('galv', x, y1 + 0.08, z, 0.09, 0.25, { segs: 8, color: '#9a9ea0' });
+  smokePoint(ctx, x, y1 + 0.4, z);
 }
 
 /**
@@ -898,6 +907,9 @@ export function chimney(ctx, x, y0, z, y1, o = {}) {
  */
 export function sign(ctx, key, x, y, z, w, h, spec, o = {}) {
   const b = ctx.b;
+  // the cache key covers the whole spec (text, glow, emissive, fade…; draw functions
+  // pass a textKey) so different names/states never share a stale material
+  key += '#' + hashString(JSON.stringify({ ...spec, w, h }) + (spec.textKey ?? ''));
   const mk = 'sign:' + key;
   b.materials.set(mk, getSignMaterial(key, { w, h, ...spec }));
   b.poly(mk, [[x - w / 2, y - h / 2, z], [x + w / 2, y - h / 2, z], [x + w / 2, y + h / 2, z], [x - w / 2, y + h / 2, z]], { uv: [[0, 0], [1, 0], [1, 1], [0, 1]], want: [0, 0, 1] });

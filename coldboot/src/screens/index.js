@@ -9,3 +9,4 @@ import '../scenes/plane.js';
 import './townview.js';
 import './town.js';
 import './laptoplab.js';
+import '../scenes/finale.js';

@@ -934,7 +934,7 @@ export const LESSONS = [
     id: 'l09',
     day: 9,
     title: 'Recipes',
-    ru: { line: 'Функция — это рецепт: написал один раз — готовишь сколько хочешь.', en: 'A function is a recipe: write it once, cook it as often as you like.' },
+    ru: { line: 'Функция — это рецепт: пишешь один раз, а готовишь сколько хочешь.', en: 'A function is a recipe: you write it once and cook it as often as you like.' },
     pages: [
       {
         text: "A function is a named block of code you can run whenever you like. def name(): starts it, and the indented block underneath is its body. Defining a function doesn't run it; calling it does: name(). Write it once, use it everywhere. Koshkin's pelmeni recipe works the same way, and it's been in use since 1911.",

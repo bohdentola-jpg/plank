@@ -1511,6 +1511,52 @@ T('int set printing', String.raw`
   print(set([3, 3, 3]), set(), frozenset([2, 1]))
 `);
 // ---------------------------------------------------------------------------
+// 19. error precedence & rarer messages (found by mutation fuzzing)
+// ---------------------------------------------------------------------------
+SYN('number then keyword', `x = 1if True else 2\ny = [1for i in range(3)]\nprint(x, y, 1and 2)\nprint(oops\n`);
+SYN('fstring format typo', `price = 2.5\nprint(f"{price.2f}")\n`);
+SYN('fstring unmatched paren', `x = f"{a)}"\n`);
+SYN('fstring mismatched bracket', `x = f"{(}"\n`);
+SYN('fstring comment', `print(f"7 x {i#} = {7 * i}")\n`);
+SYN('fstring incomplete expr', `x = f"{a +}"\n`);
+SYN('fstring lambda', `x = f"{lambda x: 1}"\n`);
+SYN('fstring missing conversion', `x = f"{x!}"\n`);
+SYN('fstring newline in spec', `print(f"CODE {code:04)\n`);
+SYN('dict missing value', `d = {"salt": , "k": 1}\n`);
+SYN('comprehension missing in', `x = [1 for 3]\n`);
+SYN('comprehension missing in 2', `x = [y for y z]\n`);
+SYN('assign to call nothing after', `f() =\n`);
+SYN('assign chain to call', `f() = 3 = 4\n`);
+SYN('annotation needs expression', `if x:\n    e in counts:\n`);
+SYN('lazy dedent after parse error', `def f():\n    x = :0\n  y = 1\n`);
+SYN('unexpected indent beats later string error', `x = 1\n    y = "unterminated\n`);
+SYN('dedent error reached first', `for t in [1]:\n    if t:\n   x = 1\n`);
+SYN('backslash at line start', `if x:\n    pass\n  \\  y = 1\n`);
+SYN('stray brace statement', `print(1)\npr{int(10 != 10)\n`);
+SYN('unclosed after missing operator', `d count_vowels(text\n`);
+SYN('nested quotes ok', `d = {"key": "v"}\nprint(f"{d["key"]}!")\nprint(f"{'a' + "b"}")\n`);
+ERR('star non-iterable in list', `print([1, *8])\n`);
+ERR('star non-iterable call', `print(*5)\n`);
+ERR('star after positional', `print(1, *5)\n`);
+ERR('star method call', `[].append(*5)\n`);
+ERR('double star non-mapping', `print(**5)\n`);
+ERR('module annotation evaluated', `p: rint(5)\n`);
+T('function annotation not evaluated', String.raw`
+  def f():
+      p: undefined_name = 3
+      return p
+  print(f())
+  x: int = 5
+  print(x)
+`);
+T('numeric precision regressions', String.raw`
+  print((2**53 + 1) / 3, 2 / 9007199254740993, 10**30 / 7, 2**70 / -2**71, 0 / -5, (10**400) // (10**399) / 3)
+  print(((179 - True) ** -1) ** 3, ((-59 / 0.1) * (1e-5 / 17.39)) ** 3, 1.1 ** 3, 0.1 ** 5, 2.5 ** -3, (-1.5) ** 7, 1.0001 ** 1000)
+  print(2.0 ** 0.5, 3 ** 0.5, 10 ** -3, 7 ** -2, (2 ** 0.5) ** 2, 1.5 ** 2, 4.0 ** 0.5)
+`);
+ERR('pow message', `print('a' ** 2)\n`);
+ERR('str times huge int', `print('6' * -(10**20))\n`);
+// ---------------------------------------------------------------------------
 // run differential cases
 // ---------------------------------------------------------------------------
 let pass = 0, fail = 0;

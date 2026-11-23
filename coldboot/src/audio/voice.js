@@ -6,7 +6,7 @@
 import { audio } from './audio.js';
 import { ALL_LINES } from '../data/script/index.js';
 import { voiceFeatures } from '../human/anim.js';
-import { settings } from '../core/settings.js';
+import { settings, store } from '../core/settings.js';
 
 const BASE = new URL('../../assets/vo/', import.meta.url);
 
@@ -24,7 +24,7 @@ class Voice {
   duration(id) {
     const m = this.manifest?.[id];
     if (m) return m.d;
-    const L = ALL_LINES[id];
+    const L = ALL_LINES[id] || ALL_LINES[id.replace(/_f$/, '')];
     const txt = L ? (L.ru || L.en || '') : '';
     return Math.max(1.2, txt.length / 14);
   }
@@ -61,8 +61,15 @@ class Voice {
    * Play a line. opts: { radio: earpiece filter, gain, onStart }
    * Returns { done: Promise, features, stop(), id, line }
    */
+  /** Lines addressed to the player have feminine Russian forms (ru_f, rendered as id_f). */
+  fem() {
+    try { const p = store.load('profile'); return !!p?.dna && p.dna.sex < 0.5; } catch { return false; }
+  }
+
   play(id, opts = {}) {
-    const L = ALL_LINES[id] || { who: '?', en: id };
+    const L0 = ALL_LINES[id] || { who: '?', en: id };
+    const L = L0.ru_f && this.fem() ? { ...L0, ru: L0.ru_f } : L0;
+    if (L !== L0) id = id + '_f';
     const h = { id, line: L, features: { open: 0, wide: 0, round: 0 }, playing: true, t: 0 };
     const dur = this.duration(id);
     h.dur = dur;
@@ -154,7 +161,7 @@ class Voice {
       if (h.analyser) voiceFeatures(h.analyser, h.fbuf, h.features);
       else if (h.fake) {
         const s = Math.sin(h.t * 14) * Math.sin(h.t * 3.3);
-        h.features.open = Math.max(0, s) * 0.8;
+        h.features.open = Math.max(0, s) * 0.42;
         h.features.wide = 0.4;
         h.features.round = 0.2;
       }

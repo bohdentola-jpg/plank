@@ -100,15 +100,40 @@ export async function buildTown(opts = {}) {
     return rec;
   };
 
+  // rebuild one building in a new state (repairs): same seed, same colliders
+  out.rebuild = (id, state) => {
+    const rec = out.buildings[id];
+    if (!rec) return;
+    let nb;
+    try { nb = BUILDING_KINDS.includes(rec.type) ? buildBuilding(rec.type, { ...rec.opts, state }) : null; } catch (e) { console.warn(e); }
+    if (!nb) return;
+    nb.group.position.copy(rec.b.group.position);
+    nb.group.rotation.y = rec.rot;
+    nb.group.name = id;
+    const wasInterior = rec.b.interior;
+    root.remove(rec.b.group);
+    rec.b.group.traverse((o) => { if (o.isMesh && o.geometry && !o.geometry.userData?.shared) o.geometry.dispose?.(); });
+    if (nb.interior) {
+      nb.interior.visible = false;
+      nb.group.add(nb.interior);
+      const it = out.interiors.find((q) => q.id === id);
+      if (it) it.group = nb.interior;
+    } else if (wasInterior) out.interiors = out.interiors.filter((q) => q.id !== id);
+    root.add(nb.group);
+    rec.b = nb;
+    rec.opts = { ...rec.opts, state };
+  };
+
   let n = 0;
   for (const e of TOWN.buildings) {
-    const state = opts.states?.[e.id] ?? (e.type === 'cornerStore' || e.type === 'dome' ? 1 : 0.15);
+    const state = opts.states?.['state:' + e.id] ?? (e.type === 'cornerStore' || e.type === 'dome' ? 1 : 0.15);
     place(e.id, e.type, e.x, e.z, e.rot, { seed: n * 31 + 7, state, name: e.name, interior: opts.interiors !== false, owner: e.owner });
     if (++n % 4 === 0) await tick(0.2 + 0.5 * n / TOWN.buildings.length);
   }
   const rng = makeRng('houses');
   TOWN.houseLots.forEach(([x, z, rot, owner], i) => {
-    place(`house${i}`, 'house', x, z, rot, { seed: 1000 + i * 17, state: opts.states?.[`house${i}`] ?? 0.1 + rng() * 0.6, owner });
+    const st0 = 0.1 + rng() * 0.6;
+    place(`house${i}`, 'house', x, z, rot, { seed: 1000 + i * 17, state: opts.states?.[`state:house${i}`] ?? st0, owner });
   });
   await tick(0.8);
 

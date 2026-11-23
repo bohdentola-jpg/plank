@@ -285,6 +285,7 @@ export function buildWarehouse() {
   const door = new THREE.Mesh(uvScale(new THREE.PlaneGeometry(5, 4.5), 4, 2), M.corr);
   door.rotation.y = -Math.PI / 2; door.position.set(L / 2 - 0.05, 2.25, 3);
   group.add(door);
+  const doorMesh = door;
 
   // neon sign hung on the west wall: РЫБА (fish)
   const neonG = new THREE.Group();
@@ -327,12 +328,14 @@ export function buildWarehouse() {
   let ci = 0;
   for (const s of Object.values(seats)) {
     const c = chair(M, 'ch' + ci++);
+    c.name = 'chair';
     const back = new THREE.Vector3(0, 0, -0.14).applyAxisAngle(new THREE.Vector3(0, 1, 0), s.rot);
     c.position.set(s.x + back.x, 0, s.z + back.z);
     c.rotation.y += s.rot;
     group.add(c);
   }
   const empty = chair(M, 'empty');
+  empty.name = 'chair';
   empty.position.set(1.5, 0, 1.02); empty.rotation.y = Math.PI + 0.4;
   group.add(empty);
 
@@ -542,7 +545,7 @@ export function buildWarehouse() {
   group.traverse((o) => { if (o.isMesh && o !== beam && o !== floor && o !== walls) { o.castShadow = o.castShadow || false; o.receiveShadow = true; } });
 
   return {
-    group, seats, top, props, lamp, beam,
+    group, seats, top, props, lamp, beam, lampFill, door: doorMesh,
     update(dt, t) {
       beamMat.uniforms.time.value = t;
       // the neon flickers now and then

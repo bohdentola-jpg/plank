@@ -22,7 +22,7 @@ export function build(opts = {}) {
   // fascia sign with a green medical cross
   b.push().translate(-W / 2, 0, D / 2);
   sign(ctx, 'clinic_sign', W * 0.42, fy + 3.35, 3.05, 4.2, 0.55, {
-    kind: 'lightbox', ppm: 150, bg: '#ffffff', dayEmissive: 0.2, nightEmissive: st > 0.15 ? 1.4 : 0.05,
+    kind: 'lightbox', ppm: 150, bg: '#ffffff', dayEmissive: 0.2, nightEmissive: st > 0.15 ? 1.4 : 0.05, textKey: (ctx.name || '') + (st > 0.15),
     draw: (g, Wc, Hc) => {
       g.fillStyle = '#ffffff'; g.fillRect(0, 0, Wc, Hc);
       g.fillStyle = '#1e8a4a';

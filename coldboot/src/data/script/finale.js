@@ -1,0 +1,27 @@
+// THE FINALE — across the strait under fire, the empty warehouse, ten minutes
+// of code, the arrest, and a jail cell at sunset.
+export const LINES = {
+  'f.g.radio1': { who: 'grisha', ru: 'Рыбка! Слышу тебя! Держи курс на запад, на огни Белого Мыса!', en: 'Rybka! I hear you! Hold west — toward the lights of Bely Mys!' },
+  'f.g.behind': { who: 'grisha', ru: 'У тебя на хвосте вертолёт. Чёрный. Не давай ему зайти сбоку!', en: "There's a helicopter on your tail. Black. Don't let him get alongside!" },
+  'f.g.left': { who: 'grisha', ru: 'Влево! Уходи влево!', en: 'Left! Break left!' },
+  'f.g.right': { who: 'grisha', ru: 'Вправо! Резко вправо!', en: 'Right! Hard right!' },
+  'f.g.down': { who: 'grisha', ru: 'Вниз! К самому льду!', en: 'Down! Right down to the ice!' },
+  'f.g.up': { who: 'grisha', ru: 'Вверх! Скала впереди!', en: 'Up! Cliff ahead!' },
+  'f.g.flares': { who: 'grisha', ru: 'Ракета! Отстреливай ловушки!', en: 'Missile! Fire the flares!' },
+  'f.g.good': { who: 'grisha', ru: 'Молодец! Держи ровно!', en: "That's it! Hold her steady!" },
+  'f.g.hit': { who: 'grisha', ru: 'Задело! Держи машину, держи!', en: "You're hit! Hold her, hold her!" },
+  'f.g.islands': { who: 'grisha', ru: 'Острова Диомида. Между ними — граница. Прижмись к скалам.', en: 'The Diomede Islands. The border runs between them. Hug the cliffs.' },
+  'f.g.border': { who: 'grisha', ru: 'Граница позади! Он отстаёт — боится лезть к нам. Ещё десять километров.', en: "Border's behind you! He's falling back — he won't follow us in. Ten more kilometres." },
+  'f.g.guards': { who: 'grisha', ru: 'Погоди… тут кто-то… Погранцы! Рыбка, слушай: код — на тебе. Ты справишься—', en: "Wait… someone's here… Border guards! Rybka, listen: the code's on you. You can do this—" },
+  'f.g.land': { who: 'grisha', ru: 'Видишь прожектор у склада? Садись рядом. Медленно. Очень медленно.', en: 'See the floodlight by the warehouse? Put her down next to it. Slowly. Very slowly.' },
+  'f.guard.stop': { who: 'guard', ru: 'Стоять! Руки за голову! На колени!', en: 'Freeze! Hands behind your head! On your knees!' },
+  'f.guard.papers': { who: 'guard', ru: 'Пограничная служба. Нарушение государственной границы. Встать. Медленно.', en: 'Border Service. Illegal crossing of the state border. Stand up. Slowly.' },
+  'f.guard.what': { who: 'guard', ru: 'Что это за экран? Что ты сейчас отправил— а, неважно. Уводите.', ru_f: 'Что это за экран? Что ты сейчас отправила— а, неважно. Уводите.', en: "What's on that screen? What did you just send— never mind. Take them away." },
+  'j.dmitri': { who: 'dmitri', ru: 'Хорошая работа, Рыбка.', en: 'Good work, Rybka.', emo: 'smile' },
+  'j.lyosha': { who: 'lyosha', ru: 'Свет горит. Везде. Охранник дал мне посмотреть новости. Ничего не случилось. Вообще ничего!', en: 'The lights are on. Everywhere. The guard let me see the news. Nothing happened. Absolutely nothing!', emo: 'laugh' },
+  'j.grisha': { who: 'grisha', ru: 'Вертолёт жалко. Красивый был.', en: 'Shame about the helicopter. She was a beauty.', emo: 'smile' },
+  'j.valya': { who: 'valya', ru: 'Я же говорила: сначала чай, потом спасать мир.', en: 'I told you: first tea, then save the world.', emo: 'laugh' },
+  'j.nadia': { who: 'nadia', ru: 'Никто никогда не узнает. Ни в Порт-Заре, ни здесь. И это правильно.', en: 'No one will ever know. Not in Port Zarya, not here. And that is how it should be.', emo: 'smile' },
+  'j.ivan': { who: 'ivan', ru: '…Паспорт, кстати, так и не потерял.', ru_f: '…Паспорт, кстати, так и не потеряла.', en: "…You never did lose the passport, by the way.", emo: 'smile' },
+  'j.dmitri2': { who: 'dmitri', ru: 'Тихо.', en: 'Quietly.', emo: 'smile' },
+};

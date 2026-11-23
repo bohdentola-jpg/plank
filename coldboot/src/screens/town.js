@@ -30,6 +30,7 @@ import { Minigames } from '../game/minigames.js';
 import { streetPoints } from '../world/roads.js';
 import { sfx } from '../audio/sfx.js';
 import { DAY_START } from '../data/script/days.js';
+import { Economy } from '../game/economy.js';
 
 export const G = {
   // the live game, for every system to reach: G.state, G.player, G.town, G.hud …
@@ -99,11 +100,19 @@ registerScreen('town', () => {
     G.missions = new Missions(G);
     G.attention = new Attention(G);
     G.minigames = new Minigames(G);
+    G.economy = new Economy(G);
+    G.cutscene = cutscene;
     G.sfx = sfx;
     G.fadeTeleport = fadeTeleport;
     G.reveal = reveal;
     G.sleep = sleep;
+    // the end of day 14: across the strait (scenes/finale.js)
+    G.finale = async () => { saveGame(); go('finale', {}, { transition: 'black' }); await new Promise(() => {}); };
     cabinSpots();
+    for (const id of ['hardware', 'koshkin', 'northstar', 'diner']) {
+      const p = G.missions.where(`${id}.counter`) || G.missions.where(id);
+      if (p) G.interact.add('shop:' + id, { x: p.x, z: p.z, y: p.y, r: 2.6, prompt: id === 'diner' ? 'Order something' : 'Browse the shelves', action: () => G.economy.shop(id) });
+    }
     progress = 1;
     input.wantPointerLock = true;
     if (!params.load || !Object.keys(s.missions.active).length) {
@@ -186,6 +195,49 @@ registerScreen('town', () => {
     G.cinematic = false;
     G.player.locked = false;
     game.renderer.dof = null;
+  }
+
+  /** Cutscenes in the open world: d.bring() puts people on stage. */
+  async function cutscene(fn) {
+    const d = G.director;
+    G.cinematic = true;
+    G.player.locked = true;
+    game.renderer.tweakPost({ letterbox: 1 });
+    d.addActor('player', G.player.ch, G.player.anim, { external: true });
+    const brought = [];
+    d.bring = async (id, where, o = {}) => {
+      if (id === 'player') {
+        const p = G.missions.where(where);
+        if (p) G.player.place(p.x, p.z, o.face ?? p.rot ?? G.player.yaw);
+        G.player.anim.setPosture(o.sit ? 'sit' : 'stand');
+        return;
+      }
+      const npc = G.npcs.get(id);
+      if (!npc) return;
+      const p = G.missions.where(where) || { x: G.player.pos.x + 2, z: G.player.pos.z + 2 };
+      npc.scripted = true;
+      npc.hidden = false;
+      npc.pos.set(p.x, G.world.groundAt(p.x, p.z), p.z);
+      npc.yaw = o.face ?? p.rot ?? npc.yaw;
+      npc.goal = { x: p.x, z: p.z, yaw: npc.yaw, activity: o.sit ? 'sit' : 'stand' };
+      if (!npc.ch) await G.npcs._build(npc);
+      npc.ch.group.position.copy(npc.pos);
+      npc.ch.group.rotation.y = npc.yaw;
+      npc.ch.group.visible = true;
+      d.addActor(id, npc.ch, npc.anim, { external: true });
+      brought.push(npc);
+    };
+    d.you = async (t) => { G.dialog.youLine = { s: t, t: 0 }; await d.wait(Math.min(3.2, 0.9 + t.length / 28)); };
+    try {
+      await fn(d);
+    } catch (e) { console.error(e); }
+    for (const npc of brought) { d.removeActor(npc.id); npc.scripted = false; npc.goal = null; }
+    d.removeActor('player');
+    G.player.anim.setPosture('stand');
+    game.renderer.tweakPost({ letterbox: 0 });
+    game.renderer.dof = null;
+    G.cinematic = false;
+    G.player.locked = false;
   }
 
   async function sleep() {

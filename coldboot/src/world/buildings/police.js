@@ -73,7 +73,7 @@ function interior(ctx, { W, D, fy }) {
   // lobby (front) | front desk counter across, offices behind
   const lz = D / 2 - 3.2; // counter line
   counter(ctx, 1.4, fy, lz, 0, { w: 4.0, d: 0.6, h: 1.05, key: 'wood_dark', color: '#6a5040', register: null });
-  b.box('i:glass_dark', 1.4, fy + 1.05, lz, 4.0, 0.6, 0.02, { color: [0, 0, 0] });
+  b.box('i:glass_clear', 1.4, fy + 1.05, lz, 4.0, 0.6, 0.02, { color: '#ffffff' });
   partition(ctx, -iw / 2, lz - 0.05, -0.7, lz - 0.05, fy, ch, { color: '#c8ccc8', doors: [{ at: 1.2, w: 0.9, leaf: true, color: '#6a6a66' }] });
   crtMonitor(ctx, 0.6, fy + 1.05, lz - 0.1, PI);
   ctx.point('frontDesk', 1.4, fy, lz + 0.8, PI);

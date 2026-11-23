@@ -466,16 +466,17 @@ export async function buildCharacter(dnaIn = {}, opts = {}) {
     ch.meshes.beard = beard.mesh;
   }
 
-  // the dark inside of the mouth (the base mesh has no cavity behind the lips)
+  // the dark inside of the mouth (the base mesh has no cavity behind the lips).
+  // It hangs from the head, not the jaw: on the jaw it swung out through the chin.
   {
-    const jaw = rig.byName.jaw;
+    const jaw = rig.byName.head;
     const lipC = new THREE.Vector3();
     let n = 0;
     for (let v = 0; v < hm.N; v++) if (hm.lip[v] > 160) { lipC.x += pos[v * 3]; lipC.y += pos[v * 3 + 1]; lipC.z += pos[v * 3 + 2]; n++; }
     lipC.multiplyScalar(1 / Math.max(1, n));
     const cav = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), new THREE.MeshBasicMaterial({ color: 0x0a0405 }));
-    cav.scale.set(0.022, 0.016, 0.03);
-    cav.position.copy(lipC).add(new THREE.Vector3(0, -0.004, -0.028));
+    cav.scale.set(0.021, 0.017, 0.026);
+    cav.position.copy(lipC).add(new THREE.Vector3(0, -0.008, -0.03));
     const holderGroup = new THREE.Group();
     holderGroup.matrixAutoUpdate = false;
     holderGroup.matrix.copy(jaw.userData.global.clone().invert());

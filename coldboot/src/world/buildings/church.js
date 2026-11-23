@@ -13,6 +13,7 @@ import {
 import { orthodoxCross } from '../props.js';
 import { getSignMaterial } from '../materials.js';
 import { floor, ceiling, wallColliders, bench, ladder, rug, partition } from './furniture.js';
+import { monumentSign } from './civic.js';
 
 const HP = HALF_PI;
 
@@ -247,6 +248,16 @@ export function build(opts = {}) {
   const towerTop = onionDome(ctx, 0, tr.yRidge + 0.6, tz, 0.78, 1.45, { color: blue, ringColor: trim, crossKey: goldKey, crossColor: goldCol, crossH: 1.4, stars: st > 0.6 ? 10 : 0 });
   if (st > 0.3) icicles(ctx, -TW / 2, TW / 2, bY - 0.35, tz + TW / 2 + 0.24, 0.6);
 
+  // name board by the steps
+  monumentSign(ctx, 'church_board', -3.4, tz + TW / 2 + 2.2, 2.0, 1.0, {
+    kind: 'paint', ppm: 120, bg: '#f4f1ea', fade: Math.max(0, wear - 0.3), seed: 8,
+    lines: [
+      { text: ctx.name || 'Holy Transfiguration', size: 0.22, y: 0.2, color: '#1e3f6e', font: 'Georgia, "Times New Roman", serif', weight: 'bold' },
+      { text: 'Храм Преображения Господня', size: 0.14, y: 0.42, color: '#7a1a1a', font: 'Georgia, serif' },
+      { text: 'Russian Orthodox Church · Est. 1822', size: 0.12, y: 0.62, color: '#2a2a2a', font: 'Georgia, serif' },
+      { text: 'Vespers Sat 6 pm · Divine Liturgy Sun 10 am', size: 0.1, y: 0.82, color: '#2a2a2a', font: 'Georgia, serif' },
+    ],
+  }, { rot: 0.35, board: '#5f8fbf', lift: 0.5 });
   ctx.footprint = { w: NW + 1.4, d: (tz + TW / 2 + stp.run) - (acz - AD / 2) + 1 };
   // doors / points
   const doorZ = tz + TW / 2 + stp.run + 0.4;

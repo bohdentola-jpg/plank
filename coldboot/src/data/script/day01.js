@@ -1,3 +1,5 @@
+export const DAY = { n: 1, start: ['d1.arrival'], mustFinish: ['d1.cabin'] };
+
 // DAY 1 — Hello, Port Zarya. The airstrip, Wade, the town, Koshkin's cabin,
 // Father Gabriel's frayed bell rope, and the relay in the bell tower.
 
