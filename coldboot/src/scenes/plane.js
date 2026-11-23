@@ -215,13 +215,7 @@ registerScreen('plane', () => {
     await d.wait(7);
     prompt = null;
     // the flash
-    d.actors.okafor.anim.override = (pose) => {
-      pose.spine03 = { e: [0, 25, 0] }; pose.spine02 = { e: [0, 20, 0] }; pose.spine01 = { e: [0, 15, 0] };
-      pose['upperarm01.R'] = { aim: [-0.2, -0.3, 1] };
-      pose['lowerarm01.R'] = { aim: [0.3, 0.75, 0.6] };
-      pose['upperarm01.L'] = { aim: [0.25, -0.3, 1] };
-      pose['lowerarm01.L'] = { aim: [-0.35, 0.75, 0.6] };
-    };
+    d.actors.okafor.anim.play('photo', { upper: true, hold: true });   // he raises a camera
     await d.wait(1.2);
     flashT = 0;
     d.actors.okafor.anim.lookAt = d.headPos('player');
@@ -230,7 +224,7 @@ registerScreen('plane', () => {
     fp = false;
     d.cam({ ...d.closeUp('okafor', { side: 1, dist: 0.9, fov: 30 }), dur: 0 });
     await d.wait(1.6);
-    d.actors.okafor.anim.override = null;
+    d.actors.okafor.anim.stop('photo');
     fp = true;
     await d.say('nadia', 'p.nadia.flash');
     const c = await d.choose(['(Look away. Look out the window.)', '(Hold his stare.)'], { prompt: 'MR. GREY' });
@@ -288,8 +282,8 @@ registerScreen('plane', () => {
       // passengers
       const seatOf = (row, side) => cab.seats.find((s) => s.row === row && s.side === side);
       const people = [['player', playerDNA(), seatOf(4, 1)], ['okafor', CAST.okafor.dna, seatOf(3, -1)],
-        ['p1', { ...CAST.hank.dna, seed: 991, age: 60, beard: { style: 'full', stubble: 1 }, hair: { style: 'short', color: '#7a6a5a' } }, seatOf(2, -1)],
-        ['p2', { ...CAST.ruth.dna, seed: 992, age: 52, hair: { style: 'long', color: '#1a1410' } }, seatOf(6, 1)]];
+        ['p1', { avatar: 'Wood_Male_01', height: 1.0 }, seatOf(2, -1)],
+        ['p2', { avatar: 'Medical_Female_03', height: 0.98 }, seatOf(6, 1)]];
       for (const [id, dna, s] of people) {
         const ch = await buildCharacter(dna);
         ch.group.position.set(s.x, 0, s.z + 0.05);
@@ -301,9 +295,7 @@ registerScreen('plane', () => {
         d.addActor(id, ch, an);
       }
       d.actors.p1.anim.exprTarget.squint = 1; // asleep
-      d.actors.player.ch.meshes.head.visible = false; // first person: no head in the way
-      for (const k of ['eyes', 'lashes', 'beard', 'teeth', 'tongue']) if (d.actors.player.ch.meshes[k]) d.actors.player.ch.meshes[k].visible = false;
-      if (d.actors.player.ch.hair?.group) d.actors.player.ch.hair.group.visible = false;
+      d.actors.player.ch.setFirstPerson(true); // first person: no head in the way
       voice.preload(['p.pilot.welcome', 'p.nadia.check', 'p.nadia.good', 'p.lyosha.hi', 'p.nadia.lyosha', 'p.nadia.rules', 'p.nadia.koshkin', 'p.nadia.flash', 'p.nadia.calm', 'p.grisha.wind', 'p.nadia.land', 'p.pilot.descent']);
       input.wantPointerLock = true;
       script().catch((e) => console.error(e));

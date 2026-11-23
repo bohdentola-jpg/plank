@@ -9,6 +9,9 @@
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export async function run(seconds = 300, o = {}) {
+  // the town may still be building (people load from files): wait for it
+  for (let i = 0; i < 600 && !(window.__cb?.G?.player && window.__cb.G.hud); i++) await sleep(250);
+  if (!window.__cb) return 'autopilot: the town never finished loading';
   const { G, input } = window.__cb;
   const { LESSONS } = await import('../src/code/lessons.js');
   const log = [];

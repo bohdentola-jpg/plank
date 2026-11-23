@@ -8,6 +8,8 @@ import { Animator } from '../human/anim.js';
 import { CAST } from '../data/cast.js';
 import { SCHEDULES } from '../data/schedules.js';
 import { makeRng } from '../core/util.js';
+import { store } from '../core/settings.js';
+import { AVATARS, FOLK_AVATARS } from '../people/catalog.js';
 
 const SPAWN_R = 95, DESPAWN_R = 130;
 const wrap = (a) => { a = (a + Math.PI) % (Math.PI * 2); if (a < 0) a += Math.PI * 2; return a - Math.PI; };
@@ -226,33 +228,25 @@ export class NPCs {
   }
 }
 
-// outdoors in November everyone wears a coat (unless their outfit has one)
-export function outdoorize(dna, id) {
-  const out = { ...dna };
-  const has = (dna.outfit || []).some((g) => g.slot === 'coat');
-  if (!has && !['halloran', 'pilot'].includes(id)) {
-    const cols = ['#3a4450', '#5a4a3a', '#2a3a2e', '#6a2a24', '#2e2e34', '#7a6a4a'];
-    const c = cols[(dna.seed || 1) % cols.length];
-    out.outfit = [...(dna.outfit || []), { slot: 'coat', pattern: (dna.seed || 1) % 3 ? 'nylon' : 'duck', color: c, thick: 0.016, puff: (dna.seed || 1) % 2 ? 0.014 : 0.006, hem: 'hip' }];
-  }
-  return out;
+// People wear what their Rocketbox avatar wears (the most wintry outfits were
+// picked for the townsfolk); kept for callers that dress people for outdoors.
+export function outdoorize(dna) {
+  return { ...dna };
 }
 
-const HAIRC = ['#0e0b09', '#2b1d14', '#3a2618', '#5a4026', '#7a5634', '#9a948c', '#c8a066'];
+/** A townsperson: a different avatar each (never the one the player chose), now and then dyed. */
+const folkUsed = new Set();
 function folkDNA(r, i, male) {
-  const a = r(), b = r();
-  const eth = { caucasian: 0.3 + r(), asian: a < 0.45 ? 0.6 + r() : r() * 0.3, african: b < 0.15 ? 0.8 : r() * 0.15 };
-  const dark = eth.african / (eth.caucasian + eth.asian + eth.african);
-  const age = 20 + Math.floor(r() * 55);
-  return outdoorize({
-    seed: 5000 + i, sex: male ? 0.9 + r() * 0.1 : r() * 0.1, age, muscle: 0.3 + r() * 0.5, weight: 0.3 + r() * 0.5, height: 0.94 + r() * 0.1,
-    ethnic: eth, skin: { tone: Math.min(1, 0.1 + dark * 0.7 + eth.asian * 0.15 + r() * 0.1), rosy: r() },
-    hair: { style: male ? r.pick(['short', 'buzz', 'messy', 'swept']) : r.pick(['bun', 'bob', 'long', 'short']), color: HAIRC[Math.floor(r() * (age > 55 ? 7 : 5))], recede: male && age > 40 ? r() * 0.8 : 0 },
-    beard: male && r() < 0.4 ? { style: r.pick(['short', 'full', 'moustache']), stubble: r() } : { stubble: male ? r() * 0.6 : 0 },
-    outfit: [
-      { slot: 'top', pattern: r.pick(['knit', 'fleece', 'plaid', 'plain']), color: r.pick(['#5a6a7a', '#7a4a32', '#3e5468', '#8e2a24', '#5a6a4e', '#7a7e86']), color2: '#151515', color3: '#9a8a62', thick: 0.008, hem: 'hip' },
-      { slot: 'bottom', pattern: r.pick(['denim', 'duck', 'wool']), color: r.pick(['#2c3a4e', '#3a3428', '#2a2a2e', '#4a4232']), thick: 0.005 },
-      { slot: 'boots', pattern: 'leather', color: r.pick(['#2a1e14', '#141210', '#4a3020']), thick: 0.014, shaft: 0.3 },
-    ],
-  }, 'folk');
+  if (i === 0) folkUsed.clear();
+  let mine = null;
+  try { mine = store.load('profile')?.dna?.avatar || null; } catch { /* */ }
+  const pool = FOLK_AVATARS.filter((id) => id !== mine && AVATARS[id]);
+  const bySex = pool.filter((id) => AVATARS[id].sex === (male ? 'm' : 'f'));
+  let fresh = bySex.filter((id) => !folkUsed.has(id));
+  if (!fresh.length) fresh = pool.filter((id) => !folkUsed.has(id));
+  if (!fresh.length) fresh = pool;
+  const avatar = fresh[Math.floor(r() * fresh.length)];
+  folkUsed.add(avatar);
+  const dyes = ['#3e4a56', '#5a4636', '#38463a', '#5e2a26', '#2e2e36', '#6a5e48'];
+  return { seed: 5000 + i, avatar, height: 0.96 + r() * 0.08, ...(r() < 0.35 ? { tint: r.pick(dyes), tintAmt: 0.45 } : {}) };
 }

@@ -1,285 +1,125 @@
-// Everyone with a face. DNA → human/character.js; voice → tools/build_voice.py.
-// face modifiers: 'group/name': -1..1 (negative = the min target, e.g. decr/down/in)
+// Everyone with a face. DNA → src/people/ (buildCharacter); voice → tools/build_voice.py.
+// dna: { avatar: a Microsoft Rocketbox avatar from src/people/catalog.js (baked
+// looks — greyed hair, aged skin, dyed clothes — live there), sex (0 f / 1 m, read
+// by the voice for Russian grammar), height (scale), tint / tintAmt (cloth colour) }
 
 export const CAST = {
   player: {
     name: 'Rybka',
-    dna: {
-      seed: 7, sex: 1, age: 31, muscle: 0.55, weight: 0.48, height: 1.0,
-      ethnic: { caucasian: 0.8, african: 0.1, asian: 0.1 },
-      face: { 'chin/chin-prominent': 0.2, 'nose/nose-hump': -0.2 },
-      skin: { tone: 0.22, warmth: 0.55, rosy: 0.5 },
-      eyes: { color: '#4a6a5a' },
-      brows: { color: '#3a2618', density: 0.75, thickness: 0.5 },
-      hair: { style: 'short', color: '#3a2618' },
-      beard: { stubble: 0.35 },
-      outfit: [
-        { slot: 'top', pattern: 'knit', color: '#6a7a88', thick: 0.008, hem: 'hip' },
-        { slot: 'bottom', pattern: 'denim', color: '#3c4e68', thick: 0.004 },
-        { slot: 'boots', pattern: 'leather', color: '#3a2618', thick: 0.012, shaft: 0.3 },
-      ],
-    },
+    dna: { avatar: 'Male_Adult_07', sex: 1, height: 1.0 },
   },
   dmitri: {
     name: 'Dmitri Volkov', ru: 'Дмитрий Волков',
-    dna: {
-      seed: 11, sex: 1, age: 62, muscle: 0.5, weight: 0.62, height: 1.02,
-      ethnic: { caucasian: 1 },
-      face: {
-        'nose/nose-scale-horiz': 0.35, 'nose/nose-hump': 0.4, 'nose/nose-volume': 0.3, 'chin/chin-width': 0.3,
-        'eyebrows/eyebrows-trans': -0.3, 'eyes/l-eye-bag': 0.5, 'eyes/r-eye-bag': 0.5, 'head/head-fat': 0.2,
-        'cheek/l-cheek-bones': 0.3, 'cheek/r-cheek-bones': 0.3,
-      },
-      skin: { tone: 0.16, warmth: 0.45, rosy: 0.75 },
-      eyes: { color: '#5d7286' },
-      brows: { color: '#8c8478', density: 0.9, thickness: 0.8 },
-      hair: { style: 'swept', color: '#9a948c' },
-      beard: { style: 'full', color: '#a39c92', stubble: 0.9 },
-      outfit: [
-        { slot: 'top', pattern: 'knit', color: '#5a6a52', thick: 0.011, hem: 'hip', neckUp: 0.03 },
-        { slot: 'bottom', pattern: 'wool', color: '#2c2a2a', thick: 0.005 },
-        { slot: 'boots', pattern: 'leather', color: '#2a1e16', thick: 0.012, shaft: 0.3 },
-      ],
-    },
+    dna: { avatar: 'Male_Adult_05', sex: 1, height: 1.02 },  // 62, grey beard: Rocketbox m009 (hair greyed further)
   },
   nadia: {
     name: 'Nadia Sokolova', ru: 'Надежда Соколова',
-    dna: {
-      seed: 23, sex: 0.02, age: 34, muscle: 0.45, weight: 0.42, height: 0.99,
-      ethnic: { caucasian: 0.9, asian: 0.1 },
-      face: {
-        'cheek/l-cheek-bones': 0.6, 'cheek/r-cheek-bones': 0.6, 'nose/nose-point-width': -0.3, 'mouth/mouth-upperlip-volume': 0.3,
-        'chin/chin-width': -0.2, 'eyes/l-eye-corner1': 0.2, 'eyes/r-eye-corner1': 0.2, 'nose/nose-scale-horiz': -0.25,
-      },
-      skin: { tone: 0.1, warmth: 0.4, rosy: 0.45, freckles: 0.15 },
-      eyes: { color: '#6c8a9a' },
-      brows: { color: '#2a1a12', density: 0.8, thickness: 0.35 },
-      lips: { color: '#a85a58' },
-      hair: { style: 'bun', color: '#2a1a12' },
-      makeup: { eyeshadow: '#4a3436', eyeshadowAmt: 0.25 },
-      outfit: [
-        { slot: 'top', pattern: 'rib', color: '#d8cdb8', thick: 0.006, hem: 'hip', neckUp: 0.02 },
-        { slot: 'bottom', pattern: 'denim', color: '#243042', thick: 0.004 },
-        { slot: 'boots', pattern: 'leather', color: '#161210', thick: 0.008, shaft: 0.42 },
-      ],
-    },
+    dna: { avatar: 'Female_Adult_14', sex: 0, height: 1.0 },  // 34: brunette bob, cream wrap cardigan, jeans, boots
   },
   lyosha: {
     name: 'Lyosha Orlov', ru: 'Алексей Орлов',
-    dna: {
-      seed: 31, sex: 1, age: 26, muscle: 0.3, weight: 0.3, height: 1.03,
-      ethnic: { caucasian: 1 },
-      face: { 'nose/nose-scale-vert': 0.3, 'chin/chin-prominent': -0.2, 'head/head-oval': 0.4, 'ears/l-ear-flap': 0.4, 'ears/r-ear-flap': 0.4 },
-      skin: { tone: 0.08, warmth: 0.4, rosy: 0.6 },
-      eyes: { color: '#7a6a4a' },
-      brows: { color: '#5a4026', density: 0.6, thickness: 0.35 },
-      hair: { style: 'messy', color: '#5a4026' },
-      beard: { stubble: 0.15 },
-      outfit: [
-        { slot: 'top', pattern: 'fleece', color: '#5a5e66', thick: 0.012, hem: 'hip' },
-        { slot: 'bottom', pattern: 'denim', color: '#3a4656', thick: 0.004 },
-        { slot: 'boots', pattern: 'duck', color: '#d8d8d0', thick: 0.01, shaft: 0.08 },
-      ],
-    },
+    dna: { avatar: 'Male_Adult_20', sex: 1, height: 1.02 },  // 26: the brown hoodie
   },
   grisha: {
     name: 'Grisha Bondarenko', ru: 'Григорий Бондаренко',
-    dna: {
-      seed: 41, sex: 1, age: 45, muscle: 0.85, weight: 0.85, height: 1.06,
-      ethnic: { caucasian: 1 },
-      face: { 'head/head-fat': 0.5, 'neck/neck-scale-horiz': 0.6, 'nose/nose-scale-horiz': 0.5, 'chin/chin-width': 0.5, 'nose/nose-flaring': 0.4 },
-      skin: { tone: 0.2, warmth: 0.55, rosy: 0.9 },
-      eyes: { color: '#4a5a6a' },
-      brows: { color: '#4a3020', density: 0.95, thickness: 0.7 },
-      hair: { style: 'buzz', color: '#4a3020' },
-      beard: { style: 'full', color: '#5a3a22', stubble: 1 },
-      outfit: [
-        { slot: 'top', pattern: 'plaid', color: '#7a1c1c', color2: '#141414', color3: '#c8a040', thick: 0.006, hem: 'hip' },
-        { slot: 'bottom', pattern: 'duck', color: '#5a4a30', thick: 0.007 },
-        { slot: 'boots', pattern: 'leather', color: '#3a2a1a', thick: 0.014, shaft: 0.32 },
-      ],
-    },
+    dna: { avatar: 'Delivery_Male_01', sex: 1, height: 1.07 },  // 45, huge: beard, beanie, red flannel, boots
   },
   valya: {
     name: 'Baba Valya', ru: 'Валентина Петровна',
-    dna: {
-      seed: 53, sex: 0, age: 78, muscle: 0.35, weight: 0.6, height: 0.93,
-      ethnic: { caucasian: 1 },
-      face: { 'nose/nose-point': -0.3, 'cheek/l-cheek-volume': 0.4, 'cheek/r-cheek-volume': 0.4, 'mouth/mouth-upperlip-volume': -0.4, 'eyes/l-eye-bag': 0.6, 'eyes/r-eye-bag': 0.6 },
-      skin: { tone: 0.12, warmth: 0.45, rosy: 0.7 },
-      eyes: { color: '#6a7a8a' },
-      brows: { color: '#b0a8a0', density: 0.5, thickness: 0.3 },
-      hair: { style: 'headscarf', color: '#c8c0b8' },
-      outfit: [
-        { slot: 'top', pattern: 'knit', color: '#6a5a4c', thick: 0.01, hem: 'hip', fit: 0.7 },
-        { slot: 'skirt', pattern: 'wool', color: '#2a2630', thick: 0.012, hem: 'calf' },
-        { slot: 'bottom', pattern: 'wool', color: '#3a3438', thick: 0.004 },
-        { slot: 'boots', pattern: 'wool', color: '#4a4440', thick: 0.018, shaft: 0.4 },
-      ],
-    },
+    dna: { avatar: 'Business_Female_02', sex: 0, height: 0.95 },  // 78: the oldest Rocketbox woman, hair whitened, skin aged; glasses
   },
   ivan: {
     name: 'Ivan Tikhonov', ru: 'Иван Тихонов',
-    dna: {
-      seed: 67, sex: 1, age: 50, muscle: 0.5, weight: 0.45, height: 0.98,
-      ethnic: { caucasian: 0.7, asian: 0.3 },
-      face: { 'nose/nose-scale-vert': 0.2, 'chin/chin-prominent': 0.3, 'eyes/l-eye-scale': -0.2, 'eyes/r-eye-scale': -0.2, 'head/head-rectangular': 0.5 },
-      skin: { tone: 0.2, warmth: 0.5, rosy: 0.35 },
-      eyes: { color: '#3a2a1a' },
-      brows: { color: '#2a2622', density: 0.7, thickness: 0.45 },
-      hair: { style: 'short', color: '#2e2a28' },
-      beard: { style: 'moustache', color: '#2e2a28', stubble: 0.5 },
-      outfit: [
-        { slot: 'top', pattern: 'wool', color: '#22262c', thick: 0.008, hem: 'hip', neckUp: 0.02 },
-        { slot: 'bottom', pattern: 'wool', color: '#1c1c1e', thick: 0.005 },
-        { slot: 'boots', pattern: 'leather', color: '#141210', thick: 0.01, shaft: 0.25 },
-      ],
-    },
+    dna: { avatar: 'Business_Male_04', sex: 1, height: 0.99 },  // 50: shaved head, grey waistcoat, says nothing
   },
 
   // ---------------------------------------------------------------- Port Zarya
   pilot: {
     name: 'Captain', short: 'Pilot', color: '#9fd0ff',
-    dna: { seed: 101, sex: 1, age: 48, muscle: 0.5, weight: 0.55, ethnic: { caucasian: 1 }, skin: { tone: 0.2 }, hair: { style: 'short', color: '#5a4a3a', recede: 0.4 }, eyes: { color: '#4a5a6a' },
-      outfit: [{ slot: 'top', pattern: 'plain', color: '#e8e8e4', thick: 0.004, hem: 'hip' }, { slot: 'bottom', pattern: 'wool', color: '#1c2030', thick: 0.004 }, { slot: 'boots', pattern: 'leather', color: '#111', thick: 0.008, shaft: 0.1 }] },
+    dna: { avatar: 'Pilot_Male_02', sex: 1, height: 1.0 },
   },
   okafor: {
     name: 'Mr. Grey', short: 'Mr. Grey', color: '#b8c0c8',
-    dna: { seed: 113, sex: 1, age: 44, muscle: 0.55, weight: 0.45, height: 1.03, ethnic: { african: 1 }, skin: { tone: 0.72, warmth: 0.5 },
-      face: { 'chin/chin-prominent': 0.3, 'cheek/l-cheek-bones': 0.3, 'cheek/r-cheek-bones': 0.3, 'nose/nose-scale-horiz': 0.2 },
-      hair: { style: 'buzz', color: '#0e0b09' }, brows: { color: '#0e0b09', density: 0.8, thickness: 0.45 }, eyes: { color: '#3a2412' }, beard: { style: 'short', color: '#0e0b09', stubble: 0.6 },
-      outfit: [{ slot: 'top', pattern: 'wool', color: '#30343a', thick: 0.006, hem: 'hip', neckUp: 0.02 }, { slot: 'coat', pattern: 'nylon', color: '#6e7378', thick: 0.014, puff: 0.012, hem: 'hip' }, { slot: 'bottom', pattern: 'wool', color: '#2a2c30', thick: 0.005 }, { slot: 'boots', pattern: 'leather', color: '#1a1614', thick: 0.012, shaft: 0.3 }] },
+    dna: { avatar: 'Business_Male_05', sex: 1, height: 1.03 },  // Special Agent Okafor: suit recoloured grey
   },
   wade: {
     name: 'Wade Tolliver', short: 'Wade', color: '#ffc07a',
-    dna: { seed: 127, sex: 1, age: 56, muscle: 0.55, weight: 0.62, ethnic: { caucasian: 1 }, skin: { tone: 0.24, rosy: 0.85 },
-      face: { 'nose/nose-scale-horiz': 0.3, 'head/head-fat': 0.3, 'eyes/l-eye-bag': 0.5, 'eyes/r-eye-bag': 0.5 },
-      hair: { style: 'short', color: '#8a7a6a', recede: 0.5 }, brows: { color: '#6a5a4a', density: 0.85, thickness: 0.6 }, eyes: { color: '#5d7286' }, beard: { style: 'moustache', color: '#8a7a6a', stubble: 0.5 },
-      outfit: [{ slot: 'top', pattern: 'plaid', color: '#2a4a6a', color2: '#101418', color3: '#c8c8c0', thick: 0.006, hem: 'hip' }, { slot: 'coat', pattern: 'duck', color: '#8a6a3a', thick: 0.014, puff: 0.006, hem: 'hip' }, { slot: 'bottom', pattern: 'denim', color: '#3a4a5e', thick: 0.004 }, { slot: 'boots', pattern: 'leather', color: '#4a3020', thick: 0.014, shaft: 0.35 }] },
+    dna: { avatar: 'Male_Adult_13', sex: 1, height: 1.0 },  // 56: thinning hair, sweater vest
   },
   koshkin: {
     name: 'Sasha Koshkin', short: 'Koshkin', color: '#e8d098',
-    dna: { seed: 131, sex: 1, age: 82, muscle: 0.3, weight: 0.5, height: 0.95, ethnic: { caucasian: 0.85, asian: 0.15 }, skin: { tone: 0.18, rosy: 0.7, freckles: 0.25 },
-      face: { 'nose/nose-scale-vert': 0.3, 'nose/nose-volume': 0.4, 'ears/l-ear-scale': 0.4, 'ears/r-ear-scale': 0.4, 'eyes/l-eye-bag': 0.8, 'eyes/r-eye-bag': 0.8, 'cheek/l-cheek-volume': -0.4, 'cheek/r-cheek-volume': -0.4 },
-      hair: { style: 'short', color: '#d8d4cc', recede: 0.85 }, brows: { color: '#e0dcd4', density: 0.9, thickness: 0.7 }, eyes: { color: '#7a8a9a' },
-      outfit: [{ slot: 'top', pattern: 'rib', color: '#7a5a3a', thick: 0.009, hem: 'hip' }, { slot: 'bottom', pattern: 'wool', color: '#4a4440', thick: 0.005 }, { slot: 'boots', pattern: 'leather', color: '#2a1e14', thick: 0.012, shaft: 0.2 }] },
+    dna: { avatar: 'Male_Adult_14', sex: 1, height: 0.96 },  // 82: white hair, aged
   },
   dolly: {
     name: 'Dolly Finch', short: 'Dolly', color: '#ff9ab0',
-    dna: { seed: 137, sex: 0, age: 58, muscle: 0.4, weight: 0.68, ethnic: { caucasian: 1 }, skin: { tone: 0.14, rosy: 0.8 },
-      face: { 'cheek/l-cheek-volume': 0.5, 'cheek/r-cheek-volume': 0.5, 'mouth/mouth-scale-horiz': 0.2, 'nose/nose-point': 0.3 },
-      hair: { style: 'bob', color: '#c8a066' }, brows: { color: '#7a5634', density: 0.6, thickness: 0.3 }, eyes: { color: '#6c8a9a' }, lips: { color: '#b0384a' }, makeup: { eyeshadow: '#5a6a8a', eyeshadowAmt: 0.3 },
-      outfit: [{ slot: 'top', pattern: 'plain', color: '#c84a5a', thick: 0.005, hem: 'hip' }, { slot: 'bottom', pattern: 'denim', color: '#3a4a6a', thick: 0.004 }, { slot: 'boots', pattern: 'leather', color: '#e8e8e8', thick: 0.01, shaft: 0.1 }] },
+    dna: { avatar: 'Female_Adult_02', sex: 0, height: 1.0 },  // 58: greying, aged a little
   },
   hank: {
     name: 'Hank Brubaker', short: 'Hank', color: '#ffb060',
-    dna: { seed: 139, sex: 1, age: 55, muscle: 0.7, weight: 0.75, height: 1.04, ethnic: { caucasian: 1 }, skin: { tone: 0.26, rosy: 0.8 },
-      face: { 'head/head-square': 0.6, 'chin/chin-width': 0.5, 'neck/neck-scale-horiz': 0.5, 'nose/nose-hump': 0.3 },
-      hair: { style: 'buzz', color: '#6a5a4a', recede: 0.3 }, brows: { color: '#5a4a3a', density: 0.9, thickness: 0.7 }, eyes: { color: '#4a5a6a' }, beard: { style: 'goatee', color: '#7a6a5a', stubble: 0.7 },
-      outfit: [{ slot: 'top', pattern: 'duck', color: '#5a5a42', thick: 0.008, hem: 'hip' }, { slot: 'coat', pattern: 'duck', color: '#7a5a2e', thick: 0.016, puff: 0.006, hem: 'hip', sleeves: 0.06 }, { slot: 'bottom', pattern: 'duck', color: '#4a4232', thick: 0.007 }, { slot: 'boots', pattern: 'leather', color: '#3a2618', thick: 0.016, shaft: 0.32 }] },
+    dna: { avatar: 'Construction_Male_02', sex: 1, height: 1.04 },  // 55: work coveralls (hard hat left off)
   },
   ruth: {
     name: 'Ruth Aqpik', short: 'Ruth', color: '#a0e0c0',
-    dna: { seed: 149, sex: 0, age: 71, muscle: 0.35, weight: 0.55, height: 0.92, ethnic: { asian: 0.85, caucasian: 0.15 }, skin: { tone: 0.42, warmth: 0.6, rosy: 0.6 },
-      face: { 'cheek/l-cheek-bones': 0.7, 'cheek/r-cheek-bones': 0.7, 'eyes/l-eye-epicanthus': 0.5, 'eyes/r-eye-epicanthus': 0.5, 'head/head-round': 0.4, 'nose/nose-scale-horiz': 0.2 },
-      hair: { style: 'bun', color: '#9a948c' }, brows: { color: '#5a5450', density: 0.6, thickness: 0.35 }, eyes: { color: '#3a2412' },
-      outfit: [{ slot: 'top', pattern: 'knit', color: '#2a6a7a', thick: 0.009, hem: 'thigh' }, { slot: 'bottom', pattern: 'wool', color: '#2a2a30', thick: 0.005 }, { slot: 'boots', pattern: 'fur', color: '#8a6a4a', color2: '#5a4030', thick: 0.02, shaft: 0.4 }] },
+    dna: { avatar: 'Female_Adult_03', sex: 0, height: 0.94 },  // 71: grey hair, aged (the only East Asian adult woman in Rocketbox)
   },
   ray: {
     name: 'Ray Moody', short: 'Ray', color: '#c0c8ff',
-    dna: { seed: 151, sex: 1, age: 47, muscle: 0.55, weight: 0.55, ethnic: { caucasian: 0.7, african: 0.3 }, skin: { tone: 0.38, rosy: 0.5 },
-      face: { 'eyes/l-eye-bag': 0.6, 'eyes/r-eye-bag': 0.6, 'mouth/mouth-angles': -0.5, 'chin/chin-prominent': 0.2 },
-      hair: { style: 'messy', color: '#2b1d14' }, brows: { color: '#2b1d14', density: 0.85, thickness: 0.55 }, eyes: { color: '#5a3a22' }, beard: { style: 'none', stubble: 0.85 },
-      outfit: [{ slot: 'top', pattern: 'fleece', color: '#3a4a5a', thick: 0.01, hem: 'hip' }, { slot: 'bottom', pattern: 'denim', color: '#2c3644', thick: 0.004 }, { slot: 'boots', pattern: 'leather', color: '#6a4a2a', thick: 0.016, shaft: 0.4 }] },
+    dna: { avatar: 'Male_Adult_12', sex: 1, height: 1.0 },  // 47: denim jacket
   },
   lyle: {
     name: 'Lyle Pruitt', short: 'Lyle', color: '#ffe080',
-    dna: { seed: 157, sex: 1, age: 38, muscle: 0.4, weight: 0.45, ethnic: { caucasian: 1 }, skin: { tone: 0.12, rosy: 0.4 },
-      face: { 'chin/chin-prominent': -0.3, 'nose/nose-scale-vert': 0.2, 'mouth/mouth-upperlip-volume': -0.3, 'head/head-oval': 0.5 },
-      hair: { style: 'swept', color: '#a07848' }, brows: { color: '#7a5634', density: 0.6, thickness: 0.35 }, eyes: { color: '#6c8a9a' },
-      outfit: [{ slot: 'top', pattern: 'plain', color: '#e8e4dc', thick: 0.004, hem: 'hip', neckUp: 0.01 }, { slot: 'coat', pattern: 'wool', color: '#1c2a44', thick: 0.008, hem: 'hip' }, { slot: 'bottom', pattern: 'wool', color: '#2a2a3a', thick: 0.004 }, { slot: 'boots', pattern: 'leather', color: '#1a0e08', thick: 0.008, shaft: 0.08 }] },
+    dna: { avatar: 'Business_Male_03', sex: 1, height: 1.0 },  // 38: suit and tie
   },
   marta: {
     name: 'Chief Marta Kowalczyk', short: 'Chief', color: '#80b0ff',
-    dna: { seed: 163, sex: 0, age: 50, muscle: 0.6, weight: 0.5, height: 1.02, ethnic: { caucasian: 1 }, skin: { tone: 0.15, rosy: 0.5 },
-      face: { 'chin/chin-width': 0.3, 'head/head-square': 0.3, 'eyebrows/eyebrows-trans': -0.3, 'mouth/mouth-upperlip-volume': -0.2 },
-      hair: { style: 'bun', color: '#5a4026' }, brows: { color: '#3a2618', density: 0.8, thickness: 0.45 }, eyes: { color: '#4a6a5a' },
-      outfit: [{ slot: 'top', pattern: 'duck', color: '#3a4a5a', thick: 0.006, hem: 'hip' }, { slot: 'coat', pattern: 'nylon', color: '#1a2230', thick: 0.012, puff: 0.006, hem: 'hip' }, { slot: 'bottom', pattern: 'duck', color: '#1e2430', thick: 0.005 }, { slot: 'boots', pattern: 'leather', color: '#0e0c0a', thick: 0.014, shaft: 0.3 }] },
+    dna: { avatar: 'Security_Female_01', sex: 0, height: 1.02 },  // the chief: black uniform and cap
   },
   gideon: {
     name: 'Gideon Shaw', short: 'Shaw', color: '#d0d0d0',
-    dna: { seed: 167, sex: 1, age: 40, muscle: 0.5, weight: 0.42, height: 1.04, ethnic: { caucasian: 0.8, asian: 0.2 }, skin: { tone: 0.16, rosy: 0.3 },
-      face: { 'chin/chin-prominent': 0.4, 'cheek/l-cheek-bones': 0.5, 'cheek/r-cheek-bones': 0.5, 'nose/nose-scale-horiz': -0.3 },
-      hair: { style: 'swept', color: '#1a1410' }, brows: { color: '#1a1410', density: 0.7, thickness: 0.35 }, eyes: { color: '#3a2a1a' },
-      outfit: [{ slot: 'top', pattern: 'plain', color: '#101418', thick: 0.004, hem: 'hip', neckUp: 0.03 }, { slot: 'coat', pattern: 'wool', color: '#2a2e34', thick: 0.008, hem: 'hip' }, { slot: 'bottom', pattern: 'wool', color: '#16181c', thick: 0.004 }, { slot: 'boots', pattern: 'leather', color: '#0a0806', thick: 0.008, shaft: 0.08 }] },
+    dna: { avatar: 'Business_Male_02', sex: 1, height: 1.03 },  // 40: navy suit
   },
   walt: {
     name: 'Mayor Walt Hennessey', short: 'Mayor', color: '#ffd0a0',
-    dna: { seed: 173, sex: 1, age: 64, muscle: 0.4, weight: 0.72, ethnic: { caucasian: 1 }, skin: { tone: 0.2, rosy: 0.9 },
-      face: { 'head/head-fat': 0.5, 'neck/neck-double': 0.6, 'nose/nose-volume': 0.4, 'eyes/l-eye-bag': 0.6, 'eyes/r-eye-bag': 0.6 },
-      hair: { style: 'swept', color: '#b8b0a4', recede: 0.6 }, brows: { color: '#a09888', density: 0.8, thickness: 0.6 }, eyes: { color: '#5d7286' },
-      outfit: [{ slot: 'top', pattern: 'rib', color: '#5a2a2a', thick: 0.009, hem: 'hip' }, { slot: 'bottom', pattern: 'wool', color: '#3a3430', thick: 0.005 }, { slot: 'boots', pattern: 'leather', color: '#3a2618', thick: 0.01, shaft: 0.1 }] },
+    dna: { avatar: 'Business_Male_07', sex: 1, height: 1.0 },  // 64: heavy, tie and jeans
   },
   halloran: {
     name: 'Cyrus Halloran', short: 'Halloran', color: '#ffffff',
-    dna: { seed: 179, sex: 1, age: 61, muscle: 0.45, weight: 0.4, height: 1.06, ethnic: { caucasian: 1 }, skin: { tone: 0.12, rosy: 0.25 },
-      face: { 'head/head-oval': 0.5, 'cheek/l-cheek-volume': -0.5, 'cheek/r-cheek-volume': -0.5, 'nose/nose-scale-vert': 0.3, 'chin/chin-prominent': 0.3 },
-      hair: { style: 'swept', color: '#e8e4dc' }, brows: { color: '#c8c4bc', density: 0.5, thickness: 0.3 }, eyes: { color: '#8a9aaa' },
-      outfit: [{ slot: 'top', pattern: 'plain', color: '#0c0c0e', thick: 0.004, hem: 'hip', neckUp: 0.03 }, { slot: 'bottom', pattern: 'wool', color: '#0c0c0e', thick: 0.004 }, { slot: 'boots', pattern: 'leather', color: '#050505', thick: 0.008, shaft: 0.08 }] },
+    dna: { avatar: 'Male_Adult_03', sex: 1, height: 1.03 },  // 61: white hair, blazer darkened
   },
   evan: {
     name: 'Evan Pike', short: 'Evan', color: '#7fe6ff',
-    dna: { seed: 181, sex: 1, age: 28, muscle: 0.45, weight: 0.4, ethnic: { caucasian: 1 }, skin: { tone: 0.1, rosy: 0.35 },
-      face: { 'head/head-oval': 0.3, 'mouth/mouth-angles': 0.4, 'eyes/l-eye-scale': 0.2, 'eyes/r-eye-scale': 0.2 },
-      hair: { style: 'short', color: '#c8a066' }, brows: { color: '#a07848', density: 0.6, thickness: 0.3 }, eyes: { color: '#6c8a9a' },
-      outfit: [{ slot: 'top', pattern: 'plain', color: '#e8f4f8', thick: 0.005, hem: 'hip' }, { slot: 'coat', pattern: 'nylon', color: '#0a5a7a', thick: 0.006, hem: 'hip', sleeves: 0.06 }, { slot: 'bottom', pattern: 'plain', color: '#2a2e34', thick: 0.004 }, { slot: 'boots', pattern: 'duck', color: '#f0f0f0', thick: 0.01, shaft: 0.08 }] },
+    dna: { avatar: 'Male_Adult_08', sex: 1, height: 1.0 },  // 28: pressed shirt
   },
   gabriel: {
     name: 'Father Gabriel', short: 'Fr. Gabriel', color: '#ffd8a0',
-    dna: { seed: 191, sex: 1, age: 54, muscle: 0.4, weight: 0.55, ethnic: { asian: 0.5, caucasian: 0.5 }, skin: { tone: 0.34, warmth: 0.6 },
-      face: { 'cheek/l-cheek-bones': 0.4, 'cheek/r-cheek-bones': 0.4, 'eyes/l-eye-epicanthus': 0.3, 'eyes/r-eye-epicanthus': 0.3 },
-      hair: { style: 'swept', color: '#3a3430' }, brows: { color: '#2a2420', density: 0.7, thickness: 0.4 }, eyes: { color: '#3a2412' }, beard: { style: 'full', color: '#4a4440', stubble: 0.8 },
-      outfit: [{ slot: 'top', pattern: 'wool', color: '#0e0e12', thick: 0.01, hem: 'knee' }, { slot: 'bottom', pattern: 'wool', color: '#0e0e12', thick: 0.005 }, { slot: 'boots', pattern: 'leather', color: '#0a0a0a', thick: 0.01, shaft: 0.1 }] },
+    dna: { avatar: 'Male_Adult_15', sex: 1, height: 1.0 },  // 54: beard; tunic and cap dyed black (cassock, skufia)
   },
   nina: {
     name: 'Nina Kowalczyk', short: 'Nina', color: '#ff80e0',
-    dna: { seed: 193, sex: 0, age: 18, muscle: 0.4, weight: 0.38, height: 0.97, ethnic: { caucasian: 1 }, skin: { tone: 0.1, rosy: 0.5, freckles: 0.5 },
-      face: { 'head/head-round': 0.3, 'nose/nose-point': 0.4, 'eyes/l-eye-scale': 0.3, 'eyes/r-eye-scale': 0.3 },
-      hair: { style: 'long', color: '#6a2a5a' }, brows: { color: '#3a2618', density: 0.6, thickness: 0.3 }, eyes: { color: '#4a6a5a' }, makeup: { eyeshadow: '#2a1a2a', eyeshadowAmt: 0.45 },
-      outfit: [{ slot: 'top', pattern: 'fleece', color: '#2a2a32', thick: 0.012, hem: 'hip' }, { slot: 'bottom', pattern: 'denim', color: '#1a1a22', thick: 0.004 }, { slot: 'boots', pattern: 'leather', color: '#0a0a0a', thick: 0.012, shaft: 0.35 }] },
+    dna: { avatar: 'Female_Adult_12', sex: 0, height: 0.97 },  // 17: hoodie
   },
   lou: {
     name: 'Lou Amarok', short: 'Lou', color: '#ffa060',
-    dna: { seed: 197, sex: 0.05, age: 45, muscle: 0.65, weight: 0.6, height: 1.02, ethnic: { asian: 0.7, caucasian: 0.3 }, skin: { tone: 0.38, warmth: 0.6 },
-      face: { 'cheek/l-cheek-bones': 0.5, 'cheek/r-cheek-bones': 0.5, 'chin/chin-width': 0.3 },
-      hair: { style: 'long', color: '#0e0b09' }, brows: { color: '#0e0b09', density: 0.7, thickness: 0.45 }, eyes: { color: '#3a2412' },
-      outfit: [{ slot: 'top', pattern: 'plaid', color: '#1a3a2a', color2: '#0a0a0a', color3: '#8a8a4a', thick: 0.006, hem: 'hip' }, { slot: 'bottom', pattern: 'denim', color: '#22282e', thick: 0.004 }, { slot: 'boots', pattern: 'leather', color: '#1a120c', thick: 0.012, shaft: 0.3 }] },
+    dna: { avatar: 'Female_Adult_05', sex: 0, height: 1.02 },  // 45: black bob, jacket dyed dark green
   },
   tommy: {
     name: 'Tommy Aqpik', short: 'Tommy', color: '#80ffb0',
-    dna: { seed: 199, sex: 1, age: 24, muscle: 0.6, weight: 0.45, ethnic: { asian: 0.85, caucasian: 0.15 }, skin: { tone: 0.4, warmth: 0.6 },
-      face: { 'cheek/l-cheek-bones': 0.5, 'cheek/r-cheek-bones': 0.5, 'eyes/l-eye-epicanthus': 0.5, 'eyes/r-eye-epicanthus': 0.5 },
-      hair: { style: 'messy', color: '#0e0b09' }, brows: { color: '#0e0b09', density: 0.7, thickness: 0.4 }, eyes: { color: '#3a2412' }, beard: { stubble: 0.2 },
-      outfit: [{ slot: 'top', pattern: 'fleece', color: '#c86a20', thick: 0.012, hem: 'hip' }, { slot: 'bottom', pattern: 'duck', color: '#2a2a2a', thick: 0.008 }, { slot: 'boots', pattern: 'leather', color: '#1a1a1a', thick: 0.018, shaft: 0.4 }] },
+    dna: { avatar: 'Male_Adult_10', sex: 1, height: 1.0 },  // 24: track jacket
   },
   ellen: {
     name: 'Doc Ellen Haverford', short: 'Doc', color: '#b0ffd0',
-    dna: { seed: 211, sex: 0, age: 60, muscle: 0.4, weight: 0.45, ethnic: { caucasian: 1 }, skin: { tone: 0.12, rosy: 0.5, freckles: 0.3 },
-      face: { 'nose/nose-scale-vert': 0.2, 'head/head-oval': 0.3 },
-      hair: { style: 'bob', color: '#9a948c' }, brows: { color: '#6a645c', density: 0.6, thickness: 0.3 }, eyes: { color: '#5d7286' },
-      outfit: [{ slot: 'top', pattern: 'knit', color: '#4a6a8a', thick: 0.008, hem: 'hip' }, { slot: 'bottom', pattern: 'wool', color: '#3a3a40', thick: 0.005 }, { slot: 'boots', pattern: 'leather', color: '#3a2618', thick: 0.01, shaft: 0.3 }] },
+    dna: { avatar: 'Medical_Female_02', sex: 0, height: 1.0 },  // 60: white coat, greying
   },
   pearl: {
     name: 'Pearl Jessup', short: 'Pearl', color: '#ffe0f0',
-    dna: { seed: 223, sex: 0, age: 66, muscle: 0.35, weight: 0.7, height: 0.94, ethnic: { african: 0.8, caucasian: 0.2 }, skin: { tone: 0.62, warmth: 0.5 },
-      face: { 'cheek/l-cheek-volume': 0.5, 'cheek/r-cheek-volume': 0.5, 'head/head-round': 0.4 },
-      hair: { style: 'bob', color: '#d8d4cc' }, brows: { color: '#4a4440', density: 0.5, thickness: 0.3 }, eyes: { color: '#3a2412' }, lips: { color: '#7a3038' },
-      outfit: [{ slot: 'top', pattern: 'knit', color: '#7a3a6a', thick: 0.009, hem: 'hip' }, { slot: 'bottom', pattern: 'wool', color: '#2a2430', thick: 0.005 }, { slot: 'boots', pattern: 'leather', color: '#2a1a14', thick: 0.01, shaft: 0.2 }] },
+    dna: { avatar: 'Business_Female_01', sex: 0, height: 0.96 },  // 66: greying
+  },
+  officer: {
+    name: 'Officer', short: 'Officer', color: '#c8d0a0',
+    dna: { avatar: 'Police_Male_03', sex: 1, height: 1.02 },  // border service officer: dark uniform, peaked cap
   },
   guard: {
     name: 'Border Guard', short: 'Guard', color: '#c8d0a0',
-    dna: { seed: 211, sex: 1, age: 26, muscle: 0.62, weight: 0.48, ethnic: { caucasian: 0.85, asian: 0.15 }, skin: { tone: 0.17, rosy: 0.55 },
-      hair: { style: 'buzz', color: '#6a5038' }, brows: { color: '#3a2a1a', density: 0.8, thickness: 0.5 }, eyes: { color: '#4a5a6a' }, beard: { style: 'none', stubble: 0.5 },
-      outfit: [{ slot: 'top', pattern: 'camo', color: '#4a5240', color2: '#272c22', color3: '#5c5e4c', thick: 0.007, hem: 'hip' }, { slot: 'coat', pattern: 'camo', color: '#3e4636', color2: '#272c22', color3: '#5c5e4c', thick: 0.014, puff: 0.01, hem: 'hip', neckUp: 0.03 }, { slot: 'bottom', pattern: 'camo', color: '#3e4636', color2: '#272c22', color3: '#5c5e4c', thick: 0.007 }, { slot: 'boots', pattern: 'leather', color: '#0e0c0a', thick: 0.014, shaft: 0.32 }] },
+    dna: { avatar: 'Military_Male_05', sex: 1, height: 1.0 },  // border guard: field uniform and cap
   },
 };

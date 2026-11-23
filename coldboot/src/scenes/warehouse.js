@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { registerScreen, game, go } from '../main.js';
 import { input } from '../core/input.js';
-import { buildCharacter } from '../human/character.js';
+import { buildCharacter, avatarOf } from '../human/character.js';
 import { Animator } from '../human/anim.js';
 import { CAST } from '../data/cast.js';
 import { Director } from './director.js';
@@ -20,7 +20,9 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
 export function playerDNA() {
   const prof = store.load('profile');
-  return prof?.dna ? { ...CAST.player.dna, ...prof.dna } : CAST.player.dna;
+  if (!prof?.dna) return { ...CAST.player.dna };
+  // profiles from before the Rocketbox people have no avatar: pick one of the right sex
+  return { ...CAST.player.dna, ...prof.dna, avatar: avatarOf(prof.dna) };
 }
 
 registerScreen('warehouse', () => {
@@ -137,8 +139,8 @@ registerScreen('warehouse', () => {
       d.setFill(0.55);
       try { music.play('cb_warehouse', { fade: 3 }); } catch { /* */ }
       const cast = { dmitri: CAST.dmitri.dna, nadia: CAST.nadia.dna, lyosha: CAST.lyosha.dna, grisha: CAST.grisha.dna, valya: CAST.valya.dna, ivan: CAST.ivan.dna, player: playerDNA() };
-      for (const [id, dna] of Object.entries(cast)) {
-        const ch = await buildCharacter(dna);
+      const built = await Promise.all(Object.entries(cast).map(([id, dna]) => buildCharacter(dna).then((ch) => [id, ch])));
+      for (const [id, ch] of built) {
         const s = set.seats[id];
         ch.group.position.set(s.x, 0, s.z);
         ch.group.rotation.y = s.rot;
@@ -146,6 +148,7 @@ registerScreen('warehouse', () => {
         const an = new Animator(ch);
         an.setPosture('sit');
         an.postureW.sit = 1; an.postureW.stand = 0;
+        an.sitHeight = 0.48;     // the chairs' seats
         an.handsOnTable = 1;
         d.addActor(id, ch, an);
       }

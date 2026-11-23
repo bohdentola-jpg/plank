@@ -409,20 +409,9 @@ function jailSet() {
   return { group: g, sky, cells, fill };
 }
 
+/** Border guards: Rocketbox soldiers in field uniform (officer: dark uniform, peaked cap). */
 function guardDNA(seed, officer) {
-  const camo = { pattern: 'camo', color: '#3e4636', color2: '#272c22', color3: '#5c5e4c' };
-  return {
-    seed, sex: 1, age: officer ? 41 : 24 + (seed % 9), muscle: 0.62, weight: officer ? 0.56 : 0.48, height: officer ? 1.02 : 1.0,
-    ethnic: { caucasian: 0.85, asian: 0.15 }, skin: { tone: 0.17, rosy: 0.55 },
-    hair: { style: 'buzz', color: officer ? '#4a3a2a' : '#6a5038' }, brows: { color: '#3a2a1a', density: 0.8, thickness: 0.5 },
-    eyes: { color: '#4a5a6a' }, beard: { style: officer ? 'moustache' : 'none', color: '#3a2a1a', stubble: 0.5 },
-    outfit: [
-      { slot: 'top', ...camo, color: '#4a5240', thick: 0.007, hem: 'hip' },
-      { slot: 'coat', ...camo, thick: 0.014, puff: 0.01, hem: 'hip', neckUp: 0.03 },
-      { slot: 'bottom', ...camo, thick: 0.007 },
-      { slot: 'boots', pattern: 'leather', color: '#0e0c0a', thick: 0.014, shaft: 0.32 },
-    ],
-  };
+  return officer ? { ...CAST.officer.dna } : { ...CAST.guard.dna, height: 0.99 + (seed % 5) * 0.01 };
 }
 
 const QTE = {
@@ -544,21 +533,8 @@ registerScreen('finale', () => {
   }
   const yawTo = (id, p) => { const g = actors[id].ch.group.position; return Math.atan2(p.x - g.x, p.z - g.z); };
 
-  function handsUp(an) {
-    let k = 0;
-    an.override = (pose, a, dt) => {
-      k = Math.min(1, k + dt * 1.6);
-      const e = smoothstep(0, 1, k);
-      for (const [side, s] of [['L', 1], ['R', -1]]) {
-        const u = pose[`upperarm01.${side}`]?.aim || [s * 0.1, -1, 0];
-        const l = pose[`lowerarm01.${side}`]?.aim || [s * 0.05, -1, 0.1];
-        const U = [s * 0.95, 0.3, 0.12], L2 = [s * 0.12, 1, 0.08];
-        pose[`upperarm01.${side}`] = { aim: u.map((v, i) => v + (U[i] - v) * e) };
-        pose[`lowerarm01.${side}`] = { aim: l.map((v, i) => v + (L2[i] - v) * e), tw: s * -20 * e };
-        pose[`wrist.${side}`] = { e: [0, 0, 0] };
-      }
-    };
-  }
+  // hands up: a named action on the animator (arms raised, palms out, held until stopped)
+  function handsUp(an) { an.play('handsUp'); }
 
   async function makeActor(id, dna, parent) {
     const ch = await buildCharacter(dna);
@@ -1053,7 +1029,7 @@ registerScreen('finale', () => {
     game.renderer.tweakPost({ fade: 1 }, true);
     const cells = jail.cells, cx = cells[1];
     const P = actors.player;
-    P.anim.override = null;
+    P.anim.stop('handsUp');
     P.anim.handsOnTable = 0;
     moveTo('player', jail.group);
     seat('player', cx + 0.85, -0.5, -Math.PI / 2 - 0.55, 0.53);
@@ -1205,7 +1181,7 @@ registerScreen('finale', () => {
         const a = await makeActor(id, CAST[id].dna, jail.group);
         a.ch.group.visible = false;
       }
-      for (const [id, dna] of [['guard', CAST.guard?.dna || guardDNA(211, false)], ['officer', guardDNA(229, true)]]) {
+      for (const [id, dna] of [['guard', guardDNA(211, false)], ['officer', guardDNA(229, true)]]) {
         const a = await makeActor(id, dna, inside);
         a.ch.group.visible = false;
         const torch = new THREE.SpotLight(0xe8f0ff, 30, 16, 0.32, 0.5, 1.6);
