@@ -8,6 +8,7 @@ import { buildCharacter } from '../human/character.js';
 import { CAST } from '../data/cast.js';
 import { getEnvMap } from '../core/envmap.js';
 import { PoseRig, standPose } from '../human/pose.js';
+import { Animator } from '../human/anim.js';
 
 registerScreen('humanlab', () => {
   const scene = new THREE.Scene();
@@ -56,7 +57,16 @@ registerScreen('humanlab', () => {
         people.push(ch);
         if (params.expr) for (const kv of params.expr.split(';')) { const [k, v] = kv.split(':'); ch.setExpr(k, +v); }
         ch.applyExpr();
-        if (params.pose !== 'rest') {
+        if (params.hide) for (const k of params.hide.split(',')) if (ch.meshes[k]) ch.meshes[k].visible = false;
+        if (params.anim) {
+          ch.anim = new Animator(ch);
+          const a = params.anim;
+          if (a === 'walk') ch.anim.targetSpeed = ch.anim.speed = 1.4;
+          if (a === 'run') ch.anim.targetSpeed = ch.anim.speed = 4.2;
+          if (a === 'sit') { ch.anim.setPosture('sit'); ch.anim.postureW.sit = 1; ch.anim.postureW.stand = 0; }
+          if (a === 'talk') ch.anim.talk = 1;
+          if (params.phase) ch.anim.phase = +params.phase;
+        } else if (params.pose !== 'rest') {
           ch.poser = new PoseRig(ch);
           ch.poser.resolve(standPose()).apply();
         }
@@ -70,7 +80,13 @@ registerScreen('humanlab', () => {
       if (input.pressed('left')) yaw -= 0.3;
       if (input.pressed('right')) yaw += 0.3;
       if (input.pressed('camera')) camMode = camMode === 'face' ? 'bust' : camMode === 'bust' ? 'full' : 'face';
-      for (const p of people) p.group.rotation.y = yaw;
+      for (const p of people) {
+        p.group.rotation.y = yaw;
+        if (p.anim) {
+          p.anim.update(this.freeze ? 0 : dt);
+          if (p.anim.talk) { p.anim.voice.open = 0.5 + 0.5 * Math.sin(t * 13) * Math.sin(t * 3.1); p.anim.voice.wide = 0.5; }
+        }
+      }
       const n = people.length;
       const h = people[0]?.height || 1.7;
       if (camMode === 'face') {

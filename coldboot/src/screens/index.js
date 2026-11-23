@@ -2,3 +2,5 @@
 import './boot.js';
 import './title.js';
 import './humanlab.js';
+import './buildlab.js';
+import '../scenes/warehouse.js';

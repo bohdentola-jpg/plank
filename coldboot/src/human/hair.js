@@ -10,14 +10,17 @@ const HAIR_VERT_PARS = /* glsl */`
 attribute float aT;
 attribute vec3 aRest;
 attribute float aLen;
+attribute float aCov;
 varying float vT;
 varying vec3 vRest;
 varying float vLen;
+varying float vCov;
 `;
 const HAIR_FRAG_PARS = /* glsl */`
 varying float vT;
 varying vec3 vRest;
 varying float vLen;
+varying float vCov;
 uniform float uDensity;
 uniform float uCell;
 uniform vec3 uTip;
@@ -42,7 +45,7 @@ function hairMaterial(color, opts = {}) {
     Object.assign(sh.uniforms, uniforms);
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\n' + HAIR_VERT_PARS)
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvT = aT; vRest = aRest; vLen = aLen;');
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvT = aT; vRest = aRest; vLen = aLen; vCov = aCov;');
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\n' + HAIR_FRAG_PARS)
       .replace('#include <color_fragment>', `#include <color_fragment>
@@ -62,7 +65,10 @@ function hairMaterial(color, opts = {}) {
         float cover = clamp((1.0 - vT * 0.95) * 0.85, 0.0, 1.0);
         float a = mix(strand, cover, smoothstep(0.35, 0.9, px));
         if (vT < 0.02) a = 1.0;                         // the innermost shell is solid
-        a *= uDensity;
+        // feathered hairline: strands thin out toward the edge of the growth area
+        float edge = smoothstep(0.0, 0.75, vCov + (r3 - 0.5) * 0.35);
+        a *= uDensity * mix(edge, 1.0, step(0.98, vCov));
+        if (vT < 0.02) a *= smoothstep(0.15, 0.6, vCov);
         if (a < 0.02) discard;
         diffuseColor.a = a;
         vec3 col = mix(diffuseColor.rgb * 0.55, uTip, smoothstep(0.1, 1.0, vT) * 0.6);
@@ -172,6 +178,7 @@ export function buildHair(ch, styleName, color, rng) {
   const T = new Float32Array(nv * (N + 1));
   const R = new Float32Array(nv * (N + 1) * 3);
   const L = new Float32Array(nv * (N + 1));
+  const CV = new Float32Array(nv * (N + 1));
   const idx = [];
   const tmp = new THREE.Vector3();
   for (let k = 0; k < nv; k++) {
@@ -195,6 +202,7 @@ export function buildHair(ch, styleName, color, rng) {
       T[o] = t;
       R[o * 3] = f.x; R[o * 3 + 1] = f.y; R[o * 3 + 2] = f.z;
       L[o] = len;
+      CV[o] = s;
     }
   }
   for (let i = 0; i <= N; i++) for (let j = 0; j < patch.tris.length; j++) idx.push(patch.tris[j] + i * nv);
@@ -204,6 +212,7 @@ export function buildHair(ch, styleName, color, rng) {
   g.setAttribute('aT', new THREE.BufferAttribute(T, 1));
   g.setAttribute('aRest', new THREE.BufferAttribute(R, 3));
   g.setAttribute('aLen', new THREE.BufferAttribute(L, 1));
+  g.setAttribute('aCov', new THREE.BufferAttribute(CV, 1));
   g.setIndex(idx);
   const mat = hairMaterial(color, { cell: style.cell, curl: style.curl || 0 });
   out.materials.push(mat);
@@ -245,6 +254,7 @@ function buildBun(ch, color) {
   g.setAttribute('aRest', new THREE.BufferAttribute(R, 3));
   g.setAttribute('aT', new THREE.BufferAttribute(T, 1));
   g.setAttribute('aLen', new THREE.BufferAttribute(L, 1));
+  g.setAttribute('aCov', new THREE.BufferAttribute(new Float32Array(p.count).fill(1), 1));
   g.translate(c.x, c.y + 0.005, c.z - 0.028);
   const material = hairMaterial(color, { cell: 30 });
   const mesh = new THREE.Mesh(g, material);
@@ -330,3 +340,94 @@ function buildHeadscarf(ch, rng) {
   mesh.receiveShadow = true;
   return { mesh, material };
 }
+
+
+// ------------------------------------------------------------------ beards
+function beardCover(f, style) {
+  const ax = Math.abs(f.x);
+  if (f.z < -3.4) return 0;
+  const front = sm(f.z, -3.4, -1.6);
+  const lower = sm(-f.y, 1.55, 1.95) * (1 - sm(-f.y, 4.3, 4.8));
+  const cheekLine = -1.35 - (ax - 0.9) * 0.55;
+  const cheek = sm(ax, 0.9, 1.25) * sm(-f.y, -cheekLine - 0.25, -cheekLine + 0.2);
+  const side = sm(ax, 2.05, 2.35) * sm(-f.y, -0.35, 0.2) * sm(f.z, -3.2, -2.4) * (1 - sm(f.z, -1.2, -0.6));
+  let m = Math.max(lower, cheek, side) * front;
+  if (style === 'moustache') {
+    // only the band between nose and upper lip
+    m = sm(-f.y, 1.5, 1.7) * (1 - sm(-f.y, 2.05, 2.2)) * (1 - sm(ax, 0.85, 1.05)) * sm(f.z, 0.3, 0.8);
+  } else if (style === 'goatee') {
+    m *= (1 - sm(ax, 0.55, 0.8)) * sm(-f.y, 1.5, 1.7);
+  } else if (style === 'short') {
+    m *= 1;
+  }
+  return Math.max(0, Math.min(1, m));
+}
+
+/** Beard as skinned fur shells over the jaw: follows the face's expressions. */
+export function buildBeard(ch, style, color) {
+  if (!style || style === 'none') return null;
+  const hm = ch.hm, pos = ch.pos, nrm = ch.nrm;
+  const face = (v) => ({ x: hm.face[v * 3] / 1000, y: hm.face[v * 3 + 1] / 1000, z: hm.face[v * 3 + 2] / 1000 });
+  const lipOf = (v) => hm.lip[v] / 255;
+  const cover = new Map();
+  const cov = (v) => {
+    let c = cover.get(v);
+    if (c === undefined) { c = beardCover(face(v), style) * (1 - Math.min(1, Math.max(0, (lipOf(v) - 0.12) / 0.2))); cover.set(v, c); }
+    return c;
+  };
+  const patch = scalpPatch(hm, pos, nrm, (v) => cov(v) > 0.03);
+  const nv = patch.ids.length;
+  if (!nv) return null;
+  const len0 = style === 'full' ? 0.016 : style === 'short' ? 0.007 : style === 'moustache' ? 0.012 : 0.012;
+  const N = style === 'short' ? 6 : 10;
+  const tot = nv * (N + 1);
+  const P = new Float32Array(tot * 3), Nn = new Float32Array(tot * 3), T = new Float32Array(tot), R = new Float32Array(tot * 3), L = new Float32Array(tot), CV = new Float32Array(tot);
+  const SI = new Uint16Array(tot * 4), SW = new Float32Array(tot * 4);
+  const exprAttrs = getExprDense(ch);
+  const morph = exprAttrs.map(() => new Float32Array(tot * 3));
+  for (let k = 0; k < nv; k++) {
+    const v = patch.ids[k];
+    const f = face(v);
+    const c = cov(v);
+    const len = len0 * Math.pow(c, 0.7) * (style === 'full' ? 1 + 0.5 * sm(-f.y, 3.0, 4.2) : 1) * (0.75 + 0.5 * Math.random());
+    const n = new THREE.Vector3(nrm[v * 3], nrm[v * 3 + 1], nrm[v * 3 + 2]);
+    const down = new THREE.Vector3(0, -1, 0).addScaledVector(n, n.y).normalize();
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, o = i * nv + k;
+      const p = new THREE.Vector3(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]).addScaledVector(n, len * t + 0.0008).addScaledVector(down, len * 0.8 * t * t);
+      P[o * 3] = p.x; P[o * 3 + 1] = p.y; P[o * 3 + 2] = p.z;
+      Nn[o * 3] = n.x; Nn[o * 3 + 1] = n.y; Nn[o * 3 + 2] = n.z;
+      T[o] = t; R[o * 3] = f.x; R[o * 3 + 1] = f.y; R[o * 3 + 2] = f.z; L[o] = len; CV[o] = c;
+      for (let q = 0; q < 4; q++) { SI[o * 4 + q] = hm.skinI[v * 4 + q]; SW[o * 4 + q] = hm.skinW[v * 4 + q] / 255; }
+      for (let e = 0; e < exprAttrs.length; e++) {
+        const d = exprAttrs[e];
+        morph[e][o * 3] = d[v * 3]; morph[e][o * 3 + 1] = d[v * 3 + 1]; morph[e][o * 3 + 2] = d[v * 3 + 2];
+      }
+    }
+  }
+  const idx = [];
+  for (let i = 0; i <= N; i++) for (const t of patch.tris) idx.push(t + i * nv);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(P, 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(Nn, 3));
+  g.setAttribute('aT', new THREE.BufferAttribute(T, 1));
+  g.setAttribute('aRest', new THREE.BufferAttribute(R, 3));
+  g.setAttribute('aLen', new THREE.BufferAttribute(L, 1));
+  g.setAttribute('aCov', new THREE.BufferAttribute(CV, 1));
+  g.setAttribute('skinIndex', new THREE.BufferAttribute(SI, 4));
+  g.setAttribute('skinWeight', new THREE.BufferAttribute(SW, 4));
+  g.morphAttributes.position = morph.map((a) => new THREE.BufferAttribute(a, 3));
+  g.morphTargetsRelative = true;
+  g.setIndex(idx);
+  g.computeBoundingSphere();
+  g.boundingSphere.radius *= 2;
+  const material = hairMaterial(color, { cell: 46, tipLighten: 0.04, density: style === 'short' ? 0.7 : 0.88, curl: 0.35 });
+  const mesh = new THREE.SkinnedMesh(g, material);
+  mesh.name = 'beard';
+  mesh.castShadow = true;
+  return { mesh, material };
+}
+
+let _exprDenseRef = null;
+export function setExprDenseProvider(fn) { _exprDenseRef = fn; }
+function getExprDense(ch) { return _exprDenseRef ? _exprDenseRef(ch) : []; }

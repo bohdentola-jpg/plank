@@ -1,0 +1,252 @@
+{
+"a.nadia.ground": {
+"d": 2.132,
+"h": "79e8193fd3a8",
+"who": "nadia"
+},
+"a.nadia.reveal": {
+"d": 11.406,
+"h": "e098dcb55973",
+"who": "nadia"
+},
+"a.wade.carpenter": {
+"d": 4.007,
+"h": "9391db77c8d8",
+"who": "wade"
+},
+"a.wade.hello": {
+"d": 5.907,
+"h": "3e32b4aa97b4",
+"who": "wade"
+},
+"a.wade.northstar": {
+"d": 5.106,
+"h": "b4d61a90f950",
+"who": "wade"
+},
+"a.wade.ride": {
+"d": 5.006,
+"h": "bdc30f47a574",
+"who": "wade"
+},
+"p.grisha.wind": {
+"d": 2.542,
+"h": "15c744907af6",
+"who": "grisha"
+},
+"p.lyosha.hi": {
+"d": 3.107,
+"h": "9ffde9abfd22",
+"who": "lyosha"
+},
+"p.nadia.calm": {
+"d": 3.406,
+"h": "aee495e000ab",
+"who": "nadia"
+},
+"p.nadia.check": {
+"d": 5.306,
+"h": "30807a0841dd",
+"who": "nadia"
+},
+"p.nadia.flash": {
+"d": 3.506,
+"h": "16c1ec220744",
+"who": "nadia"
+},
+"p.nadia.good": {
+"d": 1.882,
+"h": "f53305036496",
+"who": "nadia"
+},
+"p.nadia.koshkin": {
+"d": 7.006,
+"h": "242f2e98a57c",
+"who": "nadia"
+},
+"p.nadia.land": {
+"d": 4.207,
+"h": "c9d9a90bdfe8",
+"who": "nadia"
+},
+"p.nadia.lyosha": {
+"d": 1.958,
+"h": "133c0e1ee3ae",
+"who": "nadia"
+},
+"p.nadia.rules": {
+"d": 8.107,
+"h": "273fce904caa",
+"who": "nadia"
+},
+"p.pilot.descent": {
+"d": 4.207,
+"h": "10629a0ab392",
+"who": "pilot"
+},
+"p.pilot.welcome": {
+"d": 8.507,
+"h": "6a8c2ce16d7a",
+"who": "pilot"
+},
+"w.dmitri.bought": {
+"d": 10.906,
+"h": "055d9c12009e",
+"who": "dmitri"
+},
+"w.dmitri.climb": {
+"d": 4.806,
+"h": "937fc6e5b3c6",
+"who": "dmitri"
+},
+"w.dmitri.debt": {
+"d": 7.907,
+"h": "8072e8d7ec21",
+"who": "dmitri"
+},
+"w.dmitri.enough": {
+"d": 2.267,
+"h": "daf10e4ae09a",
+"who": "dmitri"
+},
+"w.dmitri.heroes": {
+"d": 6.207,
+"h": "9b021df40620",
+"who": "dmitri"
+},
+"w.dmitri.plane": {
+"d": 5.106,
+"h": "dfe62a8f3218",
+"who": "dmitri"
+},
+"w.dmitri.tell": {
+"d": 9.507,
+"h": "a30f733d52df",
+"who": "dmitri"
+},
+"w.dmitri.war": {
+"d": 2.706,
+"h": "84320a87e715",
+"who": "dmitri"
+},
+"w.grisha.fly": {
+"d": 4.207,
+"h": "8938cae69849",
+"who": "grisha"
+},
+"w.grisha.hosp": {
+"d": 2.34,
+"h": "5754e21e0f4f",
+"who": "grisha"
+},
+"w.grisha.tea": {
+"d": 3.107,
+"h": "f67deb037a07",
+"who": "grisha"
+},
+"w.grisha.top": {
+"d": 2.2,
+"h": "2a1d4943c561",
+"who": "grisha"
+},
+"w.grisha.who": {
+"d": 3.004,
+"h": "a09e30234713",
+"who": "grisha"
+},
+"w.ivan.lose": {
+"d": 0.926,
+"h": "052ceb13317c",
+"who": "ivan"
+},
+"w.ivan.papers": {
+"d": 6.007,
+"h": "d07e6f00621f",
+"who": "ivan"
+},
+"w.lyosha.aurora1": {
+"d": 5.806,
+"h": "c8410a41c1b7",
+"who": "lyosha"
+},
+"w.lyosha.aurora2": {
+"d": 6.907,
+"h": "a261ad0012f5",
+"who": "lyosha"
+},
+"w.lyosha.key": {
+"d": 5.006,
+"h": "3d17c410c8a8",
+"who": "lyosha"
+},
+"w.lyosha.teach": {
+"d": 5.306,
+"h": "7548f54f6423",
+"who": "lyosha"
+},
+"w.lyosha.worm": {
+"d": 7.407,
+"h": "c33da33a132a",
+"who": "lyosha"
+},
+"w.nadia.ear": {
+"d": 5.707,
+"h": "1fb6b2207879",
+"who": "nadia"
+},
+"w.nadia.inside": {
+"d": 10.107,
+"h": "4b88395cd358",
+"who": "nadia"
+},
+"w.nadia.quiet": {
+"d": 0.519,
+"h": "bc616706fd66",
+"who": "nadia"
+},
+"w.nadia.where": {
+"d": 7.506,
+"h": "4b31117a04fb",
+"who": "nadia"
+},
+"w.nadia.who": {
+"d": 8.607,
+"h": "26333021187c",
+"who": "nadia"
+},
+"w.nadia.worm": {
+"d": 0.894,
+"h": "2a91e3a25013",
+"who": "nadia"
+},
+"w.valya.doll": {
+"d": 4.707,
+"h": "3b9fe0c1baf6",
+"who": "valya"
+},
+"w.valya.end": {
+"d": 1.229,
+"h": "90c0019b5114",
+"who": "valya"
+},
+"w.valya.listen": {
+"d": 3.506,
+"h": "6644f1b72c4b",
+"who": "valya"
+},
+"w.valya.silence": {
+"d": 2.284,
+"h": "8a7b8e1165ce",
+"who": "valya"
+},
+"w.valya.tea": {
+"d": 2.979,
+"h": "afa61a7cb361",
+"who": "valya"
+},
+"w.valya.tea2": {
+"d": 3.906,
+"h": "d52350d173f0",
+"who": "valya"
+}
+}

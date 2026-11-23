@@ -13,6 +13,11 @@ export const CAST = {
       brows: { color: '#3a2618', density: 0.75, thickness: 0.5 },
       hair: { style: 'short', color: '#3a2618' },
       beard: { stubble: 0.35 },
+      outfit: [
+        { slot: 'top', pattern: 'knit', color: '#4a5560', thick: 0.008, hem: 'hip' },
+        { slot: 'bottom', pattern: 'denim', color: '#2c3a4e', thick: 0.004 },
+        { slot: 'boots', pattern: 'leather', color: '#3a2618', thick: 0.012, shaft: 0.3 },
+      ],
     },
   },
   dmitri: {
@@ -31,8 +36,7 @@ export const CAST = {
       hair: { style: 'swept', color: '#9a948c' },
       beard: { style: 'full', color: '#a39c92', stubble: 0.9 },
       outfit: [
-        { slot: 'top', pattern: 'knit', color: '#3d4a3c', thick: 0.008, hem: 'hip' },
-        { slot: 'coat', pattern: 'nylon', color: '#1b1f26', thick: 0.012, puff: 0.012, hem: 'hip', sleeves: -1 },
+        { slot: 'top', pattern: 'knit', color: '#3d4a3c', thick: 0.011, hem: 'hip', neckUp: 0.03 },
         { slot: 'bottom', pattern: 'wool', color: '#2c2a2a', thick: 0.005 },
         { slot: 'boots', pattern: 'leather', color: '#2a1e16', thick: 0.012, shaft: 0.3 },
       ],
@@ -106,6 +110,12 @@ export const CAST = {
       eyes: { color: '#6a7a8a' },
       brows: { color: '#b0a8a0', density: 0.5, thickness: 0.3 },
       hair: { style: 'headscarf', color: '#c8c0b8' },
+      outfit: [
+        { slot: 'top', pattern: 'knit', color: '#6a5a4c', thick: 0.01, hem: 'hip', fit: 0.7 },
+        { slot: 'skirt', pattern: 'wool', color: '#2a2630', thick: 0.012, hem: 'calf' },
+        { slot: 'bottom', pattern: 'wool', color: '#3a3438', thick: 0.004 },
+        { slot: 'boots', pattern: 'wool', color: '#4a4440', thick: 0.018, shaft: 0.4 },
+      ],
     },
   },
   ivan: {
@@ -119,6 +129,11 @@ export const CAST = {
       brows: { color: '#2a2622', density: 0.7, thickness: 0.45 },
       hair: { style: 'short', color: '#2e2a28' },
       beard: { style: 'moustache', color: '#2e2a28', stubble: 0.5 },
+      outfit: [
+        { slot: 'top', pattern: 'wool', color: '#22262c', thick: 0.008, hem: 'hip', neckUp: 0.02 },
+        { slot: 'bottom', pattern: 'wool', color: '#1c1c1e', thick: 0.005 },
+        { slot: 'boots', pattern: 'leather', color: '#141210', thick: 0.01, shaft: 0.25 },
+      ],
     },
   },
 };

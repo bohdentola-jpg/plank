@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { loadHM } from './hm.js';
 import { createSkinMaterial, createEyeMaterial, createLashMaterial, createMouthMaterials } from './skin.js';
 import { makeRng } from '../core/util.js';
-import { buildHair, hairline } from './hair.js';
+import { buildHair, hairline, buildBeard, setExprDenseProvider } from './hair.js';
 import { buildGarment, visibleBodyIndex, cullRegion } from './clothes.js';
 
 // expression units uploaded as GPU morph targets (order = influence index)
@@ -354,7 +354,11 @@ export class Character {
   }
 
   applyExpr() {
-    for (const key of ['head', 'lashes', 'teeth', 'tongue']) {
+    // the teeth/tongue helpers poke through closed lips: only show them when talking
+    const open = this.expr[EXPR_INDEX['mouth-open']] || 0;
+    if (this.meshes.teeth) this.meshes.teeth.visible = open > 0.12;
+    if (this.meshes.tongue) this.meshes.tongue.visible = open > 0.12;
+    for (const key of ['head', 'lashes', 'teeth', 'tongue', 'beard']) {
       const m = this.meshes[key];
       if (!m || !m.morphTargetInfluences) continue;
       for (let i = 0; i < this.expr.length; i++) m.morphTargetInfluences[i] = this.expr[i];
@@ -422,7 +426,7 @@ export async function buildCharacter(dnaIn = {}, opts = {}) {
     ch.garments.push(gm.mesh);
     if (g.opaque !== false) culls.push(cullRegion(ch, g));
   }
-  addPart('head', partGeometry(hm, 'head', pos, merged, { skinAttrs: true, morph: true }), skinMat);
+  addPart('head', partGeometry(hm, 'head', pos, merged, { skinAttrs: true, morph: true, index: culls.length ? visibleBodyIndex(ch, culls, 'head') : undefined }), skinMat);
   addPart('body', partGeometry(hm, 'body', pos, merged, { skinAttrs: true, index: culls.length ? visibleBodyIndex(ch, culls) : undefined }), skinMat);
   const eyeMats = createEyeMaterial(dna, hm.eyeTexURL);
   ch.materials.push(...eyeMats);
@@ -452,6 +456,33 @@ export async function buildCharacter(dnaIn = {}, opts = {}) {
   const hair = buildHair(ch, dna.hair?.style || 'short', dna.hair?.color || '#2b1d14', rng);
   ch.hair = hair;
   ch.materials.push(...hair.materials);
+  setExprDenseProvider(() => getShared(hm).exprDense);
+  const beard = buildBeard(ch, dna.beard?.style, dna.beard?.color || dna.hair?.color || '#2b1d14');
+  if (beard) {
+    ch.materials.push(beard.material);
+    beard.mesh.frustumCulled = opts.frustumCulled ?? true;
+    holder.add(beard.mesh);
+    beard.mesh.bind(rig.skeleton, new THREE.Matrix4());
+    ch.meshes.beard = beard.mesh;
+  }
+
+  // the dark inside of the mouth (the base mesh has no cavity behind the lips)
+  {
+    const jaw = rig.byName.jaw;
+    const lipC = new THREE.Vector3();
+    let n = 0;
+    for (let v = 0; v < hm.N; v++) if (hm.lip[v] > 160) { lipC.x += pos[v * 3]; lipC.y += pos[v * 3 + 1]; lipC.z += pos[v * 3 + 2]; n++; }
+    lipC.multiplyScalar(1 / Math.max(1, n));
+    const cav = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), new THREE.MeshBasicMaterial({ color: 0x0a0405 }));
+    cav.scale.set(0.022, 0.016, 0.03);
+    cav.position.copy(lipC).add(new THREE.Vector3(0, -0.004, -0.028));
+    const holderGroup = new THREE.Group();
+    holderGroup.matrixAutoUpdate = false;
+    holderGroup.matrix.copy(jaw.userData.global.clone().invert());
+    holderGroup.add(cav);
+    jaw.add(holderGroup);
+    ch.materials.push(cav.material);
+  }
 
   ch.headBone = rig.byName.head;
   ch.height = (dna.height || 1) * (() => {

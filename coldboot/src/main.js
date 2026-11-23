@@ -95,6 +95,7 @@ function showError(e) {
   document.body.insertAdjacentHTML('beforeend', `<pre style="position:fixed;left:8px;bottom:8px;max-width:90vw;white-space:pre-wrap;color:#f66;font:12px monospace;z-index:9;background:rgba(0,0,0,.7);padding:6px">${String(e && (e.stack || e))}</pre>`);
 }
 
+const FF = game.query.has('ff');
 let last = performance.now();
 let perfAcc = 0, perfFrames = 0;
 
@@ -102,7 +103,8 @@ function loop(now) {
   requestAnimationFrame(loop);
   let dt = (now - last) / 1000;
   last = now;
-  if (dt > 0.1) dt = 0.1;
+  // ?ff=1 (QA on a software GPU): let game time keep up with the wall clock
+  if (dt > (FF ? 0.5 : 0.1)) dt = FF ? 0.5 : 0.1;
   if (dt <= 0) dt = 0.001;
   game.time += dt;
   game.frame++;

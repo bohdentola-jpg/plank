@@ -128,6 +128,7 @@ function regionFn(ch, g) {
       return false;
     }
     if (kind === 'gloves') return s === SEG.hand && tArm[v] >= 0.97;
+    if (kind === 'skirt') return y >= hem;
     return false;
   };
 }
@@ -166,6 +167,8 @@ function snapper(ch, g) {
         const axis = new THREE.Vector3().subVectors(b, a).normalize();
         out.addScaledVector(axis, -out.clone().sub(cuffP).dot(axis));
       }
+    } else if (g.slot === 'skirt') {
+      out.y = Math.max(out.y, hem);
     } else if (g.slot === 'boots') {
       const side = out.x >= 0 ? 'L' : 'R';
       const t = 1 - (g.shaft ?? 0.3);
@@ -179,12 +182,38 @@ function snapper(ch, g) {
 function garmentMaterial(g) {
   const fab = fabric({ pattern: g.pattern || 'plain', color: g.color, color2: g.color2, color3: g.color3, stripe: g.stripe });
   const mat = new THREE.MeshPhysicalMaterial({
-    map: fab.map, normalMap: fab.normalMap, normalScale: new THREE.Vector2(0.8, 0.8),
+    map: fab.map, normalMap: fab.normalMap, normalScale: new THREE.Vector2(0.7, 0.7),
     roughness: g.rough ?? fab.rough, metalness: 0,
-    sheen: fab.sheen, sheenRoughness: 0.7, sheenColor: new THREE.Color(g.color || '#888').lerp(new THREE.Color('#fff'), 0.3),
+    sheen: fab.sheen * 0.12, sheenRoughness: 0.9, sheenColor: new THREE.Color(g.color || '#888').lerp(new THREE.Color('#fff'), 0.25),
     side: THREE.DoubleSide,
   });
   mat.userData.repeat = fab.repeat;
+  const rep = { value: fab.repeat };
+  // triplanar on the rest-pose position: seamless across body parts
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uRep = rep;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute vec3 aRestP;\nattribute vec3 aRestN;\nvarying vec3 vRestP;\nvarying vec3 vRestN;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRestP = aRestP; vRestN = aRestN;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uRep;\nvarying vec3 vRestP;\nvarying vec3 vRestN;')
+      .replace('#include <map_fragment>', `
+        vec3 tw = pow(abs(normalize(vRestN)), vec3(4.0));
+        tw /= (tw.x + tw.y + tw.z + 1e-5);
+        vec4 tx = texture2D(map, vRestP.zy * uRep);
+        vec4 ty = texture2D(map, vRestP.xz * uRep);
+        vec4 tz = texture2D(map, vRestP.xy * uRep);
+        diffuseColor *= tx * tw.x + ty * tw.y + tz * tw.z;`)
+      .replace('#include <normal_fragment_maps>', `
+        {
+          vec3 tw2 = pow(abs(normalize(vRestN)), vec3(4.0));
+          vec2 nuv = tw2.x > tw2.y && tw2.x > tw2.z ? vRestP.zy : (tw2.y > tw2.z ? vRestP.xz : vRestP.xy);
+          vec3 mapN = texture2D(normalMap, nuv * uRep).xyz * 2.0 - 1.0;
+          mapN.xy *= normalScale * 0.6;
+          normal = normalize(normal + (mapN.x * normalize(cross(normal, vec3(0.0, 1.0, 0.0001))) + mapN.y * vec3(0.0, 1.0, 0.0)) * 0.5);
+        }`);
+  };
+  mat.customProgramCacheKey = () => 'cb-cloth-v1';
   return mat;
 }
 
@@ -195,7 +224,7 @@ function garmentMaterial(g) {
  */
 export function buildGarment(ch, g) {
   const hm = ch.hm, pos = ch.pos, nrm = ch.nrm;
-  const src = g.slot === 'gloves' ? 'body' : 'tights';
+  const src = g.slot === 'gloves' ? 'body' : g.slot === 'skirt' ? 'skirt' : 'tights';
   const part = hm.parts[src];
   const inside = regionFn(ch, g);
   const snap = snapper(ch, g);
@@ -224,12 +253,13 @@ export function buildGarment(ch, g) {
     let w = W.get(b);
     if (!w) {
       w = { p: new THREE.Vector3(pos[b * 3], pos[b * 3 + 1], pos[b * 3 + 2]), n: new THREE.Vector3(nrm[b * 3], nrm[b * 3 + 1], nrm[b * 3 + 2]), inside: insideR[i], nb: new Set() };
+      w.p0 = w.p.clone();
       W.set(b, w);
     }
     if (insideR[i]) w.inside = 1;
   }
   for (const w of W.values()) if (!w.inside) { /* snapped below */ }
-  for (const [b, w] of W) if (!w.inside) snap(b, w.p);
+  for (const [b, w] of W) if (!w.inside) { snap(b, w.p); w.p0.copy(w.p); }
   // adjacency (welded) for smoothing; hem vertices stay put
   for (let k = 0; k < keep.length; k += 3) {
     const a = map[keep[k]], bb = map[keep[k + 1]], c = map[keep[k + 2]];
@@ -252,7 +282,7 @@ export function buildGarment(ch, g) {
     w.p.addScaledVector(w.n, off);
   }
   // drape: tops hang from the chest, trousers fall straight from the thigh
-  const fit = g.fit ?? (g.slot === 'coat' ? 0.85 : 0.55);
+  const fit = g.fit ?? (g.slot === 'coat' ? 0.85 : g.slot === 'skirt' ? 0 : 0.55);
   if ((g.slot === 'top' || g.slot === 'coat') && fit > 0) {
     const chestY = (F.J.shL.y + F.J.shR.y) / 2 - 0.12;
     const bins = new Float32Array(36);
@@ -328,6 +358,12 @@ export function buildGarment(ch, g) {
       if (d0 < 0) w.p.addScaledVector(n0, -d0 * 0.6);
     }
   }
+  // never let the cloth sink back into the body (smoothing shrinks convex ridges)
+  const minOff = Math.max(0.003, thick * 0.85);
+  for (const w of W.values()) {
+    const d = w.p.clone().sub(w.p0).dot(w.n);
+    if (d < minOff) w.p.addScaledVector(w.n, minOff - d);
+  }
   for (let i = 0; i < map.length; i++) {
     if (!used[i]) continue;
     const b = map[i];
@@ -358,10 +394,9 @@ export function buildGarment(ch, g) {
   }
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   geo.computeVertexNormals();
+  geo.setAttribute('aRestP', new THREE.BufferAttribute(P.array.slice(), 3));
+  geo.setAttribute('aRestN', new THREE.BufferAttribute(geo.attributes.normal.array.slice(), 3));
   const mat = garmentMaterial(g);
-  const rep = mat.userData.repeat;
-  mat.map.repeat.set(rep, rep);
-  mat.normalMap.repeat.set(rep, rep);
   const mesh = new THREE.SkinnedMesh(geo, mat);
   mesh.name = 'garment-' + g.slot;
   mesh.castShadow = true;
@@ -370,9 +405,9 @@ export function buildGarment(ch, g) {
 }
 
 /** Which body render triangles stay visible under the outfit. */
-export function visibleBodyIndex(ch, regions) {
+export function visibleBodyIndex(ch, regions, partName = 'body') {
   const hm = ch.hm;
-  const part = hm.parts.body;
+  const part = hm.parts[partName];
   const map = part.map, idx = part.index;
   const covered = new Uint8Array(map.length);
   for (let i = 0; i < map.length; i++) {
@@ -400,6 +435,10 @@ export function cullRegion(ch, g) {
   const inner = regionFn(ch, shrunk);
   const hem = hemY(F, g.hem) + 0.03;
   const waist = F.hipY + (g.waist ?? 0.1) - 0.03;
+  if (g.slot === 'skirt') {
+    const hemS = hemY(F, g.hem) + 0.04;
+    return (v) => F.seg[v] === SEG.leg && ch.pos[v * 3 + 1] > hemS && F.tLeg[v] < 0.6;
+  }
   return (v) => {
     if (!inner(v)) return false;
     const y = ch.pos[v * 3 + 1];

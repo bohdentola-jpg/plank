@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 
 // real-ish skin tones (sRGB), fair → deep
-const TONES = ['#f6dfd1', '#eac3a6', '#d9a47f', '#be8460', '#9a6342', '#74472e', '#4f2f1f', '#38211a'];
+const TONES = ['#e9c4aa', '#ddb090', '#cc9874', '#b5805c', '#966040', '#72462d', '#4e2f1f', '#37211a'];
 
 function toneColor(t, warmth = 0.5) {
   const x = THREE.MathUtils.clamp(t, 0, 1) * (TONES.length - 1);
@@ -57,18 +57,22 @@ float gauss1(float x, float c, float w) { float d = (x - c) / w; return exp(-d *
 // eyebrow coverage at face coords (x mirrored)
 float browMask(vec3 f) {
   float ax = abs(f.x);
-  float t = clamp((ax - 0.22) / (1.75 * uBrowP.w), 0.0, 1.0);
-  float yc = 0.92 + uBrowP.z * 0.42 * sin(3.14159 * pow(t, 0.75)) - 0.12 * t;
-  float th = mix(0.30, 0.10, t) * (0.6 + uBrowP.y * 0.9);
-  float inX = smoothstep(0.16, 0.3, ax) * (1.0 - smoothstep(1.62 * uBrowP.w, 1.95 * uBrowP.w, ax));
+  float t = clamp((ax - 0.2) / (1.72 * uBrowP.w), 0.0, 1.0);
+  // inner end low, peak two-thirds out, tail dropping
+  float yc = 0.9 + uBrowP.z * 0.36 * sin(3.14159 * pow(t, 0.8)) - 0.14 * t * t;
+  float th = mix(0.2, 0.06, t) * (0.55 + uBrowP.y * 0.7);
+  float inX = smoothstep(0.14, 0.32, ax) * (1.0 - smoothstep(1.5 * uBrowP.w, 1.9 * uBrowP.w, ax));
   float d = abs(f.y - yc) / th;
-  float m = (1.0 - smoothstep(0.55, 1.0, d)) * inX * smoothstep(-0.8, -0.2, f.z);
-  // hairs: streaks along the brow, angled up at the inner end
-  float ang = mix(0.9, 0.15, t);
+  float body = (1.0 - smoothstep(0.35, 1.05, d)) * inX * smoothstep(-0.8, -0.2, f.z);
+  // individual hairs: streaks that fan upward at the inner end, run outward along the brow
+  float ang = mix(1.1, 0.12, smoothstep(0.0, 0.45, t));
   vec2 q = vec2(ax * cos(ang) + f.y * sin(ang), -ax * sin(ang) + f.y * cos(ang));
   float fwB = max(length(fwidth(f)), 1e-5);
-  float hairs = mix(0.5, vnoise(vec3(q.x * 9.0, q.y * 70.0, 3.1)) * 0.6 + vnoise(vec3(q.x * 18.0, q.y * 140.0, 7.7)) * 0.4, 1.0 - smoothstep(0.15, 0.4, 70.0 * fwB));
-  return clamp(m * (0.35 + hairs * 0.9) * uBrowP.x * 1.25, 0.0, 1.0);
+  float strands = vnoise(vec3(q.x * 7.0, q.y * 95.0, 3.1)) * 0.55 + vnoise(vec3(q.x * 14.0, q.y * 190.0, 7.7)) * 0.45;
+  float hairs = mix(0.55, smoothstep(0.3, 0.75, strands), 1.0 - smoothstep(0.12, 0.35, 95.0 * fwB));
+  // sparse stray hairs outside the main body
+  float stray = smoothstep(0.82, 0.95, vnoise(vec3(q.x * 30.0, q.y * 60.0, 1.3))) * inX * (1.0 - smoothstep(0.9, 1.7, d)) * 0.5;
+  return clamp((body * (0.25 + hairs * 0.85) + stray) * uBrowP.x * 0.95, 0.0, 0.92);
 }
 float beardMask(vec3 f) {
   float ax = abs(f.x);
@@ -193,14 +197,14 @@ export function createSkinMaterial(dna, rng) {
     color: tone.clone(),
     roughness: 0.52,
     metalness: 0,
-    sheen: 0.35,
-    sheenRoughness: 0.75,
+    sheen: 0.12,
+    sheenRoughness: 0.8,
     sheenColor: new THREE.Color(0.6, 0.45, 0.4),
     specularIntensity: 0.55,
   });
   const dark = dna.skin?.tone ?? 0.3;
   const lipBase = dna.lips?.color ? new THREE.Color(dna.lips.color)
-    : tone.clone().multiply(new THREE.Color(0.86, 0.52, 0.5)).lerp(new THREE.Color(0.55, 0.25, 0.25), 0.15);
+    : tone.clone().multiply(new THREE.Color(0.74, 0.43, 0.42)).lerp(new THREE.Color(0.48, 0.19, 0.2), 0.28);
   const browCol = new THREE.Color(dna.brows?.color || dna.hair?.color || '#2b1d14');
   const beardCol = new THREE.Color(dna.beard?.color || dna.hair?.color || '#2b1d14');
   const age = dna.age || 30;
@@ -284,7 +288,7 @@ export function createLashMaterial(dna) {
 
 export function createMouthMaterials() {
   return {
-    teeth: new THREE.MeshPhysicalMaterial({ color: 0xd8d0bc, roughness: 0.32, clearcoat: 0.6 }),
-    tongue: new THREE.MeshStandardMaterial({ color: 0x9a4a48, roughness: 0.45 }),
+    teeth: new THREE.MeshPhysicalMaterial({ color: 0x8a8274, roughness: 0.35, clearcoat: 0.4 }),
+    tongue: new THREE.MeshStandardMaterial({ color: 0x5a2422, roughness: 0.5 }),
   };
 }

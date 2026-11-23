@@ -1,0 +1,216 @@
+{
+  "_doc": "who → voice. silero: Russian (models.silero.ai v4_ru). piper: English (rhasspy piper-voices). pitch in semitones, tempo as speed ratio.",
+  "dmitri": {
+    "engine": "silero",
+    "speaker": "aidar",
+    "pitch": -2.0,
+    "tempo": 0.94
+  },
+  "nadia": {
+    "engine": "silero",
+    "speaker": "kseniya",
+    "pitch": 0.0,
+    "tempo": 1.0
+  },
+  "lyosha": {
+    "engine": "silero",
+    "speaker": "eugene",
+    "pitch": 0.6,
+    "tempo": 1.06
+  },
+  "grisha": {
+    "engine": "piper",
+    "model": "ru_RU-ruslan-medium",
+    "pitch": -1.5,
+    "tempo": 0.98
+  },
+  "valya": {
+    "engine": "silero",
+    "speaker": "baya",
+    "pitch": -2.5,
+    "tempo": 0.9
+  },
+  "ivan": {
+    "engine": "piper",
+    "model": "ru_RU-dmitri-medium",
+    "pitch": -2.0,
+    "tempo": 0.92
+  },
+  "guard": {
+    "engine": "silero",
+    "speaker": "aidar",
+    "pitch": -1.0,
+    "tempo": 1.05
+  },
+  "pilot": {
+    "engine": "piper",
+    "model": "en_US-ryan-high"
+  },
+  "wade": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 463
+  },
+  "koshkin": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 186,
+    "pitch": -1.0,
+    "tempo": 0.92
+  },
+  "hank": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 339
+  },
+  "ray": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 22
+  },
+  "walt": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 296,
+    "tempo": 0.96
+  },
+  "halloran": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 552,
+    "pitch": -0.5,
+    "tempo": 0.95
+  },
+  "gideon": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 256
+  },
+  "lyle": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 392,
+    "tempo": 1.05
+  },
+  "evan": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 640
+  },
+  "okafor": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 413
+  },
+  "gabriel": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 374,
+    "tempo": 0.95
+  },
+  "tommy": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 492,
+    "tempo": 1.05
+  },
+  "dolly": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 262
+  },
+  "ruth": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 346,
+    "pitch": -0.8,
+    "tempo": 0.92
+  },
+  "marta": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 67
+  },
+  "ellen": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 160
+  },
+  "pearl": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 1,
+    "tempo": 1.05
+  },
+  "nina": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 9,
+    "tempo": 1.06
+  },
+  "lou": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 308
+  },
+  "m1": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 3
+  },
+  "m2": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 5
+  },
+  "m3": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 135
+  },
+  "m4": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 473
+  },
+  "m5": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 847
+  },
+  "m6": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 600
+  },
+  "f1": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 129
+  },
+  "f2": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 220
+  },
+  "f3": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 251
+  },
+  "f4": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 366
+  },
+  "f5": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 18
+  },
+  "f6": {
+    "engine": "piper",
+    "model": "en_US-libritts_r-medium",
+    "speaker": 115
+  }
+}
