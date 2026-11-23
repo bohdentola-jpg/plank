@@ -40,7 +40,7 @@ export const LINES = {
 
   // ---- the liturgy
   'd7.g.peace': { who: 'gabriel', en: 'In peace, let us pray to the Lord.' },
-  'd7.f.mercy': { who: 'f2', en: 'Lord, have mercy.' },
+  'd7.f.mercy': { who: 'f2', name: 'The choir', en: 'Lord, have mercy.' },
   'd7.g.sasha': { who: 'gabriel', en: 'For the servant of God Alexander, who lies ill in Nome, and for all who care for him, let us pray to the Lord.' },
   'd7.n.choir': { who: 'nadia', ru: 'Красиво поют. Валентина Петровна сейчас плачет. Только ей не говори, что я сказала.', en: "They sing beautifully. Valentina Petrovna is crying right now. Just don't tell her I said so.", emo: 'smile' },
   'd7.v.hear': { who: 'valya', ru: 'Я всё слышу, Надя.', en: 'I can hear everything, Nadia.', emo: 'smile' },

@@ -86,7 +86,7 @@ export const LINES = {
   'd8.g.radio': { who: 'gabriel', en: 'Ah, my carpenter. Do you know anything about radios? Every night at nine my old shortwave picks up a woman reading numbers. Only numbers.' },
   'd8.g.radio2': { who: 'gabriel', en: "Come and listen tonight, at nine, in the narthex. Maybe you'll hear what it means. All I hear is that it frightens me." },
   'd8.g.listen': { who: 'gabriel', en: 'There. Every night, the same woman. My grandmother used to say the dead read numbers to the living.' },
-  'd8.f.num': { who: 'f6', en: 'Kettle, Kettle. Zero. Four. Eight. Twelve. Sixteen. Twenty. And two. Kettle, Kettle.' },
+  'd8.f.num': { who: 'f6', name: 'Shortwave', en: 'Kettle, Kettle. Zero. Four. Eight. Twelve. Sixteen. Twenty. And two. Kettle, Kettle.' },
   'd8.v.num': { who: 'valya', ru: 'Ох, как просто. Это не шпионы, это сторожа. Ноль, четыре, восемь — смена караула каждые четыре часа. А «два» в конце — две минуты после часа.', en: "Oh, how simple. These aren't spies, they're watchmen. Zero, four, eight: the guard changes every four hours. And the 'two' at the end is two minutes past the hour.", emo: 'smile' },
   'd8.v.num2': { who: 'valya', ru: 'В семьдесят третьем мы шифровали получше. Американцы.', en: 'In seventy-three we encrypted things better than this. Americans.', emo: 'smile' },
   'd8.g.after': { who: 'gabriel', en: "You've gone quiet. You understand it? No, don't tell me. A priest hears enough secrets." },

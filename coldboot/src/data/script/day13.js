@@ -78,9 +78,9 @@ export const LINES = {
   'd13.g.night': { who: 'grisha', ru: 'Спокойной ночи, советник! Завтра летаем.', en: 'Good night, councillor! Tomorrow, we fly.', emo: 'smile' },
   // ---------------------------------------------------------------- side: get out the vote
   'd13.r.gotv': { who: 'ruth', en: 'Election day rule. The old folks vote, but only if somebody drives them. Mrs. Ivanoff, Old Kaplan, the Petrov sisters. Their children are all in Anchorage.' },
-  'd13.f.ivanoff': { who: 'f5', en: 'Oh! A ride? Let me get my good hat. I always wear my good hat to vote.' },
-  'd13.m.kaplan': { who: 'm6', en: "About time somebody asked. I've voted in every election since Eisenhower. Help me with these boots." },
-  'd13.f.petrov': { who: 'f3', en: "We'll come, dear. Both of us. We always vote the same way, and we never tell each other." },
+  'd13.f.ivanoff': { who: 'f5', name: 'Mrs. Ivanoff', en: 'Oh! A ride? Let me get my good hat. I always wear my good hat to vote.' },
+  'd13.m.kaplan': { who: 'm6', name: 'Mr. Kaplan', en: "About time somebody asked. I've voted in every election since Eisenhower. Help me with these boots." },
+  'd13.f.petrov': { who: 'f3', name: 'The Petrov sisters', en: "We'll come, dear. Both of us. We always vote the same way, and we never tell each other." },
   'd13.r.gotvDone': { who: 'ruth', en: 'Four more votes, and four people who will tell everyone at church who drove them. That is how elections are won up here.', emo: 'smile' },
   // ---------------------------------------------------------------- side: watch the boxes
   'd13.ev.boxes': { who: 'evan', en: 'Hi! Northstar volunteers are here to help carry the ballot boxes! We have a van! It\'s heated!', emo: 'smile' },

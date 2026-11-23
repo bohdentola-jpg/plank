@@ -55,8 +55,8 @@ export const LINES = {
   // ---- the store: Ruth, Koshkin on the phone, Evan
   'd6.r.first': { who: 'ruth', en: 'Good morning. I have bought my tea in this store for fifty years. I am not about to buy it from a machine with a smile. Black tea, please. The Russian one.' },
   'd6.r.sasha': { who: 'ruth', en: "And when Sasha calls, tell him Ruth Aqpik was the first customer. He'll pretend not to care. He'll care.", emo: 'smile' },
-  'd6.f.card': { who: 'f2', en: "Is it true about Sasha? Give him this card when he's back. And I need batteries, while I'm here." },
-  'd6.f.loyal': { who: 'm5', en: "Northstar's milk is cheaper. I don't care. My dad bought his milk here. I'll take two." },
+  'd6.f.card': { who: 'f2', name: 'A regular', en: "Is it true about Sasha? Give him this card when he's back. And I need batteries, while I'm here." },
+  'd6.f.loyal': { who: 'm5', name: 'A customer', en: "Northstar's milk is cheaper. I don't care. My dad bought his milk here. I'll take two." },
   'd6.k.call1': { who: 'koshkin', en: 'Golubchik? It is me. They have me in a bed with wheels and a television I cannot turn off. Is the store open? Good. Good.' },
   'd6.k.call2': { who: 'koshkin', en: 'The heart doctor here is twelve years old. He says, Mr. Koshkin, no salt. I say, young man, I am made of herring.', emo: 'laugh' },
   'd6.k.call3': { who: 'koshkin', en: "Did Evan come? Of course he came. The vultures come on the first day. Don't sell him anything. Not even matches." },

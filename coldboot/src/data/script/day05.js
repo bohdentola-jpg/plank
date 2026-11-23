@@ -60,10 +60,10 @@ export const LINES = {
 
   // ---- the fish fry
   'd5.g.grace': { who: 'gabriel', en: "Friends! Before Hank burns anything else, let us give thanks. For the fish, for the hands that caught it, and for the hands that fried it. Mostly Dolly's. Amen.", emo: 'smile' },
-  'd5.f.amen': { who: 'm3', en: 'Amen! Pass the tartar sauce!' },
+  'd5.f.amen': { who: 'm3', name: 'A fisherman', en: 'Amen! Pass the tartar sauce!' },
   'd5.wt.toast': { who: 'walt', en: "And thanks to Northstar for the new fryer! Gideon couldn't make it, but he sends his regards." },
   'd5.ra.heckle': { who: 'ray', en: 'Tell Gideon his regards are a little greasy.', emo: 'smile' },
-  'd5.f.laugh': { who: 'f1', en: 'Oh, Ray!' },
+  'd5.f.laugh': { who: 'f1', name: 'A neighbour', en: 'Oh, Ray!' },
   'd5.d.serve': { who: 'dolly', en: "Fish is up! Halibut on the left, cod on the right, and Sasha's herring is too salty, as usual!", emo: 'laugh' },
   'd5.d.where': { who: 'dolly', en: 'Where is Sasha, anyway? Thirty years he has carried those jars in here himself.', emo: 'worry' },
 

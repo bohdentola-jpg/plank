@@ -56,12 +56,12 @@ export const LINES = {
   'd3.n.trivia': { who: 'nadia', ru: 'Викторина? Ну конечно. Только не умничай слишком — плотникам не положено знать всё на свете.', en: "Trivia? Of course. Just don't be too clever — carpenters aren't supposed to know everything." },
 
   // ---- the turnout (heard through Lyosha's directional microphone)
-  'd3.sec.1': { who: 'm2', en: 'Evening, Mr. Shaw. Cold one.' },
+  'd3.sec.1': { who: 'm2', name: 'Dome Security', en: 'Evening, Mr. Shaw. Cold one.' },
   'd3.gi.gate1': { who: 'gideon', en: 'Tell Mr. Halloran the council tabled Phase Two. Aqpik and Moody, as expected. Finch went with them.' },
-  'd3.sec.2': { who: 'm2', en: "He won't like that. He wanted it signed before the Gala." },
+  'd3.sec.2': { who: 'm2', name: 'Dome Security', en: "He won't like that. He wanted it signed before the Gala." },
   'd3.gi.gate2': { who: 'gideon', en: 'It will be. Votes are like ice. You wait for the right temperature.' },
   'd3.gi.gate3': { who: 'gideon', en: "And the carpenter. Koshkin's tenant. Find out who sends a carpenter to the edge of the world in November." },
-  'd3.sec.3': { who: 'm2', en: 'Want us to take a look at the cabin?' },
+  'd3.sec.3': { who: 'm2', name: 'Dome Security', en: 'Want us to take a look at the cabin?' },
   'd3.gi.gate4': { who: 'gideon', en: 'Not yet. Watch first. People like that always make a mistake, if you give them time.' },
 
   // ---- Pearl (side_town.js runs the board itself; these are the day's touches)
