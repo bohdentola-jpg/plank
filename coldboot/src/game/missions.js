@@ -11,6 +11,13 @@ import { ALL_MISSIONS } from '../data/script/index.js';
 import { saveGame, addRel } from './state.js';
 import { voice } from '../audio/voice.js';
 
+/** 19 → "7 pm", 9.5 → "9:30 am". */
+export function fmtHour(h) {
+  const hh = Math.floor(h) % 24, mm = Math.round((h % 1) * 60);
+  const ap = hh < 12 ? 'am' : 'pm', h12 = hh % 12 || 12;
+  return mm ? `${h12}:${String(mm).padStart(2, '0')} ${ap}` : `${h12} ${ap}`;
+}
+
 export class Missions {
   constructor(G) {
     this.G = G;
@@ -113,6 +120,16 @@ export class Missions {
       event(evt) { return new Promise((resolve) => self.listeners.push({ evt, resolve })); },
       /** Wait for the clock (hour today, or tomorrow if it's passed). */
       hour(h) { return m.until(() => s.hour >= h && s.hour < h + 3); },
+      /**
+       * A time-gated step the player can skip: shows the objective with
+       * "T: wait until 7 pm" and resolves once the clock reaches h.
+       */
+      waitUntil(h, text, where, sub) {
+        const label = fmtHour(h);
+        m.obj(text, where, sub || `Press T to wait until ${label}`);
+        if (m._obj) m._obj.waitTo = h;
+        return m.until(() => s.hour >= h);
+      },
       wait(sec) { return G.director.wait(sec); },
       ear(line, o) { return self.ear(line, o); },
       async ears(lines) { for (const l of lines) await self.ear(l); },

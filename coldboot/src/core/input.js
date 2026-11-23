@@ -14,7 +14,7 @@ import { clamp } from './util.js';
 export const ACTIONS = [
   'up', 'down', 'left', 'right', 'confirm', 'back', 'tabL', 'tabR', 'alt', 'extra',
   'pause', 'camera', 'map', 'phone', 'journal', 'interact', 'vehicle', 'jump', 'crouch',
-  'skip', 'choice1', 'choice2', 'choice3', 'choice4', 'replay', 'any',
+  'skip', 'choice1', 'choice2', 'choice3', 'choice4', 'replay', 'wait', 'any',
 ];
 
 const KEYMAP = {
@@ -29,7 +29,7 @@ const KEYMAP = {
   KeyF: ['vehicle', 'alt'], KeyX: ['extra'],
   Tab: ['phone'], KeyM: ['map'], KeyJ: ['journal'],
   KeyC: ['crouch', 'camera'], ControlLeft: ['crouch'],
-  KeyR: ['replay'], KeyP: ['pause'],
+  KeyR: ['replay'], KeyP: ['pause'], KeyT: ['wait'],
   Digit1: ['choice1'], Digit2: ['choice2'], Digit3: ['choice3'], Digit4: ['choice4'],
   Numpad1: ['choice1'], Numpad2: ['choice2'], Numpad3: ['choice3'], Numpad4: ['choice4'],
 };
@@ -38,7 +38,7 @@ const KEYMAP = {
 const PADMAP = {
   0: ['confirm', 'interact', 'skip'], 1: ['back', 'crouch'], 2: ['extra', 'jump'], 3: ['alt', 'vehicle'],
   4: ['tabL'], 5: ['tabR'], 8: ['phone'], 9: ['pause'], 11: ['camera'],
-  12: ['up', 'phone'], 13: ['down', 'replay'], 14: ['left'], 15: ['right'],
+  12: ['up', 'phone'], 13: ['down', 'replay', 'wait'], 14: ['left'], 15: ['right'],
   17: ['map'],
 };
 

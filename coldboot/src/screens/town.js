@@ -388,6 +388,12 @@ registerScreen('town', () => {
       }
       // the Gala: dressed for it once the story says so
       if (s.flags.galaOutfit && s.flags.outfit !== 'gala' && !G._dressing) { G._dressing = true; G.setOutfit('gala').finally(() => { G._dressing = false; }); }
+      // T: let time pass until a time-gated objective is due
+      const wt = G.hud.objective?.waitTo;
+      if (wt != null && wt > s.hour && !G.cinematic && !G.overlay && !G.dialog.active && input.pressed('wait') && !G._waiting) {
+        G._waiting = true;
+        (async () => { G.player.locked = true; await fade(1, 0.45); s.hour = wt; await new Promise((r) => setTimeout(r, 350)); await fade(0, 0.6); G.player.locked = false; G._waiting = false; })();
+      }
       // the phone: Tab, or straight to the map (M) / journal (J)
       if (!G.cinematic && !G.dialog.active && !G.minigames.active) {
         if (input.pressed('phone')) G.phone.toggle();
