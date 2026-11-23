@@ -30,7 +30,12 @@ import { Minigames } from '../game/minigames.js';
 import { streetPoints } from '../world/roads.js';
 import { sfx } from '../audio/sfx.js';
 import { DAY_START } from '../data/script/days.js';
+import { NEWDAY_HOOKS } from '../data/script/index.js';
 import { Economy } from '../game/economy.js';
+import { optionsPanel } from './options.js';
+import { Phone } from '../game/phone.js';
+import { ChimneySmoke } from '../world/smoke.js';
+import { Vehicles } from '../game/vehicles.js';
 
 export const G = {
   // the live game, for every system to reach: G.state, G.player, G.town, G.hud …
@@ -47,7 +52,7 @@ function outdoorDNA(profile) {
 registerScreen('town', () => {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(58, 16 / 9, 0.1, 6000);
-  let ready = false, progress = 0, paused = false, pauseSel = 0;
+  let ready = false, progress = 0, paused = false, pauseSel = 0, opts = null;
   let env, sky, snow, pool, world, orbit, hud;
   let saveT = 0, occT = 0;
 
@@ -66,6 +71,9 @@ registerScreen('town', () => {
     snow.uniforms.size.value = 0.06;
     scene.add(snow.points);
     const town = await buildTown({ states: s.repairs, onProgress: (k) => { progress = k * 0.9; } });
+    const chimneys = new ChimneySmoke(town.smokePoints);
+    scene.add(chimneys.points);
+    G.chimneys = chimneys;
     G.town = town;
     scene.add(town.root);
     pool = new LightPool(scene, town.lightSources, 12);
@@ -101,6 +109,9 @@ registerScreen('town', () => {
     G.attention = new Attention(G);
     G.minigames = new Minigames(G);
     G.economy = new Economy(G);
+    G.phone = new Phone(G);
+    G.vehicles = new Vehicles(G, scene);
+    if (game.query.has('ff')) window.__cb = { game, G, input };   // QA handle
     G.cutscene = cutscene;
     G.sfx = sfx;
     G.fadeTeleport = fadeTeleport;
@@ -116,7 +127,7 @@ registerScreen('town', () => {
     progress = 1;
     input.wantPointerLock = true;
     if (!params.load || !Object.keys(s.missions.active).length) {
-      if (s.day === 1 && !s.missions.done['d1.arrival']) {
+      if (s.day === 1 && !s.missions.done['d1.arrival'] && !game.query.has('free')) {
         const t = town.buildings.terminal;
         player.place(t.x + 4, t.z + 14, Math.PI);
         orbit.yaw = 0;
@@ -257,6 +268,9 @@ registerScreen('town', () => {
     await fade(0, 1.0);
     G.player.locked = false;
     for (const id of DAY_START[s.day]?.start || []) G.missions.start(id);
+    for (const h of NEWDAY_HOOKS) { try { h(G, s.day); } catch (e) { console.error(e); } }
+    G.missions.emit('newday');
+    G.missions.emit('day:' + s.day);
   }
 
   function updateOccluders() {
@@ -283,6 +297,7 @@ registerScreen('town', () => {
       if (!ready) return;
       const s = G.state;
       if (G.overlay) { G.overlay.update(dt); G.director.update(dt); return; }
+      if (opts) { opts.update(dt); return; }
       if (input.pressed('pause')) { paused = !paused; pauseSel = 0; audio.duck(paused ? 0.8 : 0); if (paused) input.releasePointer(); }
       if (paused) {
         if (input.pressed('up')) pauseSel = (pauseSel + PAUSE.length - 1) % PAUSE.length;
@@ -291,11 +306,18 @@ registerScreen('town', () => {
           const it = PAUSE[pauseSel];
           if (it === 'RESUME') { paused = false; audio.duck(0); }
           if (it === 'SAVE GAME') { s.pos = { x: G.player.pos.x, z: G.player.pos.z, yaw: G.player.yaw }; saveGame(); hud.toast('SAVED', `Day ${s.day}, ${env.clockString()}`); paused = false; audio.duck(0); }
-          if (it === 'OPTIONS') go('options', { from: 'town' });
+          if (it === 'OPTIONS') opts = optionsPanel(() => { opts = null; });
           if (it === 'QUIT TO TITLE') { audio.duck(0); go('title', {}); }
         }
         return;
       }
+      // the phone: Tab, or straight to the map (M) / journal (J)
+      if (!G.cinematic && !G.dialog.active && !G.minigames.active) {
+        if (input.pressed('phone')) G.phone.toggle();
+        else if (input.pressed('map')) G.phone.toggle('map');
+        else if (input.pressed('journal')) G.phone.toggle('journal');
+      }
+      if (G.phone.open) { if (G.cinematic) G.phone.close(); else G.phone.update(dt); }
       // the clock: one game minute per real second
       s.hour += dt / 60;
       if (s.hour >= 24) { s.hour -= 24; }
@@ -308,6 +330,7 @@ registerScreen('town', () => {
       G.missions.update(dt);
       G.minigames.update(dt);
       G.interact.update(dt);
+      G.vehicles.update(dt);
       G.attention.update(dt);
       G.director.update(dt);
       G.dialog.update(dt);
@@ -321,13 +344,15 @@ registerScreen('town', () => {
         if (d < 6) indoors = true;
       }
       P.indoors = indoors;
-      if (!G.cinematic) orbit.update(dt, P, { indoors });
+      if (!G.cinematic) orbit.update(dt, P, { indoors, vehicle: G.vehicles.driving });
       G.camYaw = orbit.yaw;
       const r = env.update(dt, P.pos, camera);
       game.renderer.tweakPost({ exposure: env.exposure });
       snow.update(dt, camera, game.renderer.targets.h);
       snow.intensity = indoors ? 0 : 0.8;
       pool.update(dt, P.pos, r.night);
+      G.town.update?.(dt);
+      G.chimneys?.update(dt, game.renderer.targets.h);
       hud.update(dt);
       saveT += dt;
       if (saveT > 60) { saveT = 0; s.pos = { x: P.pos.x, z: P.pos.z, yaw: P.yaw }; saveGame(); }
@@ -344,6 +369,8 @@ registerScreen('town', () => {
       hud.visible = !G.cinematic || !!G.dialog.active;
       if (!G.cinematic) hud.draw(ctx, { state: G.state, player: G.player, camYaw: G.camYaw, buildingRects: G.buildingRects, shoreZ });
       G.minigames.draw(ctx);
+      G.vehicles.draw(ctx);
+      G.phone.draw(ctx);
       if (G.overlay) G.overlay.draw(ctx, 1 / 60);
       G.director.draw(ctx);
       drawYou(ctx, G.dialog, W, H, text);
@@ -356,6 +383,7 @@ registerScreen('town', () => {
           vText(ctx, it, W / 2, 312 + i * 58, 20, { align: 'center', color: on ? '#fff' : C.dim, weight: 0.16 });
         });
         hints(ctx, [['ud', 'SELECT'], ['confirm', 'OK'], ['pause', 'RESUME']]);
+        if (opts) opts.draw(ctx);
       }
     },
     view() { return ready ? { scene, camera } : null; },

@@ -24,7 +24,11 @@ for (const [id, L] of Object.entries(ALL_LINES)) {
   else if (!voices[L.who]) errors.push(`line ${id}: no voice for "${L.who}" in tools/voices.json`);
   else if (!CAST[L.who] && !/^[mf]\d$/.test(L.who) && L.who !== 'guard') warnings.push(`line ${id}: "${L.who}" has no CAST entry (no face)`);
   if (!L.en) errors.push(`line ${id}: no English text/subtitle`);
-  if (L.ru && /\b(ты|тебя|тебе)\b/i.test(L.ru) && /\b(был|сделал|пришёл|пришел|нашёл|нашел|сказал|видел|готов|один|должен|рад|сам)\b/i.test(L.ru) && !L.ru_f) {
+  // \b doesn't see Cyrillic letters in JS regexes: use Unicode letter lookarounds.
+  // Flag "ты" followed closely by a masculine past/short form (ты был, ты сам сделал…).
+  const MASC = 'был|сделал|пришёл|пришел|нашёл|нашел|сказал|видел|готов|один|должен|рад|сам|смог|понял|устал|успел|забыл|прав|уверен|занят|нужен|свободен|похож|справился|вернулся|остался|ошибся|соврал|спас|украл|взял|принёс|принес|ушёл|ушел';
+  const GENDERED = new RegExp(`(?<!\\p{L})ты(?!\\p{L})(?:[\\s,]+\\p{L}+){0,2}?[\\s,]+(?:${MASC})(?!\\p{L})`, 'iu');
+  if (L.ru && GENDERED.test(L.ru) && !L.ru_f) {
     warnings.push(`line ${id}: Russian may be gendered toward the player: "${L.ru}"`);
   }
 }

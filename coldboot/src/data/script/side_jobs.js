@@ -51,7 +51,7 @@ export const LINES = {
   'sj.k.call1': { who: 'koshkin', en: "They feed me Jell-O. Green. Like a traffic light. My mother made kisel. Real food. The doctor says, that's nice, Mr. Koshkin. Bah." },
   'sj.k.call2a': { who: 'koshkin', en: "Golubchik! Evan came to visit me. Here. In Nome. With flowers from his store. I gave them to the nurse. The nurse gave them to the cat." },
   'sj.k.call2b': { who: 'koshkin', en: "Even the cat said nyet. And who was minding his store while he was here? Nobody? A robot? I think a robot.", emo: 'laugh' },
-  'sj.k.call3': { who: 'koshkin', en: "Listen. Mrs. Nanouk comes on Thursdays. If she asks for the tab, the tab is yes. Always yes. That is not business. That is Port Zarya." },
+  'sj.k.call3': { who: 'koshkin', en: "Listen. If Mrs. Nanouk asks for the tab, the tab is yes. Always yes. Jimmy lost his job. That is not business. That is Port Zarya." },
   'sj.k.call4': { who: 'koshkin', en: "Golubchik, lying here, you think. More than a hundred years, Koshkin's. Grandfather, father, me. Now you. Is strange. Is good strange." },
   'sj.k.call5': { who: 'koshkin', en: "Doctor says I go home soon. Maybe. Maybe is doctor for no. Don't let the stove go out. The stove is older than me and in better health." },
   'sj.k.call6': { who: 'koshkin', en: "Pearl calls me every day with the news. Pearl knows more about you than you do. Be careful, golubchik. Come home safe every night. That's all." },
@@ -84,7 +84,7 @@ async function offer(c, who, line, job, yes, no) {
   if (k !== 0) return false;
   c.flag(`job.${job}.day`, c.day);
   c.start('job.' + job);
-  if (SIDE.once(c.G, 'sj.n.job.heard')) c.G.missions?.ear?.('sj.n.job');
+  if (c.flag('sj.n.job.heard') !== true) { c.flag('sj.n.job.heard', true); c.G.missions?.ear?.('sj.n.job'); }
   return true;
 }
 

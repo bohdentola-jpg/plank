@@ -42,7 +42,7 @@ export const TOWN = {
     { id: 'hardware', type: 'hardware', x: 92, z: 44, rot: Math.PI, name: 'BRUBAKER HARDWARE & FUEL', owner: 'hank' },
     { id: 'fueltanks', type: 'fuelTanks', x: 128, z: 36, rot: 0 },
     { id: 'cannery', type: 'cannery', x: 175, z: 108, rot: Math.PI, name: 'ZARYA SEAFOODS' },
-    { id: 'harbor', type: 'harbor', x: -10, z: 110, rot: 0, name: 'Small Boat Harbor' },
+    { id: 'harbor', type: 'harbor', x: -10, z: 84, rot: 0, name: 'Small Boat Harbor' },   // its shore end (local z −20) meets the beach
     { id: 'cabin', type: 'cabin', x: -150, z: 92, rot: Math.PI * 0.85, owner: 'player' },
     // --- out of town
     { id: 'terminal', type: 'terminal', x: 335, z: -14, rot: Math.PI, name: 'PORT ZARYA  PZY' },

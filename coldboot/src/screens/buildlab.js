@@ -341,7 +341,8 @@ registerScreen('buildlab', () => {
         // frame a named gameplay point: stand behind it, look the way it faces
         const pt = res.points[q.camPoint];
         const fx = Math.sin(pt.rot), fz = Math.cos(pt.rot);
-        presets.unshift({ name: q.camPoint, pos: [pt.x - fx * 2.6, pt.y + 1.75, pt.z - fz * 2.6], look: [pt.x + fx * 1.5, pt.y + 1.0, pt.z + fz * 1.5], fov: 70 });
+        const back = parseFloat(q.camBack ?? '2.6');
+        presets.unshift({ name: q.camPoint, pos: [pt.x - fx * back, pt.y + 1.75, pt.z - fz * back], look: [pt.x + fx * 1.5, pt.y + 1.0, pt.z + fz * 1.5], fov: 75 });
         camIdx = 0;
       }
     },

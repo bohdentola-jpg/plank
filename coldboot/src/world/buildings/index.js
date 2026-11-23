@@ -12,7 +12,15 @@
 //
 // Everything is in the building's local frame: origin at the footprint centre on
 // the ground, front door facing +Z, metres. Exterior meshes are merged per
-// material (one draw call each); the interior (when asked for) is a separate group.
+// material (one draw call each, ≤ 12 per building; ≤ 13 more for an interior);
+// the interior (when asked for) is a separate group. Exceptions to "y = 0 is the
+// ground": harbor (y = 0 is the sea surface; opts.shoreY = bulkhead height,
+// default 2.8) and cannery (y = 0 is dock/shore level; pilings go down to −6.5).
+//
+// Extras: points named smoke, smoke2… mark stovepipe/chimney tops (smoke
+// emitters); door leaves of enterable buildings are separate meshes (pivot at
+// the hinge, mesh.userData.door = id); lighthouse group.userData.beam is a
+// light-beam mesh to spin; batchExteriors() statically batches a whole town.
 import { build as house } from './house.js';
 import { build as church } from './church.js';
 import { build as generalStore } from './generalStore.js';
@@ -45,7 +53,7 @@ const GEN = {
   diner, bar, terminal, hangar, hardware, fuelTanks, cannery, harbor, dome, lighthouse, cemetery,
 };
 
-/** Register a generator (used by the per-type modules below). */
+/** Register or override a generator at runtime. */
 export function registerBuilding(type, fn) { GEN[type] = fn; }
 
 export const BUILDING_KINDS = Object.keys(GEN);

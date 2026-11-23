@@ -15,6 +15,12 @@ import webbrowser
 
 args = [a for a in sys.argv[1:] if a.isdigit()]
 START_PORT = int(args[0]) if args else 8000
+# --open <path>: open a sub-game instead of the root page (e.g. --open coldboot/)
+OPEN_PATH = ''
+if '--open' in sys.argv:
+    i = sys.argv.index('--open')
+    if i + 1 < len(sys.argv):
+        OPEN_PATH = sys.argv[i + 1].lstrip('/')
 
 
 class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
@@ -42,9 +48,9 @@ def main():
         input('Press Enter to close...')
         return
 
-    url = f'http://localhost:{port}'
+    url = f'http://localhost:{port}/' + OPEN_PATH
     print()
-    print('  VARSITY 27')
+    print('  COLD BOOT' if OPEN_PATH.startswith('coldboot') else '  VARSITY 27')
     print(f'  Game is live at  {url}')
     if port != START_PORT:
         print(f'  (port {START_PORT} was busy — an old window may still be running)')

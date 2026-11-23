@@ -17,7 +17,7 @@ import { CAST } from '../cast.js';
 export const REPAIRS = {
   // ---- Holy Transfiguration and the old graves
   'r.church.domes': {
-    name: 'Gild the dome stars', building: 'church', where: 'church.domeTop', hint: 'Holy Transfiguration, Church Square',
+    name: 'Gild the dome stars', building: 'church', where: 'church.belfry', hint: 'Up the bell tower, then out on a rope',
     materials: { paint: 2, rope: 2 }, minigames: ['rope', 'paint', 'paint'], pay: 0, spirit: 15, unlock: { day: 3 }, owner: 'gabriel',
     desc: 'The gold stars on the blue onion domes have flaked to grey. Father Gabriel has the gold paint, but not the head for heights.',
   },
@@ -45,11 +45,11 @@ export const REPAIRS = {
   // ---- Koshkin's
   'r.koshkin.roof': {
     name: 'The cabin roof', building: 'cabin', where: 'cabin.porch', hint: 'Your cabin on Shore Road (Koshkin\'s deal)',
-    materials: { shingles: 3, lumber: 1, nails: 1 }, minigames: ['saw', 'hammer'], pay: 0, spirit: 4, unlock: { flag: 'hasCabin' }, owner: 'koshkin',
+    materials: { shingles: 3, lumber: 1, nails: 1 }, minigames: ['saw', 'hammer'], pay: 0, spirit: 4, unlock: { day: 5, flag: 'hasCabin' }, owner: 'koshkin',
     desc: "Yuri's old cabin, your cabin, leaks on the north side. Koshkin pinned the card himself: 'Fix the roof, carpenter.' He could have just said it.",
   },
   'r.koshkin.sign': {
-    name: "Repaint Koshkin's sign", building: 'koshkin', where: 'koshkin.sign', hint: 'Church Square',
+    name: "Repaint Koshkin's sign", building: 'koshkin', where: 'koshkin.door', hint: 'Church Square (bring a ladder)',
     materials: { paint: 2, nails: 1 }, minigames: ['hammer', 'paint'], pay: 70, spirit: 8, owner: 'koshkin',
     desc: "KOSHKIN'S GENERAL MDSE., est. 1911. His grandfather painted the gold letters. Half are gone, and Northstar's sign glows all night across the square.",
   },
@@ -69,6 +69,16 @@ export const REPAIRS = {
     name: "The diner's front window", building: 'diner', where: 'diner', hint: 'Midnight Sun Diner, Front St',
     materials: { glass: 2, nails: 1 }, minigames: ['glass', 'glass'], pay: 100, spirit: 6, unlock: { day: 3 }, owner: 'dolly',
     desc: "A plough threw a block of ice through the diner's big window in October. It has been plywood and duct tape since.",
+  },
+  'r.dolly.freezer': {
+    name: "Earl's walk-in freezer", building: 'diner', where: 'diner', hint: 'Midnight Sun Diner, the kitchen',
+    materials: { pipe: 2, wire: 2 }, minigames: ['wire', 'hammer'], pay: 0, spirit: 6, unlock: { flag: 'sf.dolly.freezer' }, board: false, owner: 'dolly',
+    desc: 'Earl put in the walk-in freezer himself in 1988. It wheezes like an old dog and quits on warm days. Warm days, up here.',
+  },
+  'r.hank.pump': {
+    name: "Hank's fuel truck pump", building: 'fueltanks', where: 'fueltanks', hint: "Hank's fuel yard, Front St",
+    materials: { pipe: 1, wire: 2 }, minigames: ['wire', 'hammer'], pay: 0, spirit: 5, unlock: { flag: 'sf.hank.pumpAsk' }, board: false, owner: 'hank',
+    desc: "The heating-oil delivery truck has a dying fuel pump. If Hank can't deliver, the town's fuel contract goes to Northstar by default.",
   },
   'r.anchor.sign': {
     name: "The Rusty Anchor's sign", building: 'bar', where: 'bar', hint: 'The Rusty Anchor, Front St',
@@ -174,7 +184,7 @@ export const REPAIRS = {
   },
   'r.house.ray': {
     name: "Ray Moody's porch roof", building: 'house3', where: 'house3.door', hint: '2nd Ave, west end',
-    materials: { lumber: 2, shingles: 2, nails: 1 }, minigames: ['saw', 'hammer'], pay: 0, spirit: 6, owner: 'ray',
+    materials: { lumber: 2, shingles: 2, nails: 1 }, minigames: ['saw', 'hammer'], pay: 0, spirit: 6, unlock: { flag: 'sf.ray.go' }, board: false, owner: 'ray',
     desc: "Ray's porch roof sags in the middle like a hammock. He hasn't touched it since his wife moved to Fairbanks.",
   },
   'r.house.nanouk': {
@@ -297,6 +307,11 @@ export const SIDE = {
   async gate(m, test, text, where, sub) {
     if (!test()) { SIDE.clear(m); await m.until(test); }
     SIDE.obj(m, text, where, sub);
+  },
+  /** Wait for a free moment: no conversation, cutscene, overlay (shop/job) or minigame running. */
+  idle(m) {
+    const G = m.G;
+    return m.until(() => !G.dialog?.active && !G.cinematic && !G.overlay && !G.minigames?.cur);
   },
   /** A line from someone standing next to you (a short conversation), or over the phone. */
   async say(m, who, line, o = {}) {

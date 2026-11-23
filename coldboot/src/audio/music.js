@@ -21,6 +21,9 @@
 //   music.beatInfo()                { bpm, bar, beat, phase } for visual sync
 // Themes: nitro underground records talk showroom | race_city race_circuit race_mountain
 //   race_desert race_docks race_highway race_boss | results_win results_lose
+// COLD BOOT: cb_title cb_warehouse cb_town cb_night cb_tension (intensity 0..1, applied on
+//   the next beat) cb_chase cb_credits — e.g. music.play('cb_town'), music.play('cb_tension',
+//   { intensity: 0.2 }) then music.setIntensity(0.9) when spotted.
 
 import { audio } from './audio.js';
 import { clamp, mtof, hashStr } from './music/util.js';
@@ -81,6 +84,7 @@ class Music {
     const ranges = {
       pad: [50, 78], strings: [55, 84], saw: [57, 90], choir: [62, 84], piano: [55, 84], stab: [55, 79],
       pluck: [62, 88], brass: [50, 80], organ: [58, 77], bell: [69, 90], square: [66, 96], mallet: [67, 84], saw3: [55, 76],
+      reed: [53, 84], celesta: [62, 100], glass: [74, 100],
     };
     for (const k of MS_KINDS()) {
       const [lo, hi] = ranges[k] || [60, 72];
@@ -90,6 +94,8 @@ class Music {
         if (!seen.has(key)) { seen.add(key); q.push(() => B.ms(k, m)); }
       }
     }
+    // COLD BOOT's plucked strings (Karplus–Strong, one buffer per exact pitch)
+    for (const [v, lo, hi] of [['folk', 38, 74], ['bala', 61, 88]]) for (let m = lo; m <= hi; m++) q.push(() => B.ks(v, m));
     const ctx = this.ctx;
     const step = (dl) => {
       if (this.ctx !== ctx || !q.length) return;
@@ -599,6 +605,7 @@ const DEFAULT_SEED = {
   nitro: 1, underground: 1, records: 1, talk: 1, showroom: 1,
   race_city: 1, race_circuit: 1, race_mountain: 1, race_desert: 1, race_docks: 1, race_highway: 1, race_boss: 1,
   results_win: 1, results_lose: 1,
+  cb_title: 1, cb_warehouse: 1, cb_town: 1, cb_night: 1, cb_tension: 1, cb_chase: 1, cb_credits: 1,
 };
 
 export const music = new Music();

@@ -154,13 +154,14 @@ const PAD_GLYPH = {
   interact: 'cross', vehicle: 'triangle', jump: 'square', crouch: 'circle', sprint: 'R2',
   phone: 'CREATE', map: 'TOUCHPAD', journal: 'CREATE', skip: 'cross', replay: 'dpadUD',
   choice1: 'cross', choice2: 'circle', choice3: 'square', choice4: 'triangle', move: 'stick', look: 'R-STICK',
+  left: 'stick', right: 'stick', up: 'stick', down: 'stick',
 };
 const KEY_LABEL = {
   confirm: 'ENTER', back: 'ESC', extra: 'X', alt: 'F', tabL: 'Q', tabR: 'E', pause: 'ESC',
   camera: 'C', lr: '← →', ud: '↑ ↓', stick: 'ARROWS', gas: 'W', brake: 'S', handbrake: 'SPACE',
   interact: 'E', vehicle: 'F', jump: 'SPACE', crouch: 'C', sprint: 'SHIFT', phone: 'TAB', map: 'M',
   journal: 'J', skip: 'ENTER', replay: 'R', choice1: '1', choice2: '2', choice3: '3', choice4: '4',
-  move: 'WASD', look: 'MOUSE',
+  move: 'WASD', look: 'MOUSE', left: 'A', right: 'D', up: 'W', down: 'S',
 };
 
 export function usingPad() {

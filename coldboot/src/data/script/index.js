@@ -36,4 +36,6 @@ for (const m of MODS) {
   }
 }
 export const FOLK_LINES = folk.FOLK;
+/** Modules may export onNewDay(G, day) — called each morning after the day's missions start. */
+export const NEWDAY_HOOKS = MODS.map((m) => m.onNewDay).filter(Boolean);
 export const DAYS = Object.fromEntries(MODS.filter((m) => m.DAY).map((m) => [m.DAY.n, m.DAY]));

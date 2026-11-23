@@ -44,6 +44,7 @@ export async function buildTown(opts = {}) {
   root.name = 'world';
   const out = {
     root, colliders: [], doors: [], points: {}, lightSources: [], cameras: [], buildings: {}, interiors: [],
+    floors: [], smokePoints: [], beams: [],
   };
   const tick = async (k) => { opts.onProgress?.(k); await new Promise((r) => setTimeout(r, 0)); };
 
@@ -65,7 +66,7 @@ export async function buildTown(opts = {}) {
       console.warn('building failed', type, e);
       b = placeholder(type);
     }
-    const y = type === 'harbor' ? 0 : groundY(x, z);
+    const y = type === 'harbor' ? 0 : groundY(x, z);   // the harbor's y = 0 is the sea surface
     b.group.position.set(x, y, z);
     b.group.rotation.y = rot;
     b.group.name = id;
@@ -83,7 +84,18 @@ export async function buildTown(opts = {}) {
     for (const [name, pt] of Object.entries(b.points || {})) {
       const p = toWorld(rec, pt.x, pt.y || 0, pt.z);
       out.points[`${id}.${name}`] = { x: p.x, y: p.y, z: p.z, rot: (pt.rot || 0) + rot };
+      if (/^smoke\d*$/.test(name)) out.smokePoints.push({ x: p.x, y: p.y, z: p.z, owner: id });
     }
+    // walkable floors (porches, docks, raised floors, stairs) in world space
+    for (const f of b.floors || []) {
+      const p = toWorld(rec, f.x, 0, f.z);
+      out.floors.push({ x: p.x, z: p.z, w: f.w, d: f.d, rot: (f.rot || 0) + rot, y: y + f.y, owner: id });
+    }
+    for (const f of b.ramps || []) {
+      const p = toWorld(rec, f.x, 0, f.z);
+      out.floors.push({ x: p.x, z: p.z, w: f.w, d: f.d, rot: (f.rot || 0) + rot, y0: y + f.y0, y1: y + f.y1, owner: id });
+    }
+    if (b.group.userData.beam) out.beams.push(b.group.userData.beam);
     for (const l of b.lights || []) {
       const p = toWorld(rec, l.x, l.y, l.z);
       out.lightSources.push({ pos: p, color: new THREE.Color().setRGB(...(Array.isArray(l.color) ? l.color : [1, 0.8, 0.6])), intensity: l.intensity ?? 2, distance: l.distance ?? 8, owner: id, interior: !!l.interior });
@@ -120,6 +132,9 @@ export async function buildTown(opts = {}) {
       if (it) it.group = nb.interior;
     } else if (wasInterior) out.interiors = out.interiors.filter((q) => q.id !== id);
     root.add(nb.group);
+    const ob = rec.b.group.userData.beam;
+    if (ob) out.beams = out.beams.filter((x) => x !== ob);
+    if (nb.group.userData.beam) out.beams.push(nb.group.userData.beam);
     rec.b = nb;
     rec.opts = { ...rec.opts, state };
   };
@@ -127,7 +142,8 @@ export async function buildTown(opts = {}) {
   let n = 0;
   for (const e of TOWN.buildings) {
     const state = opts.states?.['state:' + e.id] ?? (e.type === 'cornerStore' || e.type === 'dome' ? 1 : 0.15);
-    place(e.id, e.type, e.x, e.z, e.rot, { seed: n * 31 + 7, state, name: e.name, interior: opts.interiors !== false, owner: e.owner });
+    const extra = e.type === 'harbor' ? { shoreY: Math.max(0.8, groundY(e.x, e.z - 21)) } : {};
+    place(e.id, e.type, e.x, e.z, e.rot, { seed: n * 31 + 7, state, name: e.name, interior: opts.interiors !== false, owner: e.owner, ...extra });
     if (++n % 4 === 0) await tick(0.2 + 0.5 * n / TOWN.buildings.length);
   }
   const rng = makeRng('houses');
@@ -198,6 +214,10 @@ export async function buildTown(opts = {}) {
     }
   });
   await tick(1);
+  // per-frame: the lighthouse turns
+  out.update = (dt) => {
+    for (const b of out.beams) b.rotation.y += dt * 0.9;
+  };
   return out;
 }
 

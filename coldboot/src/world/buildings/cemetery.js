@@ -78,8 +78,8 @@ export function build(opts = {}) {
       for (let k = 0; k < perRow; k++) {
         const x = side * (3.2 + k * 2.15), z = -D / 2 + 3.5 + row * 4.6 + (r() - 0.5) * 0.4;
         if (Math.abs(x) > W / 2 - 1.2) continue;
-        if (r() < 0.12) continue;
         if (!fresh && side > 0 && row === rows - 1 && k === 1) { fresh = [x, z]; continue; }
+        if (r() < 0.12) continue;
         const kind = r();
         b.push().translate(x, 0, z).rotateY(HALF_PI + (r() - 0.5) * 0.06);
         // snow mound over the grave

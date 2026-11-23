@@ -2,12 +2,21 @@
 // for bugs, loop Northstar's smart streetlights around the square with code,
 // and meet Mr. Grey outside the diner: "You're not the only one watching them."
 // Side: who had a key (Ellen, Pearl, a new deadbolt from Hank); the numbers
-// on Father Gabriel's shortwave (the Dome's guard roster); a shift at Koshkin's.
+// on Father Gabriel's shortwave (the Dome's guard roster).
 export const DAY = { n: 8, start: ['d8.sweep'], mustFinish: ['d8.night'] };
 
 const NIGHT = (h) => h >= 17 || h < 6;
 const passed = (r) => r === true || !!(r && r.pass);
 const BOX = { x: 14, z: 56 };   // the smart-light pole's junction box on Front St, by the diner
+/** Characters with no town schedule (Okafor) get an NPC record so a scene can bring them. */
+function ensureNpc(G, id, name = id) {
+  const list = G.npcs?.list;
+  if (!list?.get || list.has(id)) return;
+  const proto = list.get('evan') || [...list.values()].find((n) => !n.def?.folk);
+  try { if (proto) list.set(id, new proto.constructor(id, { name })); } catch { /* none to borrow */ }
+}
+/** m.until() that puts this mission's objective back if a side task cleared it. */
+const hold = (m, test, text, where, sub) => m.until(() => { if (text && !m.G.hud?.objective) m.obj(text, where, sub); return test(); });
 
 export const LINES = {
   // ---------------------------------------------------------------- the earpiece: morning sweep
@@ -32,7 +41,6 @@ export const LINES = {
   'd8.l.lights2': { who: 'lyosha', ru: 'Выключить их нельзя — заметят. Но можно подсунуть им петлю: пустую улицу вместо живой. Для этого мне нужен их щиток.', en: "We can't switch them off — they'd notice. But we can feed them a loop: an empty street instead of a live one. For that I need their junction box." },
   'd8.n.box': { who: 'nadia', ru: 'Щиток на столбе на Фронт-стрит, у закусочной. Старожилы зовут её Беринговой улицей. Только после темноты. И пригнись: этот столб смотрит на площадь.', en: 'The box is on the pole on Front Street, by the diner. The old-timers call it Bering Street. Only after dark. And keep low: that pole watches the square.' },
   'd8.n.day': { who: 'nadia', ru: 'Пока светло — живи обычной жизнью. Открой магазин, выпей кофе у Долли. Пусть видят плотника.', en: "While it's light, live a normal life. Open the store, have coffee at Dolly's. Let them see a carpenter." },
-  'd8.n.store': { who: 'nadia', ru: 'Хорошо. Тебя видели за прилавком. Плотник, который торгует селёдкой, — вне подозрений.', en: 'Good. They saw you behind the counter. A carpenter selling herring is above suspicion.', emo: 'smile' },
   'd8.n.dark': { who: 'nadia', ru: 'Стемнело. Пора. Фронт-стрит, столб у закусочной.', en: "It's dark. Time to go. Front Street, the pole by the diner." },
   'd8.l.tap': { who: 'lyosha', ru: 'Я внутри. Вижу всё, что видят они. Боже, сколько тут камер. Теперь твоя очередь — код на телефоне.', en: "I'm in. I can see everything they see. God, so many cameras. Now it's your turn — the code's on your phone." },
   'd8.l.retry': { who: 'lyosha', ru: 'Ничего страшного. Давай ещё раз, я подожду.', en: "No big deal. Let's go again — I'll wait." },
@@ -190,13 +198,12 @@ export const MISSIONS = {
         await m.ear('d8.l.lights2');
         await m.ear('d8.n.box');
         m.start('d8.numbers');
-        if (m.flag('runStore')) m.start('d8.store');
       }
       if (m.cp(2, from)) {
         if (!NIGHT(G.state.hour)) {
           m.ear('d8.n.day');
           m.obj('Live a normal day until dark', 'koshkin', 'The junction box after 17:00');
-          await m.until(() => NIGHT(G.state.hour));
+          await hold(m, () => NIGHT(G.state.hour), 'Live a normal day until dark', 'koshkin', 'The junction box after 17:00');
           await m.ear('d8.n.dark');
         }
       }
@@ -224,6 +231,7 @@ export const MISSIONS = {
       }
       if (m.cp(6, from)) {
         m.clear();
+        ensureNpc(G, 'okafor', 'Mr. Grey');
         await m.scene(async (d) => {
           await d.bring('okafor', { x: 27, z: 42 }, { face: 'player' });
           await d.say('okafor', 'd8.o.hello', { cam: d.closeUp('okafor') });
@@ -254,7 +262,7 @@ export const MISSIONS = {
       if (m.cp(1, from)) {
         await m.ear('d8.n.lesson');
         m.obj("Lyosha's lesson — the laptop in your cabin", 'cabin.laptop', 'Lesson 8: Cutting Strings');
-        await m.until(() => G.state.lessons.l08);
+        await hold(m, () => G.state.lessons.l08, "Lyosha's lesson — the laptop in your cabin", 'cabin.laptop', 'Lesson 8: Cutting Strings');
       }
       if (m.cp(2, from)) {
         await m.ear('d8.l.after');
@@ -326,23 +334,6 @@ export const MISSIONS = {
         m.flag('domeShifts', true);
         G.hud.toast('NOTED', 'Dome guards change at :02 past every fourth hour', '#7fe6ff');
         await m.ear('d8.n.numbers');
-        m.done();
-      }
-    },
-  },
-
-  'd8.store': {
-    title: "Koshkin's, Monday", day: 8,
-    async run(m, from) {
-      if (m.cp(1, from)) {
-        m.obj("Open Koshkin's for a few hours", 'koshkin.counter', 'Optional — the till pays');
-        await m.spot('open', 'koshkin.counter', 'Open the store', 2.4);
-      }
-      if (m.cp(2, from)) {
-        const earned = await m.job('shop', { hours: 3 });
-        if (earned) m.money(earned, "Koshkin's takings");
-        m.G.attention.add(-4);
-        await m.ear('d8.n.store');
         m.done();
       }
     },

@@ -73,7 +73,7 @@ class Voice {
     const h = { id, line: L, features: { open: 0, wide: 0, round: 0 }, playing: true, t: 0 };
     const dur = this.duration(id);
     h.dur = dur;
-    this.subtitle = { who: L.who, en: L.en || '', ru: L.ru || '', t: 0, dur, radio: !!opts.radio };
+    this.subtitle = { who: L.who, name: L.name, en: L.en || '', ru: L.ru || '', t: 0, dur, radio: !!opts.radio };
     let resolveDone;
     h.done = new Promise((r) => { resolveDone = r; });
     const finish = () => {

@@ -8,19 +8,21 @@
 // camera shots, scripted people, repairs, hacks, conversation fallbacks).
 //
 // ---------------------------------------------------------------- repairs used
-// (REPAIRS are defined in side_town.js; suggested specs below.)
-//   r.cabin.roof — the leak on the north side of the cabin (Koshkin's late
-//                  brother Yuri's). building 'cabin', materials { shingles: 2,
-//                  nails: 1 }, minigames ['hammer'], spirit 3, no `pay` (it is
-//                  the rent deal from day 1, or forty dollars off next week).
+// (REPAIRS are defined in side_town.js.)
+//   r.koshkin.roof — the cabin roof (Koshkin's late brother Yuri's cabin), done
+//                    at 'cabin.porch' in the optional 'd2.roof'. pay 0 there: it
+//                    is the rent deal from day 1, or forty dollars off next week
+//                    (paid by this script when Rybka didn't haggle).
 //
 // ---------------------------------------------------------------- flags set
 //   d2.comment       'cams' | 'fix' | 'yes' | 'none' — what Rybka said at the meeting
 //   phaseTwoTabled   true — the council tabled Northstar's Phase Two until after the Gala
 //   ellenAskedKoshkin  Doc Ellen asked Rybka to nag Koshkin about his heart (foreshadows day 5)
-//   cabinRoofFixed   the cabin roof repair is done        d2.rayHeard  Ray told Rybka he might quit
+//   cabinRoofFixed   the cabin roof is fixed (also state.repairs['r.koshkin.roof'])
+//   d2.rayHeard      Ray told Rybka (after the meeting) he might quit the council
 //   d2.faces         the faces hack is done (also state.challenges.faces)
 import { TOWN } from '../../world/townplan.js';
+import * as town from './side_town.js';
 
 export const DAY = { n: 2, start: ['d2.shift'], mustFinish: ['d2.shift', 'd2.council'] };
 
@@ -66,7 +68,6 @@ export const LINES = {
   'd2.k.hat': { who: 'koshkin', en: "Here. His hat. Ushanka. Don't look at me like that. It's minus twenty, and he doesn't need it anymore." },
   'd2.k.roof': { who: 'koshkin', en: "And the roof. North side. You promised. Hank has shingles. I don't need it pretty, I need it dry." },
   'd2.k.roofOffer': { who: 'koshkin', en: "If you get bored, the cabin roof leaks on the north side. Fix it, and I'll take forty dollars off next week. Fair?" },
-  'd2.k.roofDone': { who: 'koshkin', en: "I went and looked at Yuri's roof. Dry as a cracker. Don't tell anybody I climbed a ladder.", emo: 'smile' },
   'd2.k.idle': { who: 'koshkin', en: 'Go on, go and see the town. Council is at seven. Sit in the back. The front row gets asked questions.' },
   'd2.k.night': { who: 'koshkin', en: "I heard all about it already. Pearl called. Pearl always calls. Go home and sleep, it's late." },
 
@@ -249,7 +250,7 @@ export const MISSIONS = {
       if (m.cp(1, from)) {
         m.ear('d2.n.roof');
         await repairJob(m, {
-          id: 'r.cabin.roof', where: 'cabin.woodpile', prompt: 'Patch the roof (ladder by the woodpile)',
+          id: 'r.koshkin.roof', where: 'cabin.porch', prompt: 'Patch the cabin roof',
           obj: 'Fix the leak on the cabin roof', sub: 'Shingles and nails from Brubaker Hardware', title: 'PATCH THE CABIN ROOF',
         });
         m.flag('cabinRoofFixed', true);
@@ -393,8 +394,7 @@ export const DIALOG = {
       c.emit('talk:koshkin');
       return;
     }
-    if (c.flag('cabinRoofFixed') && !c.flag('d2.k.roofThanks')) { c.flag('d2.k.roofThanks', true); await c.say('koshkin', 'd2.k.roofDone'); c.rel(4); return; }
-    if (c.flag('d2.roofLater') && !c.flag('cabinRoofFixed') && !c.G.missions.isActive('d2.roof')) {
+    if (c.flag('d2.roofLater') && !c.flag('cabinRoofFixed') && !c.state.repairs?.['r.koshkin.roof'] && !c.G.missions.isActive('d2.roof')) {
       await c.say('koshkin', c.flag('fixKoshkinRoof') ? 'd2.k.roof' : 'd2.k.roofOffer');
       const k = await c.choose(["All right. I'll do it now.", 'Not today.']);
       if (k === 0) { c.flag('d2.roofLater', false); c.start('d2.roof'); }
@@ -585,6 +585,14 @@ export function at(G, name, side = 0, fwd = 0) {
   return { x: p.x + Math.sin(r) * fwd - Math.cos(r) * side, y: p.y ?? 0, z: p.z + Math.cos(r) * fwd + Math.sin(r) * side, rot: r };
 }
 
+/** A spot in a building's own frame (metres; +z = out of its front door), as {x, y, z, rot}. */
+export function local(G, id, lx, lz, rot = 0) {
+  const b = G.town?.buildings?.[id] || BLD[id];
+  if (!b) return { x: lx, y: 0, z: lz, rot };
+  const c = Math.cos(b.rot), s = Math.sin(b.rot);
+  return { x: b.x + lx * c + lz * s, y: b.y ?? 0, z: b.z - lx * s + lz * c, rot: rot + b.rot };
+}
+
 /** Same place, without height (for spots that should not check the floor). */
 export const flat = (p) => ({ x: p.x, z: p.z });
 
@@ -735,20 +743,34 @@ export function payFee(m, got, fee, why) {
 /** Materials in the bag (to notice a trip to Hank's). */
 export const materials = stock;
 
-// A conversation fallback: hand the talk to earlier modules (side quests,
-// friendships), but if all they have is a stale day-one pleasantry, say
-// today's line instead; if they have nothing at all, say it too.
+// A conversation's everyday part. The first talk of the day opens with
+// today's line (it stands in for side_friends.js's daily hello), then hands
+// over to the earlier modules: the friendship hub's menu (quests, jobs, small
+// talk), or day 1. A stale day-one pleasantry down there becomes today's line
+// (once); if nobody has anything to say, today's line it is.
 const STALE = new Set(['d1.k.again', 'd1.d.bye', 'd1.g.again', 'd1.e.no', 'd1.w.again', 'd1.h.again']);
 export async function idle(c, prev, who, line) {
-  let said = false;
+  const first = c.flag('dl.' + who) !== c.day;
+  if (first) {
+    c.flag('dl.' + who, c.day);
+    await c.say(who, line);
+    c.flag('hi.' + who, c.day); // the hub says hello once a day; this was it
+  }
+  let said = first;
   const c2 = Object.create(c);
   c2.say = async (w, id, o) => {
-    if (!said && STALE.has(id)) { said = true; return c.say(who, line); }
+    if (STALE.has(id)) {
+      if (said) return undefined;
+      said = true;
+      return c.say(who, line);
+    }
     said = true;
     return c.say(w, id, o);
   };
   c2.choose = async (opts, o) => { said = true; return c.choose(opts, o); };
   c2.you = async (t) => { said = true; return c.you(t); };
   await prev(c2);
-  if (!said) await c.say(who, line);
+  if (said) return;
+  if (await town.reactTo?.(c, who)) return; // "you fixed my sign!" (once; side_town.js REACTIONS)
+  await c.say(who, line);
 }

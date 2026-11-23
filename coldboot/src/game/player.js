@@ -35,6 +35,7 @@ export class Player {
   }
 
   update(dt, camYaw) {
+    if (this.vehicle) { this.onSeat?.(this); return; }   // driving: the vehicle carries you
     let mx = 0, my = 0;
     if (!this.locked) { mx = input.move.x; my = input.move.y; }
     if (input.pressed('crouch') && !this.locked) this.crouch = !this.crouch;
@@ -97,13 +98,15 @@ export class OrbitCamera {
     this.pitch -= (input.mouseLook.dy * 0.0028 + input.look.y * dt * 1.9) * sens * inv;
     this.pitch = clamp(this.pitch, -1.05, 0.55);
     // drift behind the player while running with no look input
-    if (player.speed > 2.5 && Math.abs(input.look.x) < 0.05 && Math.abs(input.mouseLook.dx) < 0.5) {
+    const veh = opts.vehicle;
+    if (player.speed > (veh ? 1.2 : 2.5) && Math.abs(input.look.x) < 0.05 && Math.abs(input.mouseLook.dx) < 0.5) {
       const behind = player.yaw + Math.PI;
-      this.yaw += wrap(behind - this.yaw) * Math.min(1, dt * 0.8);
+      this.yaw += wrap(behind - this.yaw) * Math.min(1, dt * (veh ? 2.2 : 0.8));
+      if (veh) this.pitch = damp(this.pitch, -0.2, 1.5, dt);
     }
-    const want = opts.indoors ? 2.2 : player.crouch ? 2.8 : 3.6 + Math.min(1.2, player.speed * 0.15);
+    const want = veh ? veh.model.length * 1.25 + 2 + Math.min(3, player.speed * 0.12) : opts.indoors ? 2.2 : player.crouch ? 2.8 : 3.6 + Math.min(1.2, player.speed * 0.15);
     this.dist = damp(this.dist, want, 4, dt);
-    const h = player.crouch ? 1.15 : 1.55;
+    const h = veh ? veh.spec.eye - (player.pos.y - veh.pos.y) : player.crouch ? 1.15 : 1.55;
     this.target.set(player.pos.x, player.pos.y + h, player.pos.z);
     const dir = new THREE.Vector3(Math.sin(this.yaw) * Math.cos(this.pitch), -Math.sin(this.pitch), Math.cos(this.yaw) * Math.cos(this.pitch));
     const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));

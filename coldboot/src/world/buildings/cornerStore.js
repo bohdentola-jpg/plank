@@ -242,8 +242,14 @@ function interior(ctx, { W, D, fy }) {
   ctx.point('register', iw / 2 - 2.2, fy, D / 2 - 1.8, PI);
   ctx.point('clerk', iw / 2 - 2.2, fy, D / 2 - 3.3, 0);
   flatScreen(ctx, iw / 2 - 0.05, fy + 2.4, D / 2 - 3.5, -HALF_PI, { w: 1.2, h: 0.7, stand: false, screen: [0.6, 2.6, 3.2] });
-  // back room: CCTV wall, desk, chair, racks of stock
-  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) flatScreen(ctx, -iw / 2 + 1.3 + i * 0.85, fy + 1.3 + j * 0.52, -D / 2 + 0.3, 0, { w: 0.78, h: 0.46, stand: false, screen: [0.4 + r() * 0.3, 1.2 + r() * 0.6, 1.2 + r() * 0.4] });
+  // back room: CCTV wall (an atlas of fake surveillance feeds), desk, chair, racks of stock
+  b.materials.set('i:sign:cctv', getSignMaterial('cctv_feeds', { kind: 'lightbox', w: 3, h: 1.8, ppm: 200, draw: drawFeeds, dayEmissive: 1.0, nightEmissive: 1.0 }));
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+    const x = -iw / 2 + 1.3 + i * 0.85, y = fy + 1.3 + j * 0.52, z = -D / 2 + 0.3;
+    b.box('i:plastic', x, y - 0.245, z, 0.81, 0.49, 0.05, { color: '#111214' });
+    const k = (2 - j) * 3 + i, cu = (k % 3) / 3, cv = 1 - (Math.floor(k / 3) + 1) / 3;
+    b.poly('i:sign:cctv', [[x - 0.39, y - 0.23, z + 0.027], [x + 0.39, y - 0.23, z + 0.027], [x + 0.39, y + 0.23, z + 0.027], [x - 0.39, y + 0.23, z + 0.027]], { uv: [[cu, cv], [cu + 1 / 3, cv], [cu + 1 / 3, cv + 1 / 3], [cu, cv + 1 / 3]], want: [0, 0, 1] });
+  }
   desk(ctx, -iw / 2 + 2.1, fy, -D / 2 + 1.2, 0, { w: 2.4, key: 'sheet_metal', color: '#d8dcde' });
   chair(ctx, -iw / 2 + 2.1, fy, -D / 2 + 1.9, PI, { folding: true, color: '#1a1a1a' });
   ctx.point('monitors', -iw / 2 + 2.1, fy, -D / 2 + 2.0, PI);
@@ -259,4 +265,63 @@ function interior(ctx, { W, D, fy }) {
   ctx.point('door_in', 0, fy, D / 2 - 1.0, PI);
   ctx.doors.push({ id: 'front_in', x: 0, z: D / 2 - 0.6, rot: PI, w: 2.4, leadsTo: 'exterior' });
   void tubeLight; void getSignMaterial; void rgb; void weather; void steps;
+}
+
+/** 3×3 atlas of grainy night CCTV feeds with timestamps — the town as Northstar sees it. */
+function drawFeeds(g, W, H) {
+  const cw = W / 3, ch = H / 3;
+  const names = ['LOT N', 'AISLE 2', 'REGISTER', 'MAIN ST', 'ENTRANCE', 'REAR', 'SQUARE / KOSHKIN', 'CHURCH SQ', 'CAM 09'];
+  for (let k = 0; k < 9; k++) {
+    const x0 = (k % 3) * cw, y0 = Math.floor(k / 3) * ch;
+    g.save();
+    g.beginPath(); g.rect(x0, y0, cw, ch); g.clip();
+    g.translate(x0, y0);
+    const gr = g.createLinearGradient(0, 0, 0, ch);
+    gr.addColorStop(0, '#2a3034'); gr.addColorStop(1, '#4a5054');
+    g.fillStyle = gr; g.fillRect(0, 0, cw, ch);
+    g.strokeStyle = '#8a9096'; g.fillStyle = '#7a8086'; g.lineWidth = 2;
+    if (k === 0 || k === 3) { // parking lot / street: perspective lines + a car
+      for (let i = -3; i <= 3; i++) { g.beginPath(); g.moveTo(cw / 2 + i * 12, ch * 0.35); g.lineTo(cw / 2 + i * 60, ch); g.stroke(); }
+      g.fillStyle = '#1a1e22'; g.fillRect(cw * 0.55, ch * 0.55, cw * 0.25, ch * 0.18);
+      g.fillStyle = '#d8d8b0'; g.beginPath(); g.arc(cw * 0.2, ch * 0.2, 6, 0, Math.PI * 2); g.fill();
+    } else if (k === 1) { // aisle
+      g.fillStyle = '#5a6066'; g.beginPath(); g.moveTo(0, 0); g.lineTo(cw * 0.35, ch * 0.3); g.lineTo(cw * 0.35, ch * 0.75); g.lineTo(0, ch); g.fill();
+      g.beginPath(); g.moveTo(cw, 0); g.lineTo(cw * 0.65, ch * 0.3); g.lineTo(cw * 0.65, ch * 0.75); g.lineTo(cw, ch); g.fill();
+    } else if (k === 2) { // register from above
+      g.fillStyle = '#6a7076'; g.fillRect(cw * 0.15, ch * 0.2, cw * 0.7, ch * 0.35);
+      g.fillStyle = '#2a2e32'; g.fillRect(cw * 0.6, ch * 0.25, cw * 0.15, ch * 0.12);
+      g.fillStyle = '#9aa0a4'; g.beginPath(); g.arc(cw * 0.35, ch * 0.75, ch * 0.12, 0, Math.PI * 2); g.fill();
+    } else if (k === 4 || k === 5) { // doors
+      g.fillStyle = '#6a7076'; g.fillRect(cw * 0.35, ch * 0.15, cw * 0.3, ch * 0.7);
+      g.fillStyle = '#9aa0a4'; g.fillRect(cw * 0.38, ch * 0.2, cw * 0.24, ch * 0.4);
+      if (k === 5) { g.fillStyle = '#3a4a3e'; g.fillRect(cw * 0.05, ch * 0.5, cw * 0.25, ch * 0.3); }
+    } else if (k === 6) { // false-front storefront across the square
+      g.fillStyle = '#6a6e70'; g.fillRect(cw * 0.25, ch * 0.15, cw * 0.5, ch * 0.6);
+      g.fillStyle = '#8a8e90'; g.fillRect(cw * 0.3, ch * 0.2, cw * 0.4, ch * 0.12);
+      g.fillStyle = '#c8c8a0'; g.fillRect(cw * 0.3, ch * 0.5, cw * 0.15, ch * 0.18); g.fillRect(cw * 0.55, ch * 0.5, cw * 0.15, ch * 0.18);
+      g.strokeStyle = '#e04030'; g.lineWidth = 2; g.strokeRect(cw * 0.46, ch * 0.5, cw * 0.08, ch * 0.22); // a tracked person box
+    } else if (k === 7) { // church tower + onion dome
+      g.fillStyle = '#7a8084'; g.fillRect(cw * 0.42, ch * 0.3, cw * 0.16, ch * 0.7);
+      g.beginPath(); g.ellipse(cw / 2, ch * 0.24, cw * 0.07, ch * 0.09, 0, 0, Math.PI * 2); g.fill();
+      g.fillRect(cw / 2 - 1, ch * 0.05, 2, ch * 0.12);
+    } else { // no signal
+      g.fillStyle = '#1a3a8a'; g.fillRect(0, 0, cw, ch);
+      g.fillStyle = '#e8e8f0'; g.font = `bold ${ch * 0.12}px Arial`; g.textAlign = 'center'; g.fillText('NO SIGNAL', cw / 2, ch / 2);
+      g.textAlign = 'left';
+    }
+    // scanlines + noise
+    g.fillStyle = 'rgba(0,0,0,0.18)';
+    for (let y = 0; y < ch; y += 3) g.fillRect(0, y, cw, 1);
+    for (let i = 0; i < 160; i++) { g.fillStyle = `rgba(255,255,255,${Math.random() * 0.08})`; g.fillRect(Math.random() * cw, Math.random() * ch, 2, 2); }
+    g.font = `bold ${ch * 0.085}px "Courier New", monospace`;
+    g.fillStyle = '#e8f0e8';
+    g.fillText(`CAM 0${k + 1}  ${names[k]}`, 6, ch * 0.1);
+    g.fillText('11-23  23:41:07', 6, ch * 0.95);
+    g.fillStyle = '#ff3020';
+    g.beginPath(); g.arc(cw - 16, ch * 0.08, 5, 0, Math.PI * 2); g.fill();
+    g.fillText('REC', cw - 58, ch * 0.1);
+    g.restore();
+  }
+  g.strokeStyle = '#000'; g.lineWidth = 4;
+  for (let i = 1; i < 3; i++) { g.beginPath(); g.moveTo((W * i) / 3, 0); g.lineTo((W * i) / 3, H); g.moveTo(0, (H * i) / 3); g.lineTo(W, (H * i) / 3); g.stroke(); }
 }

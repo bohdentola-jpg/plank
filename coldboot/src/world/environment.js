@@ -69,9 +69,15 @@ export class Environment {
     // key light: the sun by day, the moon by night
     const sunUp = sm(-4, 2, elev);
     if (sunUp > 0.02) {
-      this.sun.position.copy(sd).multiplyScalar(200);
+      // At 65° N in late November the sun never climbs past ~4°. Light the
+      // world from at least ~11° so the snow doesn't flash cell by cell at a
+      // grazing angle (the sky still draws the real, lower sun).
+      const ld = this._ld || (this._ld = new THREE.Vector3());
+      ld.copy(sd);
+      if (ld.y < 0.2) { ld.y = 0.2; ld.normalize(); }
+      this.sun.position.copy(ld).multiplyScalar(200);
       this.sun.color.setRGB(1.0, 0.62 + 0.25 * sm(0, 4, elev), 0.38 + 0.3 * sm(0, 4, elev));
-      this.sun.intensity = 2.6 * sunUp;
+      this.sun.intensity = 2.6 * sunUp * (0.5 + 0.5 * sm(0, 10, elev));
     } else {
       this.sun.position.copy(this.moonDir).multiplyScalar(200);
       this.sun.color.setRGB(0.55, 0.68, 0.95);

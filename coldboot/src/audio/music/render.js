@@ -782,6 +782,35 @@ function choir(B, ref) {
   });
 }
 
+/**
+ * Free-reed (accordion / bayan) loop: three reeds per note, the centre one in both
+ * channels and a sharp / flat pair split left and right (a gentle musette beat that
+ * moves across the stereo field), a buzzy spectrum with a reed-chamber formant.
+ */
+function reedLoop(B, ref, o = {}) {
+  const { det = 7, form = 1350, lp = 4600, tilt = 0.55 } = o;
+  return specLoop(B, ref, (add, D, snap, sr) => {
+    const f0 = mtof(ref), fc = snap(f0), nyq = sr * 0.45;
+    const reeds = [[0, 2, 1], [det, 0, 0.72], [-det * 0.7, 1, 0.66]];
+    for (const [cents, ch, g] of reeds) {
+      let f = snap(f0 * Math.pow(2, cents / 1200));
+      if (cents && f === fc) f += (cents > 0 ? 1 : -1) / D;
+      const th = (B.noise() * 0.5 + 0.5) * TAU;
+      for (let h = 1; h * f < nyq; h++) {
+        const fh = h * f;
+        let a = g / (Math.pow(h, tilt) * Math.sqrt(1 + Math.pow(h / 7, 3)));
+        if (h % 2 === 0) a *= 0.78; // a little hollower than a saw
+        const x = fh / form - form / fh;
+        a *= 1 + 1.1 / Math.sqrt(1 + 5 * x * x);
+        a *= lpResp(fh, Math.min(lp, f0 * 16), 2, 0.7);
+        if (fh < 110) a *= (fh / 110) * (fh / 110);
+        add(ch, fh, a, h * th);
+      }
+    }
+    return fc;
+  });
+}
+
 // --- one-shot multisamples (half sample rate: cheaper, still ~11 kHz bandwidth) ----
 
 function piano(B, ref) {
@@ -939,6 +968,10 @@ const MS = {
   bell: { step: 6, fn: (B, r) => fmOne(B, r, { len: 2.2, ratio: 3.5, i0: 3.2, i1: 0.25, id: 0.45, ad: 1.1 }) },
   mallet: { step: 6, fn: (B, r) => fmOne(B, r, { len: 2.2, partials: [[1, 1, 1.6], [3.98, 0.22, 0.45], [9.9, 0.05, 0.1]], trem: 0.35 }) },
   organ: { step: 5, fn: organ },
+  // COLD BOOT additions
+  reed: { step: 4, loop: true, fn: (B, r) => reedLoop(B, r) },
+  celesta: { step: 6, fn: (B, r) => fmOne(B, r, { len: 2.6, partials: [[1, 1, 0.95], [2, 0.05, 0.3], [4, 0.28, 0.14], [10.2, 0.05, 0.035]] }) },
+  glass: { step: 6, fn: (B, r) => fmOne(B, r, { len: 4.2, partials: [[1, 1, 1.8], [2.756, 0.26, 0.7], [5.404, 0.09, 0.28], [8.933, 0.035, 0.12]] }) },
 };
 
 // --- Karplus–Strong strings -----------------------------------------------------
@@ -1012,6 +1045,25 @@ const KS = {
     const sr = B.sr, f = mtof(m);
     for (let i = 0; i < sr * 0.2; i++) s[i] += 0.35 * Math.sin((TAU * f * i) / sr) * Math.exp(-i / (sr * 0.06));
     return ksBuf(B, [[s, 0, 1]], { len: 1.6, lp: 1400, hp: 35, fade: 0.3 });
+  },
+  // COLD BOOT: steel-string folk guitar (finger-picked) and balalaika (two unison
+  // strings a few cents apart, picked near the bridge, small bright body)
+  folk: (B, m) => {
+    const buf = ksBuf(B, [[ksString(B, m, { bright: 0.44, t60: 2.4, len: 2.2, pick: 0.19 }), 0, 1]], { len: 2.2, lp: 5600, hp: 75, fade: 0.3, peak: 1 });
+    const d = buf.getChannelData(0);
+    biq(d, 'peak', 210, 1.1, B.sr, 3);
+    biq(d, 'peak', 2400, 0.9, B.sr, 2);
+    return normPeak(buf, 0.85);
+  },
+  bala: (B, m) => {
+    const buf = ksBuf(B, [
+      [ksString(B, m - 0.03, { bright: 0.82, t60: 1.25, len: 1.5, pick: 0.085 }), 0, 1],
+      [ksString(B, m + 0.035, { bright: 0.78, t60: 1.15, len: 1.5, pick: 0.1 }), 0.0035, 0.85],
+    ], { len: 1.5, lp: 7800, hp: 160, fade: 0.25, peak: 1 });
+    const d = buf.getChannelData(0);
+    biq(d, 'peak', 520, 1.3, B.sr, 4);
+    biq(d, 'peak', 2900, 1.1, B.sr, 3);
+    return normPeak(buf, 0.85);
   },
 };
 

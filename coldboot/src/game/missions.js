@@ -8,7 +8,7 @@
 //     m.done();
 //   }
 import { ALL_MISSIONS } from '../data/script/index.js';
-import { saveGame } from './state.js';
+import { saveGame, addRel } from './state.js';
 import { voice } from '../audio/voice.js';
 
 export class Missions {
@@ -109,6 +109,8 @@ export class Missions {
         });
       },
       flag(k, v) { if (v === undefined) return s.flags[k]; s.flags[k] = v; return v; },
+      /** Friendship with anyone, from inside a mission. */
+      rel(npcId, n) { s.met[npcId] = true; return addRel(s, npcId, n); },
       money(n, why) { s.money += n; G.hud.toast(n >= 0 ? 'PAID' : 'SPENT', `${n >= 0 ? '+' : '−'}$${Math.abs(n)}${why ? '  ' + why : ''}`, n >= 0 ? '#9fe8b0' : '#ffb21e'); },
       start(other) { self.start(other); },
       async minigame(kind, opts) { return G.minigames ? G.minigames.run(kind, opts) : true; },
@@ -143,7 +145,8 @@ export class Missions {
     if (npc && !npc.def.folk && (npc.ch || !npc.hidden)) return { x: npc.pos.x, z: npc.pos.z };
     const pt = G.town.points[w];
     if (pt) return pt;
-    const b = G.town.buildings[w];
+    // 'building.point' that doesn't exist falls back to the building's front
+    const b = G.town.buildings[w] || (w.includes('.') ? G.town.buildings[w.split('.')[0]] : null);
     if (b) return { x: b.x + Math.sin(b.rot) * ((b.b.footprint?.d || 10) / 2 + 2), z: b.z + Math.cos(b.rot) * ((b.b.footprint?.d || 10) / 2 + 2), y: b.y };
     return null;
   }
@@ -154,7 +157,13 @@ export class Missions {
     }
     this.waiters = this.waiters.filter((w) => !w.done);
     // radar: objective marker
-    const o = this.G.hud.objective;
-    this.G.hud.markers = o?.target ? [{ x: o.target.x, z: o.target.z, color: '#ffd166', icon: 'diamond' }] : [];
+    const G = this.G, o = G.hud.objective;
+    const ms = o?.target ? [{ x: o.target.x, z: o.target.z, color: '#ffd166', icon: 'diamond' }] : [];
+    const wp = G.hud.waypoint;
+    if (wp) {
+      if (Math.hypot(G.player.pos.x - wp.x, G.player.pos.z - wp.z) < 8) G.hud.waypoint = null;
+      else ms.push({ x: wp.x, z: wp.z, color: '#c792ea', icon: 'diamond' });
+    }
+    G.hud.markers = ms;
   }
 }

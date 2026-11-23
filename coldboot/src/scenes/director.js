@@ -232,7 +232,7 @@ export class Director {
     const sub = voice.subtitle;
     if (sub && this.subsOn) {
       const L = CAST[sub.who];
-      const name = (L?.short || L?.name || sub.who).toUpperCase();
+      const name = (sub.name || L?.short || L?.name || (/^[mf]\d$/.test(sub.who) ? '' : sub.who)).toUpperCase();
       const a = sub.fading ? Math.max(0, 1 - (sub.fadeT || 0) / 0.6) : Math.min(1, sub.t * 6);
       ctx.save();
       ctx.globalAlpha = a;
@@ -244,7 +244,7 @@ export class Director {
       ctx.fillRect(W / 2 - maxW / 2 - 24, y - bh + 6, maxW + 48, bh + 10);
       let yy = y - bh + 32;
       const col = L?.color || (sub.radio ? '#7fe6ff' : '#ffd479');
-      text(ctx, (sub.radio ? '◉ ' : '') + name, W / 2, yy - 4, { size: 15, weight: 800, color: col, align: 'center', spacing: 3 });
+      if (name || sub.radio) text(ctx, (sub.radio ? '◉ ' : '') + name, W / 2, yy - 4, { size: 15, weight: 800, color: col, align: 'center', spacing: 3 });
       yy += 24;
       for (const ln of lines) { text(ctx, ln, W / 2, yy, { size: 24, weight: 600, color: '#f4f6f8', align: 'center' }); yy += 30; }
       if (sub.ru) text(ctx, sub.ru, W / 2, yy - 2, { size: 14, weight: 500, color: 'rgba(220,225,235,0.55)', align: 'center', italic: true });
