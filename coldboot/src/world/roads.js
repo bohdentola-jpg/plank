@@ -155,8 +155,10 @@ function roadTexture() {
     // slush and snow drift along both edges, ragged, and a little in the crown
     for (let y = 0; y < H; y += 3) {
       const t = y / H;
-      const wl = W * (0.05 + 0.05 * Math.sin(t * 19 + 1.3) * Math.sin(t * 7) + 0.035 * r());
-      const wr = W * (0.05 + 0.05 * Math.sin(t * 23 + 0.4) * Math.sin(t * 5 + 2) + 0.035 * r());
+      // smooth, wandering edges (whole periods per tile so the repeat doesn't seam)
+      const P = Math.PI * 2;
+      const wl = W * (0.06 + 0.035 * Math.sin(t * P * 3 + 1.3) * Math.sin(t * P) + 0.012 * Math.sin(t * P * 17 + 0.5) + 0.006 * Math.sin(t * P * 41));
+      const wr = W * (0.06 + 0.035 * Math.sin(t * P * 4 + 0.4) * Math.sin(t * P * 2 + 2) + 0.012 * Math.sin(t * P * 13 + 2.1) + 0.006 * Math.sin(t * P * 37 + 1));
       const gl = c.createLinearGradient(0, 0, wl * 1.5, 0);
       gl.addColorStop(0, 'rgba(232,236,240,0.96)'); gl.addColorStop(0.65, 'rgba(214,220,226,0.75)'); gl.addColorStop(1, 'rgba(200,206,212,0)');
       c.fillStyle = gl; c.fillRect(0, y, wl * 1.5, 3);
