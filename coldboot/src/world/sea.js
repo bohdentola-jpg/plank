@@ -62,13 +62,23 @@ void main() {
   vec3 water = vec3(0.004, 0.012, 0.018) + sky * fres + vec3(0.75, 0.82, 0.95) * moon * uNight;
   // ice: shore-fast where shallow, floes beyond
   vec2 v = vor(vW.xz * 0.06);
-  vec2 v2 = vor(vW.xz * 0.22 + 4.0);
+  vec2 v2 = vor(vW.xz * 0.2 + 4.0);
   float shallow = smoothstep(5.5, 1.5, depth);
-  float floes = step(0.62, v.y) * smoothstep(9.0, 5.0, depth) * 0.9;
+  float floeZone = smoothstep(9.0, 5.0, depth) * (1.0 - shallow);
+  float floes = step(0.62, v.y) * floeZone * 0.9;
   float ice = max(shallow, floes);
-  float crack = smoothstep(0.0, 0.06, v.x) * mix(1.0, smoothstep(0.0, 0.05, v2.x), 0.6);
-  vec3 iceCol = vec3(0.78, 0.84, 0.9) * (0.85 + 0.15 * vn(vW.xz * 0.5));
-  iceCol = mix(vec3(0.05, 0.12, 0.16), iceCol, crack);           // dark water in the cracks
+  // Shore-fast ice is one snowy sheet with the odd refrozen pressure crack;
+  // out among the floes the plate edges are open leads of dark water.
+  float edge = 1.0 - smoothstep(0.0, 0.05, v.x);
+  float crackMask = mix(smoothstep(0.66, 0.82, vn(vW.xz * 0.011 + 3.0)) * 0.8, 1.0, floeZone);
+  float lead = edge * crackMask;
+  float seam = (1.0 - smoothstep(0.0, 0.02, v2.x)) * smoothstep(0.6, 0.85, vn(vW.xz * 0.02 + 9.0)) * 0.5;
+  float crack = 1.0 - lead;
+  vec3 iceCol = vec3(0.80, 0.85, 0.90) * (0.8 + 0.12 * vn(vW.xz * 0.05) + 0.06 * vn(vW.xz * 0.9) + 0.05 * (v.y - 0.5) * floeZone);
+  iceCol += 0.05 * smoothstep(0.55, 0.9, vn(vec2(vW.x * 0.018, vW.z * 0.11)));   // wind-blown snow streaks
+  iceCol = mix(iceCol, iceCol * 0.78, seam);
+  vec3 crackCol = mix(iceCol * 0.62, vec3(0.05, 0.12, 0.16), floeZone);
+  iceCol = mix(iceCol, crackCol, lead);
   iceCol += vec3(0.75, 0.82, 0.95) * moon * 0.05 * uNight;
   // lit by the night: the ice catches moonlight and aurora a little
   iceCol *= mix(1.0, 0.32, uNight);

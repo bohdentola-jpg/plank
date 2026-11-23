@@ -1113,7 +1113,7 @@ registerScreen('finale', () => {
       outside = new THREE.Group();
       scene.add(outside);
       sky = createSky();
-      sky.uniforms.aurora.value = 1.15;
+      sky.uniforms.aurora.value = 0.6;
       outside.add(sky.mesh);
       sea = buildSea();
       sea.mesh.scale.set(4, 4, 1);
