@@ -23,7 +23,7 @@ export class Environment {
     this.scene = scene;
     this.sky = sky;
     this.hour = opts.hour ?? 22;
-    this.weather = { snow: 0.4, cloud: 0.2, aurora: 0.9, wind: 1 };
+    this.weather = { snow: 0.4, cloud: 0.35, aurora: 0.55, wind: 1 };
     this.sun = new THREE.DirectionalLight(0xffffff, 1);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
@@ -91,7 +91,7 @@ export class Environment {
     this.hemi.color.copy(u.zenith.value).multiplyScalar(2.2).add(new THREE.Color(0.05, 0.06, 0.08));
     this.hemi.groundColor.setRGB(0.12, 0.13, 0.15).multiplyScalar(0.4 + dayK);
     this.hemi.intensity = 0.55 + dayK * 0.45 + u.aurora.value * 0.15;
-    if (u.aurora.value > 0.2) this.hemi.color.lerp(new THREE.Color(0.12, 0.45, 0.3), 0.25 * u.aurora.value);
+    if (u.aurora.value > 0.2) this.hemi.color.lerp(new THREE.Color(0.12, 0.4, 0.32), 0.1 * u.aurora.value);
     // fog takes the horizon colour
     this.fogColor.copy(u.horizon.value).multiplyScalar(0.9);
     this.scene.fog.color.copy(this.fogColor);

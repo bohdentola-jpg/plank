@@ -84,7 +84,7 @@ export class Minigames {
     if (s.type === 'timing') {
       const bx = x + 30, by = y + 62, len = bw - 60;
       ctx.fillStyle = 'rgba(255,255,255,0.1)'; roundRect(ctx, bx, by, len, 22, 6); ctx.fill();
-      ctx.fillStyle = 'rgba(93,255,176,0.55)'; ctx.fillRect(bx + (c.zoneC - s.zone / 2) * len, by, s.zone * len, 22);
+      ctx.fillStyle = 'rgba(124,196,143,0.55)'; ctx.fillRect(bx + (c.zoneC - s.zone / 2) * len, by, s.zone * len, 22);
       ctx.fillStyle = c.flash > 0 ? (c.good ? C.green : C.red) : '#fff';
       ctx.fillRect(bx + c.needle * len - 2, by - 6, 4, 34);
       const gw = actionGlyph(ctx, 'interact', bx, by + 54, 11);
@@ -100,7 +100,7 @@ export class Minigames {
       const n = c.seq.length;
       c.seq.forEach((d, i) => {
         const cx = x + bw / 2 + (i - (n - 1) / 2) * 62, cy = y + 82;
-        ctx.fillStyle = i < c.idx ? 'rgba(93,255,176,0.35)' : i === c.idx ? 'rgba(127,230,255,0.25)' : 'rgba(255,255,255,0.08)';
+        ctx.fillStyle = i < c.idx ? 'rgba(124,196,143,0.35)' : i === c.idx ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)';
         roundRect(ctx, cx - 24, cy - 24, 48, 48, 8); ctx.fill();
         text(ctx, ARROW[d], cx, cy + 10, { size: 28, weight: 900, color: i < c.idx ? C.green : '#fff', align: 'center' });
       });

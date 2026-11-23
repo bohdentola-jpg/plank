@@ -1,7 +1,7 @@
-// COLD BOOT — bootstrap, main loop and the screen manager (Midnight Frequency's
-// pattern). Screens are objects with enter(params) / exit() / update(dt) /
-// draw(ctx) and optionally view() → {scene, camera}. Switching screens plays a
-// "channel change": static burst → swap (builds may take a few frames) → clear.
+// COLD BOOT — bootstrap, main loop and the screen manager. Screens are objects
+// with enter(params) / exit() / update(dt) / draw(ctx) and optionally
+// view() → {scene, camera}. Switching screens fades to black, swaps (builds may
+// take a few frames) and fades back in.
 import { Renderer, UI_W, UI_H } from './core/renderer.js';
 import { input } from './core/input.js';
 import { hit, osd } from './core/ui.js';
@@ -25,14 +25,14 @@ export function registerScreen(name, factory) {
 }
 
 /**
- * Change screens. opts.transition: 'static' (default) | 'fade' | 'black' | 'none'
+ * Change screens. opts.transition: 'fade' (default) | 'black' | 'none'
  * 'black' fades to black and holds it through the build, for cutscene joins.
  */
 export function go(name, params = {}, opts = {}) {
-  const kind = opts.transition || 'static';
+  let kind = opts.transition || 'fade';
+  if (kind === 'static') kind = 'fade';
   if (game._transition && !opts.force) return;
   game._transition = { name, params, kind, t: 0, phase: 'out', swapped: false, out: opts.out, in: opts.in };
-  if (kind === 'static') import('./audio/sfx.js').then((m) => m.sfx?.staticBurst?.(0.5)).catch(() => {});
 }
 
 async function swapScreen(name, params) {
@@ -54,13 +54,12 @@ function stepTransition(dt) {
   const tr = game._transition;
   if (!tr) return;
   const fadeish = tr.kind === 'fade' || tr.kind === 'black';
-  const OUT = tr.kind === 'none' ? 0 : (tr.out ?? (fadeish ? 0.6 : 0.22));
-  const IN = tr.kind === 'none' ? 0 : (tr.in ?? (fadeish ? 0.8 : 0.45));
+  const OUT = tr.kind === 'none' ? 0 : (tr.out ?? 0.45);
+  const IN = tr.kind === 'none' ? 0 : (tr.in ?? 0.7);
   tr.t += dt;
   if (tr.phase === 'out') {
     const k = OUT ? Math.min(1, tr.t / OUT) : 1;
-    if (tr.kind === 'static') { game.fx.staticAmt = k; game.fx.interference = k * 0.8; }
-    if (fadeish) game.fx.fade = k;
+    if (fadeish) game.fx.fade = k * k * (3 - 2 * k);
     if (k >= 1 && !tr.swapped) {
       tr.swapped = true;
       tr.phase = 'loading';
@@ -75,13 +74,11 @@ function stepTransition(dt) {
       });
     }
   } else if (tr.phase === 'loading') {
-    if (tr.kind === 'static') { game.fx.staticAmt = 0.92 + Math.random() * 0.08; game.fx.interference = 0.6; }
     if (fadeish) game.fx.fade = 1;
   } else if (tr.phase === 'in') {
     const k = IN ? Math.min(1, tr.t / IN) : 1;
     const e = 1 - k;
-    if (tr.kind === 'static') { game.fx.staticAmt = e * e; game.fx.interference = e * 0.7; }
-    if (fadeish) game.fx.fade = e;
+    if (fadeish) game.fx.fade = e * e * (3 - 2 * e);
     if (k >= 1) {
       game._transition = null;
       game.fx.staticAmt = 0;
@@ -112,12 +109,9 @@ function loop(now) {
   input.update(dt);
   if (input.padEvent) {
     const ds = /054c|dualsense|wireless controller/i.test(input.padId || '');
-    game.padToast = { t: 0, text: input.padEvent === 'lost' ? 'CONTROLLER DISCONNECTED' : ds ? 'DUALSENSE CONNECTED' : 'CONTROLLER CONNECTED' };
+    game.padToast = { t: 0, text: input.padEvent === 'lost' ? 'Controller disconnected' : ds ? 'DualSense connected' : 'Controller connected' };
   }
-  if (input.pressed('any')) {
-    audio.unlock();
-    document.getElementById('room-hint')?.classList.add('gone');
-  }
+  if (input.pressed('any')) audio.unlock();
 
   stepTransition(dt);
   const scr = game.screen;
@@ -140,10 +134,10 @@ function loop(now) {
     const pt = game.padToast;
     pt.t += dt;
     if (pt.t > 3.2) game.padToast = null;
-    else if (Math.floor(pt.t * 4) % 2 === 0 || pt.t > 0.8) osd(ctx, pt.text, UI_W - 40, 52, 20, pt.text.includes('DIS') ? '#ffb0a0' : '#d8ffd8', 'right');
+    else osd(ctx, pt.text, UI_W - 40, 52, 20, pt.text.includes('dis') ? '#e5534b' : '#eef0f2', 'right');
   }
-  if (audio.ctx && audio.ctx.state !== 'running' && game.screen?.name !== 'boot' && game.time > 4) {
-    if (Math.floor(game.time * 1.5) % 3 !== 0) osd(ctx, 'NO SOUND? CLICK THE TV OR PRESS ANY KEY', UI_W / 2, 30, 16, '#ffe8a0', 'center');
+  if (audio.ctx && audio.ctx.state !== 'running' && game.screen?.name !== 'title' && game.time > 4) {
+    osd(ctx, 'No sound? Click the picture or press any key', UI_W / 2, 34, 16, '#eef0f2', 'center');
   }
 
   const view = scr?.view ? scr.view() : null;
@@ -192,7 +186,6 @@ async function boot() {
   const canvas = document.getElementById('screen');
   game.renderer = new Renderer(canvas);
   game.renderer.setInternalLines(settings.get('lines'));
-  game.renderer.crt = settings.get('crt') ?? 1;
   input.settingsRumble = settings.get('rumble') !== false;
   input.bindMouse(canvas, (x, y) => game.renderer.clientToUI(x, y));
   audio.setVolumes({
@@ -216,8 +209,14 @@ async function boot() {
   }
   try { sessionStorage.removeItem('cb_reload'); } catch { /* */ }
 
-  const start = game.query.get('screen') || 'boot';
-  if (start !== 'boot') game.renderer.power = 1;
+  // the UI is drawn with Inter: wait for it (briefly) so the first frames don't flash a fallback face
+  if (document.fonts?.load) {
+    const faces = ['300', '400', '500', '600', '700'].map((w) => document.fonts.load(`${w} 20px Inter`, 'AЖ'))
+      .concat(['400', '700'].map((w) => document.fonts.load(`${w} 16px "JetBrains Mono"`, 'AЖ')));
+    await Promise.race([Promise.all(faces).catch(() => {}), new Promise((r) => setTimeout(r, 3000))]);
+  }
+
+  const start = game.query.get('screen') || 'title';
   await swapScreen(start, Object.fromEntries(game.query.entries()));
   requestAnimationFrame((t) => { last = t; loop(t); });
 

@@ -132,7 +132,7 @@ export class CodeEditor {
     ctx.save();
     ctx.fillStyle = '#05100c';
     ctx.fillRect(x, y, w, h);
-    ctx.strokeStyle = this.focused ? 'rgba(93,255,176,0.7)' : 'rgba(93,255,176,0.25)';
+    ctx.strokeStyle = this.focused ? 'rgba(124,196,143,0.7)' : 'rgba(124,196,143,0.25)';
     ctx.lineWidth = 1.5;
     ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
     ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
@@ -145,13 +145,13 @@ export class CodeEditor {
     for (let r = this.scroll; r < Math.min(lines.length, this.scroll + visible); r++) {
       const ly = y + 8 + (r - this.scroll) * this.lh;
       const line = lines[r];
-      if (r === caretRow && this.focused) { ctx.fillStyle = 'rgba(93,255,176,0.06)'; ctx.fillRect(x + 1, ly, w - 2, this.lh); }
+      if (r === caretRow && this.focused) { ctx.fillStyle = 'rgba(124,196,143,0.06)'; ctx.fillRect(x + 1, ly, w - 2, this.lh); }
       if (opts.errorLine === r + 1) { ctx.fillStyle = 'rgba(255,64,72,0.18)'; ctx.fillRect(x + 1, ly, w - 2, this.lh); }
       // selection
       const ls = off, le = off + line.length;
       if (selB > selA && selB > ls && selA <= le) {
         const a = Math.max(selA, ls) - ls, b = Math.min(selB, le + 1) - ls;
-        ctx.fillStyle = 'rgba(127,230,255,0.28)';
+        ctx.fillStyle = 'rgba(255,255,255,0.28)';
         ctx.fillRect(x + 48 + a * cw, ly + 2, Math.max(4, (b - a) * cw), this.lh - 2);
       }
       ctx.fillStyle = 'rgba(160,200,170,0.35)';

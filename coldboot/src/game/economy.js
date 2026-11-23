@@ -67,13 +67,13 @@ export class Economy {
         list.forEach(([item, price], i) => {
           const y = 170 + i * 38;
           const on = i === sel;
-          if (on) { ctx.fillStyle = 'rgba(127,230,255,0.12)'; ctx.fillRect(360, y - 24, 560, 34); }
+          if (on) { ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(360, y - 24, 560, 34); }
           text(ctx, ITEMS[item] || item, 380, y, { size: 17, weight: on ? 800 : 600, color: on ? '#fff' : C.dim });
           text(ctx, `owned ${s.inv[item] || 0}`, 760, y, { size: 13, weight: 600, color: C.faint, align: 'right' });
           text(ctx, `$${price}`, 900, y, { size: 17, weight: 800, color: s.money >= price ? '#ffd166' : C.red, align: 'right' });
         });
         const y = 170 + list.length * 38;
-        if (sel === list.length) { ctx.fillStyle = 'rgba(127,230,255,0.12)'; ctx.fillRect(360, y - 24, 560, 34); }
+        if (sel === list.length) { ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(360, y - 24, 560, 34); }
         text(ctx, 'Done', 380, y, { size: 17, weight: 700, color: C.dim });
         if (msg) text(ctx, msg, 640, y + 46, { size: 15, weight: 700, color: flash > 0 ? '#ffd166' : C.dim, align: 'center' });
         if (def.watched) text(ctx, 'Every purchase here is logged to your loyalty profile. Smile!', 640, y + 72, { size: 13, color: C.accent, align: 'center', italic: true });
@@ -178,7 +178,7 @@ export class Economy {
         opts3.forEach((o, k) => {
           const y = 244 + k * 50;
           const on = k === sel;
-          ctx.fillStyle = on ? 'rgba(127,230,255,0.2)' : 'rgba(255,255,255,0.05)';
+          ctx.fillStyle = on ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.05)';
           roundRect(ctx, 680, y, 260, 40, 6); ctx.fill();
           actionGlyph(ctx, 'choice' + (k + 1), 692, y + 20, 10);
           text(ctx, `$${o}`, 820, y + 28, { size: 22, weight: 900, color: on ? '#fff' : C.dim, align: 'center' });
@@ -258,7 +258,7 @@ export class Economy {
         text(ctx, `"Play ${c[1]}."`, 330, 262, { size: 18, weight: 600, color: '#fff', italic: true });
         c[2].forEach((o, k) => {
           const y = 300 + k * 50;
-          ctx.fillStyle = k === sel ? 'rgba(127,230,255,0.2)' : 'rgba(255,255,255,0.05)';
+          ctx.fillStyle = k === sel ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.05)';
           roundRect(ctx, 330, y, 620, 40, 6); ctx.fill();
           text(ctx, '♪  ' + o, 350, y + 27, { size: 18, weight: 700, color: k === sel ? '#fff' : C.dim });
         });

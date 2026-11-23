@@ -1,8 +1,7 @@
-// 2D UI toolkit for the canvas layer (1280×720 logical units). Mid-2000s
-// console look from Midnight Frequency: slanted smoked-glass panels, chunky
-// italic display type (font.js), controller glyphs that match the device in
-// use. COLD BOOT's palette: ice cyan, sodium amber, signal red, aurora green.
-import { vText, vWidth } from './font.js';
+// 2D UI toolkit for the canvas layer (1280×720 logical units).
+// The look: a grounded thriller. Clean sans type (Inter), flat dark panels,
+// white text, one restrained amber accent for "this matters / go here", red
+// only for danger. No glow, no italics, no slants.
 import { input } from './input.js';
 import { clamp } from './util.js';
 
@@ -10,33 +9,49 @@ export const W = 1280;
 export const H = 720;
 
 export const C = {
-  panel: 'rgba(6,10,16,0.80)',
-  panel2: 'rgba(12,18,28,0.86)',
-  edge: 'rgba(150,190,220,0.20)',
-  accent: '#7fe6ff',
-  accentDim: '#3f8fa8',
-  amber: '#ffb21e',
-  cyan: '#7fe6ff',
-  text: '#eef3f7',
-  dim: '#8c9aa8',
-  faint: '#46525f',
-  red: '#ff4048',
-  green: '#5dffb0',
-  blue: '#5aa9ff',
-  aurora: '#5dffb0',
-  violet: '#b98cff',
+  panel: 'rgba(10,12,15,0.80)',
+  panel2: 'rgba(16,19,23,0.88)',
+  edge: 'rgba(255,255,255,0.08)',
+  accent: '#e7a740',
+  accentDim: '#8a6a33',
+  amber: '#e7a740',
+  cyan: '#9dbbd0',
+  text: '#eef0f2',
+  dim: '#a5adb5',
+  faint: '#5c646c',
+  red: '#e5534b',
+  green: '#7cc48f',
+  blue: '#8fb0cc',
+  aurora: '#7cc48f',
+  violet: '#a99bd1',
 };
 
-export const BODY_FONT = '"Bahnschrift", "Segoe UI", "DIN Alternate", "Helvetica Neue", Arial, sans-serif';
-export const MONO_FONT = '"Consolas", "Lucida Console", "DejaVu Sans Mono", "Courier New", monospace';
+export const BODY_FONT = 'Inter, "Segoe UI", "Helvetica Neue", Arial, sans-serif';
+export const MONO_FONT = '"JetBrains Mono", Consolas, "Lucida Console", "DejaVu Sans Mono", monospace';
 
-export { vText, vWidth };
+// Colours from the old neon palette that still arrive from content (toasts,
+// cast colours) land on their grounded equivalents.
+const TONE = {
+  '#7fe6ff': C.cyan, '#5dffb0': C.green, '#ffd166': C.accent, '#ffb21e': C.accent,
+  '#ff4048': C.red, '#ff5a50': C.red, '#9fe8b0': '#a9d4b2', '#d8ffd8': C.text,
+  '#bff3ff': C.text, '#4fc3e8': C.cyan, '#3f8fa8': C.accentDim, '#ffd479': '#e9c58a',
+  '#ff6a5a': C.red, '#c792ea': '#b9a6e0',
+};
+export const tone = (c) => (typeof c === 'string' && TONE[c.toLowerCase()]) || c;
 
-/** System-font text (body copy, small labels). */
+const fontOf = (opts, size) => `${opts.italic ? 'italic ' : ''}${weightOf(opts.weight)} ${size}px ${opts.font || BODY_FONT}`;
+function weightOf(w) {
+  if (w === undefined) return 500;
+  if (w >= 800) return 700;
+  if (w >= 650) return 600;
+  return w;
+}
+
+/** Body text. (x, y) is the baseline anchor unless opts.baseline says otherwise. */
 export function text(ctx, str, x, y, opts = {}) {
   const size = opts.size || 16;
   ctx.save();
-  ctx.font = `${opts.italic ? 'italic ' : ''}${opts.weight || 600} ${size}px ${opts.font || BODY_FONT}`;
+  ctx.font = fontOf(opts, size);
   ctx.textAlign = opts.align || 'left';
   ctx.textBaseline = opts.baseline || 'alphabetic';
   if (opts.alpha !== undefined) ctx.globalAlpha *= opts.alpha;
@@ -44,23 +59,18 @@ export function text(ctx, str, x, y, opts = {}) {
     try { ctx.letterSpacing = `${opts.spacing}px`; } catch { /* old browsers */ }
   }
   if (opts.shadow !== false) {
-    ctx.shadowColor = 'rgba(0,0,0,0.85)';
-    ctx.shadowOffsetY = 1.5;
-    ctx.shadowBlur = 2;
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowOffsetY = 1;
+    ctx.shadowBlur = size > 28 ? 8 : 3;
   }
-  if (opts.glow) {
-    ctx.shadowColor = opts.glowColor || opts.color || '#fff';
-    ctx.shadowBlur = opts.glow;
-    ctx.shadowOffsetY = 0;
-  }
-  ctx.fillStyle = opts.color || C.text;
+  ctx.fillStyle = tone(opts.color) || C.text;
   ctx.fillText(str, x, y);
   ctx.restore();
 }
 
 export function measure(ctx, str, opts = {}) {
   ctx.save();
-  ctx.font = `${opts.italic ? 'italic ' : ''}${opts.weight || 600} ${opts.size || 16}px ${opts.font || BODY_FONT}`;
+  ctx.font = fontOf(opts, opts.size || 16);
   if (opts.spacing) {
     try { ctx.letterSpacing = `${opts.spacing}px`; } catch { /* */ }
   }
@@ -72,7 +82,7 @@ export function measure(ctx, str, opts = {}) {
 /** Word-wrap body text into a box. Returns the y after the last line. */
 export function paragraph(ctx, str, x, y, maxW, opts = {}) {
   const size = opts.size || 16;
-  const lh = opts.lineHeight || size * 1.35;
+  const lh = opts.lineHeight || size * 1.4;
   const words = String(str).split(/\s+/);
   let line = '';
   for (const w of words) {
@@ -89,60 +99,87 @@ export function paragraph(ctx, str, x, y, maxW, opts = {}) {
   return y;
 }
 
-/** Slanted smoked-glass panel. */
-export function panel(ctx, x, y, w, h, opts = {}) {
-  const sk = opts.skew ?? Math.min(18, h * 0.18);
+// ------------------------------------------------------------- display type
+// Titles and labels: uppercase Inter with a little tracking. `size` is the cap
+// height in px (the old stroke font's unit), so layouts keep their proportions.
+const CAP = 0.727; // Inter's cap height / em
+let mctx = null;
+function displayFont(size, opts) {
+  const w = opts.weight === undefined ? 600 : opts.weight < 0.13 ? 400 : opts.weight < 0.165 ? 500 : opts.weight < 0.2 ? 600 : 700;
+  return `${w} ${Math.round((size / CAP) * 10) / 10}px ${opts.font || BODY_FONT}`;
+}
+const tracking = (size, spacing) => (spacing || 0) + size * 0.06;
+
+/** Width of display text (same arguments as vText). */
+export function vWidth(str, size, spacing = 0, opts = {}) {
+  if (!mctx) mctx = document.createElement('canvas').getContext('2d');
+  mctx.font = displayFont(size, opts);
+  const tr = tracking(size, spacing);
+  try { mctx.letterSpacing = `${tr}px`; } catch { /* */ }
+  const s = String(str).toUpperCase();
+  return Math.max(0, mctx.measureText(s).width - tr);
+}
+
+/**
+ * Display text. (x, y) is the baseline anchor.
+ * opts: { align, color, weight (0.12 light … 0.2 bold), spacing (px), alpha, shadow }
+ */
+export function vText(ctx, str, x, y, size, opts = {}) {
+  const s = String(str).toUpperCase();
+  const tr = tracking(size, opts.spacing);
   ctx.save();
   if (opts.alpha !== undefined) ctx.globalAlpha *= opts.alpha;
-  ctx.beginPath();
-  ctx.moveTo(x + sk, y);
-  ctx.lineTo(x + w, y);
-  ctx.lineTo(x + w - sk, y + h);
-  ctx.lineTo(x, y + h);
-  ctx.closePath();
-  const g = ctx.createLinearGradient(0, y, 0, y + h);
-  g.addColorStop(0, opts.fillTop || 'rgba(22,28,44,0.86)');
-  g.addColorStop(1, opts.fill || C.panel);
-  ctx.fillStyle = g;
-  ctx.shadowColor = 'rgba(0,0,0,0.55)';
-  ctx.shadowBlur = 14;
-  ctx.shadowOffsetY = 4;
+  ctx.font = displayFont(size, opts);
+  try { ctx.letterSpacing = `${tr}px`; } catch { /* */ }
+  const w = Math.max(0, ctx.measureText(s).width - tr);
+  let ox = x;
+  if (opts.align === 'center') ox = x - w / 2;
+  else if (opts.align === 'right') ox = x - w;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  if (opts.shadow !== false) {
+    ctx.shadowColor = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur = Math.max(3, size * 0.25);
+    ctx.shadowOffsetY = 1;
+  }
+  let fill = tone(opts.color) || '#fff';
+  if (opts.gradient && !opts.color) fill = tone(opts.gradient[0][1]);
+  ctx.fillStyle = fill;
+  ctx.fillText(s, ox, y);
+  ctx.restore();
+  return w;
+}
+
+/** Flat panel with a hairline edge and an optional short accent line on top. */
+export function panel(ctx, x, y, w, h, opts = {}) {
+  ctx.save();
+  if (opts.alpha !== undefined) ctx.globalAlpha *= opts.alpha;
+  roundRect(ctx, x, y, w, h, opts.radius ?? 6);
+  ctx.fillStyle = opts.fill || C.panel;
+  ctx.shadowColor = 'rgba(0,0,0,0.35)';
+  ctx.shadowBlur = 18;
+  ctx.shadowOffsetY = 6;
   ctx.fill();
   ctx.shadowColor = 'transparent';
   ctx.strokeStyle = opts.edge || C.edge;
   ctx.lineWidth = 1;
   ctx.stroke();
-  if (opts.accent !== false) {
-    ctx.beginPath();
-    ctx.moveTo(x + sk, y + 0.5);
-    ctx.lineTo(x + Math.min(w, sk + (opts.accentLen || w * 0.4)), y + 0.5);
-    ctx.strokeStyle = opts.accent || C.accent;
-    ctx.lineWidth = 2;
-    ctx.stroke();
+  if (opts.accent !== false && opts.accent !== undefined) {
+    ctx.fillStyle = tone(opts.accent);
+    ctx.fillRect(x + 12, y, Math.min(w - 24, opts.accentLen ? Math.min(48, opts.accentLen) : 32), 2);
   }
   ctx.restore();
 }
 
-/** Header strip: big italic stroke-font title with an underline swoosh. */
+/** Screen header: an uppercase title, a short accent rule, an optional subtitle. */
 export function header(ctx, title, sub, x = 64, y = 86, opts = {}) {
-  vText(ctx, title, x, y, opts.size || 40, {
-    color: C.text, weight: 0.16, outline: 3, outlineColor: 'rgba(0,0,0,0.75)', shadow: [3, 4, 'rgba(0,0,0,0.6)'],
-  });
-  const w = vWidth(title, opts.size || 40);
-  const g = ctx.createLinearGradient(x, 0, x + w + 260, 0);
-  g.addColorStop(0, opts.color || C.accent);
-  g.addColorStop(1, 'rgba(127,230,255,0)');
+  const size = opts.size ? opts.size * 0.75 : 28;
+  vText(ctx, title, x, y, size, { color: C.text, weight: 0.17, spacing: 2 });
   ctx.save();
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.moveTo(x - 6, y + 10);
-  ctx.lineTo(x + w + 260, y + 10);
-  ctx.lineTo(x + w + 254, y + 14);
-  ctx.lineTo(x - 10, y + 14);
-  ctx.closePath();
-  ctx.fill();
+  ctx.fillStyle = tone(opts.color) || C.accent;
+  ctx.fillRect(x, y + 14, 40, 2);
   ctx.restore();
-  if (sub) text(ctx, sub, x + 2, y + 36, { size: 15, color: C.dim, weight: 600, spacing: 2 });
+  if (sub) text(ctx, sub, x, y + 40, { size: 15, color: C.dim, weight: 400 });
 }
 
 // ------------------------------------------------------------------ glyphs
@@ -154,40 +191,38 @@ const PAD_GLYPH = {
   interact: 'cross', vehicle: 'triangle', jump: 'square', crouch: 'circle', sprint: 'R2',
   phone: 'CREATE', map: 'TOUCHPAD', journal: 'CREATE', skip: 'cross', replay: 'dpadUD',
   choice1: 'cross', choice2: 'circle', choice3: 'square', choice4: 'triangle', move: 'stick', look: 'R-STICK',
-  left: 'stick', right: 'stick', up: 'stick', down: 'stick',
+  left: 'stick', right: 'stick', up: 'stick', down: 'stick', wait: 'dpadUD',
 };
 const KEY_LABEL = {
   confirm: 'ENTER', back: 'ESC', extra: 'X', alt: 'F', tabL: 'Q', tabR: 'E', pause: 'ESC',
   camera: 'C', lr: '← →', ud: '↑ ↓', stick: 'ARROWS', gas: 'W', brake: 'S', handbrake: 'SPACE',
   interact: 'E', vehicle: 'F', jump: 'SPACE', crouch: 'C', sprint: 'SHIFT', phone: 'TAB', map: 'M',
   journal: 'J', skip: 'ENTER', replay: 'R', choice1: '1', choice2: '2', choice3: '3', choice4: '4',
-  move: 'WASD', look: 'MOUSE', left: 'A', right: 'D', up: 'W', down: 'S',
+  move: 'WASD', look: 'MOUSE', left: 'A', right: 'D', up: 'W', down: 'S', wait: 'T',
 };
 
 export function usingPad() {
   return input.device === 'pad' || (input.padConnected && input.device !== 'keyboard' && input.device !== 'mouse');
 }
 
-/** PlayStation-style face/shoulder glyph. */
+/** PlayStation-style face/shoulder glyph, flat. */
 export function padGlyph(ctx, name, x, y, r = 11) {
   ctx.save();
   ctx.translate(x, y);
-  const face = { cross: '#8fb4ff', circle: '#ff7a7a', square: '#ff9be0', triangle: '#5ee8be' };
+  const face = { cross: '#a9c1ee', circle: '#ee9f9f', square: '#e6abd6', triangle: '#97dcc4' };
   if (face[name]) {
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
-    const g = ctx.createRadialGradient(-r * 0.3, -r * 0.4, 1, 0, 0, r);
-    g.addColorStop(0, '#3a3f4b');
-    g.addColorStop(1, '#14161b');
-    ctx.fillStyle = g;
+    ctx.fillStyle = 'rgba(18,20,24,0.92)';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 1.2;
     ctx.stroke();
     ctx.strokeStyle = face[name];
-    ctx.lineWidth = Math.max(1.6, r * 0.17);
+    ctx.lineWidth = Math.max(1.5, r * 0.15);
     ctx.lineCap = 'round';
-    const s = r * 0.48;
+    ctx.lineJoin = 'round';
+    const s = r * 0.46;
     ctx.beginPath();
     if (name === 'cross') { ctx.moveTo(-s, -s); ctx.lineTo(s, s); ctx.moveTo(s, -s); ctx.lineTo(-s, s); }
     if (name === 'circle') ctx.arc(0, 0, s * 1.05, 0, Math.PI * 2);
@@ -195,19 +230,19 @@ export function padGlyph(ctx, name, x, y, r = 11) {
     if (name === 'triangle') { ctx.moveTo(0, -s * 1.1); ctx.lineTo(s * 1.05, s * 0.75); ctx.lineTo(-s * 1.05, s * 0.75); ctx.closePath(); }
     ctx.stroke();
   } else if (name === 'dpadLR' || name === 'dpadUD' || name === 'stick') {
-    ctx.fillStyle = '#1b1e25';
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    ctx.lineWidth = 1;
+    ctx.fillStyle = 'rgba(18,20,24,0.92)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 1.2;
     if (name === 'stick') {
       ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.arc(0, 0, r * 0.55, 0, Math.PI * 2); ctx.fillStyle = '#2c313c'; ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, r * 0.5, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fill();
     } else {
       const a = r * 0.36;
       ctx.beginPath();
       ctx.moveTo(-a, -r); ctx.lineTo(a, -r); ctx.lineTo(a, -a); ctx.lineTo(r, -a); ctx.lineTo(r, a); ctx.lineTo(a, a);
       ctx.lineTo(a, r); ctx.lineTo(-a, r); ctx.lineTo(-a, a); ctx.lineTo(-r, a); ctx.lineTo(-r, -a); ctx.lineTo(-a, -a);
       ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = C.accent;
+      ctx.fillStyle = '#fff';
       const t = r * 0.5;
       ctx.beginPath();
       if (name === 'dpadLR') {
@@ -220,19 +255,17 @@ export function padGlyph(ctx, name, x, y, r = 11) {
       ctx.fill();
     }
   } else {
-    // shoulder / system buttons as rounded pills
-    ctx.font = `700 ${Math.round(r * 0.95)}px ${BODY_FONT}`;
+    // shoulder / system buttons as pills
+    ctx.font = `600 ${Math.round(r * 0.9)}px ${BODY_FONT}`;
     const tw = ctx.measureText(name).width;
-    const w = tw + r * 1.1, h = r * 1.7;
-    roundRect(ctx, -w / 2, -h / 2, w, h, h * 0.4);
-    const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
-    g.addColorStop(0, '#3a3f4b');
-    g.addColorStop(1, '#16181e');
-    ctx.fillStyle = g;
+    const w = tw + r * 1.2, h = r * 1.7;
+    roundRect(ctx, -w / 2, -h / 2, w, h, h * 0.45);
+    ctx.fillStyle = 'rgba(18,20,24,0.92)';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 1.2;
     ctx.stroke();
-    ctx.fillStyle = '#dfe4ee';
+    ctx.fillStyle = '#eef0f2';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(name, 0, 1);
@@ -243,19 +276,19 @@ export function padGlyph(ctx, name, x, y, r = 11) {
   return r * 2;
 }
 
+/** A keyboard key: a light rounded box with the label in dark type. */
 export function keyCap(ctx, label, x, y, h = 20) {
   ctx.save();
-  ctx.font = `700 ${Math.round(h * 0.55)}px ${BODY_FONT}`;
+  ctx.font = `600 ${Math.round(h * 0.52)}px ${BODY_FONT}`;
   const w = Math.max(h, ctx.measureText(label).width + h * 0.7);
   roundRect(ctx, x - w / 2, y - h / 2, w, h, 4);
-  const g = ctx.createLinearGradient(0, y - h / 2, 0, y + h / 2);
-  g.addColorStop(0, '#e9ecf2');
-  g.addColorStop(1, '#a9aeb8');
-  ctx.fillStyle = g;
+  ctx.fillStyle = 'rgba(238,240,242,0.94)';
+  ctx.shadowColor = 'rgba(0,0,0,0.4)';
+  ctx.shadowBlur = 4;
+  ctx.shadowOffsetY = 1;
   ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-  ctx.stroke();
-  ctx.fillStyle = '#15171c';
+  ctx.shadowColor = 'transparent';
+  ctx.fillStyle = '#121418';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(label, x, y + 1);
@@ -271,7 +304,7 @@ export function actionGlyph(ctx, action, x, y, size = 11) {
     return w || size * 2;
   }
   const lbl = KEY_LABEL[action] || action.toUpperCase();
-  const w = keyCap(ctx, lbl, 0, -1000, size * 1.8); // measure
+  const w = measureKey(ctx, lbl, size * 1.8);
   keyCap(ctx, lbl, x + w / 2, y, size * 1.8);
   return w;
 }
@@ -280,17 +313,17 @@ export function actionGlyph(ctx, action, x, y, size = 11) {
 export function hints(ctx, items, opts = {}) {
   const y = opts.y ?? H - 34;
   let x = opts.x ?? W - 40;
-  const size = 11;
+  const size = 10.5;
   ctx.save();
-  // right-to-left layout
   for (let i = items.length - 1; i >= 0; i--) {
     const [action, label] = items[i];
-    const tw = measure(ctx, label, { size: 14, weight: 700, spacing: 1 });
-    text(ctx, label, x, y + 5, { size: 14, weight: 700, color: C.text, align: 'right', spacing: 1 });
-    x -= tw + 8;
+    const lbl = label.length > 2 && label === label.toUpperCase() ? label[0] + label.slice(1).toLowerCase() : label;
+    const tw = measure(ctx, lbl, { size: 14, weight: 500 });
+    text(ctx, lbl, x, y + 5, { size: 14, weight: 500, color: C.text, align: 'right' });
+    x -= tw + 9;
     const gw = glyphWidth(ctx, action, size);
     actionGlyph(ctx, action, x - gw, y, size);
-    x -= gw + 22;
+    x -= gw + 24;
   }
   ctx.restore();
 }
@@ -306,20 +339,21 @@ export function glyphWidth(ctx, action, size = 11) {
 
 function measureGlyph(ctx, name, r) {
   ctx.save();
-  ctx.font = `700 ${Math.round(r * 0.95)}px ${BODY_FONT}`;
-  const w = ctx.measureText(name).width + r * 1.1;
+  ctx.font = `600 ${Math.round(r * 0.9)}px ${BODY_FONT}`;
+  const w = ctx.measureText(name).width + r * 1.2;
   ctx.restore();
   return w;
 }
 function measureKey(ctx, label, h) {
   ctx.save();
-  ctx.font = `700 ${Math.round(h * 0.55)}px ${BODY_FONT}`;
+  ctx.font = `600 ${Math.round(h * 0.52)}px ${BODY_FONT}`;
   const w = Math.max(h, ctx.measureText(label).width + h * 0.7);
   ctx.restore();
   return w;
 }
 
 export function roundRect(ctx, x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, w / 2, h / 2));
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.lineTo(x + w - r, y);
@@ -333,31 +367,26 @@ export function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-/** Horizontal stat bar with segmented fill (classic car-stats look). */
+/** A thin flat meter. opts.compare shows what a change would do (green gain / red loss). */
 export function statBar(ctx, x, y, w, h, value, opts = {}) {
-  const segs = opts.segments || 20;
-  const gap = 2;
-  const sw = (w - gap * (segs - 1)) / segs;
-  const filled = clamp(value, 0, 1) * segs;
-  const delta = opts.compare !== undefined ? clamp(opts.compare, 0, 1) * segs : null;
-  for (let i = 0; i < segs; i++) {
-    const sx = x + i * (sw + gap);
-    let col = 'rgba(255,255,255,0.08)';
-    if (i < Math.floor(filled)) col = opts.color || C.accent;
-    else if (i < filled) col = opts.color || C.accent;
-    if (delta !== null) {
-      if (i >= Math.floor(filled) && i < Math.floor(delta)) col = C.green;
-      if (i < Math.floor(filled) && i >= Math.floor(delta)) col = C.red;
-    }
+  const v = clamp(value, 0, 1);
+  const r = Math.min(h / 2, 3);
+  ctx.save();
+  roundRect(ctx, x, y, w, h, r);
+  ctx.fillStyle = 'rgba(255,255,255,0.10)';
+  ctx.fill();
+  const col = tone(opts.color) || C.accent;
+  if (opts.compare !== undefined) {
+    const c = clamp(opts.compare, 0, 1);
+    const lo = Math.min(v, c), hi = Math.max(v, c);
+    if (lo > 0) { roundRect(ctx, x, y, w * lo, h, r); ctx.fillStyle = col; ctx.fill(); }
+    if (hi > lo) { ctx.fillStyle = c > v ? C.green : C.red; ctx.fillRect(x + w * lo, y, w * (hi - lo), h); }
+  } else if (v > 0) {
+    roundRect(ctx, x, y, Math.max(h, w * v), h, r);
     ctx.fillStyle = col;
-    ctx.beginPath();
-    ctx.moveTo(sx + 3, y);
-    ctx.lineTo(sx + sw + 3, y);
-    ctx.lineTo(sx + sw, y + h);
-    ctx.lineTo(sx, y + h);
-    ctx.closePath();
     ctx.fill();
   }
+  ctx.restore();
 }
 
 /** Simple hit-region registry for mouse support (cleared each frame). */
@@ -377,7 +406,19 @@ export const hit = {
   },
 };
 
-/** "VCR OSD" text — boxy green-on-nothing, like a VHS deck overlay. */
-export function osd(ctx, str, x, y, size = 26, color = '#d8ffd8', align = 'left') {
-  vText(ctx, str, x, y, size, { color, align, weight: 0.2, skew: 0, spacing: 2, shadow: [2, 2, 'rgba(0,0,0,0.8)'], glow: 6, glowColor: 'rgba(160,255,160,0.5)' });
+/** A small system notice (controller connected, no sound…). */
+export function osd(ctx, str, x, y, size = 26, color = C.text, align = 'left') {
+  const s = Math.min(15, size * 0.7);
+  ctx.save();
+  ctx.font = `600 ${s}px ${BODY_FONT}`;
+  try { ctx.letterSpacing = '1.5px'; } catch { /* */ }
+  const w = ctx.measureText(str).width;
+  const bx = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
+  roundRect(ctx, bx - 12, y - s - 8, w + 24, s + 18, 4);
+  ctx.fillStyle = 'rgba(10,12,15,0.78)';
+  ctx.fill();
+  ctx.fillStyle = tone(color) === '#d8ffd8' ? C.text : tone(color);
+  ctx.textAlign = 'left';
+  ctx.fillText(str, bx, y);
+  ctx.restore();
 }

@@ -1,11 +1,10 @@
-// The picture pipeline (Midnight Frequency's, widened to 16:9). Every frame:
+// The picture pipeline. Every frame:
 //   3D scene → HDR multisampled target (internal res, e.g. 1280×720)
-//   → optional depth-of-field (close-up dialogue shots)
+//   → optional depth-of-field (dialogue shots)
 //   → bloom mip chain (13-tap down / tent up)
-//   → final CRT pass to the canvas: chromatic aberration, bloom, ACES tonemap,
-//     grade, letterbox, 2D UI composited *under the glass* (so menus get the
-//     same curvature, scanlines and static), grain, snow, tearing, vignette,
-//     power-on/off collapse.
+//   → final pass: filmic tonemap, a cold grade with a gentle split-tone,
+//     fine film grain and a soft vignette on the picture, cinema bars in
+//     cutscenes, then the 2D UI composited crisp on top, then fades/flashes.
 import * as THREE from 'three';
 
 export const UI_W = 1280;
@@ -135,6 +134,7 @@ float hash12(vec2 p) {
   p3 += dot(p3, p3.yzx + 33.33);
   return fract((p3.x + p3.y) * p3.z);
 }
+// ACES (Narkowicz fit), slightly shoulder-softened
 vec3 aces(vec3 x) {
   return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
 }
@@ -149,80 +149,37 @@ vec3 hdrAt(vec2 uv) {
 
 void main() {
   vec2 uv = vUv;
-  float bright = 1.0;
-  if (power < 0.999) {
-    float hs = clamp(power / 0.3, 0.004, 1.0);
-    float vs = clamp((power - 0.3) / 0.7, 0.003, 1.0);
-    uv = (uv - 0.5) / vec2(hs, vs) + 0.5;
-    bright = 1.0 + (1.0 - vs) * 4.0 + (1.0 - hs) * 6.0;
-  }
-  // glass curvature (a widescreen tube bulges less across its width)
-  vec2 cc = uv - 0.5;
-  float r2 = dot(cc * vec2(1.0, 0.62), cc * vec2(1.0, 0.62));
-  uv = 0.5 + cc * (1.0 + curvature * r2);
-
-  if (interference > 0.001) {
-    float row = floor(uv.y * 180.0);
-    float tear = hash12(vec2(row, floor(time * 24.0))) - 0.5;
-    tear *= step(0.55, hash12(vec2(floor(time * 13.0), row * 0.37)));
-    uv.x += tear * interference * 0.05 + sin(uv.y * 40.0 + time * 23.0) * interference * 0.004;
-  }
-
-  vec2 dir = uv - 0.5;
   vec3 col = vec3(0.0);
   if (sceneOn > 0.5) {
-    float ca = aberration * (0.25 + dot(dir, dir) * 3.0);
-    col.r = hdrAt(uv - dir * ca).r;
-    col.g = hdrAt(uv).g;
-    col.b = hdrAt(uv + dir * ca).b;
+    col = hdrAt(uv);
     col = aces(col * exposure);
     col = toSRGB(col);
     col = pow(max(col, 0.0), 1.0 / gammaV);
     col = col * gain + lift * (1.0 - col);
-    float l = dot(col, vec3(0.299, 0.587, 0.114));
+    float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
     col = mix(vec3(l), col, saturation);
     col = (col - 0.5) * contrast + 0.5;
     col = mix(col, col * tint, tintAmt);
-    // cinema bars
+    // the North in November: shadows lean steel-blue, highlights a touch warm
+    l = dot(clamp(col, 0.0, 1.0), vec3(0.2126, 0.7152, 0.0722));
+    col += (1.0 - l) * vec3(-0.010, 0.002, 0.016) + l * vec3(0.012, 0.004, -0.010);
+    // fine film grain, strongest in the mid-tones
+    float gn = hash12(gl_FragCoord.xy + fract(time * 13.7) * 811.0) - 0.5;
+    col += gn * grain * (0.35 + 0.65 * (1.0 - abs(l - 0.45) * 1.6));
+    // soft vignette
+    vec2 d = (uv - 0.5) * vec2(1.0, 0.8);
+    col *= mix(1.0, 1.0 - smoothstep(0.25, 0.85, length(d) * 1.25), vignette);
+    // cinema bars (2.39:1 inside 16:9)
     if (letterbox > 0.001) {
-      float bar = letterbox * 0.125;
+      float bar = letterbox * 0.128;
       float inBar = step(uv.y, bar) + step(1.0 - bar, uv.y);
       col *= 1.0 - clamp(inBar, 0.0, 1.0);
     }
   }
-
   vec4 ui = texture2D(tUI, uv);
   col = mix(col, ui.rgb, ui.a * uiAlpha);
-
-  float snowSeed = floor(time * 50.0);
-  vec2 sp = floor(gl_FragCoord.xy / vec2(2.0, 2.0));
-  float snow = hash12(vec2(floor(sp.x / 2.0) * 1.7 + sp.y * 31.0, sp.y) + snowSeed * 7.13);
-  snow = pow(snow, 1.6);
-  float band = 0.75 + 0.25 * sin(uv.y * 9.0 - time * 7.0);
-  col = mix(col, vec3(snow * band * 0.95 + 0.04), clamp(staticAmt, 0.0, 1.0));
-
-  float g = hash12(gl_FragCoord.xy + fract(time * 7.31) * 517.0) - 0.5;
-  col += g * grain;
-
-  float lines = resolution.y / 3.0;
-  float sl = sin(uv.y * lines * 3.14159265);
-  col *= 1.0 - scanline * sl * sl;
-  col *= 1.0 + scanline * 0.45;
-  float m = mod(gl_FragCoord.x, 3.0);
-  vec3 mask = m < 1.0 ? vec3(1.0, 0.82, 0.82) : (m < 2.0 ? vec3(0.82, 1.0, 0.82) : vec3(0.82, 0.82, 1.0));
-  col *= mix(vec3(1.0), mask, maskStr);
-
-  col *= 1.0 - 0.022 * smoothstep(0.0, 0.15, fract(uv.y * 0.6 - time * 0.07)) * (1.0 - smoothstep(0.15, 0.3, fract(uv.y * 0.6 - time * 0.07)));
-
-  float v = 1.0 - smoothstep(0.3, 1.0, length(dir * vec2(0.9, 1.15)));
-  col *= mix(1.0, v, vignette);
-
   col = mix(col, flashColor, flash);
-  col *= (1.0 - fade) * bright;
-
-  vec2 edge = smoothstep(vec2(0.0), vec2(0.003), uv) * smoothstep(vec2(0.0), vec2(0.003), 1.0 - uv);
-  col *= edge.x * edge.y;
-  if (power < 0.999) col *= smoothstep(0.0, 0.05, power);
+  col *= (1.0 - fade);
   gl_FragColor = vec4(max(col, 0.0), 1.0);
 }
 `;
@@ -238,16 +195,16 @@ export const DEFAULT_POST = {
   gain: [1.0, 1.0, 1.0],
   saturation: 1.0,
   contrast: 1.0,
-  vignette: 0.5,
-  aberration: 0.002,
-  grain: 0.04,
+  vignette: 0.35,
+  aberration: 0.0,
+  grain: 0.025,
   staticAmt: 0.0,
-  scanline: 0.13,
-  curvature: 0.06,
+  scanline: 0.0,
+  curvature: 0.0,
   flash: 0.0,
   fade: 0.0,
   interference: 0.0,
-  maskStr: 0.1,
+  maskStr: 0.0,
   letterbox: 0.0,
   tint: [1, 1, 1],
   tintAmt: 0,
@@ -281,8 +238,8 @@ export class Renderer {
 
     this.post = { ...DEFAULT_POST };
     this.postTarget = { ...DEFAULT_POST };
-    this.power = 0;
-    this.crt = 1;
+    this.power = 1;
+    this.crt = 0;
     this.sceneOn = true;
     this.time = 0;
     this.internalLines = 720;
@@ -389,7 +346,7 @@ export class Renderer {
     this.gl.setSize(cw, ch, false);
     this.displayW = cw;
     this.displayH = ch;
-    const scale = Math.min(1.6, Math.max(0.6, ch / UI_H));
+    const scale = Math.min(2, Math.max(0.6, ch / UI_H));
     this.uiScale = scale;
     this.uiCanvas.width = Math.round(UI_W * scale);
     this.uiCanvas.height = Math.round(UI_H * scale);
@@ -503,12 +460,11 @@ export class Renderer {
     u.saturation.value = p.saturation;
     u.contrast.value = p.contrast;
     u.vignette.value = p.vignette;
-    const crt = this.crt;
-    u.aberration.value = p.aberration * crt;
-    u.grain.value = p.grain * (0.35 + 0.65 * crt);
-    u.scanline.value = p.scanline * crt;
-    u.curvature.value = p.curvature * (0.3 + 0.7 * crt);
-    u.maskStr.value = p.maskStr * crt;
+    u.aberration.value = 0;
+    u.grain.value = p.grain;
+    u.scanline.value = 0;
+    u.curvature.value = 0;
+    u.maskStr.value = 0;
     u.staticAmt.value = Math.max(p.staticAmt, fx.staticAmt || 0);
     u.flash.value = Math.max(p.flash, fx.flash || 0);
     u.flashColor.value.copy(fx.flashColor || this.flashColor);
@@ -529,13 +485,7 @@ export class Renderer {
   /** Client (mouse) position → UI coordinates (1280×720) through the glass curvature. */
   clientToUI(clientX, clientY) {
     const r = this.canvas.getBoundingClientRect();
-    const x = (clientX - r.left) / r.width;
-    const y = 1 - (clientY - r.top) / r.height;
-    const k = this.post.curvature * (0.3 + 0.7 * this.crt);
-    const tx = x - 0.5, ty = y - 0.5;
-    const r2 = tx * tx + (ty * 0.62) * (ty * 0.62);
-    const sx = 0.5 + tx * (1 + k * r2);
-    const sy = 0.5 + ty * (1 + k * r2);
-    return { x: sx * UI_W, y: (1 - sy) * UI_H };
+    return { x: ((clientX - r.left) / r.width) * UI_W, y: ((clientY - r.top) / r.height) * UI_H };
   }
+
 }

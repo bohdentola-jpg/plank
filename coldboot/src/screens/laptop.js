@@ -28,7 +28,7 @@ function wrapLines(ctx, str, maxW, size, weight = 500) {
 function button(ctx, id, x, y, w, label, on, color = C.accent) {
   hit.add(id, x, y, w, 34);
   const hov = hit.hover === id;
-  ctx.fillStyle = hov ? 'rgba(127,230,255,0.25)' : on ? 'rgba(93,255,176,0.16)' : 'rgba(255,255,255,0.06)';
+  ctx.fillStyle = hov ? 'rgba(255,255,255,0.25)' : on ? 'rgba(124,196,143,0.16)' : 'rgba(255,255,255,0.06)';
   roundRect(ctx, x, y, w, 34, 5);
   ctx.fill();
   ctx.strokeStyle = hov ? color : 'rgba(255,255,255,0.15)';
@@ -191,12 +191,12 @@ export function openLaptop(G, opts = {}) {
             const y = 150 + i * 36;
             const on = i === ui.sel;
             hit.add('lesson:' + i, 80, y - 22, 700, 32);
-            if (on) { ctx.fillStyle = 'rgba(93,255,176,0.12)'; ctx.fillRect(78, y - 22, 700, 32); }
+            if (on) { ctx.fillStyle = 'rgba(124,196,143,0.12)'; ctx.fillRect(78, y - 22, 700, 32); }
             text(ctx, `${s.lessons[L.id] ? '✓' : '·'}  ${String(i + 1).padStart(2, '0')}  ${L.title}`, 92, y, { size: 17, weight: 700, color: s.lessons[L.id] ? '#5dffb0' : '#e8f0e8', font: MONO_FONT });
           });
           const y = 150 + list.length * 36;
           hit.add('lesson:' + list.length, 80, y - 22, 700, 32);
-          if (ui.sel === list.length) { ctx.fillStyle = 'rgba(93,255,176,0.12)'; ctx.fillRect(78, y - 22, 700, 32); }
+          if (ui.sel === list.length) { ctx.fillStyle = 'rgba(124,196,143,0.12)'; ctx.fillRect(78, y - 22, 700, 32); }
           text(ctx, '   ×  close the laptop', 92, y, { size: 17, weight: 700, color: C.dim, font: MONO_FONT });
           button(ctx, 'exit', W - 220, H - 110, 140, 'CLOSE');
           return;

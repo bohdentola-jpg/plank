@@ -1,60 +1,61 @@
-// Title: the TV comes on to an old computer's power-on self test that "cold
-// boots" into the logo — COLD BOOT over the aurora above the Bering Strait,
-// snow drifting past, the Dome's light blinking on Kettle Hill.
+// Title: blue hour over the frozen Bering Strait. Port Zarya's windows on the
+// far shore, one store far too bright for the town, the Dome's beacon on
+// Kettle Hill, snow drifting past a slow push-in. A film-poster title; the
+// first key press (which also unlocks audio) brings up the menu.
 import * as THREE from 'three';
 import { registerScreen, game, go } from '../main.js';
 import { input } from '../core/input.js';
-import { C, W, H, text, panel, hints, vText, hit } from '../core/ui.js';
+import { C, W, H, text, hints, vText, hit } from '../core/ui.js';
 import { createSky } from '../world/sky.js';
 import { createSnow } from '../world/snow.js';
 import { store } from '../core/settings.js';
 import { sfx } from '../audio/sfx.js';
 import { music } from '../audio/music.js';
+import { audio } from '../audio/audio.js';
 import { makeNoise2D, clamp, easeOutCubic } from '../core/util.js';
 
-const POST = [
-  ['NOVATRON BIOS v4.06   (C) 1998 Novatron Electronics', 0.0],
-  ['', 0.15],
-  ['CPU   : 486DX4-100 ........................ OK', 0.3],
-  ['MEMORY: 65536K ............................ OK', 0.6],
-  ['', 0.75],
-  ['DETECTING LINK ... БЕЛЫЙ МЫС / BELY MYS ... OK', 1.0],
-  ['TROPOSCATTER UPLINK ...................... STANDBY', 1.35],
-  ['SCANNING GRID TRAFFIC ... AURORA v3.2 ..... FOUND', 1.75],
-  ['  > payload signature: ПОЛЫНЬ / WORMWOOD', 2.1],
-  ['  > wakes in 14 days 06:00:00', 2.35],
-  ['', 2.5],
-  ['ATTEMPTING COLD BOOT_', 2.7],
-];
-
 const MENU = [
-  { id: 'new', label: 'NEW GAME', desc: 'Fourteen days. One town. Save the world — quietly.' },
-  { id: 'continue', label: 'CONTINUE', desc: 'Pick up where you left off.' },
-  { id: 'options', label: 'OPTIONS', desc: 'Picture, sound, controls.' },
-  { id: 'credits', label: 'CREDITS', desc: 'Who made this.' },
+  { id: 'continue', label: 'Continue', desc: 'Pick up where you left off.' },
+  { id: 'new', label: 'New game', desc: 'One town, one code, five days. Save the world — quietly.' },
+  { id: 'options', label: 'Options', desc: 'Picture, sound, controls.' },
+  { id: 'credits', label: 'Credits', desc: 'Who made this, and with what.' },
 ];
 
 function buildScene() {
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x05090e, 0.0016);
-  const camera = new THREE.PerspectiveCamera(42, 16 / 9, 0.5, 4000);
-  camera.position.set(0, 9, 60);
-  camera.lookAt(0, 22, -300);
+  scene.fog = new THREE.FogExp2(0x1a222c, 0.0011);
+  const camera = new THREE.PerspectiveCamera(38, 16 / 9, 0.5, 4000);
+  camera.position.set(0, 7, 70);
+  camera.lookAt(0, 20, -300);
 
   const sky = createSky();
+  const u = sky.uniforms;
+  u.zenith.value.setRGB(0.018, 0.03, 0.055);
+  u.horizon.value.setRGB(0.16, 0.19, 0.24);
+  u.ground.value.setRGB(0.03, 0.035, 0.045);
+  u.sunDir.value.set(0.55, -0.06, -0.83).normalize();
+  u.sunColor.value.setRGB(1.0, 0.6, 0.42);
+  u.sunAmt.value = 0.35;
+  u.starAmt.value = 0.25;
+  u.moonAmt.value = 0.4;
+  u.aurora.value = 0.22;
+  u.auroraA.value.setRGB(0.12, 0.55, 0.38);
+  u.auroraB.value.setRGB(0.1, 0.38, 0.42);
+  u.cloud.value = 0.6;
+  u.cloudColor.value.setRGB(0.09, 0.1, 0.12);
   scene.add(sky.mesh);
 
-  // frozen sea + shore ice, gently lit by the aurora
+  // frozen sea, wind-scoured
   const noise = makeNoise2D(7);
   const seaG = new THREE.PlaneGeometry(4000, 4000, 160, 160);
   seaG.rotateX(-Math.PI / 2);
   const p = seaG.attributes.position;
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), z = p.getZ(i);
-    p.setY(i, noise.fbm(x * 0.01, z * 0.01, 3) * 0.8 + (z < -900 ? 0 : 0));
+    p.setY(i, noise.fbm(x * 0.01, z * 0.01, 3) * 0.8 + Math.max(0, noise.ridged(x * 0.004, z * 0.004, 3) - 0.55) * 3);
   }
   seaG.computeVertexNormals();
-  const ice = new THREE.Mesh(seaG, new THREE.MeshStandardMaterial({ color: 0x5a6a78, roughness: 0.42, metalness: 0.0 }));
+  const ice = new THREE.Mesh(seaG, new THREE.MeshStandardMaterial({ color: 0x7b8794, roughness: 0.78, metalness: 0.0 }));
   scene.add(ice);
 
   // hills on the far shore
@@ -68,43 +69,40 @@ function buildScene() {
     hp.setZ(i, -t * 60);
   }
   hillG.computeVertexNormals();
-  const hills = new THREE.Mesh(hillG, new THREE.MeshStandardMaterial({ color: 0x9aaabb, roughness: 0.9 }));
+  const hills = new THREE.Mesh(hillG, new THREE.MeshStandardMaterial({ color: 0x8a96a3, roughness: 0.95 }));
   hills.position.set(0, -4, -700);
   scene.add(hills);
 
   // the Dome on Kettle Hill and its beacon
   const dome = new THREE.Mesh(new THREE.SphereGeometry(14, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.6),
-    new THREE.MeshStandardMaterial({ color: 0xdde6ee, roughness: 0.5 }));
+    new THREE.MeshStandardMaterial({ color: 0xc9d1d8, roughness: 0.5 }));
   dome.position.set(180, 118, -720);
   scene.add(dome);
-  const tower = new THREE.Mesh(new THREE.CylinderGeometry(9, 10, 14, 24), new THREE.MeshStandardMaterial({ color: 0x6d7680, roughness: 0.8 }));
+  const tower = new THREE.Mesh(new THREE.CylinderGeometry(9, 10, 14, 24), new THREE.MeshStandardMaterial({ color: 0x5d656e, roughness: 0.8 }));
   tower.position.set(180, 107, -720);
   scene.add(tower);
-  const beacon = new THREE.Mesh(new THREE.SphereGeometry(1.4, 12, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(30, 2, 2) }));
+  const beacon = new THREE.Mesh(new THREE.SphereGeometry(1.1, 12, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(14, 1, 1) }));
   beacon.position.set(180, 134, -720);
   scene.add(beacon);
 
-  // a scatter of warm town windows at the shore
+  // Port Zarya's windows: warm, few, low
   const winG = new THREE.BufferGeometry();
   const wp = [];
-  for (let i = 0; i < 140; i++) wp.push(-260 + Math.random() * 380, 2 + Math.random() * 14 + (Math.random() < 0.1 ? 20 : 0), -560 - Math.random() * 90);
+  for (let i = 0; i < 110; i++) wp.push(-260 + Math.random() * 380, 2 + Math.random() * 10 + (Math.random() < 0.08 ? 14 : 0), -560 - Math.random() * 90);
   winG.setAttribute('position', new THREE.Float32BufferAttribute(wp, 3));
-  const wins = new THREE.Points(winG, new THREE.PointsMaterial({ color: new THREE.Color(6, 3.2, 1.2), size: 2.2, sizeAttenuation: true }));
+  const wins = new THREE.Points(winG, new THREE.PointsMaterial({ color: new THREE.Color(3.2, 1.7, 0.7), size: 1.6, sizeAttenuation: true }));
   scene.add(wins);
-  // one neon store that's far too bright for this town
-  const neon = new THREE.Mesh(new THREE.PlaneGeometry(9, 2.2), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.6, 6, 9) }));
-  neon.position.set(-40, 8, -560);
-  scene.add(neon);
+  // …and the one store that's far too bright for this town
+  const store_ = new THREE.Mesh(new THREE.PlaneGeometry(8, 1.6), new THREE.MeshBasicMaterial({ color: new THREE.Color(3.6, 4.2, 4.8) }));
+  store_.position.set(-40, 7, -560);
+  scene.add(store_);
 
-  scene.add(new THREE.HemisphereLight(0x3a6a7a, 0x0a0c10, 0.6));
-  const moon = new THREE.DirectionalLight(0x9fb6d8, 0.5);
-  moon.position.set(-200, 300, -400);
-  scene.add(moon);
-  const auroraLight = new THREE.DirectionalLight(0x40ffa0, 0.35);
-  auroraLight.position.set(0, 400, -600);
-  scene.add(auroraLight);
+  scene.add(new THREE.HemisphereLight(0x8aa0b8, 0x1a1e24, 2.0));
+  const sun = new THREE.DirectionalLight(0xffc8a0, 1.2);
+  sun.position.set(300, 40, -500);
+  scene.add(sun);
 
-  const snow = createSnow({ count: 5000, box: 70, height: 40 });
+  const snow = createSnow({ count: 2600, box: 70, height: 40 });
   scene.add(snow.points);
   return { scene, camera, sky, snow, beacon };
 }
@@ -112,19 +110,25 @@ function buildScene() {
 registerScreen('title', () => {
   let world = null;
   let t = 0;
-  let phase = 'post';
+  let phase = 'press';
   let sel = 0;
-  let logoT = 0;
+  let menuT = 0;
   const hasSave = !!store.load('save0');
+  const items = MENU.filter((m) => m.id !== 'continue' || hasSave);
   return {
     heavy: false,
     enter(params) {
       world = buildScene();
-      phase = params.intro ? 'post' : 'menu';
-      if (!params.intro) logoT = 3;
-      game.renderer.setPost({ exposure: 1.15, bloomStrength: 0.9, vignette: 0.6, saturation: 1.05, lift: [0.0, 0.005, 0.012] }, true);
-      sel = hasSave ? 1 : 0;
-      try { music.play('cb_title', { fade: 2 }); } catch { /* */ }
+      const unlocked = audio.ctx && audio.ctx.state === 'running';
+      phase = params.intro || !unlocked ? 'press' : 'menu';
+      if (phase === 'menu') { t = 4; menuT = 1; }
+      game.renderer.sceneOn = true;
+      game.renderer.setPost({
+        exposure: 1.0, bloomStrength: 0.45, vignette: 0.5, saturation: 0.82, contrast: 1.06,
+        lift: [0.004, 0.008, 0.016], grain: 0.03,
+      }, true);
+      sel = 0;
+      try { music.play('cb_title', { fade: 3 }); } catch { /* */ }
     },
     exit() {
       world?.scene.traverse((o) => { o.geometry?.dispose?.(); o.material?.dispose?.(); });
@@ -133,34 +137,36 @@ registerScreen('title', () => {
       t += dt;
       world.sky.update(dt, world.camera);
       world.snow.update(dt, world.camera, game.renderer.targets.h);
-      world.beacon.material.color.setScalar(0).r = Math.sin(t * 2.4) > 0.6 ? 30 : 0.4;
+      world.beacon.material.color.setRGB(Math.sin(t * 2.2) > 0.75 ? 14 : 0.3, 0.2, 0.2);
       const cam = world.camera;
-      cam.position.x = Math.sin(t * 0.03) * 6;
-      cam.position.y = 9 + Math.sin(t * 0.05) * 1.2;
-      cam.lookAt(cam.position.x * 0.4, 24, -300);
-      if (phase === 'post') {
-        game.renderer.sceneOn = false;
-        if (t > 3.4 || input.pressed('confirm') || input.pressed('back')) {
-          phase = 'logo';
-          logoT = 0;
-          game.renderer.sceneOn = true;
-          game.fx.staticAmt = 1;
-          try { sfx.staticBurst(0.6); } catch { /* */ }
+      const push = Math.min(1, t / 60);
+      cam.position.set(Math.sin(t * 0.025) * 5, 7 + Math.sin(t * 0.04) * 0.8, 70 - push * 22);
+      cam.lookAt(cam.position.x * 0.3, 20, -300);
+      // fade up from black
+      game.fx.fade = phase === 'press' ? Math.max(0, 1 - t / 2.5) : game.fx.fade;
+
+      if (phase === 'press') {
+        if (t > 1.2 && (input.pressed('any') || input.takeClick())) {
+          audio.unlock();
+          try { music.play('cb_title', { fade: 2 }); } catch { /* */ }
+          sfx.ui?.('select');
+          phase = 'menu';
+          menuT = 0;
+          game.fx.fade = 0;
+          input.consume?.('confirm');
         }
         return;
       }
-      game.renderer.sceneOn = true;
-      logoT += dt;
-      game.fx.staticAmt = Math.max(0, 1 - logoT * 1.6);
-      if (phase === 'logo' && (logoT > 2.2 || input.pressed('confirm'))) { phase = 'menu'; input.consume('confirm'); }
-      if (phase !== 'menu') return;
-      if (input.pressed('up')) { sel = (sel + MENU.length - 1) % MENU.length; sfx.ui?.('move'); }
-      if (input.pressed('down')) { sel = (sel + 1) % MENU.length; sfx.ui?.('move'); }
-      if (hit.hover && hit.hover.startsWith('menu:')) sel = +hit.hover.slice(5);
+      menuT = Math.min(1, menuT + dt * 2.2);
+      if (input.pressed('up')) { sel = (sel + items.length - 1) % items.length; sfx.ui?.('move'); }
+      if (input.pressed('down')) { sel = (sel + 1) % items.length; sfx.ui?.('move'); }
+      if (hit.hover && hit.hover.startsWith('menu:')) {
+        const i = +hit.hover.slice(5);
+        if (i !== sel) { sel = i; sfx.ui?.('move'); }
+      }
       const click = input.takeClick() && hit.hover && hit.hover.startsWith('menu:');
-      if (input.pressed('confirm') || click) {
-        const id = MENU[sel].id;
-        if (id === 'continue' && !hasSave) return;
+      if ((input.pressed('confirm') || click) && menuT > 0.5) {
+        const id = items[sel].id;
         sfx.ui?.('select');
         if (id === 'new') go('creator', {});
         else if (id === 'continue') go('town', { load: true });
@@ -169,57 +175,55 @@ registerScreen('title', () => {
       }
     },
     draw(ctx) {
-      if (phase === 'post') {
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, W, H);
-        ctx.save();
-        ctx.font = '600 22px "Consolas", "Lucida Console", "DejaVu Sans Mono", monospace';
-        ctx.fillStyle = '#b8c4b0';
-        let y = 90;
-        for (const [line, at] of POST) {
-          if (t < at) break;
-          const shown = line.slice(0, Math.floor((t - at) * 90));
-          ctx.fillStyle = /ПОЛЫНЬ|WORMWOOD|FOUND/.test(line) ? '#ff6a5a' : '#b8c4b0';
-          ctx.fillText(shown + (line.endsWith('_') && Math.floor(t * 3) % 2 ? '' : ''), 80, y);
-          y += 34;
-        }
-        ctx.restore();
-        return;
-      }
-      // logo
-      const k = easeOutCubic(clamp(logoT / 1.2, 0, 1));
-      const lx = W / 2, ly = 250;
+      // a soft dark gradient on the left so type reads over the sky
+      const g = ctx.createLinearGradient(0, 0, W * 0.6, 0);
+      g.addColorStop(0, 'rgba(4,6,9,0.55)');
+      g.addColorStop(1, 'rgba(4,6,9,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+
+      const k = easeOutCubic(clamp((t - 1.0) / 2.2, 0, 1));
+      const x = 96, y = 300;
       ctx.save();
       ctx.globalAlpha = k;
-      vText(ctx, 'COLD BOOT', lx, ly, 96, {
-        align: 'center', weight: 0.17, spacing: 6,
-        gradient: [[0, '#ffffff'], [0.5, '#bff3ff'], [1, '#4fc3e8']],
-        outline: 3, outlineColor: 'rgba(0,10,20,0.8)', glow: 28, glowColor: 'rgba(120,230,255,0.75)',
-        shadow: [4, 5, 'rgba(0,0,0,0.5)'],
-      });
-      text(ctx, 'ХОЛОДНЫЙ ПУСК', lx, ly + 52, { size: 26, weight: 800, align: 'center', color: '#ff5a50', spacing: 10, glow: 14, glowColor: 'rgba(255,60,40,0.8)' });
-      text(ctx, 'SAVE THE WORLD.  QUIETLY.', lx, ly + 92, { size: 15, weight: 700, align: 'center', color: C.dim, spacing: 6 });
+      vText(ctx, 'Cold Boot', x, y, 64, { weight: 0.12, spacing: 14, color: '#f2f4f6' });
+      text(ctx, 'ХОЛОДНЫЙ  ПУСК', x + 3, y + 40, { size: 15, weight: 500, color: C.dim, spacing: 7 });
+      ctx.fillStyle = C.accent;
+      ctx.fillRect(x + 3, y + 62, 36, 2);
+      text(ctx, 'Save the world. Quietly.', x + 3, y + 92, { size: 17, weight: 400, color: '#c9cfd5' });
       ctx.restore();
-      if (phase !== 'menu') return;
 
-      const mx = W / 2 - 170, my = 420;
-      panel(ctx, mx - 30, my - 34, 400, MENU.length * 46 + 40, { accentLen: 160 });
-      MENU.forEach((m, i) => {
-        const y = my + i * 46;
-        const on = i === sel;
-        const disabled = m.id === 'continue' && !hasSave;
-        hit.add('menu:' + i, mx - 20, y - 26, 380, 40);
-        if (on) {
-          ctx.fillStyle = 'rgba(127,230,255,0.12)';
-          ctx.fillRect(mx - 18, y - 26, 360, 38);
-          ctx.fillStyle = C.accent;
-          ctx.fillRect(mx - 18, y - 26, 4, 38);
+      if (phase === 'press') {
+        if (t > 2.2) {
+          const a = 0.55 + 0.45 * Math.sin((t - 2.2) * 2.4);
+          text(ctx, input.padConnected ? 'Press any button' : 'Press any key', W / 2, H - 92, { size: 16, weight: 500, color: '#fff', align: 'center', alpha: Math.min(1, (t - 2.2) * 1.5) * a, spacing: 3 });
+          text(ctx, 'Headphones recommended  ·  Russian dialogue with English subtitles', W / 2, H - 48, { size: 13, weight: 400, color: C.faint, align: 'center', alpha: Math.min(1, (t - 2.2)) });
         }
-        vText(ctx, m.label, mx + 8, y + 2, 22, { color: disabled ? C.faint : on ? '#fff' : C.dim, weight: 0.16 });
+        return;
+      }
+
+      // menu
+      const my = y + 168;
+      const a = easeOutCubic(menuT);
+      ctx.save();
+      ctx.globalAlpha = a;
+      items.forEach((m, i) => {
+        const yy = my + i * 44;
+        const on = i === sel;
+        hit.add('menu:' + i, x - 16, yy - 28, 320, 40);
+        if (on) {
+          ctx.fillStyle = C.accent;
+          ctx.fillRect(x - 16, yy - 19, 3, 24);
+        }
+        text(ctx, m.label, x + (on ? 4 : 0) * a, yy, { size: 22, weight: on ? 600 : 400, color: on ? '#fff' : 'rgba(225,230,235,0.55)' });
       });
-      text(ctx, MENU[sel].desc, W / 2, my + MENU.length * 46 + 34, { size: 15, color: C.dim, align: 'center' });
-      hints(ctx, [['ud', 'SELECT'], ['confirm', 'OK']]);
+      const d = items[sel].desc;
+      text(ctx, d, x, my + items.length * 44 + 22, { size: 14, weight: 400, color: C.dim });
+      ctx.restore();
+      hints(ctx, [['ud', 'Select'], ['confirm', 'OK']]);
+      // build stamp, bottom-left
+      text(ctx, 'Port Zarya, Alaska  ·  Bely Mys, Chukotka', x, H - 40, { size: 12, weight: 400, color: C.faint, spacing: 1 });
     },
-    view() { return world && phase !== 'post' ? { scene: world.scene, camera: world.camera } : null; },
+    view() { return world ? { scene: world.scene, camera: world.camera } : null; },
   };
 });

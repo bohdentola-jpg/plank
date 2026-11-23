@@ -4,6 +4,8 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>COLD BOOT</title>
+<link rel="preload" href="assets/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="assets/fonts/inter-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="style.css" />
 <script type="importmap">
 { "imports": {
@@ -13,25 +15,8 @@
 </script>
 </head>
 <body>
-<div id="room">
-  <div id="tv">
-    <div id="tv-bezel">
-      <div id="tv-screen">
-        <canvas id="screen" tabindex="0"></canvas>
-        <div id="tv-glass"></div>
-      </div>
-    </div>
-    <div id="tv-panel">
-      <div class="tv-brand">NOVATRON <span>TRINIQUE&nbsp;WIDE&nbsp;16:9</span></div>
-      <div class="tv-grille"></div>
-      <div class="tv-controls">
-        <span class="tv-btn"></span><span class="tv-btn"></span><span class="tv-btn"></span>
-        <span id="tv-led"></span>
-        <button id="tv-power" title="Power">⏻</button>
-      </div>
-    </div>
-  </div>
-  <div id="room-hint">plug in a controller · or use the keyboard and mouse</div>
+<div id="stage">
+  <canvas id="screen" tabindex="0"></canvas>
 </div>
 <textarea id="code-input" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="code editor"></textarea>
 <script type="module" src="src/main.js"></script>

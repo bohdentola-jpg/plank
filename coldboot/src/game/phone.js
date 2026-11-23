@@ -16,7 +16,7 @@ import { REPAIRS } from '../data/script/side_town.js';
 import { LESSONS } from '../code/lessons.js';
 import { CHALLENGE_ORDER } from '../code/challenges.js';
 import { ITEMS } from './economy.js';
-import { relLevel, REL_NAMES } from './state.js';
+import { relLevel, REL_NAMES, DAYS } from './state.js';
 
 const APPS = [
   { id: 'map', label: 'MAP', icon: '◎' },
@@ -115,7 +115,7 @@ export class Phone {
     ctx.fillStyle = 'rgba(4,6,9,0.96)';
     roundRect(ctx, PX, PY, PW, PH, 34);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(127,230,255,0.35)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.fillStyle = '#0a1018';
@@ -130,7 +130,7 @@ export class Phone {
     APPS.forEach((a, i) => {
       const x = SX + i * tw, on = a.id === this.app;
       hit.add('app:' + a.id, x, PY + 54, tw, 36);
-      if (on) { ctx.fillStyle = 'rgba(127,230,255,0.14)'; ctx.fillRect(x + 2, PY + 54, tw - 4, 36); ctx.fillStyle = C.accent; ctx.fillRect(x + 8, PY + 88, tw - 16, 2); }
+      if (on) { ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fillRect(x + 2, PY + 54, tw - 4, 36); ctx.fillStyle = C.accent; ctx.fillRect(x + 8, PY + 88, tw - 16, 2); }
       text(ctx, `${a.icon} ${a.label}`, x + tw / 2, PY + 77, { size: 12, weight: 800, color: on ? '#fff' : C.dim, align: 'center', spacing: 1 });
     });
     ctx.save();
@@ -160,7 +160,7 @@ export class Phone {
     rows.slice(this.scroll, this.scroll + visible).forEach((r, i) => {
       const y = SY + i * rowH;
       const on = this.scroll + i === this.sel;
-      if (on) { ctx.fillStyle = 'rgba(127,230,255,0.08)'; ctx.fillRect(SX, y, SW, rowH - 4); }
+      if (on) { ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(SX, y, SW, rowH - 4); }
       drawRow(r, SX + 12, y, on);
     });
     if (rows.length > visible) {
@@ -283,7 +283,7 @@ export class Phone {
     rows.push({ kind: 'note', text: `${Object.keys(s.missions.done).length} things done since you landed.` });
     this._list(ctx, rows, 58, (r, x, y) => {
       if (r.kind === 'day') {
-        const left = 14 - s.day;
+        const left = DAYS - s.day;
         vText(ctx, `DAY ${s.day}`, x, y + 30, 24, { color: '#fff', weight: 0.17 });
         text(ctx, DOW[(s.day - 1) % 7], x + 110, y + 30, { size: 16, weight: 700, color: C.dim });
         text(ctx, left > 0 ? `Wormwood wakes in ${left} day${left === 1 ? '' : 's'}` : 'Wormwood wakes at dawn', x, y + 50, { size: 12, weight: 800, color: left <= 3 ? C.red : C.dim });

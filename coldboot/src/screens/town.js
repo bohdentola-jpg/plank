@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { registerScreen, game, go } from '../main.js';
 import { input } from '../core/input.js';
-import { C, W, H, text, panel, vText, hints } from '../core/ui.js';
+import { C, W, H, text, vText, hints } from '../core/ui.js';
 import { buildTown, LightPool } from '../world/town.js';
 import { createSky } from '../world/sky.js';
 import { createSnow } from '../world/snow.js';
@@ -472,14 +472,14 @@ registerScreen('town', () => {
     draw(ctx) {
       if (!ready) {
         ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-        vText(ctx, 'PORT ZARYA', W / 2, H / 2 - 10, 40, { align: 'center', color: '#fff', weight: 0.16, glow: 14, glowColor: 'rgba(127,230,255,0.5)' });
-        text(ctx, 'ALASKA  ·  POP. 1,140', W / 2, H / 2 + 22, { size: 14, weight: 700, color: C.dim, align: 'center', spacing: 4 });
-        ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(W / 2 - 200, H / 2 + 48, 400, 3);
-        ctx.fillStyle = C.accent; ctx.fillRect(W / 2 - 200, H / 2 + 48, 400 * progress, 3);
+        vText(ctx, 'Port Zarya', 96, H - 120, 26, { color: '#fff', weight: 0.14, spacing: 8 });
+        text(ctx, 'Alaska  ·  pop. 1,140', 98, H - 88, { size: 14, weight: 400, color: C.dim, spacing: 1 });
+        ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(98, H - 64, 240, 2);
+        ctx.fillStyle = '#fff'; ctx.fillRect(98, H - 64, 240 * progress, 2);
         return;
       }
       hud.visible = !G.cinematic || !!G.dialog.active;
-      if (!G.cinematic) hud.draw(ctx, { state: G.state, player: G.player, camYaw: G.camYaw, buildingRects: G.buildingRects, shoreZ });
+      if (!G.cinematic) hud.draw(ctx, { state: G.state, player: G.player, camYaw: G.camYaw, camera: G.camera, buildingRects: G.buildingRects, shoreZ });
       G.minigames.draw(ctx);
       G.vehicles.draw(ctx);
       G.phone.draw(ctx);
@@ -487,14 +487,20 @@ registerScreen('town', () => {
       G.director.draw(ctx);
       drawYou(ctx, G.dialog, W, H, text);
       if (paused) {
-        ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, W, H);
-        vText(ctx, 'PAUSED', W / 2, 220, 44, { align: 'center', color: '#fff', weight: 0.16 });
+        const gr = ctx.createLinearGradient(0, 0, W * 0.55, 0);
+        gr.addColorStop(0, 'rgba(4,6,9,0.86)'); gr.addColorStop(1, 'rgba(4,6,9,0.35)');
+        ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+        vText(ctx, 'Paused', 96, 200, 26, { color: '#fff', weight: 0.14, spacing: 6 });
+        ctx.fillStyle = C.accent; ctx.fillRect(98, 216, 36, 2);
+        const s2 = G.state;
+        text(ctx, `Day ${s2.day}  ·  ${G.hud.objective ? G.hud.objective.text : 'Free roam'}`, 98, 248, { size: 14, weight: 400, color: C.dim });
         PAUSE.forEach((it, i) => {
           const on = i === pauseSel;
-          panel(ctx, W / 2 - 170, 280 + i * 58, 340, 46, { accent: on ? C.accent : 'rgba(0,0,0,0)', alpha: on ? 1 : 0.7 });
-          vText(ctx, it, W / 2, 312 + i * 58, 20, { align: 'center', color: on ? '#fff' : C.dim, weight: 0.16 });
+          const yy = 310 + i * 44;
+          if (on) { ctx.fillStyle = C.accent; ctx.fillRect(82, yy - 19, 3, 24); }
+          text(ctx, it.charAt(0) + it.slice(1).toLowerCase(), 98 + (on ? 4 : 0), yy, { size: 22, weight: on ? 600 : 400, color: on ? '#fff' : 'rgba(225,230,235,0.55)' });
         });
-        hints(ctx, [['ud', 'SELECT'], ['confirm', 'OK'], ['pause', 'RESUME']]);
+        hints(ctx, [['ud', 'Select'], ['confirm', 'OK'], ['pause', 'Resume']]);
         if (opts) opts.draw(ctx);
       }
     },

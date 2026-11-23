@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { game } from '../main.js';
 import { voice } from '../audio/voice.js';
 import { input } from '../core/input.js';
-import { C, W, H, text, panel, measure, actionGlyph } from '../core/ui.js';
+import { C, W, H, text, measure, actionGlyph, roundRect, tone } from '../core/ui.js';
 import { CAST } from '../data/cast.js';
 
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
@@ -155,43 +155,39 @@ export class Director {
   hangUp() { this.callers = null; return Promise.resolve(); }
 
   _drawCall(ctx) {
+    // an encrypted call: one card per caller, initials, a ring while they speak
     const n = this.callers.length;
-    const tw = n > 2 ? 150 : 210, th = n > 2 ? 112 : 150, cols = n > 2 ? 3 : n;
-    const x0 = W - 24 - cols * (tw + 8), y0 = 232;
+    const tw = n > 2 ? 132 : 168, th = n > 2 ? 132 : 150, cols = n > 2 ? 3 : n;
+    const x0 = W - 40 - cols * (tw + 8) + 8, y0 = 168;
     const k = Math.min(1, this.callT * 4);
     ctx.save();
     ctx.globalAlpha = k;
-    text(ctx, '◉ ' + this.callLabel, W - 24, y0 - 8, { size: 11, weight: 800, color: '#ff6a5a', align: 'right', spacing: 2 });
+    text(ctx, (this.callLabel || 'Secure call').toUpperCase(), W - 40, y0 - 12, { size: 11, weight: 600, color: C.dim, align: 'right', spacing: 2 });
+    ctx.fillStyle = C.red;
+    ctx.beginPath(); ctx.arc(W - 40 - measure(ctx, (this.callLabel || 'Secure call').toUpperCase(), { size: 11, weight: 600, spacing: 2 }) - 12, y0 - 16, 3.5, 0, Math.PI * 2); ctx.fill();
     this.callers.forEach((c, i) => {
       const x = x0 + (i % cols) * (tw + 8), y = y0 + Math.floor(i / cols) * (th + 8);
       const L = CAST[c.id] || {};
       const talking = voice.subtitle?.who === c.id;
-      const g = ctx.createLinearGradient(0, y, 0, y + th);
-      g.addColorStop(0, '#141a1e'); g.addColorStop(1, '#06080a');
-      ctx.fillStyle = g;
-      ctx.fillRect(x, y, tw, th);
-      // a head and shoulders against the warehouse lamp
-      ctx.fillStyle = 'rgba(255,190,120,0.12)';
-      ctx.beginPath(); ctx.arc(x + tw * 0.5, y + th * 0.18, th * 0.5, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = L.color || '#8899aa';
-      ctx.globalAlpha = k * 0.85;
-      ctx.beginPath(); ctx.ellipse(x + tw / 2, y + th * 0.42, th * 0.15, th * 0.19, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(x + tw / 2, y + th * 1.02, th * 0.42, th * 0.36, 0, Math.PI, 0); ctx.fill();
-      ctx.globalAlpha = k;
-      for (let yy = y; yy < y + th; yy += 3) { ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(x, yy, tw, 1); }
-      ctx.strokeStyle = talking ? '#5dffb0' : 'rgba(255,255,255,0.18)';
-      ctx.lineWidth = talking ? 2 : 1;
-      ctx.strokeRect(x + 0.5, y + 0.5, tw - 1, th - 1);
-      ctx.fillStyle = 'rgba(0,0,0,0.55)';
-      ctx.fillRect(x, y + th - 22, tw, 22);
-      text(ctx, (L.short || L.name || c.id).toUpperCase(), x + 8, y + th - 7, { size: 11, weight: 800, color: '#fff', spacing: 1 });
+      roundRect(ctx, x, y, tw, th, 8);
+      ctx.fillStyle = 'rgba(12,14,18,0.86)';
+      ctx.fill();
+      ctx.strokeStyle = talking ? C.accent : 'rgba(255,255,255,0.10)';
+      ctx.lineWidth = talking ? 1.5 : 1;
+      ctx.stroke();
+      const cx = x + tw / 2, cy = y + th * 0.42, r = th * 0.22;
       if (talking) {
-        for (let b = 0; b < 6; b++) {
-          const hgt = 3 + Math.abs(Math.sin(this.t * 13 + b * 1.7)) * 10 * (this.lineHandle?.h?.features?.open ?? 0.5 + 0.3);
-          ctx.fillStyle = '#5dffb0';
-          ctx.fillRect(x + tw - 48 + b * 6, y + th - 11 - hgt / 2, 3, hgt);
-        }
+        const pulse = 1 + 0.08 * Math.abs(Math.sin(this.t * 9));
+        ctx.strokeStyle = 'rgba(231,167,64,0.55)';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(cx, cy, r * pulse + 5, 0, Math.PI * 2); ctx.stroke();
       }
+      ctx.fillStyle = '#2a3038';
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+      const nm = L.short || L.name || c.id;
+      const initials = nm.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+      text(ctx, initials, cx, cy + r * 0.36, { size: Math.round(r * 0.95), weight: 500, color: '#dfe4e9', align: 'center', shadow: false });
+      text(ctx, nm, cx, y + th - 16, { size: 13, weight: 500, color: talking ? '#fff' : C.dim, align: 'center' });
     });
     ctx.restore();
   }
@@ -305,40 +301,52 @@ export class Director {
     const sub = voice.subtitle;
     if (sub && this.subsOn) {
       const L = CAST[sub.who];
-      const name = (sub.name || L?.short || L?.name || (/^[mf]\d$/.test(sub.who) ? '' : sub.who)).toUpperCase();
+      const name = sub.name || L?.short || L?.name || (/^[mf]\d$/.test(sub.who) ? '' : sub.who);
       const a = sub.fading ? Math.max(0, 1 - (sub.fadeT || 0) / 0.6) : Math.min(1, sub.t * 6);
       ctx.save();
       ctx.globalAlpha = a;
-      const y = H - (game.renderer.post.letterbox > 0.5 ? 128 : 112);
-      const maxW = 860;
-      const lines = wrap(ctx, sub.en, maxW, 24);
-      const bh = 30 + lines.length * 30 + (sub.ru ? 22 : 0);
-      ctx.fillStyle = 'rgba(0,0,0,0.42)';
-      ctx.fillRect(W / 2 - maxW / 2 - 24, y - bh + 6, maxW + 48, bh + 10);
-      let yy = y - bh + 32;
-      const col = L?.color || (sub.radio ? '#7fe6ff' : '#ffd479');
-      if (name || sub.radio) text(ctx, (sub.radio ? '◉ ' : '') + name, W / 2, yy - 4, { size: 15, weight: 800, color: col, align: 'center', spacing: 3 });
-      yy += 24;
-      for (const ln of lines) { text(ctx, ln, W / 2, yy, { size: 24, weight: 600, color: '#f4f6f8', align: 'center' }); yy += 30; }
-      if (sub.ru) text(ctx, sub.ru, W / 2, yy - 2, { size: 14, weight: 500, color: 'rgba(220,225,235,0.55)', align: 'center', italic: true });
+      const boxed = game.renderer.post.letterbox > 0.5;
+      const maxW = 900;
+      const lines = wrap(ctx, sub.en, maxW, 23);
+      const ruH = sub.ru ? 22 : 0;
+      // bottom of the text block sits above the cinema bar (or the screen edge)
+      const bottom = boxed ? H - 104 : H - 64;
+      let yy = bottom - ruH - (lines.length - 1) * 30;
+      // a soft dark pool behind the words, no box
+      const top = yy - (name ? 50 : 30);
+      const midY = (top + bottom + 16) / 2, rx = maxW * 0.62, ry = Math.max(40, (bottom + 16 - top) * 0.75);
+      ctx.save();
+      ctx.translate(W / 2, midY);
+      ctx.scale(1, ry / rx);
+      const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+      gr.addColorStop(0, 'rgba(0,0,0,0.38)'); gr.addColorStop(0.6, 'rgba(0,0,0,0.26)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gr;
+      ctx.fillRect(-rx, -rx, rx * 2, rx * 2);
+      ctx.restore();
+      const col = sub.radio ? C.cyan : (L?.color ? tone(L.color) : '#e9c58a');
+      if (name || sub.radio) text(ctx, (sub.radio ? 'EARPIECE  ·  ' : '') + name.toUpperCase(), W / 2, yy - 28, { size: 12, weight: 600, color: col, align: 'center', spacing: 2.5 });
+      for (const ln of lines) { text(ctx, ln, W / 2, yy, { size: 23, weight: 500, color: '#f6f7f8', align: 'center' }); yy += 30; }
+      if (sub.ru) text(ctx, sub.ru, W / 2, yy - 6, { size: 14, weight: 400, color: 'rgba(225,230,235,0.6)', align: 'center' });
       ctx.restore();
     }
     if (this.choice) {
       const c = this.choice;
       const n = c.options.length;
-      const bw = 640, rowH = 44;
-      const x = W / 2 - bw / 2, y = H - 150 - n * rowH;
-      panel(ctx, x - 20, y - 46, bw + 40, n * rowH + 60, { accentLen: 200 });
-      text(ctx, c.prompt || 'YOU', x, y - 16, { size: 13, weight: 800, color: C.accent, spacing: 3 });
+      const bw = 600, rowH = 46;
+      const x = W / 2 - bw / 2, y = H - 120 - n * rowH;
+      text(ctx, (c.prompt || 'Your answer').toUpperCase(), x, y - 14, { size: 11, weight: 600, color: C.accent, spacing: 2.5 });
       c.hover = undefined;
       c.options.forEach((o, i) => {
         const yy = y + i * rowH;
         const on = i === c.sel;
-        if (on) { ctx.fillStyle = 'rgba(127,230,255,0.13)'; ctx.fillRect(x - 8, yy, bw + 16, rowH - 6); ctx.fillStyle = C.accent; ctx.fillRect(x - 8, yy, 3, rowH - 6); }
+        roundRect(ctx, x, yy, bw, rowH - 8, 6);
+        ctx.fillStyle = on ? 'rgba(20,23,28,0.92)' : 'rgba(10,12,15,0.66)';
+        ctx.fill();
+        if (on) { ctx.fillStyle = C.accent; ctx.fillRect(x, yy + 6, 2, rowH - 20); }
         const m = input.mouse;
-        if (m.x > x - 8 && m.x < x + bw + 8 && m.y > yy && m.y < yy + rowH - 6) { if (input.mouse.moved) c.sel = i; c.hover = i; }
-        actionGlyph(ctx, 'choice' + (i + 1), x + 4, yy + 19, 10);
-        text(ctx, o, x + 44, yy + 26, { size: 19, weight: on ? 700 : 500, color: on ? '#fff' : C.dim });
+        if (m.x > x && m.x < x + bw && m.y > yy && m.y < yy + rowH - 8) { if (input.mouse.moved) c.sel = i; c.hover = i; }
+        actionGlyph(ctx, 'choice' + (i + 1), x + 14, yy + (rowH - 8) / 2, 9.5);
+        text(ctx, o, x + 52, yy + 25, { size: 17, weight: on ? 500 : 400, color: on ? '#fff' : '#c3cad1' });
       });
     }
   }

@@ -40,6 +40,12 @@ float hash12(vec2 p) {
   p3 += dot(p3, p3.yzx + 33.33);
   return fract((p3.x + p3.y) * p3.z);
 }
+float vnoise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float a = hash12(i), b = hash12(i + vec2(1.0, 0.0)), c = hash12(i + vec2(0.0, 1.0)), d = hash12(i + vec2(1.0, 1.0));
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
 mat2 rot(float a) { float c = cos(a), s = sin(a); return mat2(c, s, -s, c); }
 float tri(float x) { return clamp(abs(fract(x) - 0.5), 0.01, 0.49); }
 vec2 tri2(vec2 p) { return vec2(tri(p.x) + tri(p.y), tri(p.y + tri(p.x))); }
@@ -109,13 +115,16 @@ void main() {
     float md = dot(rd, moonDir);
     col += vec3(0.75, 0.8, 0.9) * (smoothstep(0.99955, 0.9997, md) * 6.0 + pow(max(md, 0.0), 200.0) * 0.25) * moonAmt;
   }
-  // thin high cloud
+  // a stratus deck: smooth fbm on a plane overhead, thicker toward the horizon,
+  // its underside picking up the low sun
   if (cloud > 0.001 && h > 0.0) {
-    vec2 uv = rd.xz / (h + 0.15) * 1.2 + vec2(time * 0.004, 0.0);
+    vec2 uv = rd.xz / (h + 0.1) * vec2(0.7, 1.1) + vec2(time * 0.006, time * 0.002);
     float n = 0.0, a = 0.5;
-    for (int i = 0; i < 5; i++) { n += a * hash12(floor(uv * 3.0)) ; uv *= 2.03; a *= 0.5; }
-    float c = smoothstep(0.45, 0.85, n) * cloud * smoothstep(0.0, 0.2, h);
-    col = mix(col, cloudColor, c * 0.6);
+    for (int i = 0; i < 6; i++) { n += a * vnoise(uv * 1.8); uv = uv * 2.02 + vec2(7.3, 3.1); a *= 0.5; }
+    float cover = mix(0.62, 0.30, cloud);
+    float c = smoothstep(cover, cover + 0.28, n) * smoothstep(0.0, 0.12, h);
+    vec3 cc = cloudColor * (0.8 + 0.4 * n) + sunColor * sunAmt * 0.22 * pow(sd, 3.0);
+    col = mix(col, cc, c * min(1.0, cloud * 1.3));
   }
   gl_FragColor = vec4(col, 1.0);
 }
@@ -133,8 +142,8 @@ export function createSky() {
     sunAmt: { value: 0 },
     starAmt: { value: 1 },
     aurora: { value: 1 },
-    auroraA: { value: new THREE.Color(0.1, 1.0, 0.55) },
-    auroraB: { value: new THREE.Color(0.55, 0.2, 0.95) },
+    auroraA: { value: new THREE.Color(0.1, 0.62, 0.42) },
+    auroraB: { value: new THREE.Color(0.16, 0.32, 0.5) },
     cloud: { value: 0 },
     cloudColor: { value: new THREE.Color(0.05, 0.06, 0.08) },
     moonAmt: { value: 1 },
