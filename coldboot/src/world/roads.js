@@ -46,7 +46,9 @@ function ribbon(pts, width, y0, uvScale = 1, across = 8) {
     if (i < n - 1) {
       for (let s = 0; s < across; s++) {
         const k = i * m + s;
-        idx.push(k, k + m, k + 1, k + 1, k + m, k + m + 1);
+        // counter-clockwise seen from above, so the strip faces up (the old order faced
+        // down and the roads were culled away entirely)
+        idx.push(k, k + 1, k + m, k + 1, k + m + 1, k + m);
       }
     }
   }

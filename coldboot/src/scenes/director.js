@@ -64,6 +64,21 @@ export class Director {
   /** Instant cut / move. spec: {pos, look, fov, dof (focus metres) | dofOn: id, dur} */
   cam(spec) {
     if (typeof window !== 'undefined') { window.__cuts = (window.__cuts || 0) + 1; window.__cutAt = performance.now(); window.__cutDur = spec?.dur || 0; }   // QA: tools/shotlog.mjs
+    // a fixed shot whose lens sits right behind a wall, a post or a lamp: step it
+    // past the obstruction toward what it looks at (the look point itself may be
+    // inside a building, so only something close to the lens counts)
+    if (spec && spec.clear !== false && spec.pos && spec.look && typeof spec.pos !== 'function' && typeof spec.look !== 'function') {
+      const P = vec(spec.pos), L = vec(spec.look);
+      if (P?.isVector3 && L?.isVector3) {
+        const full = P.distanceTo(L);
+        const near = Math.min(1.6, full * 0.3);
+        const c = this.clearDist(P, L.clone().sub(P).normalize().multiplyScalar(near).add(P));
+        if (c < near - 0.02) {
+          const step = Math.min(full * 0.6, c + 0.45);
+          spec = { ...spec, pos: P.clone().lerp(L, step / full) };
+        }
+      }
+    }
     const cam = this.camera;
     const from = { pos: cam.position.clone(), look: this._look ? this._look.clone() : new THREE.Vector3(0, 1, 0), fov: cam.fov };
     const resolve = (v) => (typeof v === 'function' ? v() : v);
@@ -118,19 +133,71 @@ export class Director {
     }
   }
 
+  /**
+   * How far from `from` toward `to` the view is clear of solid scenery (walls,
+   * lamps, furniture). People, the sky, glass and particles don't block.
+   */
+  clearDist(from, to) {
+    const dir = to.clone().sub(from);
+    const len = dir.length();
+    if (len < 1e-3 || !this.scene) return len;
+    dir.divideScalar(len);
+    const rc = this._rc || (this._rc = new THREE.Raycaster());
+    rc.set(from, dir);
+    rc.near = 0.12;
+    rc.far = len;
+    let hits;
+    try { hits = rc.intersectObject(this.scene, true); } catch { return len; }
+    for (const h of hits) {
+      const ob = h.object;
+      if (!ob.isMesh || ob.isSkinnedMesh || ob.isInstancedMesh && ob.count === 0) continue;
+      const m = Array.isArray(ob.material) ? ob.material[0] : ob.material;
+      if (!m || m.side === THREE.BackSide || m.transparent || m.depthWrite === false || m.colorWrite === false) continue;
+      let p = ob, skip = false;
+      for (; p; p = p.parent) {
+        if (!p.visible || p.userData?.noBlock || (p.name && p.name.startsWith('person'))) { skip = true; break; }
+      }
+      if (skip) continue;
+      return h.distance;
+    }
+    return len;
+  }
+
   /** Close-up on an actor's face from a side (+1 their left, −1 their right). */
   closeUp(id, o = {}) {
     // head-and-shoulders, never a nose-to-lens extreme close-up
-    const side = o.side ?? 1, dist = Math.max(1.0, (o.dist ?? 0.75) * 1.35), h = o.h ?? 0.03, fov = Math.max(28, o.fov ?? 28);
+    const dist = Math.max(1.0, (o.dist ?? 0.75) * 1.35), h = o.h ?? 0.03, fov = Math.max(28, o.fov ?? 28);
+    let side = o.side ?? 1, pull = 1, decided = false;
+    const at = (a, sd, k) => {
+      const hp = this.headPos(id);
+      const q = a.ch.group.getWorldQuaternion(new THREE.Quaternion());
+      const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(q);
+      const left = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+      return hp.clone().addScaledVector(fwd, dist * k).addScaledVector(left, sd * dist * k * (o.angle ?? 0.45)).add(new THREE.Vector3(0, h, 0));
+    };
     return {
       pos: () => {
         const a = this.actors[id];
         if (!a) return this.camera.position.clone();   // not on stage: hold the shot
-        const hp = this.headPos(id);
-        const q = a.ch.group.getWorldQuaternion(new THREE.Quaternion());
-        const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(q);
-        const left = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
-        return hp.clone().addScaledVector(fwd, dist).addScaledVector(left, side * dist * (o.angle ?? 0.45)).add(new THREE.Vector3(0, h, 0));
+        if (!decided) {
+          // keep the face clear: if scenery sits between face and lens, take the other
+          // side; if both are blocked, come in closer than the obstruction
+          decided = true;
+          const hp = this.headPos(id);
+          const want = at(a, side, 1);
+          const full = hp.distanceTo(want);
+          const c1 = this.clearDist(hp, want);
+          if (c1 < full - 0.05) {
+            const alt = at(a, -side, 1);
+            const c2 = this.clearDist(hp, alt);
+            if (c2 >= full - 0.05) side = -side;
+            else {
+              if (c2 > c1) side = -side;
+              pull = Math.max(0.55, (Math.max(c1, c2) - 0.15) / full);
+            }
+          }
+        }
+        return at(a, side, pull);
       },
       look: () => (this.actors[id] ? this.headPos(id).add(new THREE.Vector3(0, -0.02, 0)) : this._look?.clone() || new THREE.Vector3()),
       fov, dofOn: this.actors[id] ? id : undefined, aperture: o.aperture ?? 9, drift: 0.006,

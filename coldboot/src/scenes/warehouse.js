@@ -105,7 +105,7 @@ registerScreen('warehouse', () => {
     d.cam({ pos: V(-1.2, 1.35, 1.6), look: V(-1.9, 1.15, 0), fov: 32, dofOn: 'dmitri', dur: 8 });
     await d.say('dmitri', 'w.dmitri.heroes');
     await d.say('nadia', 'w.nadia.quiet', { cam: d.closeUp('nadia', { side: -1, dist: 0.9 }) });
-    await d.say('valya', 'w.valya.end', { cam: d.closeUp('valya', { side: -1, dist: 0.9 }), emo: 'laugh' });
+    await d.say('valya', 'w.valya.end', { cam: d.closeUp('valya', { side: 1, dist: 0.9 }), emo: 'laugh' });
     // everyone laughs, the camera rises away
     for (const a of Object.values(d.actors)) { d._setEmo(a, 'laugh'); a.anim.lookAt = null; }
     d.cam({ pos: V(-6, 4.8, 5.8), look: V(0, 0.9, 0), fov: 40, dof: false, dur: 7 });
