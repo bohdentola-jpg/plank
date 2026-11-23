@@ -294,7 +294,7 @@ export class Vehicles {
       this.near = best;
       if (best) {
         if (!G.hud.prompt) G.hud.prompt = { action: 'vehicle', text: this.owns(best) ? best.label : best.id === 'truck' ? "Hank's truck — not yours (yet)" : 'Locked' };
-        if (input.pressed('vehicle') && this.owns(best)) this.enter(best);
+        if (input.pressed('vehicle') && this.owns(best) && !G.phone?.open && !G.cinematic) this.enter(best);
       }
     }
     if (this.driving) this._drive(dt, this.driving);

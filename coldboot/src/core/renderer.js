@@ -185,7 +185,7 @@ void main() {
 `;
 
 export const DEFAULT_POST = {
-  bloomStrength: 0.75,
+  bloomStrength: 0.45,
   bloomThreshold: 1.0,
   bloomKnee: 0.6,
   bloomRadius: 1.0,

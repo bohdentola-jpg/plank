@@ -104,7 +104,7 @@ registerScreen('town', () => {
     player.place(at.x, at.z, at.yaw ?? 0);
     G.player = player;
     orbit = new OrbitCamera(camera, world);
-    orbit.yaw = player.yaw;
+    orbit.snapBehind(player);
     G.orbit = orbit;
     hud = new HUD();
     G.hud = hud;
@@ -229,8 +229,9 @@ registerScreen('town', () => {
   async function fadeTeleport(p, dur = 1.2) {
     G.player.locked = true;
     await fade(1, dur * 0.4);
-    G.player.place(p.x, p.z, p.yaw ?? G.player.yaw);
-    orbit.yaw = G.player.yaw;
+    G.player.place(p.x, p.z, p.yaw ?? G.player.yaw, p.y);
+    orbit.snapBehind(G.player);
+    p.onBlack?.();
     await new Promise((r) => setTimeout(r, dur * 300));
     await fade(0, dur * 0.4);
     G.player.locked = false;
@@ -359,7 +360,7 @@ registerScreen('town', () => {
   return {
     heavy: true,
     async enter(params) {
-      game.renderer.setPost({ exposure: 1.05, bloomStrength: 0.75, vignette: 0.5, letterbox: 0 }, true);
+      game.renderer.setPost({ exposure: 1.05, bloomStrength: 0.42, vignette: 0.5, letterbox: 0 }, true);
       G.screen = this;
       await setup(params);
       ready = true;

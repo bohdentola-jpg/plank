@@ -41,17 +41,30 @@ export class Player {
     if (input.pressed('crouch') && !this.locked) this.crouch = !this.crouch;
     const mag = Math.min(1, Math.hypot(mx, my));
     this.moveIntent = mag;
+    // Speeds (m/s): a brisk jog by default, a sprint on Shift / R2, a walk when
+    // crouched or when the stick is only nudged. Indoors everything is gentler.
     const run = input.sprint && !this.crouch;
-    const target = mag < 0.05 ? 0 : (this.crouch ? 1.1 : run ? 4.2 : (input.keyboardMove ? 1.55 : 1.0 + 0.8 * mag)) * (input.keyboardMove ? 1 : Math.max(0.4, mag));
-    // desired direction, camera-relative
+    const SPEED = this.indoors ? { walk: 1.4, jog: 2.2, run: 3.2, crouch: 1.0 } : { walk: 1.6, jog: 3.4, run: 5.8, crouch: 1.2 };
+    let target = 0;
+    if (mag >= 0.05) {
+      if (this.crouch) target = SPEED.crouch * (input.keyboardMove ? 1 : Math.max(0.5, mag));
+      else if (run) target = SPEED.run;
+      else if (input.keyboardMove) target = SPEED.jog;
+      else target = mag < 0.55 ? SPEED.walk * Math.max(0.45, mag / 0.55) : SPEED.walk + (SPEED.jog - SPEED.walk) * ((mag - 0.55) / 0.45);
+    }
+    // desired direction, camera-relative; turn fast but smoothly
     if (mag > 0.05) {
       const a = Math.atan2(-mx, my) + camYaw + Math.PI; // camYaw = orbit yaw; its forward is yaw + π
       const want = wrap(a);
-      const turnRate = run ? 7 : 10;
-      this.yaw += clamp(wrap(want - this.yaw), -turnRate * dt, turnRate * dt);
-      this.anim.turn = clamp(wrap(want - this.yaw), -1, 1);
+      const diff = wrap(want - this.yaw);
+      // a hard reversal from standing turns on the spot quickly
+      const rate = this.speed < 0.8 ? 16 : run ? 8 : 11;
+      this.yaw = wrap(this.yaw + diff * Math.min(1, rate * dt));
+      this.anim.turn = clamp(diff, -1, 1);
+      // turning sharply while moving sheds a little speed (feet plant)
+      if (Math.abs(diff) > 1.6 && this.speed > 2) target = Math.min(target, this.speed * 0.6);
     } else this.anim.turn = 0;
-    this.speed = damp(this.speed, target, target > this.speed ? 6 : 9, dt);
+    this.speed = damp(this.speed, target, target > this.speed ? 7 : 10, dt);
     const dx = Math.sin(this.yaw) * this.speed * dt, dz = Math.cos(this.yaw) * this.speed * dt;
     const r = this.world.move(this.pos, dx, dz, this.radius, this.pos.y);
     // step up/down onto whatever is underfoot
@@ -80,37 +93,57 @@ export class OrbitCamera {
     this.camera = camera;
     this.world = world;
     this.yaw = Math.PI;       // camera's own yaw (looks down −Z at 0)
-    this.pitch = -0.18;
-    this.dist = 3.6;
-    this.curDist = 3.6;
+    this.pitch = -0.16;
+    this.dist = 3.4;
+    this.curDist = 3.4;
     this.target = new THREE.Vector3();
-    this.shoulder = 0.45;
+    this.pivotS = null;       // smoothed pivot (soaks up steps and bumps)
+    this.shoulder = 0.5;
     this.occluders = [];
     this._ray = new THREE.Raycaster();
     this._t = 0;
-    this.fovBase = 58;
+    this.sinceLook = 99;      // seconds since the player last steered the camera
+    this.fovBase = 56;
   }
 
   update(dt, player, opts = {}) {
     const sens = settings.get('lookSens') ?? 1;
     const inv = settings.get('invertY') ? -1 : 1;
-    this.yaw -= (input.mouseLook.dx * 0.0028 + input.look.x * dt * 2.6) * sens;
-    this.pitch -= (input.mouseLook.dy * 0.0028 + input.look.y * dt * 1.9) * sens * inv;
-    this.pitch = clamp(this.pitch, -1.05, 0.55);
-    // drift behind the player while running with no look input
+    const lx = input.mouseLook.dx * 0.0026 + input.look.x * dt * 2.8;
+    const ly = input.mouseLook.dy * 0.0026 + input.look.y * dt * 2.0;
+    this.yaw -= lx * sens;
+    this.pitch -= ly * sens * inv;
+    this.pitch = clamp(this.pitch, -1.0, 0.5);
+    if (Math.abs(input.look.x) > 0.05 || Math.abs(input.look.y) > 0.05 || Math.abs(input.mouseLook.dx) > 0.5 || Math.abs(input.mouseLook.dy) > 0.5) this.sinceLook = 0;
+    else this.sinceLook += dt;
+    // swing in behind the player while moving, once they've let go of the camera
     const veh = opts.vehicle;
-    if (player.speed > (veh ? 1.2 : 2.5) && Math.abs(input.look.x) < 0.05 && Math.abs(input.mouseLook.dx) < 0.5) {
+    const moving = player.speed > (veh ? 1.2 : 1.8);
+    if (moving && this.sinceLook > (veh ? 0.6 : 1.4)) {
       const behind = player.yaw + Math.PI;
-      this.yaw += wrap(behind - this.yaw) * Math.min(1, dt * (veh ? 2.2 : 0.8));
-      if (veh) this.pitch = damp(this.pitch, -0.2, 1.5, dt);
+      const ease = Math.min(1, (this.sinceLook - (veh ? 0.6 : 1.4)) * 0.8);
+      const rate = (veh ? 2.4 : 1.1) * ease * Math.min(1, player.speed / 4);
+      this.yaw += wrap(behind - this.yaw) * Math.min(1, dt * rate);
+      // and level out the pitch a little
+      this.pitch = damp(this.pitch, veh ? -0.2 : -0.14, 0.8 * ease, dt);
     }
-    const want = veh ? veh.model.length * 1.25 + 2 + Math.min(3, player.speed * 0.12) : opts.indoors ? 2.2 : player.crouch ? 2.8 : 3.6 + Math.min(1.2, player.speed * 0.15);
-    this.dist = damp(this.dist, want, 4, dt);
-    const h = veh ? veh.spec.eye - (player.pos.y - veh.pos.y) : player.crouch ? 1.15 : 1.55;
+    const want = veh ? veh.model.length * 1.25 + 2 + Math.min(3, player.speed * 0.12)
+      : opts.indoors ? 2.3 : player.crouch ? 2.8 : 3.4 + Math.min(1.0, player.speed * 0.14);
+    this.dist = damp(this.dist, want, 3, dt);
+    const h = veh ? veh.spec.eye - (player.pos.y - veh.pos.y) : player.crouch ? 1.15 : 1.58;
     this.target.set(player.pos.x, player.pos.y + h, player.pos.z);
     const dir = new THREE.Vector3(Math.sin(this.yaw) * Math.cos(this.pitch), -Math.sin(this.pitch), Math.cos(this.yaw) * Math.cos(this.pitch));
     const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
-    const pivot = this.target.clone().addScaledVector(right, this.shoulder * 0.5);
+    const shoulder = opts.indoors ? this.shoulder * 0.35 : this.shoulder * 0.5;
+    const pivotRaw = this.target.clone().addScaledVector(right, shoulder);
+    // smooth the pivot: horizontal follows tightly, vertical eases (steps, porches)
+    if (!this.pivotS || this.pivotS.distanceToSquared(pivotRaw) > 25) this.pivotS = pivotRaw.clone();
+    else {
+      this.pivotS.x = damp(this.pivotS.x, pivotRaw.x, 18, dt);
+      this.pivotS.z = damp(this.pivotS.z, pivotRaw.z, 18, dt);
+      this.pivotS.y = damp(this.pivotS.y, pivotRaw.y, 7, dt);
+    }
+    const pivot = this.pivotS;
     // pull in if something solid is between the pivot and the camera
     let d = this.dist;
     if (this.occluders.length) {
@@ -119,14 +152,22 @@ export class OrbitCamera {
       const hits = this._ray.intersectObjects(this.occluders, true);
       if (hits.length) d = Math.max(0.6, hits[0].distance - 0.3);
     }
-    this.curDist = d < this.curDist ? d : damp(this.curDist, d, 3, dt);
+    this.curDist = d < this.curDist ? d : damp(this.curDist, d, 2.5, dt);
     const cam = this.camera;
     cam.position.copy(pivot).addScaledVector(dir, this.curDist);
     const ground = this.world.groundNear(cam.position.x, cam.position.z, player.pos.y) + 0.3;
     if (cam.position.y < ground) cam.position.y = ground;
     cam.lookAt(pivot);
-    cam.fov = damp(cam.fov, this.fovBase + Math.min(8, player.speed * 1.2), 3, dt);
+    cam.fov = damp(cam.fov, this.fovBase + Math.min(7, Math.max(0, player.speed - 3) * 2.2), 2.5, dt);
     cam.updateProjectionMatrix();
+  }
+
+  /** Put the camera behind the player (after cutscenes and conversations). */
+  snapBehind(player, pitch = -0.14) {
+    this.yaw = player.yaw + Math.PI;
+    this.pitch = pitch;
+    this.pivotS = null;
+    this.sinceLook = 0;
   }
 
   /** World yaw the camera is looking along (for camera-relative input). */

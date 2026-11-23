@@ -256,7 +256,7 @@ registerScreen('plane', () => {
   return {
     heavy: true,
     async enter() {
-      game.renderer.setPost({ exposure: 1.1, bloomStrength: 0.8, vignette: 0.65, saturation: 0.95, grain: 0.05, letterbox: 0, lift: [0.01, 0.012, 0.02] }, true);
+      game.renderer.setPost({ exposure: 1.1, bloomStrength: 0.5, vignette: 0.65, saturation: 0.95, grain: 0.05, letterbox: 0, lift: [0.01, 0.012, 0.02] }, true);
       scene.environment = getEnvMap(game.renderer.gl, 'night');
       scene.environmentIntensity = 0.3;
       sky = createSky();

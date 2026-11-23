@@ -610,10 +610,10 @@ registerScreen('finale', () => {
   }
   function postFor(which, letterbox) {
     const P = which === 'outside'
-      ? { exposure: 1.15, bloomStrength: 0.95, vignette: 0.6, saturation: 1.0, lift: [0.0, 0.01, 0.02], grain: 0.05, letterbox: 0 }
+      ? { exposure: 1.15, bloomStrength: 0.55, vignette: 0.6, saturation: 1.0, lift: [0.0, 0.01, 0.02], grain: 0.05, letterbox: 0 }
       : which === 'inside'
-        ? { exposure: 1.05, bloomStrength: 0.85, bloomThreshold: 1.1, vignette: 0.7, saturation: 0.92, contrast: 1.06, lift: [0.012, 0.008, 0.012], gain: [1.02, 0.98, 0.94], grain: 0.05, letterbox: 1 }
-        : { exposure: 1.0, bloomStrength: 1.0, vignette: 0.62, saturation: 1.08, contrast: 1.04, gain: [1.05, 0.98, 0.9], grain: 0.04, letterbox: 1 };
+        ? { exposure: 1.05, bloomStrength: 0.5, bloomThreshold: 1.1, vignette: 0.7, saturation: 0.92, contrast: 1.06, lift: [0.012, 0.008, 0.012], gain: [1.02, 0.98, 0.94], grain: 0.05, letterbox: 1 }
+        : { exposure: 1.0, bloomStrength: 0.6, vignette: 0.62, saturation: 1.08, contrast: 1.04, gain: [1.05, 0.98, 0.9], grain: 0.04, letterbox: 1 };
     if (letterbox !== undefined) P.letterbox = letterbox;
     game.renderer.setPost(P, true);
   }

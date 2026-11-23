@@ -33,20 +33,20 @@ export class Dialog {
       async say(who, line, opts = {}) {
         const a = d.actors[who];
         if (a && who !== 'player') {
-          // reverse shot: over the player's shoulder onto the speaker
-          d.cam(d.overShoulder('player', who, { side: (s.stats.playSeconds | 0) % 2 ? 1 : -1, fov: 30 }));
+          // over the player's shoulder onto the speaker (same side of the line all conversation)
+          if (self._shot !== who) { self._shot = who; d.cam(d.overShoulder('player', who, { side: self.side, fov: 30 })); }
         }
         await d.say(who, line, { radio: opts.radio, emo: opts.emo, listeners: [] });
       },
       async you(text) {
-        d.cam(d.overShoulder(id, 'player', { fov: 32 }));
+        if (id && self._shot !== 'player') { self._shot = 'player'; d.cam(d.overShoulder(id, 'player', { side: -self.side, fov: 32 })); }
         self.youLine = { s: text, t: 0 };
         await d.wait(Math.min(3.2, 0.9 + text.length / 28));
       },
       async choose(opts, o) {
         const list = opts.filter((x) => typeof x === 'string' || !x.when || x.when());
         const labels = list.map((x) => (typeof x === 'string' ? x : x.label));
-        d.cam(d.overShoulder(id, 'player', { fov: 34 }));
+        if (id && self._shot !== 'player') { self._shot = 'player'; d.cam(d.overShoulder(id, 'player', { side: -self.side, fov: 34 })); }
         const i = await d.choose(labels, o);
         const pick = list[i];
         return typeof pick === 'string' ? opts.indexOf(pick) : (pick.key ?? opts.indexOf(pick));
@@ -99,7 +99,15 @@ export class Dialog {
     d.addActor(npc.id, npc.ch, npc.anim, { external: true });
     npc.anim.lookAt = d.headPos('player');
     P.anim.lookAt = d.headPos(npc.id);
-    d.cam(d.overShoulder('player', npc.id, { fov: 30 }));
+    // keep the camera on the side of the line it's already on: no jump across the pair
+    const toNpc = Math.atan2(npc.pos.x - P.pos.x, npc.pos.z - P.pos.z);
+    const camRight = Math.sin((G.orbit?.lookYaw ?? toNpc) - toNpc) > 0;
+    this.side = camRight ? 1 : -1;
+    this._shot = npc.id;
+    game.renderer.tweakPost({ letterbox: 1 });
+    G.hud.prompt = null;
+    // ease from the gameplay camera into the first shot
+    d.cam({ ...d.overShoulder('player', npc.id, { side: this.side, fov: 30 }), dur: 0.55 });
     try {
       await fn(this._ctx(npc));
     } catch (e) { console.error(e); }
@@ -111,6 +119,8 @@ export class Dialog {
     G.player.locked = false;
     G.cinematic = false;
     game.renderer.dof = null;
+    game.renderer.tweakPost({ letterbox: 0 });
+    G.orbit?.snapBehind(P);
     this.active = null;
     G.state.met[npc.id] = true;
   }
@@ -129,18 +139,27 @@ export class Dialog {
   update(dt) { if (this.youLine) this.youLine.t += dt; }
 }
 
-/** Subtitle-style "YOU:" line for the silent protagonist (drawn by the town screen). */
+/** The silent protagonist's line, in the subtitle style (drawn by the town screen). */
 export function drawYou(ctx, d, W, H, text) {
   const y = d.youLine;
   if (!y) return;
   if (y.t > 3.4) { d.youLine = null; return; }
   const a = Math.min(1, y.t * 5) * Math.min(1, (3.4 - y.t) * 3);
+  const boxed = game.renderer.post.letterbox > 0.5;
+  const base = boxed ? H - 104 : H - 64;
   ctx.save();
   ctx.globalAlpha = Math.max(0, a);
-  ctx.fillStyle = 'rgba(0,0,0,0.42)';
-  ctx.fillRect(W / 2 - 420, H - 168, 840, 66);
-  text(ctx, 'YOU', W / 2, H - 146, { size: 15, weight: 800, color: '#9fe8b0', align: 'center', spacing: 3 });
-  text(ctx, y.s, W / 2, H - 116, { size: 22, weight: 600, color: '#f4f6f8', align: 'center' });
+  ctx.translate(W / 2, base - 14);
+  ctx.scale(1, 0.12);
+  const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, 520);
+  gr.addColorStop(0, 'rgba(0,0,0,0.38)'); gr.addColorStop(0.6, 'rgba(0,0,0,0.24)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = gr;
+  ctx.fillRect(-520, -520, 1040, 1040);
+  ctx.restore();
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, a);
+  text(ctx, 'YOU', W / 2, base - 28, { size: 12, weight: 600, color: '#a9d4b2', align: 'center', spacing: 2.5 });
+  text(ctx, y.s, W / 2, base, { size: 23, weight: 500, color: '#f6f7f8', align: 'center' });
   ctx.restore();
 }
 

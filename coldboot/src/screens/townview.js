@@ -17,7 +17,7 @@ registerScreen('townview', () => {
   return {
     heavy: true,
     async enter(p) {
-      game.renderer.setPost({ exposure: 1.05, bloomStrength: 0.8, vignette: 0.55 }, true);
+      game.renderer.setPost({ exposure: 1.05, bloomStrength: 0.45, vignette: 0.55 }, true);
       sky = createSky();
       scene.add(sky.mesh);
       env = new Environment(scene, sky, { hour: +(p.hour ?? 22) });

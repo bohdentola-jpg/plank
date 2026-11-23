@@ -14,6 +14,7 @@ import { voice } from '../audio/voice.js';
 import { getEnvMap } from '../core/envmap.js';
 import { store } from '../core/settings.js';
 import { text, W, H, C } from '../core/ui.js';
+import { DAYS } from '../game/state.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
@@ -121,7 +122,7 @@ registerScreen('warehouse', () => {
     heavy: true,
     async enter() {
       game.renderer.setPost({
-        exposure: 1.05, bloomStrength: 0.85, bloomThreshold: 1.1, vignette: 0.7, saturation: 0.92, contrast: 1.06,
+        exposure: 1.05, bloomStrength: 0.5, bloomThreshold: 1.1, vignette: 0.7, saturation: 0.92, contrast: 1.06,
         lift: [0.012, 0.008, 0.012], gain: [1.02, 0.98, 0.94], grain: 0.05, letterbox: 1,
       }, true);
       scene.background = new THREE.Color(0x020304);
@@ -181,8 +182,11 @@ registerScreen('warehouse', () => {
         if (a > 0) {
           ctx.save();
           ctx.globalAlpha = a;
-          text(ctx, 'БЕЛЫЙ МЫС', 90, 200, { size: 46, weight: 900, color: '#ffffff', spacing: 6, glow: 14, glowColor: 'rgba(255,90,70,0.7)', italic: true });
-          text(ctx, 'BELY MYS, CHUKOTKA  ·  14 DAYS BEFORE THE WORM WAKES', 92, 236, { size: 16, weight: 700, color: C.dim, spacing: 3 });
+          // a film location card, bottom-left inside the frame
+          const words = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen'];
+          text(ctx, 'Bely Mys, Chukotka', 96, H - 172, { size: 30, weight: 300, color: '#ffffff', spacing: 1 });
+          text(ctx, 'БЕЛЫЙ МЫС', 98, H - 144, { size: 12, weight: 500, color: C.dim, spacing: 6 });
+          text(ctx, `${words[DAYS] || DAYS} days before the worm wakes`, 98, H - 120, { size: 15, weight: 400, color: '#c9cfd5' });
           ctx.restore();
         }
       }

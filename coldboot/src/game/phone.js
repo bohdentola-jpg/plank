@@ -98,6 +98,11 @@ export class Phone {
         G.sfx?.ui?.('select');
       }
       if (input.pressed('replay')) { const p = G.player.pos; this.map.x = p.x; this.map.z = p.z; }
+      if (input.pressed('travel') || (input.device === 'pad' && input.pressed('alt'))) {
+        input.consume('vehicle'); input.consume('alt');
+        this._travel();
+        return;
+      }
     } else {
       if (input.pressed('up')) this.sel = Math.max(0, this.sel - 1);
       if (input.pressed('down')) this.sel++;
@@ -145,10 +150,32 @@ export class Phone {
     ctx.restore();
     ctx.restore();
     const hs = [['tabL', ''], ['tabR', 'APPS']];
-    if (this.app === 'map') hs.push(['move', 'PAN'], ['extra', 'ZOOM'], ['confirm', 'WAYPOINT']);
+    if (this.app === 'map') hs.push(['move', 'PAN'], ['extra', 'ZOOM'], ['confirm', 'WAYPOINT'], ['travel', G.hud.waypoint ? 'GO TO WAYPOINT' : 'GO TO OBJECTIVE']);
     else hs.push(['ud', 'SCROLL']);
     hs.push(['phone', 'CLOSE']);
     hints(ctx, hs, { x: PX - 24 });
+  }
+
+  /** Quick travel: walk there in a fade (a few minutes pass). */
+  _travel() {
+    const G = this.G;
+    const dest = G.hud.waypoint || G.hud.objective?.target;
+    if (!dest) { G.hud.toast('NOWHERE TO GO', 'Drop a waypoint on the map, or follow an objective', C.dim); return; }
+    if (G.vehicles?.driving) { G.hud.toast('DRIVING', 'Get out of the vehicle first', C.dim); return; }
+    if (G.dialog?.active || G.cinematic || G.overlay) return;
+    const P = G.player.pos;
+    const dist = Math.hypot(dest.x - P.x, dest.z - P.z);
+    if (dist < 40) { G.hud.toast('ALREADY CLOSE', `${Math.round(dist)} m away — just walk`, C.dim); return; }
+    // arrive a few metres short, on the side you're coming from
+    const a = Math.atan2(P.x - dest.x, P.z - dest.z);
+    const x = dest.x + Math.sin(a) * 3, z = dest.z + Math.cos(a) * 3;
+    this.close();
+    G.sfx?.ui?.('select');
+    const mins = Math.min(20, Math.round(dist / 3.4 / 60) + 2);
+    G.fadeTeleport?.({
+      x, z, yaw: Math.atan2(dest.x - x, dest.z - z), y: dest.y,
+      onBlack: () => { G.state.hour = Math.min(23.9, G.state.hour + mins / 60); },
+    }, 1.4);
   }
 
   // -------------------------------------------------------------------- apps
