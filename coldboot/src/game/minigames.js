@@ -36,7 +36,7 @@ export class Minigames {
     const c = this.cur;
     this.cur = null;
     this.G.player.locked = false;
-    this.G.hud.toast(ok ? 'NICE WORK' : 'GOOD ENOUGH', c.spec.title || c.kind.toUpperCase(), ok ? '#9fe8b0' : '#ffb21e');
+    this.G.hud.toast(ok ? 'NICE WORK' : 'GOOD ENOUGH', c.spec.title || c.kind.toUpperCase(), ok ? '#a9d4b2' : '#e7a740');
     c.resolve(ok);
   }
 

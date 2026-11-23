@@ -3,10 +3,12 @@
 import { store } from '../core/settings.js';
 
 export const DAYS = 14;
+// Bump when the story changes shape: older saves are then ignored, not half-loaded.
+export const SAVE_VERSION = 1;
 
 export function newState(profile) {
   return {
-    version: 1,
+    version: SAVE_VERSION,
     name: profile?.name || 'Sam',
     day: 1,
     hour: 10.5,
@@ -32,8 +34,14 @@ export const game$ = { s: null };
 
 export function loadGame() {
   const s = store.load('save0');
-  game$.s = s && s.version === 1 ? s : null;
+  game$.s = s && s.version === SAVE_VERSION ? s : null;
   return game$.s;
+}
+
+/** Is there a save this version of the game can continue? */
+export function hasSave() {
+  const s = store.load('save0');
+  return !!(s && s.version === SAVE_VERSION && !s.flags?.finished);
 }
 
 export function saveGame() {

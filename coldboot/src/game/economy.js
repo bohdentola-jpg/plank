@@ -63,19 +63,19 @@ export class Economy {
       draw(ctx) {
         panel(ctx, 340, 90, 600, 120 + list.length * 38, { accentLen: 200 });
         vText(ctx, def.name, 370, 132, 22, { color: '#fff', weight: 0.16 });
-        text(ctx, `$${Math.floor(s.money)}`, 910, 132, { size: 18, weight: 800, color: '#9fe8b0', align: 'right' });
+        text(ctx, `$${Math.floor(s.money)}`, 910, 132, { size: 18, weight: 800, color: '#a9d4b2', align: 'right' });
         list.forEach(([item, price], i) => {
           const y = 170 + i * 38;
           const on = i === sel;
           if (on) { ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(360, y - 24, 560, 34); }
           text(ctx, ITEMS[item] || item, 380, y, { size: 17, weight: on ? 800 : 600, color: on ? '#fff' : C.dim });
           text(ctx, `owned ${s.inv[item] || 0}`, 760, y, { size: 13, weight: 600, color: C.faint, align: 'right' });
-          text(ctx, `$${price}`, 900, y, { size: 17, weight: 800, color: s.money >= price ? '#ffd166' : C.red, align: 'right' });
+          text(ctx, `$${price}`, 900, y, { size: 17, weight: 800, color: s.money >= price ? '#e7a740' : C.red, align: 'right' });
         });
         const y = 170 + list.length * 38;
         if (sel === list.length) { ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(360, y - 24, 560, 34); }
         text(ctx, 'Done', 380, y, { size: 17, weight: 700, color: C.dim });
-        if (msg) text(ctx, msg, 640, y + 46, { size: 15, weight: 700, color: flash > 0 ? '#ffd166' : C.dim, align: 'center' });
+        if (msg) text(ctx, msg, 640, y + 46, { size: 15, weight: 700, color: flash > 0 ? '#e7a740' : C.dim, align: 'center' });
         if (def.watched) text(ctx, 'Every purchase here is logged to your loyalty profile. Smile!', 640, y + 72, { size: 13, color: C.accent, align: 'center', italic: true });
         hints(ctx, [['ud', 'SELECT'], ['confirm', 'BUY'], ['back', 'LEAVE']]);
       },
@@ -157,14 +157,14 @@ export class Economy {
         vText(ctx, own ? "RUNNING KOSHKIN'S" : "THE TILL AT KOSHKIN'S", 330, 154, 22, { color: '#fff', weight: 0.16 });
         if (phase === 'price') {
           text(ctx, 'Set today\'s prices against NORTHSTAR 24 across the square.', 330, 200, { size: 16, color: '#e8f0e8' });
-          text(ctx, `Markup: ${(markup * 100).toFixed(0)}%`, 640, 270, { size: 30, weight: 900, color: markup > 1.15 ? C.red : markup < 0.95 ? C.green : '#ffd166', align: 'center' });
+          text(ctx, `Markup: ${(markup * 100).toFixed(0)}%`, 640, 270, { size: 30, weight: 900, color: markup > 1.15 ? C.red : markup < 0.95 ? C.green : '#e7a740', align: 'center' });
           text(ctx, markup > 1.15 ? 'More profit per sale — but customers may walk to Northstar.' : markup < 0.95 ? 'Cheaper than Northstar. People will notice. Thin margins.' : 'Fair prices. Koshkin would approve.', 640, 310, { size: 15, color: C.dim, align: 'center' });
           hints(ctx, [['lr', 'ADJUST'], ['confirm', 'OPEN THE DOORS']]);
           return;
         }
         if (phase === 'done') {
           text(ctx, `Customers served: ${right} right${lost ? `, ${lost} lost to Northstar` : ''}.`, 330, 220, { size: 18, weight: 700, color: '#fff' });
-          text(ctx, own ? `Profit today: $${Math.round(earned)}` : `Wages: $${Math.round(earned)}`, 330, 260, { size: 24, weight: 900, color: '#9fe8b0' });
+          text(ctx, own ? `Profit today: $${Math.round(earned)}` : `Wages: $${Math.round(earned)}`, 330, 260, { size: 24, weight: 900, color: '#a9d4b2' });
           hints(ctx, [['confirm', 'CLOSE UP']]);
           return;
         }
@@ -218,14 +218,14 @@ export class Economy {
         ctx.fillStyle = '#20262c'; ctx.fillRect(290, 300, 700, 60);
         fish.forEach((f, i) => {
           const x = 290 + f.x * 700;
-          ctx.fillStyle = i === 0 ? '#ffd166' : '#9ab';
+          ctx.fillStyle = i === 0 ? '#e7a740' : '#9ab';
           ctx.beginPath(); ctx.ellipse(x, 330, 34, 13, 0, 0, Math.PI * 2); ctx.fill();
           if (i === 0) text(ctx, f.k[0], x, 290, { size: 15, weight: 800, color: '#fff', align: 'center' });
         });
         text(ctx, '←  KEEP (salmon, halibut, pollock)', 300, 410, { size: 15, weight: 700, color: C.green });
         text(ctx, 'REJECT (damaged, bycatch, junk)  →', 980, 410, { size: 15, weight: 700, color: C.red, align: 'right' });
         text(ctx, `sorted ${score}  ·  mistakes ${miss}`, 640, 460, { size: 15, color: C.dim, align: 'center' });
-        if (done) { text(ctx, `Shift over — $${Math.round(30 + score * 3.2)}`, 640, 250, { size: 26, weight: 900, color: '#9fe8b0', align: 'center' }); hints(ctx, [['confirm', 'CLOCK OUT']]); }
+        if (done) { text(ctx, `Shift over — $${Math.round(30 + score * 3.2)}`, 640, 250, { size: 26, weight: 900, color: '#a9d4b2', align: 'center' }); hints(ctx, [['confirm', 'CLOCK OUT']]); }
       },
     });
   }
@@ -252,7 +252,7 @@ export class Economy {
       draw(ctx) {
         panel(ctx, 300, 140, 680, 380, { accentLen: 220 });
         vText(ctx, 'KZRY 88.9 — YOU\'RE ON THE AIR', 330, 184, 22, { color: '#fff', weight: 0.16 });
-        if (done) { text(ctx, `Good show. Listeners happy: ${score}/${calls.length}. $${25 + score * 8}`, 640, 300, { size: 20, weight: 800, color: '#9fe8b0', align: 'center' }); hints(ctx, [['confirm', 'SIGN OFF']]); return; }
+        if (done) { text(ctx, `Good show. Listeners happy: ${score}/${calls.length}. $${25 + score * 8}`, 640, 300, { size: 20, weight: 800, color: '#a9d4b2', align: 'center' }); hints(ctx, [['confirm', 'SIGN OFF']]); return; }
         const c = calls[i];
         text(ctx, `Caller: ${c[0]}`, 330, 230, { size: 17, weight: 800, color: C.accent });
         text(ctx, `"Play ${c[1]}."`, 330, 262, { size: 18, weight: 600, color: '#fff', italic: true });
@@ -274,7 +274,7 @@ export class Economy {
     if (s.repairs[id]) return true;
     const need = Object.entries(R.materials || {}).filter(([k, n]) => (s.inv[k] || 0) < n);
     if (need.length) {
-      G.hud.toast('MATERIALS NEEDED', need.map(([k, n]) => `${ITEMS[k] || k} ×${n - (s.inv[k] || 0)}`).join(', '), '#ffb21e');
+      G.hud.toast('MATERIALS NEEDED', need.map(([k, n]) => `${ITEMS[k] || k} ×${n - (s.inv[k] || 0)}`).join(', '), '#e7a740');
       return false;
     }
     for (const mg of R.minigames || ['hammer']) await G.minigames.run(mg, { title: R.name.toUpperCase() });
@@ -283,7 +283,7 @@ export class Economy {
     s.stats.repairs++;
     s.spirit += R.spirit || 5;
     if (R.pay) s.money += R.pay;
-    G.hud.toast('FIXED', `${R.name}${R.pay ? `  +$${R.pay}` : ''}  ·  Town Spirit +${R.spirit || 5}`, '#ffd166');
+    G.hud.toast('FIXED', `${R.name}${R.pay ? `  +$${R.pay}` : ''}  ·  Town Spirit +${R.spirit || 5}`, '#e7a740');
     // the building looks better for every project done on it
     if (R.building && G.town.rebuild) {
       const REP = (await import('../data/script/side_town.js')).REPAIRS;

@@ -8,7 +8,7 @@ import { input } from '../core/input.js';
 import { C, W, H, text, hints, vText, hit } from '../core/ui.js';
 import { createSky } from '../world/sky.js';
 import { createSnow } from '../world/snow.js';
-import { store } from '../core/settings.js';
+import { hasSave as saveExists } from '../game/state.js';
 import { sfx } from '../audio/sfx.js';
 import { music } from '../audio/music.js';
 import { audio } from '../audio/audio.js';
@@ -113,7 +113,7 @@ registerScreen('title', () => {
   let phase = 'press';
   let sel = 0;
   let menuT = 0;
-  const hasSave = !!store.load('save0');
+  const hasSave = saveExists();
   const items = MENU.filter((m) => m.id !== 'continue' || hasSave);
   return {
     heavy: false,

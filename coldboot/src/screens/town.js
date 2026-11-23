@@ -284,6 +284,7 @@ registerScreen('town', () => {
     await line;
     await d.wait(0.8);
     game.renderer.tweakPost({ letterbox: 0 });
+    orbit.snapBehind(G.player);
     G.cinematic = false;
     G.player.locked = false;
     game.renderer.dof = null;
@@ -341,6 +342,7 @@ registerScreen('town', () => {
     G.player.anim.setPosture('stand');
     game.renderer.tweakPost({ letterbox: 0 });
     game.renderer.dof = null;
+    orbit.snapBehind(G.player);
     G.cinematic = false;
     G.player.locked = false;
   }

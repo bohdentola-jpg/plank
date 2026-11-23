@@ -234,7 +234,7 @@ export class Phone {
         i ? ctx.lineTo(a, bb) : ctx.moveTo(a, bb);
       });
       ctx.closePath();
-      ctx.fillStyle = b.color ? '#36b8d8' : '#8a96a2';
+      ctx.fillStyle = b.color ? '#6f9fb8' : '#8a96a2';
       ctx.fill();
     }
     if (m.zoom >= 1) {
@@ -255,7 +255,7 @@ export class Phone {
     for (const [id, npc] of G.npcs?.list || []) {
       if (!s.met?.[id] || relLevel(s, id) < 1 || !npc.pos || npc.hidden) continue;
       const [a, b] = tf(npc.pos.x, npc.pos.z);
-      ctx.fillStyle = CAST[id]?.color || '#ffd166';
+      ctx.fillStyle = CAST[id]?.color || '#e7a740';
       ctx.beginPath(); ctx.arc(a, b, 5, 0, 7); ctx.fill();
       ctx.strokeStyle = '#1a2430'; ctx.lineWidth = 1.5; ctx.stroke();
       if (m.zoom >= 1) text(ctx, CAST[id]?.short || id, a + 8, b + 4, { size: 10, weight: 800, color: '#1a2430', shadow: false });
@@ -264,7 +264,7 @@ export class Phone {
     const o = G.hud.objective?.target;
     if (o) this._diamond(ctx, ...tf(o.x, o.z), '#e8a000');
     const wp = G.hud.waypoint;
-    if (wp) this._diamond(ctx, ...tf(wp.x, wp.z), '#a050e0');
+    if (wp) this._diamond(ctx, ...tf(wp.x, wp.z), '#9a84c8');
     const p = G.player.pos;
     const [px, py] = tf(p.x, p.z);
     ctx.save();
@@ -304,8 +304,8 @@ export class Phone {
     const nh = CHALLENGE_ORDER.filter((c) => s.challenges[c]).length;
     rows.push({ kind: 'meter', text: `Field hacks  ${nh} / ${CHALLENGE_ORDER.length}`, v: nh / CHALLENGE_ORDER.length, color: C.green });
     rows.push({ kind: 'head', text: 'STANDING' });
-    rows.push({ kind: 'meter', text: `Town Spirit  ${Math.round(s.spirit)}`, v: Math.min(1, s.spirit / 200), color: '#ffd166' });
-    rows.push({ kind: 'meter', text: `Political standing  ${Math.round(s.standing)}`, v: Math.min(1, s.standing / 100), color: '#7fe6ff' });
+    rows.push({ kind: 'meter', text: `Town Spirit  ${Math.round(s.spirit)}`, v: Math.min(1, s.spirit / 200), color: '#e7a740' });
+    rows.push({ kind: 'meter', text: `Political standing  ${Math.round(s.standing)}`, v: Math.min(1, s.standing / 100), color: '#9dbbd0' });
     rows.push({ kind: 'meter', text: `Northstar attention  ${Math.round(s.attention)}%`, v: s.attention / 100, color: C.red });
     rows.push({ kind: 'note', text: `${Object.keys(s.missions.done).length} things done since you landed.` });
     this._list(ctx, rows, 58, (r, x, y) => {
@@ -315,13 +315,13 @@ export class Phone {
         text(ctx, DOW[(s.day - 1) % 7], x + 110, y + 30, { size: 16, weight: 700, color: C.dim });
         text(ctx, left > 0 ? `Wormwood wakes in ${left} day${left === 1 ? '' : 's'}` : 'Wormwood wakes at dawn', x, y + 50, { size: 12, weight: 800, color: left <= 3 ? C.red : C.dim });
       } else if (r.kind === 'now') {
-        text(ctx, 'NOW', x, y + 18, { size: 11, weight: 800, color: '#ffd166', spacing: 2 });
+        text(ctx, 'NOW', x, y + 18, { size: 11, weight: 800, color: '#e7a740', spacing: 2 });
         text(ctx, r.text, x, y + 38, { size: 16, weight: 700, color: '#fff' });
         if (r.sub) text(ctx, r.sub, x, y + 54, { size: 12, color: C.dim });
       } else if (r.kind === 'head') {
         text(ctx, r.text, x, y + 40, { size: 12, weight: 800, color: C.accent, spacing: 3 });
       } else if (r.kind === 'mission') {
-        text(ctx, (r.main ? '◆ ' : '· ') + r.text, x, y + 34, { size: 16, weight: 700, color: r.main ? '#ffd166' : '#e8eef4' });
+        text(ctx, (r.main ? '◆ ' : '· ') + r.text, x, y + 34, { size: 16, weight: 700, color: r.main ? '#e7a740' : '#e8eef4' });
       } else if (r.kind === 'meter') {
         text(ctx, r.text, x, y + 24, { size: 14, weight: 700, color: '#e8eef4' });
         statBar(ctx, x, y + 34, SW - 40, 8, r.v, { color: r.color });
@@ -340,12 +340,12 @@ export class Phone {
       ctx.beginPath(); ctx.arc(x + 14, y + 28, 12, 0, 7); ctx.fill();
       text(ctx, (CAST[id].short || CAST[id].name)[0], x + 14, y + 33, { size: 13, weight: 800, color: '#0a1018', align: 'center', shadow: false });
       text(ctx, CAST[id].name, x + 38, y + 24, { size: 16, weight: 700, color: on ? '#fff' : '#e8eef4' });
-      text(ctx, REL_NAMES[L], x + 38, y + 44, { size: 12, weight: 800, color: L >= 3 ? '#ffd166' : C.dim, spacing: 1 });
+      text(ctx, REL_NAMES[L], x + 38, y + 44, { size: 12, weight: 800, color: L >= 3 ? '#e7a740' : C.dim, spacing: 1 });
       for (let i = 0; i < 5; i++) {
-        ctx.fillStyle = i < L ? '#ff8aa0' : 'rgba(255,255,255,0.12)';
+        ctx.fillStyle = i < L ? '#d9a3a8' : 'rgba(255,255,255,0.12)';
         ctx.fillRect(x + SW - 140 + i * 22, y + 16, 16, 6);
       }
-      if (L < 5) statBar(ctx, x + SW - 140, y + 32, 104, 5, (pts % 20) / 20, { color: '#ff8aa0', segments: 10 });
+      if (L < 5) statBar(ctx, x + SW - 140, y + 32, 104, 5, (pts % 20) / 20, { color: '#d9a3a8', segments: 10 });
     });
   }
 
@@ -358,7 +358,7 @@ export class Phone {
     });
     all.sort((a, b) => (a.done - b.done) || (b.open - a.open));
     const doneN = all.filter((x) => x.done).length;
-    text(ctx, `TOWN SPIRIT  ${Math.round(s.spirit)}`, SX + 12, SY + 22, { size: 13, weight: 800, color: '#ffd166', spacing: 2 });
+    text(ctx, `TOWN SPIRIT  ${Math.round(s.spirit)}`, SX + 12, SY + 22, { size: 13, weight: 800, color: '#e7a740', spacing: 2 });
     text(ctx, `${doneN} of ${all.length} projects done`, SX + SW - 12, SY + 22, { size: 12, weight: 700, color: C.dim, align: 'right' });
     ctx.save();
     ctx.translate(0, 34);
@@ -373,13 +373,13 @@ export class Phone {
 
   _wallet(ctx) {
     const s = this.G.state;
-    vText(ctx, `$${Math.floor(s.money)}`, SX + 14, SY + 44, 34, { color: '#9fe8b0', weight: 0.17 });
+    vText(ctx, `$${Math.floor(s.money)}`, SX + 14, SY + 44, 34, { color: '#a9d4b2', weight: 0.17 });
     text(ctx, 'Cash. Northstar takes cards; you pay cash.', SX + 14, SY + 70, { size: 12, color: C.dim, italic: true });
     const rows = Object.entries(s.inv || {}).filter(([, n]) => n > 0);
     ctx.save();
     ctx.translate(0, 90);
     this._list(ctx, rows, 34, ([k, n], x, y, on) => {
-      text(ctx, SPECIAL[k] || ITEMS[k] || k, x, y + 22, { size: 15, weight: 700, color: SPECIAL[k] ? '#ffd166' : on ? '#fff' : '#e8eef4' });
+      text(ctx, SPECIAL[k] || ITEMS[k] || k, x, y + 22, { size: 15, weight: 700, color: SPECIAL[k] ? '#e7a740' : on ? '#fff' : '#e8eef4' });
       if (!SPECIAL[k] || n > 1) text(ctx, `× ${n}`, x + SW - 40, y + 22, { size: 14, weight: 800, color: C.dim, align: 'right' });
     });
     ctx.restore();
