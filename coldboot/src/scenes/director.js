@@ -241,9 +241,13 @@ export class Director {
         if (!this.actors[from] || !this.actors[to]) return this.camera.position.clone();
         if (far()) return cu.pos();
         const a = this.headPos(from), b = this.headPos(to);
+        const gap = a.distanceTo(b);
         const dir = b.clone().sub(a).normalize();
         const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
-        return a.clone().addScaledVector(dir, -0.45).addScaledVector(right, (o.side ?? 1) * 0.32).add(new THREE.Vector3(0, 0.1, 0));
+        // people standing close (a shop counter): step back and wider, so the near
+        // head is a shoulder at the edge of frame, not half the picture
+        const close = Math.max(0, 1.5 - gap);
+        return a.clone().addScaledVector(dir, -(0.45 + close * 0.6)).addScaledVector(right, (o.side ?? 1) * (0.32 + close * 0.25)).add(new THREE.Vector3(0, 0.1, 0));
       },
       look: () => {
         if (this.actors[to] && far()) return cu.look();

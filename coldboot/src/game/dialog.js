@@ -107,6 +107,9 @@ export class Dialog {
       d.addActor('player', P.ch, P.anim, { external: true });
       if (npc.ch && npc.anim) {
         npc.ch.group.visible = true;
+        // they turn to you now, not over the first line (the first shot must see a face)
+        npc.yaw = Math.atan2(P.pos.x - npc.pos.x, P.pos.z - npc.pos.z);
+        npc.ch.group.rotation.y = npc.yaw;
         d.addActor(npc.id, npc.ch, npc.anim, { external: true });
         npc.anim.lookAt = d.headPos('player');
         P.anim.lookAt = d.headPos(npc.id);
