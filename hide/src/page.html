@@ -1,0 +1,86 @@
+<title>%%TITLE%%</title>
+<meta name="description" content="A first-person horror game about hiding. Make it to 6 AM." />
+<meta name="theme-color" content="#050607" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,500;1,300&family=IBM+Plex+Mono:wght@300;400;500&display=swap" />
+<style>
+%%CSS%%
+</style>
+<!--BODY-->
+<div id="game" class="%%PLATFORM%%">
+  <canvas id="view"></canvas>
+  <div id="fx-vignette"></div>
+  <div id="fx-grain"></div>
+  <div id="fx-hurt"></div>
+  <div id="fx-fade"></div>
+
+  <div id="hud" hidden>
+    <div id="clock"><span id="clock-time">12:00</span><span id="clock-ampm">AM</span></div>
+    <div id="status">
+      <div id="lantern-row"><span class="lbl">lantern</span><span class="bar"><i id="lantern-bar"></i></span></div>
+      <div id="carry"></div>
+    </div>
+    <div id="crosshair"></div>
+    <div id="prompt"></div>
+    <div id="breathbar"><i></i></div>
+    <div id="msg"></div>
+  </div>
+
+  <div id="touch" hidden>
+    <div id="touch-surface"></div>
+    <div id="stick"><div id="knob"></div></div>
+    <button class="tbtn" data-btn="pause" id="t-pause" aria-label="Pause">II</button>
+    <button class="tbtn big" data-btn="use" id="t-use">use</button>
+    <button class="tbtn big" data-btn="breath" id="t-breath">hold<br />breath</button>
+    <button class="tbtn" data-btn="run" id="t-run">run</button>
+    <button class="tbtn" data-btn="crouch" id="t-crouch">crouch</button>
+    <button class="tbtn" data-btn="light" id="t-light">light</button>
+  </div>
+
+  <section id="title" class="screen">
+    <div class="title-inner">
+      <h1 class="wordmark" aria-label="hide"><span>h</span><span>i</span><span>d</span><span>e</span></h1>
+      <p class="tag">it is somewhere in the store. you have your spot.<br />make it to 6 AM.</p>
+      <button id="start" class="go" disabled>preparing the store…</button>
+      <div id="load"><i></i></div>
+      <dl class="controls desktop-only">
+        <dt>move</dt><dd>W A S D</dd>
+        <dt>run</dt><dd>shift</dd>
+        <dt>crouch</dt><dd>C</dd>
+        <dt>hide · take · use</dt><dd>E</dd>
+        <dt>flashlight</dt><dd>F</dd>
+        <dt>hold breath</dt><dd>space (hold)</dd>
+      </dl>
+      <p class="controls mobile-only">left thumb moves · right thumb looks<br />hold <b>breath</b> when it is close</p>
+      <p class="hp">headphones. lights off.</p>
+    </div>
+  </section>
+
+  <section id="pause" class="screen" hidden>
+    <div class="title-inner">
+      <h2>paused</h2>
+      <button id="resume" class="go">keep hiding</button>
+      <p class="hp"><span class="desktop-only">M mutes sound · </span><button id="mute" class="link">sound: on</button></p>
+    </div>
+  </section>
+
+  <section id="dead" class="screen" hidden>
+    <div class="title-inner">
+      <h2 class="dead-h">it found you.</h2>
+      <p id="dead-stats" class="stats"></p>
+      <button id="retry" class="go">hide again</button>
+    </div>
+  </section>
+
+  <section id="won" class="screen" hidden>
+    <div class="title-inner">
+      <h2 class="won-h">6:00 AM</h2>
+      <p class="tag">the lights come on. the doors unlock.<br />whatever it was is gone.</p>
+      <p id="won-stats" class="stats"></p>
+      <button id="again" class="go">another night</button>
+    </div>
+  </section>
+</div>
+<script>
+%%JS%%
+</script>

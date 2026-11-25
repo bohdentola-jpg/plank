@@ -113,3 +113,10 @@ node tools/shot.mjs "?gallery" g.png --wait 2500    # screenshot the anim galler
 
 QA URL modes: `?quick` jumps straight into a game, `?gallery` shows every animation
 clip on a grid of rigs (`&clips=run,sprint&camr=8&camy=2&ang=0.6` to frame shots).
+
+## Also in this repo: hide
+
+[`hide/`](hide/) is a separate first-person horror game about hiding in a
+closed supermarket at night. It has nothing to do with the football game.
+Open `hide/hide.html` on a computer or `hide/hide-mobile.html` on a phone.
+Both are single self-contained files. See [hide/README.md](hide/README.md).
