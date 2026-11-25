@@ -491,12 +491,13 @@ class Game {
       // spin the monster in, right in front of your face
       const dx = monster.pos.x - pl.pos.x, dz = monster.pos.z - pl.pos.z;
       const d = Math.hypot(dx, dz) || 1;
-      monster.pos.set(pl.pos.x + (dx / d) * 0.78, 0, pl.pos.z + (dz / d) * 0.78);
+      monster.pos.set(pl.pos.x + (dx / d) * 1.05, 0, pl.pos.z + (dz / d) * 1.05);
       monster.yaw = Math.atan2(-dx, -dz);
     }
     this.audio.jumpscare();
     this.player.shake = 1;
     this.hurt = 1;
+    this.grabFlash = 1;
     $('hud').hidden = true;
     $('touch').hidden = true;
   }
@@ -846,7 +847,7 @@ class Game {
       if (lt.shadow && v > 0) lt.shadow.needsUpdate = true;
     }
     lt.intensity = v * (MOBILE ? 420 : 650);
-    if (this.outsideMat) this.outsideMat.color.setScalar(1 + v * 5 + this.dawn * 3);
+    if (this.outsideMat) this.outsideMat.color.setScalar(2.2 + v * 6 + this.dawn * 4);
     if (this.rainTex) {
       this.rainTex[0].offset.y += dt * 0.05;
       this.rainTex[1].offset.y += dt * 0.11;
@@ -911,14 +912,15 @@ class Game {
     P.fade = 0;
     const bpm = 62 + this.fear * 98;
     P.pulse = Math.pow(Math.max(0, Math.sin(this.time * (bpm / 60) * Math.PI)), 12);
-    P.exposure = 1.1 + this.dawn * 0.4;
+    this.grabFlash = Math.max(0, (this.grabFlash || 0) - dt * 2.5);
+    P.exposure = 1.1 + this.dawn * 0.4 + this.grabFlash * 2.5;
     if (!this.post.full) this.renderer.toneMappingExposure = 0.42 + this.dawn * 0.2;
     if (this.dustMat) {
       const U = this.dustMat.uniforms;
       U.cam.value.copy(this.camera.position);
       U.fpos.value.copy(pl.flash.position);
       U.fdir.value.copy(pl.dir);
-      U.fpow.value = pl.flash.intensity / 40;
+      U.fpow.value = pl.flash.intensity / 32;
       U.time.value = this.time;
       U.pr.value = this.renderer.getPixelRatio();
     }
@@ -986,6 +988,7 @@ class Game {
     m.yaw = yaw;
     m.path = null;
     m.setState(state, timer);
+    m.model.root.visible = true;
     m.place();
   }
 

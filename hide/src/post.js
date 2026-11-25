@@ -97,7 +97,7 @@ void main() {
   // vignette (heartbeat pulse when afraid, tighter when hidden)
   float vig = smoothstep(0.85, 0.18, length(c * vec2(1.0, 0.85)) * (1.0 + hidden * 0.35 + fear * 0.25 + pulse * fear * 0.18));
   s *= mix(0.25, 1.0, vig);
-  s = mix(s, s * vec3(1.0, 0.25, 0.2), hurt * 0.65);
+  s = mix(s, s * vec3(1.0, 0.35, 0.3), hurt * 0.45);
   // film grain, stronger in the dark
   float n = hash(vUv * res + fract(time * 7.13) * 100.0) - 0.5;
   s += n * grain * (1.0 - lum * 0.6) * (1.0 + fear);

@@ -21,7 +21,8 @@ const S = {
   title: [{ shot: 'title' }],
   hole: [{ js: 'g.dbgStart(); g.dbgSettle(30)' }, { wait: 3000 }, { shot: 'hole' }],
   aisle: [{ js: 'g.dbgStart(); const L=g.lvl.layout||null; g.dbgTeleport(g.lvl.W*0.5-1.8+0.0, 12, Math.PI, -0.05)' }, { js: 'g.dbgSettle(30)' }, { wait: 3000 }, { shot: 'aisle' }],
-  front: [{ js: 'g.dbgStart(); g.dbgTeleport(g.lvl.W*0.5, 9.5, Math.PI*0.75, -0.1)' }, { js: 'g.dbgSettle(30)' }, { wait: 3000 }, { shot: 'front' }],
+  face: [{ js: 'g.dbgStart(); g.dbgTeleport(g.lvl.W*0.5-1.8, 12, Math.PI, 0.3); g.dbgMonster(g.lvl.W*0.5-1.8, 13.1, Math.PI, "linger"); const m=g.monster; m.model.lookTarget=g.player.eye; m.model.set("scream",1); for(let i=0;i<40;i++) m.model.update(0.05,0); m.update=()=>{}; const hp=new (g.camera.position.constructor)(); m.model.head.getWorldPosition(hp); g.player.lockLook=hp; g.dbgSettle(20)' }, { wait: 3000 }, { shot: 'face' }],
+  front: [{ js: 'g.dbgStart(); g.dbgTeleport(g.lvl.W*0.5+3, 8.8, -0.35, 0.02)' }, { js: 'g.dbgSettle(30)' }, { wait: 3000 }, { shot: 'front' }],
   stock: [{ js: 'g.dbgStart(); g.dbgTeleport(g.lvl.W*0.5, g.lvl.S0+1.2, -Math.PI/2-0.6, -0.05)' }, { js: 'g.dbgSettle(30)' }, { wait: 3000 }, { shot: 'stock' }],
   monster: [{ js: 'g.dbgStart(); g.dbgTeleport(g.lvl.W*0.5-1.8, 12, Math.PI, 0.05); g.dbgMonster(g.lvl.W*0.5-1.8, 16.5, Math.PI, "linger"); g.monster.update=()=>{}; g.dbgSettle(30)' }, { wait: 3000 }, { shot: 'monster' }],
   close: [{ js: 'g.dbgStart(); g.dbgTeleport(g.lvl.W*0.5-1.8, 12, Math.PI, 0.25); g.dbgMonster(g.lvl.W*0.5-1.8, 14.2, Math.PI, "linger"); const m=g.monster; m.model.lookTarget=g.player.eye; for(let i=0;i<30;i++) m.model.update(0.05,0); m.update=()=>{}; g.dbgSettle(30)' }, { wait: 3000 }, { shot: 'close' }],
@@ -30,8 +31,8 @@ const S = {
   peerside: [{ js: 'g.dbgStart(); const h=g.hole; g.dbgMonster(h.check.x, h.check.z, -Math.PI/2, "linger"); g.monster.spot=h; g.monster.setState("check", 999); g.monster.checkT=0; g.dbgTeleport(h.check.x+0.9, h.check.z-2.8, 2.83, -0.12); g.dbgSettle(60); g.dbgTeleport(h.check.x+0.9, h.check.z-2.8, 2.83, -0.12); g.dbgSettle(3)' }, { wait: 3000 }, { shot: 'peerside' }],
   litaisle: [{ js: 'g.dbgStart(); const f=g.lvl.pointLights.find(p=>p.kind==="fixture"); g.dbgTeleport(f.x+0.3, f.z-4.5, Math.PI, -0.05); g.dbgSettle(30)' }, { wait: 3000 }, { shot: 'litaisle' }],
   holeout: [{ js: 'g.dbgStart(); const h=g.hole; g.dbgTeleport(h.enter.x+2.5, h.enter.z-1.2, Math.PI/2+0.35, -0.2);' }, { js: 'g.dbgSettle(30)' }, { wait: 3000 }, { shot: 'holeout' }],
-  staff: [{ js: 'g.dbgStart(); g.dbgTeleport(g.lvl.W-4.5, g.lvl.D-2.2, 0.2, -0.05)' }, { js: 'g.dbgSettle(30)' }, { wait: 3000 }, { shot: 'staff' }],
-  dead: [{ js: 'g.dbgStart(); g.dbgTeleport(g.lvl.W*0.5-1.8, 12, Math.PI, 0.05); g.dbgMonster(g.lvl.W*0.5-1.8, 13.0, Math.PI, "linger"); g.monster.grab();' }, { wait: 700 }, { shot: 'grab' }, { wait: 2500 }, { shot: 'dead' }],
+  staff: [{ js: 'g.dbgStart(); g.dbgTeleport(g.lvl.W-5.5, g.lvl.D-2.6, Math.PI-0.5, -0.1)' }, { js: 'g.dbgSettle(30)' }, { wait: 3000 }, { shot: 'staff' }],
+  dead: [{ js: 'g.dbgStart(); g.dbgTeleport(g.lvl.W*0.5-1.8, 12, Math.PI, 0.05); g.dbgMonster(g.lvl.W*0.5-1.8, 13.0, Math.PI, "linger"); g.monster.grab(); g.dbgSettle(12, 0.05); g._upd=g.update; g.update=()=>{};' }, { wait: 2500 }, { shot: 'grab' }, { js: 'g.update=g._upd; g.dbgSettle(40, 0.05)' }, { wait: 4000 }, { shot: 'dead' }],
   overview: [{ js: 'g.dbgStart(); g.dbgTeleport(2.2, 1.2, -Math.PI*0.8, -0.25); g.player.flashlight=false;' }, { js: 'g.dbgSettle(30)' }, { wait: 3000 }, { shot: 'overview' }],
 };
 

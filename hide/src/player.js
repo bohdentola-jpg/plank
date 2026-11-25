@@ -323,15 +323,18 @@ export class Player {
     // flashlight rig
     const fl = this.flash;
     this._q.copy(cam.quaternion);
-    this.flashQ.slerp(this._q, 1 - Math.exp(-(this.hidden ? 20 : 11) * dt));
+    if (this.lockLook) this.flashQ.copy(this._q);
+    else this.flashQ.slerp(this._q, 1 - Math.exp(-(this.hidden ? 20 : 11) * dt));
     const off = this._v.set(0.2, -0.24, -0.15).applyQuaternion(cam.quaternion);
     fl.position.copy(cam.position).add(off);
     const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(this.flashQ);
-    fl.target.position.copy(fl.position).addScaledVector(fwd, 6);
+    if (this.lockLook) fl.target.position.copy(this.lockLook);
+    else fl.target.position.copy(fl.position).addScaledVector(fwd, 6);
     fl.target.updateMatrixWorld();
-    const on = this.flashlight && !this.hidden ? 1 : 0;
+    // during the grab the beam snaps onto its face, whatever you were doing
+    const on = this.lockLook ? 1.4 : this.flashlight && !this.hidden ? 1 : 0;
     this.flashPower = damp(this.flashPower, on, 25, dt);
-    fl.intensity = this.flashPower * 40 * this.flashFlicker;
+    fl.intensity = this.flashPower * 32 * this.flashFlicker;
     fl.visible = true;
     this.dir.copy(fwd);
   }

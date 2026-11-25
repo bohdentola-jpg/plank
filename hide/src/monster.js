@@ -432,6 +432,7 @@ export class Monster {
         this.speed = 0;
         M.set('reach', 1);
         M.set('scream', 1);
+        if (!pl.hidden) M.set('crouch', 0.75); // bring the face down to yours
         M.lookTarget = pl.eye;
         if (!pl.hidden) this.faceToward(pl.pos.x, pl.pos.z, dt, 14);
         break;

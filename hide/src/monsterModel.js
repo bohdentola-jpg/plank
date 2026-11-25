@@ -113,8 +113,8 @@ function teethGeo(radius, count, down, spread = Math.PI * 0.75) {
   const R = rng(down ? 3 : 4);
   for (let i = 0; i < count; i++) {
     const a = -spread / 2 + (spread * i) / (count - 1);
-    const len = R.range(0.018, 0.04) * (Math.abs(a) < 0.5 ? 1.2 : 0.8);
-    const c = new THREE.ConeGeometry(0.0045, len, 4);
+    const len = R.range(0.025, 0.055) * (Math.abs(a) < 0.5 ? 1.25 : 0.75);
+    const c = new THREE.ConeGeometry(0.005, len, 4);
     c.rotateX(down ? Math.PI : 0);
     c.translate(Math.sin(a) * radius * 0.6, (down ? -1 : 1) * len / 2, Math.cos(a) * radius);
     parts.push(c);
@@ -200,16 +200,24 @@ export class MonsterModel {
     mouth.scale.set(0.05, 0.03, 0.08);
     mouth.position.set(0, 0.0, 0.1);
     this.head.add(mouth);
-    const upper = M(teethGeo(0.115, 14, true), boneMat);
-    upper.position.set(0, 0.02, 0.03);
+    const upper = M(teethGeo(0.12, 18, true), boneMat);
+    upper.position.set(0, 0.02, 0.035);
     this.head.add(upper);
-    const lower = M(teethGeo(0.1, 12, false), boneMat);
-    lower.position.set(0, -0.01, 0.03);
+    const lower = M(teethGeo(0.105, 16, false), boneMat);
+    lower.position.set(0, -0.012, 0.035);
     this.jaw.add(lower);
+    // empty black sockets around small glinting eyes
+    const socketMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    for (const sx of [-1, 1]) {
+      const so = new THREE.Mesh(new THREE.SphereGeometry(0.03, 12, 10), socketMat);
+      so.position.set(sx * 0.048, 0.104, 0.148);
+      so.scale.set(1, 0.85, 0.55);
+      this.head.add(so);
+    }
     this.eyes = [];
     for (const s of [-1, 1]) {
-      const e = new THREE.Mesh(new THREE.SphereGeometry(0.011, 8, 6), this.eyeMat);
-      e.position.set(s * 0.046, 0.1, 0.165);
+      const e = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 6), this.eyeMat);
+      e.position.set(s * 0.048, 0.102, 0.158);
       this.head.add(e);
       this.eyes.push(e);
     }
@@ -381,7 +389,7 @@ export class MonsterModel {
     // counter the body pitch so the head stays level-ish, then apply look
     const bodyPitch = this.spine.rotation.x + this.chest.rotation.x;
     this.neck.rotation.x = -bodyPitch * 0.35 + 0.35; // vulture neck: thrust forward
-    this.head.rotation.x = -bodyPitch * 0.45 + this.lookPitch * 0.8 + Math.sin(this.t * 14) * 0.05 * W.sniff - W.scream * 0.5;
+    this.head.rotation.x = -bodyPitch * 0.45 + this.lookPitch * 0.8 + Math.sin(this.t * 14) * 0.05 * W.sniff - W.scream * 0.5 * (1 - W.reach);
     this.neck.rotation.y = this.lookYaw * 0.4;
     this.head.rotation.y = this.lookYaw * 0.6;
     this.head.rotation.z = damp(this.head.rotation.z, this.twitch.roll * 0.6 * (1 - W.run), 6, dt);
@@ -407,10 +415,11 @@ export class MonsterModel {
       const sw = Math.sin(p - 0.4);
       const swing = sw * lerp(0.25, 0.9, W.run) * gait;
       const reach = W.reach;
-      A.shoulder.rotation.x = lerp(-0.25 - swing - W.peer * 0.45 - W.run * 0.5, -1.45, reach) + W.scream * -0.4;
-      A.shoulder.rotation.z = A.s * (0.12 + W.scream * 0.9 + W.peer * 0.25 + reach * 0.2) + Math.sin(this.t * 1.3 + A.s) * 0.02;
-      A.shoulder.rotation.y = A.s * reach * -0.25;
-      A.elbow.rotation.x = lerp(-0.25 - Math.max(0, sw) * 0.4 * gait - W.run * 0.6, -0.15, reach) - W.peer * 0.3;
+      // reaching: arms come up and wide, elbows bent, closing in around your head
+      A.shoulder.rotation.x = lerp(-0.25 - swing - W.peer * 0.45 - W.run * 0.5 + W.scream * -0.4, -1.25, reach);
+      A.shoulder.rotation.z = A.s * (0.12 + W.scream * 0.9 * (1 - reach) + W.peer * 0.25 + reach * 0.75) + Math.sin(this.t * 1.3 + A.s) * 0.02;
+      A.shoulder.rotation.y = 0;
+      A.elbow.rotation.x = lerp(-0.25 - Math.max(0, sw) * 0.4 * gait - W.run * 0.6, -0.95, reach) - W.peer * 0.3;
       A.wrist.rotation.x = -0.15 + Math.sin(this.t * 2 + A.s) * 0.05;
       // fingers: loose curl, twitch, splay when reaching
       A.fingers.forEach((segs, i) => {
