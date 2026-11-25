@@ -139,6 +139,7 @@ class App {
     this.menus.loading(true, text);
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     if (this.mode) { try { this.mode.dispose(); } catch (e) { console.error(e); } this.mode = null; }
+    this.post.resetGrade();
     const m = make();
     await m.init();
     this.mode = m;

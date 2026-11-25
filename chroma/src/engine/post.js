@@ -190,4 +190,10 @@ export class Post {
   }
 
   get uniforms() { return this.compMat.uniforms; }
+
+  resetGrade() {
+    const u = this.compMat.uniforms;
+    u.uVignette.value = 0.55; u.uDesat.value = 0; u.uSat.value = 1.12; u.uTint.value.setRGB(1, 1, 1);
+    this.flash = 0;
+  }
 }

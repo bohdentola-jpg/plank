@@ -240,6 +240,11 @@ export class Battle {
     this.stage.decor.update(this.time);
     w.listener.copy(this.camera.position);
     app.audio?.setListener(this.camera.position.x, this.camera.position.y, this.camera.position.z, this.rig.yaw + Math.PI);
+    // ---- low-health grade: heavier vignette + slight desaturation
+    const hurtK = p.alive ? Math.max(0, 1 - p.hp / 100) : 0.6;
+    const u = app.post.uniforms;
+    u.uVignette.value += ((0.55 + hurtK * 0.75) - u.uVignette.value) * damp(6, dt);
+    u.uDesat.value += ((p.alive ? hurtK * 0.3 : 0.45) - u.uDesat.value) * damp(6, dt);
     // ---- HUD
     if (this.state !== 'intro') this.hud.update(dt, this.camera, { aimTarget: this.control.aimTarget, pad: inp.usingPad });
     this.mapOpen = inp.action('map') && this.state !== 'intro';
@@ -251,6 +256,7 @@ export class Battle {
   // ---------------------------------------------------------------- judge
   startJudge() {
     this.state = 'judge'; this.stateT = 0;
+    this.app.post.resetGrade();
     this.hud.showPlayUI(false);
     this.hud.cover(false);
     if (this.scene.fog) this.scene.fog.density *= 0.35;
