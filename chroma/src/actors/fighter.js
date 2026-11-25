@@ -132,9 +132,12 @@ export class Fighter {
     if (goo && wall && wall.face && !this.nova) {
       const press = -(mx * wall.nx + mz * wall.nz);
       if (press > 0.25) {
-        _v.set(this.pos.x - wall.nx * 0.37, this.pos.y + 0.35, this.pos.z - wall.nz * 0.37);
-        const ownerWall = w.paint.ownerAt(wall.face, _v);
-        if (ownerWall === this.team) {
+        let ownWall = false;
+        for (const hy of [0.2, 0.55, 0.95]) {
+          _v.set(this.pos.x - wall.nx * 0.37, this.pos.y + hy, this.pos.z - wall.nz * 0.37);
+          if (w.paint.ownerAt(wall.face, _v) === this.team) { ownWall = true; break; }
+        }
+        if (ownWall) {
           this.climbing = true;
           this.vel.y = 6.8 * Math.min(1, press + 0.2);
           // slide sideways along the wall, stick into it
@@ -262,6 +265,7 @@ export class Fighter {
 
   syncModel(dt, firing = false, hs = 0) {
     const m = this.model;
+    if (this.world.listener) m.lodFor(this.world.listener);
     m.root.position.copy(this.pos);
     m.root.rotation.y = this.yaw;
     m.root.visible = this.alive;

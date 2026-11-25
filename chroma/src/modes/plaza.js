@@ -101,6 +101,9 @@ class NPC {
     }
     this.model.root.position.copy(this.pos);
     this.model.root.rotation.y = this.yaw;
+    this.model.lodFor(this.world.listener);
+    // far-away NPCs only need a cheap update every few frames
+    if (this.model.lod.level === 2 && !speed) { this.skip = (this.skip || 0) + 1; if (this.skip % 4) return; dt *= 4; }
     this.model.update(dt, { speed, grounded: true, vy: 0, pitch: 0, aiming: false, firing: false, weapon: this.model.weaponId });
   }
 
@@ -321,7 +324,8 @@ export class Plaza {
     this.uiOpen = true;
     app.input.unlock();
     this.prompt.classList.remove('on');
-    const close = () => { this.uiOpen = false; this.showcase = null; this.player.model.emote = null; this.updatePlazaHud(); app.input.lock(); };
+    this.plazaHud.classList.remove('on');
+    const close = () => { this.uiOpen = false; this.showcase = null; this.player.model.emote = null; this.plazaHud.classList.add('on'); this.updatePlazaHud(); app.input.lock(); };
     if (kind === 'tower') {
       app.audio?.sfx('door');
       app.menus.lobby({
@@ -329,13 +333,13 @@ export class Plaza {
         onClose: close,
       });
     } else if (kind === 'shop') {
-      this.showcase = 'front';
+      this.showcase = 'left';
       app.menus.shop({
         onEquip: (id) => { this.player.setWeapon(id); this.updatePlazaHud(); },
         onClose: close,
       });
     } else if (kind === 'locker') {
-      this.showcase = 'front';
+      this.showcase = 'right';
       this.player.model.emote = null;
       app.menus.locker({
         create: !!opts.create,
@@ -356,6 +360,20 @@ export class Plaza {
     }
   }
 
+  openPause() {
+    const app = this.app, inp = app.input;
+    if (this.uiOpen || this.titleMode) return;
+    inp.unlock();
+    this.uiOpen = true;
+    app.menus.pause(true, {
+      onResume: () => { this.uiOpen = false; inp.lock(); },
+      onQuit: () => { this.uiOpen = false; app.goTitle(); },
+      quitLabel: 'BACK TO TITLE',
+    });
+  }
+
+  onLockLost() { this.openPause(); }
+
   update(dt) {
     const app = this.app, inp = app.input;
     this.time += dt;
@@ -375,9 +393,10 @@ export class Plaza {
         const yaw = p.yaw;
         const fx = Math.sin(yaw), fz = Math.cos(yaw);
         const rx = -fz, rz = fx;
-        const tgt = new THREE.Vector3(p.pos.x + fx * 3.0 - rx * 0.9, p.pos.y + 1.25, p.pos.z + fz * 3.0 - rz * 0.9);
+        const side = this.showcase === 'right' ? -0.95 : 0.95; // which side of the screen the character sits on
+        const tgt = new THREE.Vector3(p.pos.x + fx * 3.0 - rx * side, p.pos.y + 1.25, p.pos.z + fz * 3.0 - rz * side);
         this.camera.position.lerp(tgt, damp(5, dt));
-        const look = new THREE.Vector3(p.pos.x - rx * 0.9, p.pos.y + 0.95, p.pos.z - rz * 0.9);
+        const look = new THREE.Vector3(p.pos.x - rx * side, p.pos.y + 0.95, p.pos.z - rz * side);
         this.camera.lookAt(look);
         p.syncModel(dt, false, 0);
       } else this.control.update(dt, p, w, false);
@@ -392,15 +411,7 @@ export class Plaza {
         this.prompt.classList.add('on');
         if (inp.action('interact')) { p.intent.fire = false; this.interact(it); }
       } else this.prompt.classList.remove('on');
-      if (inp.action('pause')) {
-        inp.unlock();
-        this.uiOpen = true;
-        app.menus.pause(true, {
-          onResume: () => { app.menus.pause(false); this.uiOpen = false; inp.lock(); },
-          onQuit: () => { app.menus.pause(false); this.uiOpen = false; app.goTitle(); },
-          quitLabel: 'BACK TO TITLE',
-        });
-      }
+      if (inp.action('pause')) this.openPause();
     }
     if (!this.titleMode) p.update(dt);
     else { p.syncModel(dt, false, 0); }

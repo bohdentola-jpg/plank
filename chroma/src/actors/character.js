@@ -36,6 +36,7 @@ function gooMaterial(color) {
   });
 }
 
+let LOD_SINK = null; // collects meshes of the character being built
 function addMesh(parent, g, mat, opts = {}) {
   const m = new THREE.Mesh(g, mat);
   if (opts.pos) m.position.set(...opts.pos);
@@ -48,7 +49,8 @@ function addMesh(parent, g, mat, opts = {}) {
     const o = new THREE.Mesh(g, OUTLINE_MAT);
     o.castShadow = false;
     m.add(o);
-  }
+    LOD_SINK?.outlines.push(o);
+  } else if (opts.shadow === false || opts.detail) LOD_SINK?.details.push(m);
   return m;
 }
 
@@ -157,6 +159,8 @@ export class Dripkin {
   }
 
   build() {
+    this.lod = { outlines: [], details: [], level: 0 };
+    LOD_SINK = this.lod;
     const L = this.look;
     this.mats = {
       skin: std(L.skin, 0.55),
@@ -204,13 +208,13 @@ export class Dripkin {
     addMesh(spine, geo('torso-' + L.topStyle, () => torsoGeometry(L.topStyle)), M.top, {});
     if (L.topStyle === 'hoodie') {
       addMesh(spine, geo('hood', () => new THREE.TorusGeometry(0.1, 0.045, 10, 20)), M.top, { pos: [0, 0.35, -0.06], rot: [Math.PI / 2 + 0.5, 0, 0] });
-      addMesh(spine, geo('pocket', () => new THREE.BoxGeometry(0.2, 0.08, 0.02)), M.top, { pos: [0, 0.1, 0.13], outline: false });
+      addMesh(spine, geo('pocket', () => new THREE.BoxGeometry(0.2, 0.08, 0.02)), M.top, { pos: [0, 0.1, 0.13], outline: false, shadow: false });
     } else if (L.topStyle === 'jacket') {
       addMesh(spine, geo('collar', () => new THREE.TorusGeometry(0.085, 0.03, 8, 18)), M.white, { pos: [0, 0.355, 0], rot: [Math.PI / 2, 0, 0] });
-      addMesh(spine, geo('zip', () => new THREE.BoxGeometry(0.012, 0.3, 0.01)), M.metal, { pos: [0, 0.17, 0.145], outline: false });
+      addMesh(spine, geo('zip', () => new THREE.BoxGeometry(0.012, 0.3, 0.01)), M.metal, { pos: [0, 0.17, 0.145], outline: false, shadow: false });
     }
     // team badge on chest
-    this.badge = addMesh(spine, geo('badge', () => new THREE.SphereGeometry(0.035, 12, 10)), M.goo, { pos: [0.075, 0.25, 0.12], scale: [1, 1, 0.4], outline: false });
+    this.badge = addMesh(spine, geo('badge', () => new THREE.SphereGeometry(0.035, 12, 10)), M.goo, { pos: [0.075, 0.25, 0.12], scale: [1, 1, 0.4], outline: false, shadow: false });
     // paint can backpack
     const pack = this.pack = new THREE.Group();
     pack.position.set(0, 0.2, -0.17);
@@ -218,7 +222,7 @@ export class Dripkin {
     addMesh(pack, geo('can', () => new THREE.CylinderGeometry(0.085, 0.085, 0.26, 18, 1, true)), M.metal, {});
     addMesh(pack, geo('canTop', () => new THREE.CylinderGeometry(0.088, 0.088, 0.03, 18)), M.dark, { pos: [0, 0.14, 0] });
     addMesh(pack, geo('canTop', () => new THREE.CylinderGeometry(0.088, 0.088, 0.03, 18)), M.dark, { pos: [0, -0.14, 0] });
-    addMesh(pack, geo('nozzle', () => new THREE.CylinderGeometry(0.018, 0.025, 0.06, 10)), M.dark, { pos: [0, 0.18, 0] });
+    addMesh(pack, geo('nozzle', () => new THREE.CylinderGeometry(0.018, 0.025, 0.06, 10)), M.dark, { pos: [0, 0.18, 0], outline: false, shadow: false });
     this.inkLevel = addMesh(pack, geo('canInk', () => new THREE.CylinderGeometry(0.075, 0.075, 1, 18).translate(0, 0.5, 0)), M.goo, { pos: [0, -0.125, 0.012], outline: false });
     this.inkLevel.scale.y = 0.25;
     // neck + head
@@ -260,7 +264,7 @@ export class Dripkin {
       sh.position.set(0.18 * side, 0.31, 0);
       spine.add(sh);
       addMesh(sh, geo('upperArm', () => new THREE.CapsuleGeometry(0.052, 0.12, 6, 10).translate(0, -0.09, 0)), L.topStyle === 'tee' ? M.skin : M.top, {});
-      addMesh(sh, geo('shoulderPad', () => new THREE.SphereGeometry(0.065, 12, 10)), M.top, { outline: false });
+      addMesh(sh, geo('shoulderPad', () => new THREE.SphereGeometry(0.065, 12, 10)), M.top, { outline: false, shadow: false });
       const elbow = new THREE.Group();
       elbow.position.y = -0.19;
       sh.add(elbow);
@@ -280,10 +284,26 @@ export class Dripkin {
       addMesh(e, geo('pupil', () => new THREE.SphereGeometry(0.02, 12, 10)), M.pupil, { pos: [0, 0, 0.05], scale: [1.4, 1.4, 0.6], outline: false });
     }
     this.goo.visible = false;
+    LOD_SINK = null;
+  }
+
+  // 0 = full detail, 1 = drop face details, 2 = also drop outlines
+  setLOD(level) {
+    if (level === this.lod.level) return;
+    this.lod.level = level;
+    for (const o of this.lod.outlines) o.visible = level < 2;
+    for (const d of this.lod.details) d.visible = level < 1;
+  }
+
+  lodFor(camPos) {
+    const d2 = this.root.position.distanceToSquared(camPos);
+    this.setLOD(d2 > 34 * 34 ? 2 : d2 > 16 * 16 ? 1 : 0);
   }
 
   buildHair() {
     if (this.hair) this.head.remove(this.hair);
+    const prevSink = LOD_SINK;
+    LOD_SINK = prevSink || this.lod;
     const hair = this.hair = new THREE.Group();
     this.head.add(hair);
     const M = this.mats;
@@ -322,6 +342,7 @@ export class Dripkin {
       for (let i = -2; i <= 2; i++) drip(i * 0.08, -0.1, -0.15 + Math.abs(i) * 0.02, 0.06 + (i % 2 ? 0.04 : 0), 0.026, 0.1, i * 0.08);
       addMesh(hair, geo('fringe', () => new THREE.SphereGeometry(0.09, 16, 12)), M.goo, { pos: [0, 0.13, 0.13], scale: [2.0, 0.5, 0.7], rot: [0.45, 0, 0] });
     }
+    LOD_SINK = prevSink;
   }
 
   setLook(look) {

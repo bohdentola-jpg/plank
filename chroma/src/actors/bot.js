@@ -188,8 +188,8 @@ export class Bot {
     this.specialT = rand(2, 6);
     this.chargeHold = 0;
     this.prefer = { shooter: 7, blaster: 6.5, roller: 1.5, charger: 19 }[fighter.weapon.type];
-    this.enemyBaseZ = fighter.team === 1 ? 36 : -36;
-    this.homeZ = -this.enemyBaseZ;
+    this.homeZ = fighter.spawnPoint.z || (fighter.team === 1 ? -36 : 36);
+    this.enemyBaseZ = -this.homeZ;
   }
 
   enemyVisible(e) {

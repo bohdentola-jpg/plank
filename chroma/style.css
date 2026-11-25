@@ -53,15 +53,15 @@ button { font: inherit; cursor: pointer; }
 .chip:hover, .chip.focus { background: rgba(255,255,255,.2); }
 .chip.sel { background: var(--team, var(--pink)); color: #fff; box-shadow: inset 0 0 0 2px #fff, 0 4px 14px rgba(0,0,0,.3); transform: rotate(-1.5deg); }
 .chips, .wpick, .skill, .stages { display: flex; flex-wrap: wrap; gap: 8px; }
-.swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; padding: 6px; }
 .swatch { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--c); box-shadow: inset 0 0 0 3px rgba(0,0,0,.15), 0 2px 6px rgba(0,0,0,.3); transition: transform .12s; }
 .swatch:hover, .swatch.focus { transform: scale(1.15); }
 .swatch.sel { box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px #fff; transform: scale(1.08); }
 
 /* ------------------------------------------------------------------ title */
 .title-screen { place-items: center; align-content: center; gap: 22px; background: linear-gradient(180deg, rgba(13,11,24,.15), rgba(13,11,24,.55)); }
-.logo { position: relative; text-align: center; animation: bob 4s ease-in-out infinite; }
-.logo-splat { position: absolute; width: 540px; height: 540px; left: 50%; top: 50%; transform: translate(-50%, -54%) rotate(-8deg); z-index: -1; filter: drop-shadow(0 10px 30px rgba(0,0,0,.35)); }
+.logo { position: relative; text-align: center; animation: bob 4s ease-in-out infinite; pointer-events: none; }
+.logo-splat { position: absolute; width: 480px; height: 480px; pointer-events: none; left: 50%; top: 50%; transform: translate(-50%, -54%) rotate(-8deg); z-index: -1; filter: drop-shadow(0 10px 30px rgba(0,0,0,.35)); }
 .logo-splat path { fill: var(--ink); opacity: .82; }
 .logo-text { font-family: var(--hfont); font-size: clamp(64px, 11vw, 140px); line-height: .9; letter-spacing: 2px; }
 .logo-text span { display: inline-block; --c: #ff2e88; color: var(--c); -webkit-text-stroke: 6px var(--ink); paint-order: stroke fill; text-shadow: 0 8px 0 var(--ink);

@@ -94,7 +94,7 @@ export class Battle {
     this.hud.setup(world.fighters, this.player, this.colors);
     this.hud.show(true);
     this.hud.showPlayUI(false);
-    this.timeLeft = o.time;
+    this.timeLeft = Number.isFinite(o.time) && o.time > 0 ? o.time : MATCH_TIME;
     this.state = 'intro';
     this.stateT = 0;
     this.oneMin = false;
@@ -139,6 +139,10 @@ export class Battle {
       onQuit: () => { this.app.menus.pause(false); this.app.goPlaza(); },
       quitLabel: 'FORFEIT & RETURN TO PLAZA',
     });
+  }
+
+  onLockLost() {
+    if ((this.state === 'play' || this.state === 'countdown') && !this.paused) this.setPaused(true);
   }
 
   update(dt) {
@@ -204,7 +208,7 @@ export class Battle {
 
     // ---- player control
     const p = this.player;
-    const canControl = (this.state === 'play') && inp.locked !== false;
+    const canControl = this.state === 'play' && (inp.locked || inp.usingPad);
     if (this.state === 'intro') { /* camera handled above */ }
     else {
       if (!p.alive && this.killer && this.deathT < 2.5) {

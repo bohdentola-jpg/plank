@@ -213,7 +213,7 @@ function buildPlazaDecor(scene, trees) {
     c.fillStyle = '#1b1e2b'; c.fillRect(0, 196, 512, 92);
     c.font = '44px "Lilita One", "Arial Black", sans-serif'; c.textAlign = 'center';
     c.fillStyle = '#fff'; c.strokeStyle = '#1b1e2b'; c.lineWidth = 8;
-    const lines = ['NOW PLAYING: TURF RUSH', 'TANGERINE TERMINAL', 'PAINT THE TOWN!'];
+    const lines = ['NOW PLAYING: TURF RUSH', 'TANGERINE TERMINAL', 'SKYLINE COURTS', 'PAINT THE TOWN!'];
     const L = lines[Math.floor(t / 3) % lines.length];
     c.strokeText(L, 256, 110); c.fillText(L, 256, 110);
     c.font = '30px "Lilita One", "Arial Black", sans-serif';

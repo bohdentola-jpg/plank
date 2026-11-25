@@ -51,6 +51,11 @@ export class CameraRig {
     if (Number.isFinite(fl.y) && this.cam.position.y < fl.y + 0.3) this.cam.position.y = fl.y + 0.3;
     this.cam.rotation.order = 'YXZ';
     this.cam.rotation.set(this.pitch, this.yaw + Math.PI, 0);
+    // frame the character a little below the reticle (more so when looking up)
+    _p.set(0, 1, 0).applyQuaternion(this.cam.quaternion);
+    const lift = 0.42 + Math.max(0, this.pitch) * 0.5;
+    const up = level.raycast(this.cam.position, _p, lift + 0.2);
+    this.cam.position.addScaledVector(_p, up ? Math.max(0, up.t - 0.2) : lift);
     if (this.shakeT > 0) {
       this.shakeT -= dt;
       const a = this.shakeA * Math.max(0, this.shakeT) * 3;

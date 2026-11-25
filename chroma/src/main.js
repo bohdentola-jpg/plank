@@ -7,6 +7,7 @@ import { Plaza } from './modes/plaza.js';
 import { Battle } from './modes/battle.js';
 import { randomLook } from './actors/character.js';
 import { WEAPONS } from './actors/weapons.js';
+import { STAGE_IDS } from './world/stage.js';
 
 let audio = null;
 try { audio = (await import('./audio.js')).audio; } catch (e) { console.warn('audio unavailable', e); }
@@ -68,6 +69,8 @@ class App {
     if (params.has('qa')) { this.profile.settings.quality = 'qa'; }
     this.applySettings();
     this.resize();
+    // Esc while the mouse is captured only releases the lock (no keydown reaches us): treat as pause
+    this.input.onLockChange = (locked, self) => { if (!locked && !self) this.mode?.onLockLost?.(); };
     addEventListener('resize', () => this.resize());
     addEventListener('keydown', (e) => {
       if (e.code === 'KeyM' && !(e.target && e.target.tagName === 'INPUT')) {
@@ -153,7 +156,7 @@ class App {
     this.menus.title({
       firstTime: !this.profile.created,
       onPlaza: () => this.enterPlazaFromTitle(),
-      onQuick: () => this.startBattle({ weapon: this.profile.weapon, skill: this.profile.lastSkill }),
+      onQuick: () => this.startBattle({ weapon: this.profile.weapon, skill: this.profile.lastSkill, stage: STAGE_IDS[Math.floor(Math.random() * STAGE_IDS.length)] }),
       onSettings: () => this.menus.settings(),
     });
   }
@@ -180,7 +183,9 @@ class App {
 
   async startBattle(opts) {
     this.input.unlock();
-    await this.setMode(() => new Battle(this, { ...opts, time: params.get('time') ? +params.get('time') : undefined }), 'Warping to the stage…');
+    const o = { ...opts };
+    if (params.get('time')) o.time = +params.get('time');
+    await this.setMode(() => new Battle(this, o), 'Warping to the stage…');
   }
 
   grantRewards(s) {
@@ -226,7 +231,7 @@ const app = new App();
 window.__chroma = app;
 if (params.has('quick')) {
   app.profile.created = true;
-  app.startBattle({ weapon: params.get('weapon') || app.profile.weapon, skill: params.get('skill') || 'normal', stage: params.get('stage') || 'terminal' });
+  app.startBattle({ weapon: params.get('weapon') || app.profile.weapon, skill: params.get('skill') || 'normal', stage: params.get('stage') || STAGE_IDS[Math.floor(Math.random() * STAGE_IDS.length)] });
 } else if (params.has('plaza')) {
   app.profile.created = true;
   app.goPlaza();

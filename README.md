@@ -1,5 +1,8 @@
 # VARSITY 27 🏈
 
+> **Also in this repo: [CHROMA CLASH](chroma/README.md)**, an original 3D ink-battler with
+> a walkable hub plaza. Run `chroma/play.bat` (Windows) or `python3 chroma/serve.py`.
+
 *Sunday has Madden. Saturday has NCAA. Friday is yours.*
 
 The high school chapter of the football-game trinity, in the browser — full 3D, no

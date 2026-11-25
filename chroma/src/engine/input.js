@@ -10,6 +10,7 @@ export class Input {
     this.mousePressed = [false, false, false];
     this.mdx = 0; this.mdy = 0; this.wheel = 0;
     this.locked = false;
+    this.lockedAt = 0;
     this.sensitivity = 1;
     this.invertY = false;
     this.pad = null;
@@ -35,13 +36,19 @@ export class Input {
     addEventListener('mouseup', (e) => { if (e.button < 3) this.mouse[e.button] = false; });
     el.addEventListener('contextmenu', (e) => e.preventDefault());
     addEventListener('mousemove', (e) => {
-      if (this.locked) { this.mdx += e.movementX; this.mdy += e.movementY; }
+      if (!this.locked) return;
+      // drop the spurious giant deltas some browsers emit right after locking
+      if (performance.now() - this.lockedAt < 120 || Math.abs(e.movementX) > 400 || Math.abs(e.movementY) > 400) return;
+      this.mdx += e.movementX; this.mdy += e.movementY;
     });
     el.addEventListener('wheel', (e) => { this.wheel += Math.sign(e.deltaY); }, { passive: true });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === this.el;
+      if (this.locked) this.lockedAt = performance.now();
       if (!this.locked) this.mouse = [false, false, false];
-      this.onLockChange?.(this.locked);
+      const self = this.selfUnlock;
+      this.selfUnlock = false;
+      this.onLockChange?.(this.locked, self);
     });
   }
 
@@ -54,7 +61,7 @@ export class Input {
     if (this.locked) return;
     try { const p = this.el.requestPointerLock?.(); if (p && p.catch) p.catch(() => {}); } catch { /* ignore */ }
   }
-  unlock() { if (document.pointerLockElement) document.exitPointerLock(); }
+  unlock() { if (document.pointerLockElement) { this.selfUnlock = true; document.exitPointerLock(); } }
 
   poll() {
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];

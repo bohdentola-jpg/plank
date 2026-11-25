@@ -42,14 +42,14 @@ void main() {
 
 export const SKIES = {
   day: {
-    zenith: 0x2f7cf6, horizon: 0xbfe6ff, ground: 0x6d8fa8, sun: 0xfff1d6, sunDir: [0.45, 0.62, 0.35],
+    zenith: 0x1f6ff2, horizon: 0xb4e2ff, ground: 0x6d8fa8, sun: 0xfff1d6, sunDir: [0.45, 0.62, 0.35],
     cloud: 0xffffff, cloudShade: 0xb9c9e6, clouds: 0.85, sunI: 4.2, hemiSky: 0xcfe8ff, hemiGround: 0x8a7f74, hemiI: 0.35,
-    fog: 0xbfe0f6, fogD: 0.0042, envI: 0.9, exposure: 1.0,
+    fog: 0xbfe0f6, fogD: 0.003, envI: 0.9, exposure: 1.0,
   },
   golden: {
     zenith: 0x3b63c9, horizon: 0xffc69a, ground: 0x7a6a78, sun: 0xffd2a0, sunDir: [-0.55, 0.32, -0.45],
     cloud: 0xfff0e2, cloudShade: 0xd48fa0, clouds: 0.75, sunI: 4.0, hemiSky: 0xffd9c2, hemiGround: 0x6d5a64, hemiI: 0.32,
-    fog: 0xf2c6a8, fogD: 0.0038, envI: 0.85, exposure: 1.02,
+    fog: 0xf2c6a8, fogD: 0.0032, envI: 0.85, exposure: 1.02,
   },
 };
 
@@ -155,7 +155,9 @@ float wh(vec2 p){ return sin(p.x*0.9+uTime*1.3)*0.5 + sin(p.y*1.3-uTime*1.1)*0.5
   vec2 p = vWPos.xz;
   float e = 0.05;
   float h0 = wh(p), hx = wh(p + vec2(e, 0.0)), hz = wh(p + vec2(0.0, e));
-  vec3 wn = normalize(vec3(-(hx - h0) / e * 0.06, 1.0, -(hz - h0) / e * 0.06));
+  float fade = clamp(1.0 - length(vViewPosition) / 150.0, 0.1, 1.0);
+  fade *= fade;
+  vec3 wn = normalize(vec3(-(hx - h0) / e * 0.06 * fade, 1.0, -(hz - h0) / e * 0.06 * fade));
   normal = normalize((viewMatrix * vec4(wn, 0.0)).xyz);
 }`)
         .replace('#include <color_fragment>', `#include <color_fragment>

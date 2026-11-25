@@ -157,7 +157,7 @@ export class Menus {
   // ------------------------------------------------------------ lobby
   lobby({ onStart, onClose }) {
     const p = this.app.profile;
-    let weapon = p.weapon, skill = p.lastSkill || 'normal', stage = STAGE_IDS[0];
+    let weapon = p.weapon, skill = p.lastSkill || 'normal', stage = p.lastStage || 'random';
     const node = el(`<div class="overlay dim lobby"><div class="panel wide">
       <div class="lobby-head"><h2>CLASH TOWER</h2><div class="mode-pill">TURF RUSH · 4v4 · 3:00</div></div>
       <div class="lobby-grid">
@@ -170,7 +170,7 @@ export class Menus {
           <h3>Opponents</h3>
           <div class="skill">${['easy', 'normal', 'hard'].map((s) => `<button class="chip ${s === skill ? 'sel' : ''}" data-k="${s}">${s.toUpperCase()}</button>`).join('')}</div>
           <h3>Stage</h3>
-          <div class="stages">${STAGE_IDS.map((id) => `<button class="chip sel" data-st="${id}">${stageInfo(id).name}</button>`).join('')}</div>
+          <div class="stages">${['random', ...STAGE_IDS].map((id) => `<button class="chip ${id === stage ? 'sel' : ''}" data-st="${id}">${id === 'random' ? 'Random' : stageInfo(id).name}</button>`).join('')}</div>
         </div>
       </div>
       <div class="lobby-slots"></div>
@@ -180,13 +180,15 @@ export class Menus {
       </div>
     </div></div>`);
     const close = this.open(node);
-    const sel = (attr, v) => node.querySelectorAll(`[data-${attr}]`).forEach((b) => b.classList.toggle('sel', b.dataset[attr === 'w' ? 'w' : attr === 'k' ? 'k' : 'st'] === v));
+    const sel = (attr, v) => node.querySelectorAll(`[data-${attr}]`).forEach((b) => b.classList.toggle('sel', b.dataset[attr] === v));
+    node.querySelectorAll('[data-st]').forEach((b) => b.onclick = () => { stage = b.dataset.st; sel('st', stage); this.sfx('ui_select'); });
     node.querySelectorAll('[data-w]').forEach((b) => b.onclick = () => { weapon = b.dataset.w; sel('w', weapon); this.sfx('ui_select'); });
     node.querySelectorAll('[data-k]').forEach((b) => b.onclick = () => { skill = b.dataset.k; sel('k', skill); this.sfx('ui_select'); });
     node.querySelector('[data-back]').onclick = () => { this.sfx('ui_back'); close(); onClose(); };
     node.querySelector('[data-a="go"]').onclick = () => {
       this.sfx('ui_select');
-      p.weapon = weapon; p.lastSkill = skill; this.app.save();
+      p.weapon = weapon; p.lastSkill = skill; p.lastStage = stage; this.app.save();
+      const chosen = stage === 'random' ? STAGE_IDS[Math.floor(Math.random() * STAGE_IDS.length)] : stage;
       node.querySelector('.lobby-actions').innerHTML = '<div class="searching">Finding players<span>.</span><span>.</span><span>.</span></div>';
       const slots = node.querySelector('.lobby-slots');
       slots.innerHTML = Array.from({ length: 8 }, (_, i) => `<div class="slot ${i === 0 ? 'me filled' : ''}"><svg viewBox="0 0 100 100"><path d="${SPLAT}"/></svg><span>${i === 0 ? p.name : ''}</span></div>`).join('');
@@ -198,7 +200,7 @@ export class Menus {
           clearInterval(iv);
           node.querySelector('.searching').textContent = 'MATCH FOUND!';
           this.sfx('special_ready');
-          setTimeout(() => { close(); onStart({ weapon, skill, stage }); }, 900);
+          setTimeout(() => { close(); onStart({ weapon, skill, stage: chosen }); }, 900);
           return;
         }
         const s = slots.children[k];
