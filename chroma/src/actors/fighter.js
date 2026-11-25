@@ -7,7 +7,7 @@ import { NONE } from '../world/paint.js';
 import { clamp, damp, dampAngle, angleDiff, rand } from '../util.js';
 
 const GRAV = 24;
-const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _muz = new THREE.Vector3(), _aim = new THREE.Vector3();
+const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _muz = new THREE.Vector3(), _aim = new THREE.Vector3(), _raw = new THREE.Vector3();
 
 export class Fighter {
   constructor(world, { name, team, look, weapon = 'spritzer', isPlayer = false, color }) {
@@ -288,9 +288,9 @@ export class Fighter {
   // ---------------------------------------------------------------- weapons
   aimDir(out) {
     const I = this.intent;
-    this.model.muzzleWorld(_muz);
+    this.model.muzzleWorld(_raw);
     if (I.aimPoint) {
-      out.subVectors(I.aimPoint, _muz);
+      out.subVectors(I.aimPoint, _raw);
       const d = out.length();
       if (d > 1.2) return out.divideScalar(d);
     }
@@ -334,7 +334,7 @@ export class Fighter {
         if (this.useInk(d.ink)) {
           this.fireCd += d.rate;
           if (this.fireCd < -0.05) this.fireCd = d.rate;
-          const o = this.muzzle(_muz), dir = this.aimDir(_aim);
+          const dir = this.aimDir(_aim), o = this.muzzle(_muz);
           if (d.type === 'shooter') w.combat.shooter(this, o, dir, d, air);
           else w.combat.blaster(this, o, dir, d);
           w.audio?.sfx(d.type === 'shooter' ? 'shoot' : 'shoot_heavy', { ...posOf(o), volume: this.isPlayer ? 0.55 : 0.4 });
@@ -354,10 +354,11 @@ export class Fighter {
       } else if (this.charging) {
         this.charging = false;
         this.stopLoop('charge');
-        if (this.charge > 0.08) {
+        if (this.charge > 0.08 && w.combatOn !== false) {
           const cost = d.ink * Math.max(0.3, this.charge);
           if (this.useInk(cost)) {
-            w.combat.beam(this, this.muzzle(_muz), this.aimDir(_aim), d, this.charge);
+            const dir = this.aimDir(_aim);
+            w.combat.beam(this, this.muzzle(_muz), dir, d, this.charge);
             this.model.recoil = 1.5;
             this.lastFire = this.time;
             firing = true;

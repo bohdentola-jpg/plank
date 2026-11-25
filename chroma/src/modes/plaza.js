@@ -387,7 +387,7 @@ export class Plaza {
       p.intent.mx = p.intent.mz = 0;
       p.model.emote = 'wave';
     } else if (this.uiOpen) {
-      p.intent.mx = p.intent.mz = 0; p.intent.fire = p.intent.goo = p.intent.jump = p.intent.sub = false;
+      p.intent.mx = p.intent.mz = 0; p.intent.fire = p.intent.goo = p.intent.jump = p.intent.sub = p.intent.special = false;
       if (this.showcase) {
         // camera in front of the player, model turned towards it
         const yaw = p.yaw;
@@ -398,10 +398,10 @@ export class Plaza {
         this.camera.position.lerp(tgt, damp(5, dt));
         const look = new THREE.Vector3(p.pos.x - rx * side, p.pos.y + 0.95, p.pos.z - rz * side);
         this.camera.lookAt(look);
-        p.syncModel(dt, false, 0);
       } else this.control.update(dt, p, w, false);
     } else {
       this.control.update(dt, p, w, true);
+      if (inp.pressed('KeyE')) p.intent.special = false; // E talks / interacts in the plaza (Q still fires specials)
       if (!inp.locked && inp.mousePressed[0]) inp.lock();
       // interaction prompt
       const it = this.nearest();
@@ -409,7 +409,7 @@ export class Plaza {
       if (it) {
         this.prompt.innerHTML = `<span class="key">${inp.usingPad ? 'X' : 'E'}</span> ${it.label}`;
         this.prompt.classList.add('on');
-        if (inp.action('interact')) { p.intent.fire = false; this.interact(it); }
+        if (inp.action('interact')) { p.intent.fire = false; p.intent.special = false; this.interact(it); }
       } else this.prompt.classList.remove('on');
       if (inp.action('pause')) this.openPause();
     }

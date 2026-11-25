@@ -61,6 +61,7 @@ class App {
     this.audio = audio;
     this.profile = loadProfile();
     if (params.get('name')) { this.profile.name = params.get('name'); this.profile.created = true; }
+    this.profile.name = String(this.profile.name || 'Rookie').replace(/[<>&"'`]/g, '').slice(0, 12) || 'Rookie';
     this.menus = new Menus(this);
     this.mode = null;
     this.quality = 'high';
@@ -135,6 +136,7 @@ class App {
   }
 
   async setMode(make, text) {
+    if (this.loadingNow) return null;
     this.loadingNow = true;
     this.menus.loading(true, text);
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -153,6 +155,7 @@ class App {
 
   async goTitle() {
     const plaza = await this.setMode(() => new Plaza(this, { title: true }), 'Loading Prism Plaza…');
+    if (!plaza) return;
     plaza.setTitleMode(true);
     this.menus.title({
       firstTime: !this.profile.created,
@@ -178,6 +181,7 @@ class App {
   async goPlaza() {
     this.input.unlock();
     const pl = await this.setMode(() => new Plaza(this, { from: this.mode instanceof Battle ? 'battle' : 'title' }), 'Heading back to Prism Plaza…');
+    if (!pl) return;
     pl.setTitleMode(false);
     pl.toast('Click to look around · <b>E</b> to interact');
   }

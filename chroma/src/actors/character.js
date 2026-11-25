@@ -6,7 +6,7 @@ import { clamp, lerp, damp } from '../util.js';
 const G = {}; // shared geometries
 function geo(key, make) { return G[key] || (G[key] = make()); }
 
-const OUTLINE_MAT = new THREE.MeshBasicMaterial({ color: 0x1b1530, side: THREE.BackSide });
+export const OUTLINE_MAT = new THREE.MeshBasicMaterial({ color: 0x1b1530, side: THREE.BackSide });
 OUTLINE_MAT.onBeforeCompile = (sh) => {
   sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed += normalize(normal) * 0.011;');
 };

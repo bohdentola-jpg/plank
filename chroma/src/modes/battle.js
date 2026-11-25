@@ -9,7 +9,7 @@ import { Bot, NavGrid, botNames } from '../actors/bot.js';
 import { CameraRig, PlayerControl } from '../actors/player.js';
 import { randomLook } from '../actors/character.js';
 import { BattleHUD } from '../ui/hud.js';
-import { COLOR_PAIRS, pick, hexToCss, damp, clamp, lerp, rand } from '../util.js';
+import { COLOR_PAIRS, pick, hexToCss, damp, clamp, lerp, rand, angleDiff } from '../util.js';
 import { TEAM_A, TEAM_B } from '../world/paint.js';
 
 const MATCH_TIME = 180;
@@ -134,6 +134,7 @@ export class Battle {
   // ---------------------------------------------------------------- loop
   setPaused(p) {
     this.paused = p;
+    if (p) for (const k of Object.keys(this.player.loops)) this.player.stopLoop(k);
     this.app.menus.pause(p, {
       onResume: () => { this.setPaused(false); this.app.input.lock(); },
       onQuit: () => { this.app.menus.pause(false); this.app.goPlaza(); },
@@ -216,13 +217,13 @@ export class Battle {
         const k = this.killer;
         const dx = k.pos.x - this.rig.pivot.x, dz = k.pos.z - this.rig.pivot.z;
         const ty = Math.atan2(dx, dz);
-        this.rig.yaw += (((ty - this.rig.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI) * damp(5, dt);
+        this.rig.yaw += angleDiff(this.rig.yaw, ty) * damp(5, dt);
         this.rig.pitch += (-0.2 - this.rig.pitch) * damp(4, dt);
         this.control.update(dt, p, w, false);
       } else {
         if (!p.alive && this.lastAlive) { /* noop */ }
         if (this.autoplay) {
-          this.rig.yaw += (((p.yaw - this.rig.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI) * damp(4, dt);
+          this.rig.yaw += angleDiff(this.rig.yaw, p.yaw) * damp(4, dt);
           this.rig.update(dt, p, w.level, null);
         } else this.control.update(dt, p, w, canControl || this.state === 'countdown');
         if (!canControl && !this.autoplay) { p.intent.mx = p.intent.mz = 0; p.intent.fire = p.intent.jump = p.intent.sub = p.intent.special = p.intent.goo = false; }

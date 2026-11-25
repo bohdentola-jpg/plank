@@ -281,7 +281,7 @@ export class Bot {
       if (t !== this.target) { this.reactT = t ? this.sk.react * rand(0.7, 1.3) : 0; this.target = t; }
       if (t) this.seenT = 0;
       const prev = this.mode;
-      if (f.ink < 0.14 && !(this.target && f.weapon.type === 'roller' && f.ink > 0.05)) this.mode = 'refill';
+      if (f.ink < Math.max(0.14, f.weapon.type === 'charger' ? f.weapon.ink : 0) && !(this.target && f.weapon.type === 'roller' && f.ink > 0.05)) this.mode = 'refill';
       else if (this.mode === 'refill' && f.ink < 0.85 && !(this.target && this.target.pos.distanceTo(f.pos) < 5)) this.mode = 'refill';
       else if (this.target) this.mode = f.hp < 35 && f.ink < 0.3 ? 'retreat' : 'fight';
       else this.mode = 'paint';
@@ -345,7 +345,8 @@ export class Bot {
       this.aim.set(e.pos.x + e.vel.x * lead, e.pos.y + e.hitHeight() * 0.55 + e.vel.y * lead * 0.5, e.pos.z + e.vel.z * lead).add(this.aimErr);
       const canShoot = this.reactT <= 0 && dist < this.prefer + 7;
       if (type === 'charger') {
-        if (canShoot) { fire = f.charge < 0.98 || this.chargeHold < 0.15; this.chargeHold = f.charge >= 0.98 ? this.chargeHold + dt : 0; }
+        const cap = f.ink >= f.weapon.ink ? 0.98 : 0.39; // low ink caps the charge — release at the cap
+        if (canShoot) { fire = f.charge < cap || this.chargeHold < 0.15; this.chargeHold = f.charge >= cap ? this.chargeHold + dt : 0; }
         if (f.charging) { mx *= 0.3; mz *= 0.3; }
       } else if (type === 'roller') {
         fire = canShoot && (dist < 3.2 || Math.random() < 0.05);

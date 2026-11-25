@@ -1,7 +1,7 @@
 // Weapon definitions + the combat system (projectiles, beams, bombs,
 // explosions, specials). Damage is in HP (fighters have 100).
 import * as THREE from 'three';
-import { buildBombModel } from './character.js';
+import { buildBombModel, OUTLINE_MAT } from './character.js';
 import { rand, clamp, segCapsuleDistSq } from '../util.js';
 
 export const WEAPONS = {
@@ -359,7 +359,7 @@ export class Combat {
       if ((b.fuse < 0 && b.landed) || b.life > 5 || b.pos.y < w.level.killY - 1) {
         if (b.pos.y > w.level.killY) this.explode(b.pos.clone(), b.owner, 3.2, 180, 30, 3.0, { extra: 6 });
         w.scene.remove(b.mesh);
-        b.mesh.traverse((o) => { if (o.material) o.material.dispose?.(); });
+        b.mesh.traverse((o) => { if (o.material && o.material !== OUTLINE_MAT) o.material.dispose?.(); });
         this.bombs.splice(i, 1);
       }
     }

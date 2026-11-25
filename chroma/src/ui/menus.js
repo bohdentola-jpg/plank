@@ -29,7 +29,12 @@ export class Menus {
     this.root.appendChild(node);
     requestAnimationFrame(() => node.classList.add('on'));
     node.querySelectorAll('button').forEach((b) => b.addEventListener('mouseenter', () => this.sfx('ui_move')));
-    return () => { node.classList.remove('on'); setTimeout(() => node.remove(), 260); };
+    return () => {
+      node.style.pointerEvents = 'none'; // no double-clicks during the fade-out
+      node.dataset.closed = '1';
+      node.classList.remove('on');
+      setTimeout(() => node.remove(), 260);
+    };
   }
 
   // ------------------------------------------------------------ loading
@@ -69,6 +74,7 @@ export class Menus {
     const onKey = (e) => { if (!armed) { e.preventDefault(); arm(); } };
     addEventListener('keydown', onKey);
     node.addEventListener('pointerdown', arm);
+    clearInterval(this._titlePad);
     this._titlePad = setInterval(() => { if (!armed && this.app.input.pad && this.app.input.padButtons.some((b) => b)) arm(); }, 100);
     const done = () => { removeEventListener('keydown', onKey); clearInterval(this._titlePad); close(); };
     node.querySelectorAll('[data-a]').forEach((b) => b.addEventListener('click', (e) => {
@@ -87,10 +93,14 @@ export class Menus {
   // gamepad / arrow navigation over a node's buttons
   padNav(node, enabled = () => true) {
     let idx = 0;
+    let prev = [];
     const iv = setInterval(() => {
       if (!node.isConnected) { clearInterval(iv); return; }
-      if (!enabled()) return;
-      const inp = this.app.input;
+      const raw = this.app.input.padButtons || [];
+      const inp = { padPressed: (i) => !!raw[i] && !prev[i] };
+      const top = [...this.root.children].filter((c) => !c.dataset.closed).pop();
+      const active = enabled() && top === node && !node.dataset.closed;
+      if (!active) { prev = raw.slice(); return; }
       const btns = [...node.querySelectorAll('button:not([disabled]), .swatch, .chip')].filter((b) => b.offsetParent);
       if (!btns.length) return;
       let moved = false;
@@ -99,7 +109,8 @@ export class Menus {
       if (moved) { btns.forEach((b) => b.classList.remove('focus')); btns[idx].classList.add('focus'); btns[idx].scrollIntoView({ block: 'nearest' }); this.sfx('ui_move'); }
       if (inp.padPressed(0)) btns[idx]?.click();
       if (inp.padPressed(1)) node.querySelector('[data-back]')?.click();
-    }, 50);
+      prev = raw.slice();
+    }, 30);
   }
 
   // ------------------------------------------------------------ settings / pause
@@ -136,11 +147,15 @@ export class Menus {
   }
 
   pause(on, opts = {}) {
-    if (!on) { this._pauseClose?.(); this._pauseClose = null; return; }
+    if (!on) {
+      this._pauseClose?.(); this._pauseClose = null;
+      if (this._pauseEsc) { removeEventListener('keydown', this._pauseEsc, true); this._pauseEsc = null; }
+      return;
+    }
     if (this._pauseClose) return;
     const node = el(`<div class="overlay dim pause"><div class="panel narrow">
       <h2>PAUSED</h2>
-      <button class="btn big" data-a="resume">RESUME</button>
+      <button class="btn big" data-a="resume" data-back>RESUME</button>
       ${this.settingsHTML()}
       <div class="keys">WASD move · Mouse aim · LMB fire · SHIFT swim · SPACE jump · RMB bomb · Q special · TAB map · E interact</div>
       <button class="btn ghost" data-a="quit">${opts.quitLabel || 'QUIT'}</button>
@@ -149,8 +164,15 @@ export class Menus {
     this.bindSettings(node);
     node.querySelector('[data-a="resume"]').onclick = () => { this.sfx('ui_select'); this.pause(false); opts.onResume?.(); };
     node.querySelector('[data-a="quit"]').onclick = () => { this.sfx('ui_back'); this.pause(false); opts.onQuit?.(); };
-    const esc = (e) => { if (e.code === 'Escape' && node.isConnected) { e.stopPropagation(); setTimeout(() => { if (this._pauseClose) { this.pause(false); opts.onResume?.(); } }, 0); removeEventListener('keydown', esc, true); } };
-    setTimeout(() => addEventListener('keydown', esc, true), 50);
+    const esc = (e) => {
+      if (!node.isConnected || node.dataset.closed) { removeEventListener('keydown', esc, true); return; }
+      if (e.code !== 'Escape') return;
+      e.stopPropagation();
+      setTimeout(() => { if (this._pauseClose) { this.pause(false); opts.onResume?.(); } }, 0);
+    };
+    if (this._pauseEsc) removeEventListener('keydown', this._pauseEsc, true);
+    this._pauseEsc = esc;
+    setTimeout(() => { if (this._pauseEsc === esc) addEventListener('keydown', esc, true); }, 50);
     this.padNav(node);
   }
 
