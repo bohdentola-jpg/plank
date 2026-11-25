@@ -101,8 +101,10 @@ Progress (name, look, coins, level, weapons, settings) is saved in your browser.
 ## Dev / QA
 
 ```bash
+node chroma/tools/smoke.mjs               # paint counts, collision, raycasts, pathfinding (no browser)
 node chroma/tools/shot.mjs "index.html?quick&skipintro&qa&autoplay" battle.png --wait 20000
 node chroma/tools/playtest.mjs plaza      # drives real keyboard/mouse input
+node chroma/tools/flowtest.mjs            # title -> creator -> plaza -> lobby -> battle
 ```
 
 URL flags: `?quick` (straight into a battle), `?plaza`, `&stage=terminal|skyline`,

@@ -241,7 +241,7 @@ export class Battle {
     w.listener.copy(this.camera.position);
     app.audio?.setListener(this.camera.position.x, this.camera.position.y, this.camera.position.z, this.rig.yaw + Math.PI);
     // ---- HUD
-    if (this.state !== 'intro') this.hud.update(dt, this.camera, { aimTarget: this.control.aimTarget });
+    if (this.state !== 'intro') this.hud.update(dt, this.camera, { aimTarget: this.control.aimTarget, pad: inp.usingPad });
     this.mapOpen = inp.action('map') && this.state !== 'intro';
     // click to lock pointer
     if (!inp.locked && inp.mousePressed[0] && this.state !== 'intro') inp.lock();
@@ -325,9 +325,10 @@ export class Battle {
     this.stage.paint.flush(app.renderer);
     app.post.render(this.scene, this.camera, dt);
     if (this.mapOpen && this.state === 'play') {
-      const H = Math.min(innerHeight * 0.86, innerWidth * 0.8 / this.mapAspect);
+      const avail = innerHeight - 150;
+      const H = Math.min(avail, innerWidth * 0.8 / this.mapAspect);
       const W = H * this.mapAspect;
-      const x = (innerWidth - W) / 2, y = (innerHeight - H) / 2;
+      const x = (innerWidth - W) / 2, y = 96 + (avail - H) / 2;
       app.post.renderViewport(this.scene, this.mapCam, x, innerHeight - y - H, W, H);
       this.hud.mapOverlay(true, this.mapCam, { x, y, w: W, h: H });
     } else this.hud.mapOverlay(false);

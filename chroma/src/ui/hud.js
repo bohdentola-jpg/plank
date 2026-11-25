@@ -126,7 +126,9 @@ export class BattleHUD {
     const sf = p.specialReady ? 1 : clamp(p.special / p.weapon.specialCost, 0, 1);
     this.spFill.style.setProperty('--p', `${sf * 100}%`);
     this.spWrap.classList.toggle('ready', p.specialReady);
-    this.spLabel.innerHTML = p.specialReady ? `${this.spName}<b>PRESS Q</b>` : this.spName;
+    const key = opts.pad ? 'Y' : 'Q';
+    const lbl = p.specialReady ? `${this.spName}<b>PRESS ${key}</b>` : this.spName;
+    if (lbl !== this._spl) { this._spl = lbl; this.spLabel.innerHTML = lbl; }
     // team icons
     for (const f of this.fighters) {
       if (!f._icon) continue;
@@ -212,6 +214,7 @@ export class BattleHUD {
 
   mapOverlay(on, cam, rect) {
     this.map.classList.toggle('on', on);
+    this.root.classList.toggle('mapon', on);
     if (!on) return;
     this.map.style.left = rect.x + 'px'; this.map.style.top = rect.y + 'px';
     this.map.style.width = rect.w + 'px'; this.map.style.height = rect.h + 'px';
