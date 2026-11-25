@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CHROMA CLASH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+<script type="importmap">{ "imports": { "three": "../vendor/three.module.js" } }</script>
+</head>
+<body>
+  <div id="game"></div>
+  <div id="hud"></div>
+  <div id="plaza-hud"></div>
+  <div id="plaza-reticle"><i></i></div>
+  <div id="plaza-cover"><div>CLICK TO LOOK AROUND</div><small>WASD move · SHIFT swim · SPACE jump · LMB paint · E interact · ESC menu</small></div>
+  <div id="prompt"></div>
+  <div id="bubble"></div>
+  <div id="toast"></div>
+  <div id="menus"></div>
+  <div id="loading" class="on">
+    <div class="ld-blob"><svg viewBox="0 0 100 100"><path d="M50 4c8 0 9 13 17 14s15-9 21-2-5 15 0 22 16 6 12 16-16 3-20 9 1 19-8 21-11-10-19-8-10 15-19 11 1-15-6-20-19 2-20-8 11-11 10-19-13-8-11-17 14-5 20-11-2-22 6-25 8 8 15 6 3-7 9-7z"/></svg></div>
+    <div class="ld-text">Loading…</div>
+  </div>
+  <noscript>CHROMA CLASH needs JavaScript and WebGL2.</noscript>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

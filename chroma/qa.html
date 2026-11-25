@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Chroma QA</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#000}canvas{display:block;width:100%;height:100%}</style>
+<script type="importmap">{ "imports": { "three": "../vendor/three.module.js" } }</script>
+</head><body>
+<script type="module">
+import * as THREE from 'three';
+import { Post } from './src/engine/post.js';
+import { Environment } from './src/world/env.js';
+import { buildStage } from './src/world/stage.js';
+import { Dripkin, randomLook } from './src/actors/character.js';
+import { TEAM_A, TEAM_B } from './src/world/paint.js';
+
+const q = new URLSearchParams(location.search);
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+const post = new Post(renderer);
+post.setSize(innerWidth, innerHeight, 1);
+const scene = new THREE.Scene();
+const env = new Environment(scene, renderer, q.get('sky') || 'day');
+const t0 = performance.now();
+const stage = buildStage('terminal', scene, renderer, env);
+console.log('[qa] stage built ms', Math.round(performance.now() - t0), 'tpm', stage.paint.tpm, 'faces', stage.paint.faces.length);
+stage.paint.setColors('#ff2e88', '#3cf03c');
+stage.decor.setTeamColors('#ff2e88', '#3cf03c');
+const cam = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 2000);
+// random paint
+const t1 = performance.now();
+const p = new THREE.Vector3();
+for (let i = 0; i < +(q.get('splats') || 500); i++) {
+  p.set((Math.random() - 0.5) * 40, 0, (Math.random() - 0.5) * 70);
+  const h = stage.level.heightAt(p.x, p.z).y;
+  p.y = h + 0.05;
+  stage.paint.splat(p, 0.6 + Math.random() * 1.4, p.z < 0 ? TEAM_A : TEAM_B, { drips: 2 });
+}
+// wall shots
+for (let i = 0; i < 60; i++) {
+  const o = new THREE.Vector3((Math.random() - 0.5) * 40, 1.2, (Math.random() - 0.5) * 70);
+  const d = new THREE.Vector3(Math.random() - 0.5, -0.05, Math.random() - 0.5).normalize();
+  const hit = stage.level.raycast(o, d, 30);
+  if (hit) stage.paint.splat(hit.point, 0.9, o.z < 0 ? TEAM_A : TEAM_B, { drips: 3 });
+}
+console.log('[qa] splats ms', Math.round(performance.now() - t1), 'coverage', JSON.stringify(stage.paint.coverage()));
+const kids = [];
+for (let i = 0; i < 4; i++) {
+  const k = new Dripkin(randomLook(), i < 2 ? '#ff2e88' : '#3cf03c', ['spritzer', 'roller', 'longshot', 'popper'][i]);
+  k.root.position.set(-3 + i * 2, 1.8, -2);
+  k.root.rotation.y = Math.PI * 0.85;
+  scene.add(k.root);
+  kids.push(k);
+}
+const view = q.get('view') || 'over';
+const views = {
+  over: [new THREE.Vector3(26, 22, -34), new THREE.Vector3(0, 0, -6)],
+  close: [new THREE.Vector3(1, 3.2, -6.5), new THREE.Vector3(0, 2.3, -2)],
+  base: [new THREE.Vector3(0, 5, -44), new THREE.Vector3(0, 1, -24)],
+  top: [new THREE.Vector3(0, 95, 0.01), new THREE.Vector3(0, 0, 0)],
+};
+const [cp, ct] = views[view];
+cam.position.copy(cp); cam.lookAt(ct);
+env.follow(ct);
+let last = performance.now();
+function frame() {
+  const now = performance.now(), dt = Math.min(0.05, (now - last) / 1000); last = now;
+  env.update(dt);
+  stage.decor.update(now / 1000);
+  for (const k of kids) k.update(dt, { speed: q.get('run') ? 6 : 0, grounded: true, vy: 0, pitch: 0, aiming: !!q.get('aim'), firing: false });
+  stage.paint.flush(renderer);
+  post.render(scene, cam, dt);
+  requestAnimationFrame(frame);
+}
+frame();
+window.qa = { scene, stage, kids, cam, renderer };
+</script></body></html>
