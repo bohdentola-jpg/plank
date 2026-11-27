@@ -5,6 +5,8 @@ import { Input } from './engine/input.js';
 import { Menus } from './ui/menus.js';
 import { Plaza } from './modes/plaza.js';
 import { Battle } from './modes/battle.js';
+// --- story mode (The Underside) ---
+import { Story } from './modes/story.js';
 import { randomLook } from './actors/character.js';
 import { WEAPONS } from './actors/weapons.js';
 import { STAGE_IDS } from './world/stage.js';
@@ -186,6 +188,12 @@ class App {
     pl.toast('Click to look around · <b>E</b> to interact');
   }
 
+  // --- story mode (The Underside) ---
+  async goStory(level = 'hub') {
+    this.input.unlock();
+    return this.setMode(() => new Story(this, { level }), 'Descending into the Underside…');
+  }
+
   async startBattle(opts) {
     this.input.unlock();
     const o = { ...opts };
@@ -240,6 +248,9 @@ if (params.has('quick')) {
 } else if (params.has('plaza')) {
   app.profile.created = true;
   app.goPlaza();
+} else if (params.has('story')) { // --- story mode (The Underside) ---
+  app.profile.created = true;
+  app.goStory(params.get('story') || 'hub');
 } else {
   app.goTitle();
 }
