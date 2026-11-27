@@ -57,7 +57,8 @@ export class Environment {
   constructor(scene, renderer, preset = 'day') {
     this.scene = scene;
     this.renderer = renderer;
-    const P = this.preset = SKIES[preset];
+    // preset: a name from SKIES, or a full preset object (same keys) for custom skies
+    const P = this.preset = typeof preset === 'string' ? (SKIES[preset] || SKIES.day) : { ...SKIES.day, ...preset };
     const sunDir = new THREE.Vector3(...P.sunDir).normalize();
     this.sunDir = sunDir;
 
