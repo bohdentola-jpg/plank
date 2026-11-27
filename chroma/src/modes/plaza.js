@@ -503,7 +503,7 @@ export class Plaza {
 
   // ---------------------------------------------------------------- news broadcast
   startNews() {
-    if (this.app.newsSeen) return;
+    if (this.app.newsSeen || new URLSearchParams(location.search).has('nonews')) return;
     this.app.newsSeen = true;
     const rot = this.rotation;
     const quips = {
@@ -599,8 +599,9 @@ export class Plaza {
         const yaw = p.yaw;
         const fx = Math.sin(yaw), fz = Math.cos(yaw);
         const rx = -fz, rz = fx;
-        const side = this.showcase === 'right' ? -0.95 : 0.95;
-        const tgt = new THREE.Vector3(p.pos.x + fx * 3.0 - rx * side, p.pos.y + 1.25, p.pos.z + fz * 3.0 - rz * side);
+        const side = this.showcase === 'right' ? -1.05 : 1.6;
+        const dist = this.showcase === 'right' ? 3.0 : 3.5;
+        const tgt = new THREE.Vector3(p.pos.x + fx * dist - rx * side, p.pos.y + 1.25, p.pos.z + fz * dist - rz * side);
         this.camera.position.lerp(tgt, damp(5, dt));
         this.camera.lookAt(p.pos.x - rx * side, p.pos.y + 0.95, p.pos.z - rz * side);
       } else this.control.update(dt, p, w, false);

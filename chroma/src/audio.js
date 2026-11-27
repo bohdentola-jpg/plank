@@ -21,6 +21,13 @@
  * Graph:  sfx voices ──→ sfxBus ─────────────────────────────────┐
  *         tracks → musicBus → EQ → music comp → duck ────────────┼→ glue comp → limiter → soft clip → master → out
  *         (shared hall / room / sfx reverbs return into their buses)
+ *
+ * Music: title, plaza, lobby, shop, news, battle(_final), battle_b(_final),
+ *        battle_c(_final), results_win, results_lose, story_hub, story_level,
+ *        story_boss, story_clear.  Sung (formant vocals): title, news and the
+ *        six battle tracks.  Loops: swim, roll, charge, fountain, crowd,
+ *        splatling_spin, bow_draw, jetpack, rain, sprinkler, skid, shop_ambience.
+ *        SFX: see the SFX table below (unknown names are ignored).
  */
 
 // ───────────────────────────── state ──────────────────────────────
@@ -947,9 +954,9 @@ const SFX = {
   },
   dualie_shot(out, t, p) {
     const r = p * rnd(0.93, 1.07);
-    tone(out, t, 1300 * r, { type: 'triangle', to: 420 * r, dt: 0.04, a: 0.001, d: 0.05, g: 0.28 });
-    noise(out, t, { f: 4500 * r, to: 1500 * r, dt: 0.04, q: 2.5, a: 0.001, d: 0.045, g: 0.42 });
-    tone(out, t, 380 * r, { to: 150 * r, dt: 0.03, a: 0.001, d: 0.04, g: 0.25 });
+    tone(out, t, 1300 * r, { type: 'triangle', to: 420 * r, dt: 0.04, a: 0.001, d: 0.05, g: 0.22 });
+    noise(out, t, { f: 4500 * r, to: 1500 * r, dt: 0.04, q: 2.5, a: 0.001, d: 0.045, g: 0.3 });
+    tone(out, t, 380 * r, { to: 150 * r, dt: 0.03, a: 0.001, d: 0.04, g: 0.2 });
   },
   dodge_roll(out, t, p) {
     noise(out, t, { f: 600 * p, sw: [[0.09, 2500 * p], [0.22, 700 * p]], q: 1.6, a: 0.03, h: 0.04, d: 0.16, g: 0.5 });
@@ -1056,7 +1063,7 @@ const SFX = {
   },
   jetpack_start(out, t, p) {
     noise(out, t, { ft: 'highpass', f: 3000, a: 0.0005, d: 0.015, g: 0.35 }); // igniter
-    noise(out, t + 0.03, { ft: 'lowpass', f: 300 * p, to: 2500 * p, dt: 0.4, q: 1, a: 0.2, h: 0.15, d: 0.3, g: 0.6 }); // roar rise
+    noise(out, t + 0.03, { ft: 'lowpass', f: 300 * p, to: 2500 * p, dt: 0.4, q: 1, a: 0.2, h: 0.15, d: 0.3, g: 0.45 }); // roar rise
     tone(out, t + 0.03, 55 * p, { to: 90 * p, dt: 0.4, a: 0.15, h: 0.15, d: 0.3, g: 0.5 }); // sub
     noise(out, t + 0.03, { f: 600 * p, to: 3500 * p, dt: 0.4, q: 1.5, a: 0.25, d: 0.25, g: 0.25 });
   },
@@ -1086,7 +1093,7 @@ const SFX = {
     tone(out, t, 150 * r, { to: 70, dt: 0.06, a: 0.001, d: 0.08, g: 0.4 });
   },
   enemy_pop(out, t, p) {
-    noise(out, t, { ft: 'highpass', f: 1500, a: 0.0005, d: 0.04, g: 0.55 }); // balloon pop
+    noise(out, t, { ft: 'highpass', f: 1500, a: 0.0005, d: 0.04, g: 0.4 }); // balloon pop
     tone(out, t, 900 * p, { to: 150 * p, dt: 0.07, a: 0.001, d: 0.1, g: 0.4 });
     noise(out, t, { ft: 'lowpass', f: 2500 * p, to: 300, dt: 0.3, a: 0.002, d: 0.3, g: 0.45 });
     droplets(out, t + 0.03, 6, 0.3, 700 * p, 2000 * p, 0.1);
@@ -1535,7 +1542,7 @@ const LOOPS = {
     };
   },
   jetpack(out, t) {
-    const R = bed(out, t, pinkBuf, 'lowpass', 900, 0.8, 0.6), H = bed(out, t, noiseBuf, 'bandpass', 2200, 0.7, 0.12);
+    const R = bed(out, t, pinkBuf, 'lowpass', 900, 0.8, 0.4), H = bed(out, t, noiseBuf, 'bandpass', 2200, 0.7, 0.09);
     const sub = mkOsc('sine', 55), sg = mkGain(0.25), fl = mkOsc('sine', 13), fg = mkGain(0.1);
     wire(fl, fg, sg.gain);
     wire(sub, sg, out);
