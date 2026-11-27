@@ -1,12 +1,14 @@
-# CHROMA CLASH 🎨
+# CHROMA CLASH 🦎🎨
 
-An original 3D ink-battler for the browser. You play a **Dripkin**, a paint-drop kid who
-sprays colored ink, melts into it to swim at high speed, climbs any wall they've painted,
-and fights 4v4 to cover the most floor in three minutes. Between matches you hang out in
-**Prism Plaza**, a lively city square with shops, NPCs, a paint fountain and a practice yard.
+An original 3D ink-battler for the browser. You are a **Chromeleon**: a chameleon kid with
+turret eyes that swivel independently, a curly tail and a glossy team-colored crest. Your
+skin shifts toward your ink color. You spray ink, dive into it to swim at high speed, climb
+any wall you've painted, and fight 4v4 to cover the most floor in three minutes. Between
+matches you hang out in **Prism Plaza**, a busy city square with walk-in shops, a live news
+broadcast, crowds of locals, and a secret way down into a story mode.
 
-Everything is generated in code: models, textures, levels, music and sound effects.
-There are no asset files and no build step.
+Everything is generated in code: models, textures, levels, music and sound effects. There
+are no asset files and no build step.
 
 ## Run it
 
@@ -29,90 +31,160 @@ Any static server works if you serve the **repository root** (the game imports
 | --- | --- | --- |
 | Move | WASD | Left stick |
 | Aim / look | Mouse (click the game to capture it) | Right stick |
-| Fire / paint | Left mouse | RT |
-| Swim in your ink (goo form) | Hold Shift | Hold LT |
-| Jump | Space | A / ✕ |
-| Splash Bomb | Right mouse | RB |
+| Fire / paint | Left mouse (hold to charge or roll) | RT |
+| Dive into your ink | Hold Shift | Hold LT |
+| Jump (dualies: + direction while firing = dodge roll) | Space | A / ✕ |
+| Sub weapon | Right mouse | RB |
 | Special | Q (or E in battle) | Y / △ |
 | Turf map | Hold Tab | Back / Share |
 | Interact (plaza) | E | X / □ |
+| Tongue flick (plaza) | T | |
 | Pause | Esc | Start / Options |
 | Mute | M | |
 
 ## How it plays
 
-- **Ink is everything.** Your shots paint every surface they touch. Standing in enemy ink
-  slows you and wears you down.
-- **Goo form.** Hold Shift on your own ink to melt into it. You swim about twice as fast,
-  refill your ink tank (the paint can on your back) in about 3 seconds, heal faster,
-  and are nearly invisible to enemies.
+- **Ink is everything.** Your shots paint every surface they touch. Enemy ink slows you and
+  wears you down.
+- **Dive form.** Hold Shift on your own ink to dive in as a sleek lizard shape. You swim
+  about twice as fast, refill your ink in about 3 seconds, heal faster and are nearly
+  invisible.
 - **Climb anything.** Paint a wall, then swim into it to climb straight up.
-- **Specials.** Painting fills your special meter. *Paint Barrage* lobs a volley of giant
-  ink balls; *Ink Nova* launches you up for a huge ground slam.
 - **Turf Rush.** After three minutes the judges count painted floor; the team with the
   higher percentage wins. You earn coins and XP either way.
 
-### Weapons (buy at Blastworks in the plaza)
+### Weapons: 12 weapons in 11 classes (Blastworks)
 
-| Weapon | Style | Special |
-| --- | --- | --- |
-| Spritzer | Rapid mid-range shooter, the all-rounder | Paint Barrage |
-| Sweeper Roller | Hold to roll a wide carpet of ink and flatten foes; tap to fling a wave | Ink Nova |
-| Pop Blaster | Explosive ink balls, and a direct hit splashes in one shot | Ink Nova |
-| Longshot | Charge-up sniper beam that one-shots at full charge | Paint Barrage |
+Each weapon comes with a sub weapon and a special.
 
-Every weapon also carries **Splash Bombs**.
+| Weapon | Class | How it works | Sub · Special |
+| --- | --- | --- | --- |
+| Spritzer | Shooter | Rapid mid-range spray, the all-rounder | Splash Bomb · Paint Barrage |
+| Spritzer Jr. | Shooter | Huge tank, wide forgiving spray | Spritz Sprinkler · Bubble Shield |
+| Twin Squirts | Dualies | One per hand; dodge-roll, then laser-tight turret shots | Pop Bomb · Jet Pack |
+| Sweeper Roller | Roller | Roll a carpet of ink; fling a wave (a vertical fling if you jump first) | Skid Bomb · Ink Nova |
+| Swish Brush | Brush | Sprint while painting; mash fire for rapid flicks | Pop Bomb · Chroma Camo |
+| Bucketeer | Slosher | Swings arcing sloshes over walls | Splash Bomb · Rain Cloud |
+| Pop Blaster | Blaster | Explosive shots; a direct hit splashes in one shot | Sticky Bomb · Ink Nova |
+| Whirlpool | Splatling | Hold to spin up, release for a long torrent | Spritz Sprinkler · Paint Barrage |
+| Bumbershoot | Brella | Shotgun blast; hold to open a shield that blocks shots | Sticky Bomb · Bubble Shield |
+| Longshot | Charger | Charged beam with a laser sight; a full charge splashes in one hit | Pop Bomb · Rain Cloud |
+| Arc Bow | Stringer | Three-arrow fan; fully drawn arrows burst after landing | Skid Bomb · Chroma Camo |
+| Ink Blade | Splatana | Quick slash waves, or a charged overhead chop | Splash Bomb · Jet Pack |
+
+**Specials:**
+- **Paint Barrage:** a volley of giant ink balls.
+- **Ink Nova:** leap up and slam the ground.
+- **Rain Cloud:** a drifting storm that rains ink.
+- **Jet Pack:** hover and fire explosive shots.
+- **Chroma Camo:** go nearly invisible, move faster and refill ink, like a true chameleon.
+- **Bubble Shield:** a dome that blocks enemy fire.
+
+You can **Try** any weapon in the shop and test it on the Bopbots in the Practice Yard
+before you buy it. Some weapons unlock at higher levels.
+
+### Gear (Scale & Thread)
+
+There are headgear, clothing and shoes; each piece has one ability:
+
+| Ability | Effect |
+| --- | --- |
+| Ink Saver | Main weapon uses 12% less ink |
+| Sub Saver | Sub weapons use 15% less ink |
+| Ink Recovery | Tank refills 20% faster |
+| Run Speed | Walk and run 8% faster |
+| Swim Speed | Swim 8% faster |
+| Special Charge | Special meter fills 15% faster |
+| Quick Respawn | Respawn 1.5 s sooner |
+| Ink Resistance | Enemy ink hurts and slows you less |
+
+The three abilities you wear stack. Try anything on in the shop before you buy. The
+**Salon** at the back of Scale & Thread changes your crest, scales, pattern, eyes and ink
+color.
 
 ### Stages
 
-- **Tangerine Terminal**: shipping docks surrounded by water, with container lanes, a
-  raised central plateau and side catwalks.
-- **Skyline Courts**: a rooftop basketball court at sunset, with open light-wells to fall
-  through and water-tower perches for chargers.
+| Stage | Setting | Size |
+| --- | --- | --- |
+| Tangerine Terminal | Shipping docks surrounded by water | 42 × 80 m |
+| Skyline Courts | Sunset rooftop court with open light-wells | 40 × 72 m |
+| Fizzwater Works | Soda bottling plant on a harbour pier, with climbable silos | 58 × 114 m |
+| Mesa Bazaar | Desert market terraces climbing to a central plaza, canyon all around | 60 × 116 m |
+| Frostbite Park | Winter skate park with a bowl, quarter-pipes and icy water | 56 × 112 m |
+
+The Clash Tower runs a **live rotation** of two stages that changes every 20 minutes. The
+news and the big screen tell you which.
 
 ### Prism Plaza
 
-Walk around, talk to the locals (they give useful tips), customize your Dripkin at the
-**Style Lab** (hair style, skin, eyes, outfit and ink color), buy weapons at
-**Blastworks**, try them on the pop-up **Bopbots** in the practice yard, and walk into the
-**Clash Tower** to queue for Turf Rush against easy, normal or hard bots. You can paint
-the whole plaza too, and it stays painted for the rest of your session.
+- **PRISM NEWS:** hosts Nova and Dex announce the current rotation when you arrive, then
+  keep broadcasting on the Clash Tower's giant screen.
+- **Blastworks** and **Scale & Thread** are real interiors. Walk through the door, talk to
+  the clerk at the counter, and the shop opens.
+- **Locals:** chat with dozens of Chromeleons. They hang out in groups, dance at the DJ
+  booth, sit on the tower steps and swim in the ink by the fountain, and they share tips.
+- **Practice Yard:** pop Bopbots with any weapon.
+- **Clash Tower:** the lobby. Pick a weapon, an opponent difficulty and a stage, then queue
+  for Turf Rush.
+- **Painting:** you can paint the whole plaza, and it stays painted for the session.
+- **The back alley** by the DJ booth hides a loose manhole cover…
 
-Progress (name, look, coins, level, weapons, settings) is saved in your browser.
+### Story mode: The Underside
+
+Something gray is bubbling up from under the city. Climb down the manhole in the back
+alley to find Captain Veil and the secret Chroma Guard. Then take back the stolen Hue
+Cores, level by level, from Baron Grisaille and his colorless Drab.
+
+Progress (name, look, gear, coins, level, weapons, story, settings) is saved in your
+browser.
 
 ## Under the hood
 
 - **Paint system:** every paintable surface has its own region in a 2048² atlas
   (R = team A, G = team B, B = baked ambient occlusion). Splats are drawn on the CPU,
   which gives exact turf counts and "what am I standing in" checks. Only the changed
-  rectangles are uploaded each frame. A material shader patch turns that data into
-  glossy, bumpy, noise-edged wet ink with wall drips.
+  rectangles are uploaded each frame. A shader patch turns that data into glossy, bumpy,
+  noise-edged wet ink with wall drips.
 - **Rendering:** HDR half-float pipeline with 4× MSAA, a mip-chain bloom, ACES tone
-  mapping, sky-based image lighting, soft shadows that follow the action, a stylized
-  water shader, outlined characters and a distance-based level of detail.
-- **Gameplay:** capsule-versus-solid character physics, projectile and beam combat,
-  bomb physics, and bots that use an A* navigation grid with paint / fight / refill /
-  retreat behaviors and adjustable skill.
-- **Audio:** fully synthesized with WebAudio: seven original music tracks, 3D-panned
-  sound effects and ambient loops.
-- **Performance:** quality is set automatically (render scale, pixel ratio and shadow
-  size) to hold frame rate; you can override it under Settings → Graphics.
+  mapping, sky-based image lighting, shadows that follow the player, a water shader,
+  outlined characters, distance-based level of detail, and instanced props. The news
+  studio renders into a texture for the plaza's big screen.
+- **Gameplay:** capsule-versus-solid physics; projectile, beam, melee and shield combat;
+  bomb, sticky, skid and sprinkler subs; and bots with A* grid navigation and per-class
+  behaviors (they spin up splatlings, draw bows, tap brellas and dodge-roll).
+- **Audio:** fully synthesized with WebAudio. Music uses distorted guitars, slap bass and a
+  formant "singer" in gibberish; there are 17 tracks (three battle songs with
+  final-minute variants, plus shop, news and story tracks), along with 3D-panned sound
+  effects and ambience.
 
 ## Dev / QA
 
 ```bash
-node chroma/tools/smoke.mjs               # paint counts, collision, raycasts, pathfinding (no browser)
+node chroma/tools/smoke.mjs               # paint counts, collision, raycasts, pathfinding, module imports
 node chroma/tools/shot.mjs "index.html?quick&skipintro&qa&autoplay" battle.png --wait 20000
 node chroma/tools/playtest.mjs plaza      # drives real keyboard/mouse input
 node chroma/tools/flowtest.mjs            # title -> creator -> plaza -> lobby -> battle
 ```
 
-URL flags: `?quick` (straight into a battle), `?plaza`, `&stage=terminal|skyline`,
-`&weapon=spritzer|roller|longshot|popper`, `&skill=easy|normal|hard`, `&time=<seconds>`,
-`&skipintro`, `&autoplay` (a bot drives you), `&qa` (low-cost rendering for headless runs).
+URL flags:
+
+| Flag | Effect |
+| --- | --- |
+| `?quick` | Straight into a battle |
+| `?plaza` | Straight into the plaza |
+| `?story[=hub\|l1..l5]` | Straight into story mode |
+| `&stage=terminal\|skyline\|fizzwater\|mesa\|frostbite` | Pick the stage |
+| `&weapon=<id>` | Pick the weapon |
+| `&skill=easy\|normal\|hard` | Bot difficulty |
+| `&time=<seconds>` | Match length |
+| `&skipintro` | Skip the battle intro |
+| `&nonews` | Skip the news broadcast |
+| `&autoplay` | A bot drives your character |
+| `&qa` | Low-cost rendering for headless runs |
+
 Screenshots go to `chroma/qa/` (git-ignored).
 
 ---
 
-CHROMA CLASH is an original game. Its characters, names, art, music and levels are
-all made for this project.
+CHROMA CLASH is an original game. Its characters, names, art, music and levels are all
+made for this project.
