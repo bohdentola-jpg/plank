@@ -3,3 +3,4 @@ qa/
 *.log
 .DS_Store
 chroma/qa/
+.claude/worktrees/
