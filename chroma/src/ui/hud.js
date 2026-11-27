@@ -185,7 +185,7 @@ export class BattleHUD {
 
   splattedBy(name, color) {
     const by = this.splat.querySelector('.s-by');
-    by.innerHTML = name ? `by <b style="color:${hexToCss(color)}">${name}</b>` : 'You fell in the water!';
+    by.innerHTML = name ? `by <b style="color:${hexToCss(color)}">${name}</b>` : 'You fell off the stage!';
   }
 
   feedMsg(html) {

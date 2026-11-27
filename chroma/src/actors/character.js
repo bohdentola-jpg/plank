@@ -275,8 +275,10 @@ export function buildWeaponModel(id, teamColor, type) {
     g.add(canopy);
     const cg = geo('uCanopy', () => { const c = new THREE.ConeGeometry(0.55, 0.26, 8, 1, true); c.rotateX(Math.PI / 2); return c; });
     addMesh(canopy, cg, ink, { pos: [0, 0, 0], outline: true });
-    const ribs = addMesh(canopy, geo('uRibs', () => { const c = new THREE.ConeGeometry(0.56, 0.265, 8, 1, true); c.rotateX(Math.PI / 2); return c; }), wm('ribs', () => new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true })), { outline: false, shadow: false });
-    void ribs;
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+      addMesh(canopy, geo('uRib', () => new THREE.BoxGeometry(0.012, 0.012, 0.62).rotateX(-0.44).translate(0, 0.27 * Math.sin(0.44) * 0 + 0.0, -0.0)), wm('rib', () => std(0xffffff, 0.4)), { pos: [Math.cos(a) * 0.27, Math.sin(a) * 0.27, -0.01], rot: [0, 0, a], outline: false, shadow: false });
+    }
     addMesh(canopy, geo('uTip', () => new THREE.SphereGeometry(0.03, 8, 6)), ACCENT(), { pos: [0, 0, 0.14], outline: false });
     muzzle.position.set(0, 0, 0.72);
   } else if (id === 'longshot') {

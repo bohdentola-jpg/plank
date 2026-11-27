@@ -105,6 +105,9 @@ export class Battle {
     app.audio?.music('lobby');
     this.hud.showBanner(`<span class="mode">TURF RUSH</span>`, st.name, 'intro', 3.6);
     this.introFrom = Math.random() < 0.5 ? 1 : -1;
+    const bb = st.bounds;
+    this.sizeK = Math.max(1, (bb.maxZ - bb.minZ) / 80);
+    this.song = pick(['battle', 'battle_b', 'battle_c']);
     if (new URLSearchParams(location.search).has('skipintro')) this.stateT = 99;
   }
 
@@ -122,7 +125,7 @@ export class Battle {
       this.hud.feedMsg(`<b style="color:${c(attacker)}">${attacker.name}</b> <span class="fx">splashed</span> <b style="color:${c(victim)}">${victim.name}</b>`);
       if (attacker === this.player) { this.app.audio?.sfx('ko_confirm', { volume: 0.8 }); this.hud.showBanner(`SPLASHED <span style="color:${c(victim)}">${victim.name}</span>!`, '', 'ko', 1.4); }
     } else {
-      this.hud.feedMsg(`<b style="color:${c(victim)}">${victim.name}</b> fell in the water`);
+      this.hud.feedMsg(`<b style="color:${c(victim)}">${victim.name}</b> fell off the stage`);
     }
     if (victim === this.player) {
       this.hud.splattedBy(attacker && attacker !== victim ? attacker.name : null, attacker?.color);
@@ -159,16 +162,17 @@ export class Battle {
       const t = clamp(this.stateT / 4, 0, 1);
       const e = t * t * (3 - 2 * t);
       const a = -Math.PI / 2 - this.introFrom * (1.1 - e * 0.9);
-      const R = lerp(62, 38, e), H = lerp(34, 14, e);
+      const k = this.sizeK;
+      const R = lerp(62, 38, e) * k, H = lerp(34, 14, e) * (0.6 + 0.4 * k);
       const fz = this.player.team === 1 ? -1 : 1;
-      this.camera.position.set(Math.cos(a) * R, H, Math.sin(a) * R * fz * -1 + fz * 10 * e);
-      this.camera.lookAt(0, 0, fz * 12 * e);
+      this.camera.position.set(Math.cos(a) * R, H, Math.sin(a) * R * fz * -1 + fz * 10 * e * k);
+      this.camera.lookAt(0, 0, fz * 12 * e * k);
       if (this.stateT > 4 || (this.stateT > 0.8 && (inp.action('confirm') || inp.mousePressed[0]))) {
         this.state = 'countdown'; this.stateT = 0;
         this.hud.showPlayUI(true);
         this.hud.showBanner('READY?', '', 'ready', 1.4);
         app.audio?.sfx('countdown');
-        app.audio?.music('battle');
+        app.audio?.music(this.song);
         this.hud.showHint(app.input.usingPad
           ? '<b>L-stick</b> move · <b>R-stick</b> aim · <b>RT</b> fire · <b>LT</b> swim · <b>A</b> jump · <b>RB</b> bomb · <b>Y</b> special · <b>Back</b> map'
           : '<b>WASD</b> move · <b>Mouse</b> aim · <b>LMB</b> fire · <b>SHIFT</b> swim in ink · <b>SPACE</b> jump · <b>RMB</b> bomb · <b>Q</b> special · <b>TAB</b> map', 9);
@@ -182,7 +186,7 @@ export class Battle {
         this.oneMin = true;
         this.hud.showBanner('1 MINUTE LEFT!', '', 'warn', 2);
         app.audio?.sfx('one_minute');
-        app.audio?.music('battle_final');
+        app.audio?.music(this.song + '_final');
       }
       if (this.timeLeft <= 10 && Math.ceil(this.timeLeft) !== this.lastTick && this.timeLeft > 0) {
         this.lastTick = Math.ceil(this.timeLeft);
@@ -274,7 +278,7 @@ export class Battle {
     // slow top-down push-in over the arena
     const t = clamp(this.stateT / 6, 0, 1);
     const fz = this.player.team === 1 ? 1 : -1;
-    this.camera.position.set(0, lerp(92, 78, t), -fz * lerp(14, 6, t));
+    this.camera.position.set(0, lerp(92, 78, t) * this.sizeK, -fz * lerp(14, 6, t) * this.sizeK);
     this.camera.up.set(0, 1, 0);
     this.camera.lookAt(0, 0, 0);
     this.stage.paint.flush(this.app.renderer);

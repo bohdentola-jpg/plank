@@ -509,6 +509,9 @@ export class Plaza {
     const quips = {
       terminal: 'Tangerine Terminal? Watch the water. Every. Single. Edge.',
       skyline: 'Skyline Courts — those light-wells are NOT shortcuts.',
+      fizzwater: 'Fizzwater Works! Climb those silos and rain down on everybody.',
+      mesa: 'Mesa Bazaar. Hold the central terrace and you hold the match.',
+      frostbite: 'Frostbite Park — skate the bowl, mind the icy water.',
     };
     this.newsScript = [
       [1, 'Heyyy, Prism Plaza! You\'re tuned in to <b>PRISM NEWS</b>!'],
