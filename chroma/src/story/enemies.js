@@ -168,7 +168,7 @@ export class Smudge extends Drab {
           const d = Math.max(dist, 0.01);
           this.vel.set((dx / d) * 5.2, 3.6, (dz / d) * 5.2);
           this.onGround = false;
-          this.world.audio?.sfx('enemy_bite', { ...posOf(this.pos), volume: 0.7 });
+          this.world.audio?.sfx('jump', { ...posOf(this.pos), volume: 0.6, pitch: 0.7 });
         }
       } else if (aggro && p.alive && dist < 1.8 && Math.abs(dy) < 1.2 && this.cool <= 0) {
         this.state = 'windup';

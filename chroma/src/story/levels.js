@@ -354,6 +354,9 @@ function buildL5(c) {
   c.shutter([-4.85, 0.5, -1.3], [-4.5, 3.1, 1.3], 'nx');
   c.shutter([-1.3, 0.5, 4.5], [1.3, 3.1, 4.85], 'pz');
   c.shutter([-1.3, 0.5, -4.85], [1.3, 3.1, -4.5], 'nz');
+  // jump pads up onto the south pillars: perches above the sweep beam and shockwaves
+  c.pad([-18.5, 0, -5], [-13, 3.5, -13], 2.2);
+  c.pad([18.5, 0, -5], [13, 3.5, -13], 2.2);
   c.spawnAt([0, 0, -33], 0);
   c.checkpoint([0, 0, -30.5], 0);
   for (let i = 0; i < 26; i++) {

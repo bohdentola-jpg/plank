@@ -11,7 +11,7 @@ import { CameraRig, PlayerControl } from '../actors/player.js';
 import { Course } from '../story/course.js';
 import { LEVELS, ORDER, INFO, GRAY_INK } from '../story/levels.js';
 import { makeEnemy, GRAY_HEX } from '../story/enemies.js';
-import { GrisailleEngine, VALVE_HP, HEART_HP } from '../story/boss.js';
+import { GrisailleEngine, HEART_HP } from '../story/boss.js';
 import { Checkpoint, JumpPad, Swatch, HueCore, Hatch, Lift, CoreShelf, arcPoint, JUMP_G } from '../story/props.js';
 import { StoryHUD } from '../story/hud.js';
 import * as D from '../story/dialogue.js';
@@ -152,7 +152,7 @@ export class Story {
     // ---- HUD
     const hud = this.hud = new StoryHUD(app);
     hud.setInk('#' + this.colors[1].getHexString());
-    if (this.isHub) { hud.setLevel('◆', 'THE UNDERSIDE', VEIL_INK); hud.swatch('hidden'); }
+    if (this.isHub) { hud.setLevel('◆', 'THE UNDERSIDE', VEIL_INK); hud.swatchCount(prog.swatches.length, ORDER.length); }
     else { hud.setLevel(this.info.num, this.info.name.toUpperCase(), this.info.color); hud.swatch(this.swatchFound ? 'found' : 'missing', this.info); }
     hud.coins(prof.coins);
     if (this.boss) hud.boss(false, 'BARON GRISAILLE\'S GRAY ENGINE', [HEART_HP / this.boss.max, (HEART_HP * 0.45) / this.boss.max]);
@@ -261,8 +261,8 @@ export class Story {
   }
 
   onEnemyDefeated(e, attacker, kind) {
-    if (attacker === this.player || kind === 'clear') {
-      if (attacker === this.player) this.kills++;
+    if (attacker === this.player && kind !== 'clear') {
+      this.kills++;
       this.app.audio?.sfx('ko_confirm', { volume: 0.45 });
     }
     if (e.group === 'boss') this.toRemove.push(e);
@@ -418,6 +418,7 @@ export class Story {
     // the Drab flee from the light
     for (const e of this.enemies) if (e.alive) e.die(this.player, 'clear');
     this.world.combatOn = false;
+    this.player.invuln = 999; // stray blobs still in flight can't splat the celebration
     app.audio?.sfx('core_get', { volume: 1 });
     app.audio?.music('story_clear');
     hud.banner('HUE CORE RECOVERED!', this.info.core, 4, true);
@@ -478,7 +479,8 @@ export class Story {
     if (this.isHub) {
       if (!this.app.profile.story) return 'Talk to <b>Captain Veil</b>';
       const next = ORDER.find((k) => !prog.cleared.includes(k));
-      return next ? `Enter hatch <b>${INFO[next].num}: ${INFO[next].name}</b>` : 'All five Hue Cores recovered! Ride the <b>lift</b> back to the plaza.';
+      const cores = `Hue Cores <b>${prog.cleared.length}/${ORDER.length}</b> · `;
+      return next ? `${cores}Enter hatch <b>${INFO[next].num}: ${INFO[next].name}</b>` : 'All five Hue Cores recovered! Ride the <b>lift</b> back to the plaza.';
     }
     if (this.state === 'clear') return 'Hue Core recovered!';
     if (this.boss) {
@@ -495,7 +497,7 @@ export class Story {
 
   update(dt) {
     if (this.leaving || this.paused) return;
-    const app = this.app, inp = app.input, hud = this.hud, p = this.player, c = this.course, w = this.world;
+    const app = this.app, inp = app.input, hud = this.hud, p = this.player, w = this.world;
     if (inp.action('pause') && !hud.clearOpen) { this.setPaused(true); inp.unlock(); return; }
     this.time += dt;
     if (this.state === 'play') this.levelTime += dt;
@@ -517,7 +519,7 @@ export class Story {
         hud.toast('Hatch <b>1</b> is open! Walk up to it and press <b>E</b>.', 4.5);
       }, this.veilShot(true));
     }
-    if (this.endingT != null && (this.endingT -= dt) <= 0) { this.endingT = null; this.talk(D.ENDING, null, this.veilShot(false)); }
+    if (this.endingT != null && (this.endingT -= dt) <= 0) { this.endingT = null; this.talkedVeil = true; this.talk(D.ENDING, null, this.veilShot(true)); }
     if (this.radioT != null && (this.radioT -= dt) <= 0) { this.radioT = null; hud.dialog(D.LEVEL_RADIO[this.levelId], { blocking: false }); }
 
     // ---- player control
@@ -711,6 +713,9 @@ export class Story {
     this.disposed = true;
     this.hud.dispose();
     this.ambient?.stop();
+    // free GPU buffers of everything still attached (character models drop their
+    // root without disposing geometry); shared geometries simply re-upload later
+    this.scene.traverse((o) => { o.geometry?.dispose?.(); });
     for (const e of this.enemies) e.dispose();
     this.boss?.dispose();
     this.player.dispose();

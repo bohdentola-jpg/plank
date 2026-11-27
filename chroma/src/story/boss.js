@@ -11,7 +11,7 @@ import { GRAY_HEX } from './enemies.js';
 export const VALVE_HP = 160, HEART_HP = 1500;
 const DIRS = [{ face: 'px', x: 1, z: 0 }, { face: 'nx', x: -1, z: 0 }, { face: 'pz', x: 0, z: 1 }, { face: 'nz', x: 0, z: -1 }];
 export const DRAINS = [[-18.6, 18.6], [18.6, 18.6], [-18.6, -18.6], [18.6, -18.6]];
-const UP = new THREE.Vector3(0, 1, 0), DOWN = new THREE.Vector3(0, -1, 0);
+const UP = new THREE.Vector3(0, 1, 0);
 const LOB_G = 20;
 const R_IN = 4.75, R_OUT = 32;
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -119,6 +119,17 @@ export class GrisailleEngine {
     this.lid = part(this.lidPivot, new THREE.SphereGeometry(2.75, 32, 14, 0, Math.PI * 2, 0, Math.PI / 2), this.bodyMat, { pos: [0, 0, 2.7], outline: OUTLINE_L });
     part(this.lidPivot, new THREE.TorusGeometry(2.76, 0.12, 8, 40), dark, { pos: [0, 0.05, 2.7], rot: [Math.PI / 2, 0, 0], shadow: false });
     part(this.lidPivot, new THREE.CylinderGeometry(0.35, 0.45, 0.5, 12), iron, { pos: [0, 2.85, 2.7] });
+    // furnace portholes glowing around the boiler (pulse harder each phase)
+    this.portMat = glowMat(0xff9a40, 1.6);
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2 + Math.PI / 10;
+      const g = new THREE.Group();
+      g.position.set(Math.sin(a) * 4.52, 4.25, Math.cos(a) * 4.52);
+      g.rotation.y = a;
+      root.add(g);
+      part(g, new THREE.TorusGeometry(0.36, 0.07, 6, 18), dark, { shadow: false });
+      part(g, new THREE.CircleGeometry(0.32, 18), this.portMat, { pos: [0, 0, 0.02], shadow: false });
+    }
     // gauges ("eyes") on the lid, facing forward
     this.gaugeMats = [];
     for (const s of [-1, 1]) {
@@ -516,7 +527,9 @@ export class GrisailleEngine {
       w.fx.spawn(_v, new THREE.Vector3(rand(-0.4, 0.4), rand(1.5, 3), rand(-0.4, 0.4)), this.state === 'dying' ? 0x3b3745 : 0x8b8794, rand(0.12, 0.22), rand(1.2, 2.2), { grav: -0.04, drag: 0.6 });
     }
     this.animBaron(dt);
-    for (const n of this.needles) n.rotation.z = Math.sin(this.t * (this.phase === 3 ? 14 : 3) + n.userData.s) * (this.phase === 3 ? 1.2 : 0.6);
+    const glow = this.state === 'dead' ? 0 : this.state === 'dormant' ? 0.8 : 1.2 + this.phase * 0.5 + Math.sin(this.t * (2 + this.phase * 2)) * 0.5;
+    this.portMat.color.setRGB(1, 0.6, 0.25).multiplyScalar(glow);
+    for (const n of this.needles) n.rotation.z =Math.sin(this.t * (this.phase === 3 ? 14 : 3) + n.userData.s) * (this.phase === 3 ? 1.2 : 0.6);
     // flash
     if (this.flash > 0) {
       this.flash = Math.max(0, this.flash - dt * 6);

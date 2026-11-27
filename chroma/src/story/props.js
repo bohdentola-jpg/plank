@@ -335,7 +335,7 @@ export class Hatch {
     this.t += dt;
     const near = playerPos ? Math.min(1, Math.max(0, (Math.hypot(playerPos.x - this.pos.x, playerPos.z - this.pos.z) - 1.6) / 3)) : 1;
     if (this.mini) { this.mini.rotation.y += dt * 1.4; this.mini.position.y = 1.6 + Math.sin(this.t * 2) * 0.12; }
-    if (this.beam) this.beamMat.opacity = (0.12 + Math.sin(this.t * 2.4) * 0.05) * near;
+    if (this.beam) this.beamMat.opacity = (0.12 + Math.sin(this.t * 2.4) * 0.05) * near * (this.status === 'cleared' ? 0.45 : 1);
     if (this.status === 'open') {
       this.lidMat.emissiveIntensity = 0.7 + Math.sin(this.t * 3) * 0.3;
       if (fx && Math.random() < dt * 8) {

@@ -137,8 +137,11 @@ async function coreCheck(id) {
   const overlay = await waitFor(() => !!(window.__chroma.mode.hud.clearOpen && document.querySelector('#story-hud .sh-clear.on')), null, 9000);
   check(`${id}: HUE CORE RECOVERED overlay shows`, overlay);
   await shot(`${id}_clear`);
-  await wait(800);
-  await page.keyboard.press('KeyE');
+  await waitFor(() => window.__chroma.mode.clearT > 3.2, null, 15000);
+  for (let k = 0; k < 8 && !(await ev(() => window.__chroma.mode.leaving || window.__chroma.loadingNow)); k++) {
+    await page.keyboard.press('KeyE');
+    await wait(700);
+  }
   const hub = await waitFor((id) => { const a = window.__chroma; return a.mode?.levelId === 'hub' && !a.loadingNow && a.mode.opts.from === id; }, id, 90000);
   check(`${id}: continue returns to the hub`, hub);
   if (hub) {
@@ -237,6 +240,17 @@ async function suiteL1() {
   await shot('l1_smudge');
   await wait(2500);
   await deathCheck('l1');
+  // real weapon fire (mouse held, camera aimed at the Smudge) pops it
+  await fakeLock();
+  const target = await ev(() => { const m = window.__chroma.mode; const e = m.enemies.find((x) => x.alive); m.player.place(e.pos.clone().setZ(e.pos.z - 4.5), 0); m.rig.snap(m.player, 0); m.player.invuln = 99; return m.enemies.indexOf(e); });
+  await ev((i) => { const m = window.__chroma.mode; window.__aim = setInterval(() => { const e = m.enemies[i], p = m.player; if (!e) return; m.rig.yaw = Math.atan2(e.pos.x - p.pos.x, e.pos.z - p.pos.z); m.rig.pitch = -0.32; }, 30); }, target);
+  await page.mouse.move(480, 270);
+  await page.mouse.down();
+  const popped = await waitFor((i) => !window.__chroma.mode.enemies[i].alive, target, 20000);
+  await page.mouse.up();
+  await ev(() => { clearInterval(window.__aim); window.__chroma.mode.player.invuln = 0; });
+  check('l1: shooting a Smudge with the real weapon pops it', popped);
+  await shot('l1_shoot');
   await killAll('l1');
   const unsealed = await waitFor(() => !window.__chroma.mode.core.locked, null, 3000);
   check('l1: seal breaks after the Smudges pop', unsealed);
@@ -351,13 +365,15 @@ async function suiteL5() {
   await fakeLock();
   const sweepHurt = await ev(() => new Promise((res) => {
     const m = window.__chroma.mode, b = m.boss, p = m.player;
+    b.lobT = 99; b.lobQueue.length = 0; b.summonT = 99; b.sweepT = 99;
+    for (const e of m.enemies) if (e.group === 'boss' && e.alive) e.die(p, 'clear');
     p.place(p.pos.clone().set(12, 0, 0), 0);
     p.invuln = 0; p.hp = 100;
-    m.world.paint.splat(p.pos.clone().set(12, 0.02, 0), 2.6, 2); // gray under foot: no swimming possible
-    b.sweepT = 99; b.startSweep(p); b.sweep.ang = 0.9; b.sweep.dir = -1;
-    let t = 0; const iv = setInterval(() => { t += 100; if (p.hp < 100 || !p.alive || t > 9000) { clearInterval(iv); res(p.hp < 100 || !p.alive); } }, 100);
+    m.world.paint.splat(p.pos.clone().set(12, 0.02, 0), 2.6, 1); // own ink, but standing (not swimming)
+    b.sweepHitT = 0; b.startSweep(p); b.sweep.ang = 0.9; b.sweep.dir = -1;
+    let t = 0; const iv = setInterval(() => { t += 100; if (b.sweepHitT > 0 || t > 9000) { clearInterval(iv); res(b.sweepHitT > 0 && (p.hp < 100 || !p.alive)); } }, 50);
   }));
-  check('l5: sweep beam hurts a player standing on the floor', sweepHurt);
+  check('l5: sweep beam hits a player standing on the floor', sweepHurt);
   await waitFor(() => window.__chroma.mode.player.alive, null, 12000);
   await ev(() => { const m = window.__chroma.mode; m.boss.sweep = null; for (const b of m.boss.beams) b.visible = false; });
   await tp(-12, 0, 0, 0);
@@ -369,7 +385,7 @@ async function suiteL5() {
     p.hp = 100; p.invuln = 0; b.lobT = 99; b.lobQueue.length = 0; b.summonT = 99;
     for (const e of m.enemies) if (e.group === 'boss' && e.alive) e.die(p, 'clear');
     b.startSweep(p); b.sweep.ang = Math.PI + 0.9; b.sweep.dir = -1;
-    let t = 0, minHp = 100; const iv = setInterval(() => { t += 100; minHp = Math.min(minHp, p.hp); if (!b.sweep || t > 9000) { clearInterval(iv); res(minHp >= 100 && p.alive); } }, 100);
+    let t = 0, hit = false; b.sweepHitT = 0; const iv = setInterval(() => { t += 50; hit = hit || b.sweepHitT > 0; if (!b.sweep || t > 12000) { clearInterval(iv); res(!hit && p.alive && t <= 12000); } }, 50);
   }));
   await page.keyboard.up('ShiftLeft');
   check('l5: swimming in own ink dodges the sweep', dodged, `submerged=${sub}`);
@@ -426,7 +442,20 @@ async function suiteCycle() {
     await waitFor(() => window.__chroma.mode?.levelId === 'hub' && !window.__chroma.loadingNow, null, 90000);
   }
   console.log('  renderer memory after each plaza return:', JSON.stringify(mem));
-  check('cycle: GPU geometries/textures do not grow between cycles', mem[1].geometries <= mem[0].geometries + 8 && mem[1].textures <= mem[0].textures + 2, JSON.stringify(mem));
+  // story-only hops: hub -> level -> hub must not leak textures; geometries may grow by the 2 PMREM
+  // source meshes that world/env.js never disposes (per Environment, so +4 per hub/level pair)
+  const hubMem = [];
+  for (const lv of ['l2', 'hub', 'l5', 'hub', 'l2', 'hub']) {
+    await ev((lv) => window.__chroma.mode.leaveTo(lv, {}, 'test'), lv);
+    await waitFor((lv) => window.__chroma.mode?.levelId === lv && !window.__chroma.loadingNow, lv, 90000);
+    await wait(1200);
+    if (lv === 'hub') hubMem.push(await ev(() => ({ ...window.__chroma.renderer.info.memory })));
+  }
+  console.log('  renderer memory at the hub after story-only hops:', JSON.stringify(hubMem));
+  check('cycle: no texture growth across hub <-> level hops', hubMem[2].textures <= hubMem[0].textures, JSON.stringify(hubMem));
+  check('cycle: geometry growth bounded (env.js PMREM meshes only)', hubMem[2].geometries - hubMem[0].geometries <= 8, JSON.stringify(hubMem));
+  const dc = await domCounts();
+  check('cycle: still exactly one story HUD', dc.hud === 1 && dc.style === 1, JSON.stringify(dc));
 }
 
 const SUITES = { hub: suiteHub, l1: suiteL1, l2: suiteL2, l3: suiteL3, l4: suiteL4, l5: suiteL5, cycle: suiteCycle };

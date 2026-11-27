@@ -187,6 +187,14 @@ export class StoryHUD {
     this.el.swName.textContent = state === 'found' ? info.swatch : 'not found yet';
   }
 
+  swatchCount(n, total) {
+    this.el.sw.style.display = '';
+    this.cls(this.el.sw, 'found', n > 0);
+    ['#ffd21a', '#ff3d7f', '#22d3ee'].forEach((c, i) => this.el.sw.style.setProperty(`--s${i + 1}`, c));
+    this.el.sw.querySelector('span').firstChild.textContent = 'LOST SWATCHES';
+    this.el.swName.textContent = `${n} / ${total} found`;
+  }
+
   vitals(p) {
     const hp = Math.max(0, Math.round(p.hp)), ink = Math.max(0, Math.min(1, p.ink));
     this.el.hp.style.width = `${hp}%`;
