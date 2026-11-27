@@ -6,6 +6,9 @@ import { PaintSystem, makeNoiseTexture } from './paint.js';
 import { levelMaterials } from './materials.js';
 import { signTexture } from './textures.js';
 import { rng } from '../util.js';
+import { FIZZWATER } from './stages/fizzwater.js';
+import { MESA } from './stages/mesa.js';
+import { FROSTBITE } from './stages/frostbite.js';
 
 const C = {
   navy: 0x4a6fa5, rust: 0xc8643c, olive: 0x8a9a5b, cream: 0xe8dcc0, teal: 0x4f9da6, plum: 0x8e6c8a, white: 0xffffff,
@@ -109,6 +112,10 @@ const STAGES = {
       ['box', [6.4, 0, -36.5], [20, 1.0, -36], { mat: 'concreteDark', paintable: false }],
     ],
   },
+  // bigger stages (layouts + decor live in ./stages/)
+  fizzwater: FIZZWATER,
+  mesa: MESA,
+  frostbite: FROSTBITE,
 };
 export const STAGE_IDS = Object.keys(STAGES);
 export function stageInfo(id) { return STAGES[id]; }
@@ -120,10 +127,9 @@ function mirrorEntry([kind, min, max, opts]) {
   return [kind, nmin, nmax, o];
 }
 
-export function buildStage(id, scene, renderer, env) {
-  const def = STAGES[id];
-  const paint = new PaintSystem({ size: 2048, tpm: 8 });
-  paint.uniforms.uNoise.value = makeNoiseTexture(256);
+// Collision/paint geometry for a stage definition (no rendering). Also used by
+// the node-side layout checks.
+export function stageLevel(def, paint) {
   const level = new Level(paint);
   level.killY = def.killY ?? -1.3;
   const add = ([kind, min, max, opts]) => {
@@ -134,6 +140,14 @@ export function buildStage(id, scene, renderer, env) {
   for (const e of def.sym) add(e);
   for (const e of def.mirrored) { add(e); add(mirrorEntry(e)); }
   level.build();
+  return level;
+}
+
+export function buildStage(id, scene, renderer, env) {
+  const def = STAGES[id];
+  const paint = new PaintSystem({ size: 2048, tpm: 8 });
+  paint.uniforms.uNoise.value = makeNoiseTexture(256);
+  const level = stageLevel(def, paint);
   paint.finalize();
   paint.bakeAO((p) => level.sdf(p));
   const mats = levelMaterials(paint);
@@ -146,7 +160,8 @@ export function buildStage(id, scene, renderer, env) {
     spawns[1].push(new THREE.Vector3(x, def.spawnY, -def.spawnZ));
     spawns[2].push(new THREE.Vector3(-x, def.spawnY, def.spawnZ));
   }
-  const decor = def.decor === 'skyline' ? buildSkylineDecor(scene, def, env) : buildTerminalDecor(scene, def, env);
+  const decor = typeof def.decor === 'function' ? def.decor(scene, def, env)
+    : def.decor === 'skyline' ? buildSkylineDecor(scene, def, env) : buildTerminalDecor(scene, def, env);
   return { def, paint, level, mats, spawns, decor, name: def.name, bounds: def.half };
 }
 
