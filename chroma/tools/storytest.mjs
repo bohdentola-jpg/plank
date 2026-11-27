@@ -68,8 +68,8 @@ const domCounts = () => ev(() => ({ hud: document.querySelectorAll('#story-hud')
 // keep the game thinking the mouse is captured so PlayerControl writes intents
 const fakeLock = () => ev(() => { const i = window.__chroma.input; i.lock = () => {}; i.locked = true; });
 
-async function checkpointsAndPads(id) {
-  const cps = await ev(() => window.__chroma.mode.checkpoints.map((c) => [...c.pos.toArray(), c.yaw]));
+async function checkpointsAndPads(id, padsOnly = false) {
+  const cps = padsOnly ? [] : await ev(() => window.__chroma.mode.checkpoints.map((c) => [...c.pos.toArray(), c.yaw]));
   for (let i = 0; i < cps.length; i++) {
     const [x, y, z, yaw] = cps[i];
     await tp(x + 0.4, y + 0.05, z, yaw);
@@ -335,6 +335,9 @@ async function suiteL5() {
   check('l5: big boss health bar visible', bar);
   const minions = await waitFor(() => window.__chroma.mode.enemies.some((e) => e.group === 'boss' && e.alive), null, 6000);
   check('l5: boss summons Smudges', minions);
+  await ev(() => { window.__chroma.mode.player.invuln = 60; });
+  await checkpointsAndPads('l5', true);
+  await ev(() => { window.__chroma.mode.player.invuln = 0; });
   // valves can't be hit before their shutters are painted
   const hp0 = await ev(() => { const b = window.__chroma.mode.boss; return b.valveHp[0]; });
   await ev(() => { const m = window.__chroma.mode; m.world.combat.damage(m.boss.valves[0], 50, m.player, 'test'); });

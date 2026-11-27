@@ -231,6 +231,7 @@ export class StoryHUD {
     this.cls(this.el.banner, 'on', true);
     this.t.banner = t;
   }
+  hideBanner() { this.t.banner = 0; this.cls(this.el.banner, 'on', false); }
   warn(html, t = 2) { this.el.warn.innerHTML = html; this.cls(this.el.warn, 'on', true); this.t.warn = t; }
   tip(html) {
     if (html) { this.set('tip', this.el.tip, html); this.t.tipHold = 0.6; this.cls(this.el.tip, 'on', true); }

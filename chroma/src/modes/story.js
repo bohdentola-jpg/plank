@@ -289,6 +289,7 @@ export class Story {
   talk(lines, onDone, cine) {
     this.cine = cine || null;
     this.dlgT = this.time;
+    this.hud.hideBanner();
     this.hud.dialog(lines, { blocking: true, onDone: () => { this.cine = null; onDone?.(); } });
   }
 
@@ -448,6 +449,7 @@ export class Story {
     this.app.audio?.sfx('door_heavy', { volume: 1 });
     p.spawnPoint.set(0, 0, -16);
     p.spawnYaw = 0;
+    this.cpIndex = this.checkpoints.length; // the antechamber is behind the door now
     this.talk(D.BOSS_INTRO, () => {
       b.begin();
       this.app.audio?.music('story_boss');
