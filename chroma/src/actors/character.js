@@ -277,7 +277,7 @@ export function buildWeaponModel(id, teamColor, type) {
     addMesh(canopy, cg, ink, { pos: [0, 0, 0], outline: true });
     for (let i = 0; i < 8; i++) {
       const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
-      addMesh(canopy, geo('uRib', () => new THREE.BoxGeometry(0.012, 0.012, 0.62).rotateX(-0.44).translate(0, 0.27 * Math.sin(0.44) * 0 + 0.0, -0.0)), wm('rib', () => std(0xffffff, 0.4)), { pos: [Math.cos(a) * 0.27, Math.sin(a) * 0.27, -0.01], rot: [0, 0, a], outline: false, shadow: false });
+      addMesh(canopy, geo('uRib2', () => new THREE.BoxGeometry(0.61, 0.014, 0.014).rotateY(0.44)), wm('rib', () => std(0xffffff, 0.4)), { pos: [Math.cos(a) * 0.275, Math.sin(a) * 0.275, 0.005], rot: [0, 0, a], outline: false, shadow: false });
     }
     addMesh(canopy, geo('uTip', () => new THREE.SphereGeometry(0.03, 8, 6)), ACCENT(), { pos: [0, 0, 0.14], outline: false });
     muzzle.position.set(0, 0, 0.72);
