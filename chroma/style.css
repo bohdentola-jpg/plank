@@ -284,3 +284,47 @@ button { font: inherit; cursor: pointer; }
   .hud-team .ico { width: 28px; height: 28px; font-size: 13px; }
   .hud-timer { font-size: 26px; min-width: 80px; }
 }
+
+/* ------------------------------------------------------------------ v2: shops, news, fades */
+.panel.shopwide { width: min(860px, 62vw); height: min(84vh, 760px); }
+.overlay.side-right .panel.shopwide { margin-right: 0; }
+.shop-cols { display: grid; grid-template-columns: 0.95fr 1.25fr; gap: 16px; flex: 1; min-height: 0; }
+.shop-cols .shop-list { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 6px; }
+.witem { position: relative; text-align: left; border: 0; border-radius: 14px; padding: 9px 12px; background: rgba(255,255,255,.07); color: #fff; box-shadow: inset 0 0 0 2px rgba(255,255,255,.07); transition: all .12s; }
+.witem b { display: flex; align-items: center; gap: 8px; font-family: var(--hfont); font-weight: 400; font-size: 17px; }
+.witem small { font-weight: 900; font-size: 11px; color: #a9a3c9; letter-spacing: .3px; }
+.witem i { position: absolute; right: 10px; top: 8px; color: var(--sun); font-style: normal; }
+.witem:hover, .witem.focus { background: rgba(255,255,255,.14); }
+.witem.sel { background: rgba(255,46,136,.25); box-shadow: inset 0 0 0 2px var(--pink); }
+.witem.locked { opacity: .55; }
+.witem.own small { color: #9dffb0; }
+.swatchdot { width: 14px; height: 14px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 2px rgba(0,0,0,.4); flex: none; }
+.shop-detail { background: rgba(0,0,0,.22); border-radius: 18px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+.wd-cls { font-family: var(--hfont); color: var(--sun); letter-spacing: 2px; font-size: 14px; }
+.wd-name { font-family: var(--hfont); font-size: 34px; line-height: 1; }
+.kit { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.kit > div { background: rgba(255,255,255,.07); border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
+.kit small { font-weight: 900; font-size: 10px; color: #a9a3c9; letter-spacing: 1px; }
+.kit b { font-family: var(--hfont); font-weight: 400; font-size: 16px; }
+.kit span { font-size: 12px; color: #d8d2ff; line-height: 1.3; }
+.wd-actions { display: flex; gap: 10px; align-items: center; margin-top: 4px; }
+.ability { display: flex; gap: 12px; align-items: center; background: rgba(255,255,255,.08); border-radius: 14px; padding: 10px 12px; }
+.ab-glyph { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--sun); color: var(--ink); font-size: 24px; font-weight: 900; flex: none; }
+.ability b { display: block; font-family: var(--hfont); font-weight: 400; font-size: 18px; }
+.ability span { font-size: 13px; color: #d8d2ff; }
+.tabs { display: flex; gap: 8px; }
+.confirm-text { font-size: 16px; line-height: 1.45; color: #e6e1ff; margin: 0; }
+.ph-weapon em { color: var(--sun); font-style: normal; font-size: 13px; }
+#fade { position: fixed; inset: 0; z-index: 80; background: #0d0b18; opacity: 0; pointer-events: none; transition: opacity .25s; }
+#fade.on { opacity: 1; }
+#news { position: fixed; inset: 0; z-index: 55; opacity: 0; pointer-events: none; transition: opacity .35s; cursor: pointer; }
+#news.on { opacity: 1; pointer-events: all; }
+.nw-bar { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 14px; padding: 14px 22px; background: linear-gradient(180deg, rgba(13,11,24,.75), rgba(13,11,24,0)); font-family: var(--hfont); }
+.nw-live { background: #ff3b3b; padding: 4px 10px; border-radius: 8px; font-size: 16px; animation: blink 1.2s steps(2) infinite; }
+.nw-logo { font-size: 26px; color: var(--sun); text-shadow: 0 3px 0 var(--ink); }
+.nw-skip { margin-left: auto; font-family: var(--bfont); font-weight: 900; font-size: 13px; opacity: .8; }
+.nw-lower { position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%); width: min(900px, 90vw); }
+.nw-name { display: inline-block; font-family: var(--hfont); font-size: 22px; padding: 4px 18px; border-radius: 12px 12px 0 0; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.3); }
+.nw-text { background: rgba(255,250,240,.96); color: var(--ink); padding: 16px 22px; border-radius: 0 18px 18px 18px; font-weight: 800; font-size: 21px; line-height: 1.35; box-shadow: 0 0 0 4px var(--ink), 0 14px 30px rgba(0,0,0,.4); min-height: 64px; }
+.nw-text b { color: var(--pink); }
+@media (max-width: 900px) { .shop-cols { grid-template-columns: 1fr; } .panel.shopwide { width: 94vw; } }

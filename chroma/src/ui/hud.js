@@ -1,8 +1,9 @@
 // DOM heads-up display for battles.
 import * as THREE from 'three';
 import { formatTime, hexToCss, clamp } from '../util.js';
+import { SUBS, SPECIALS } from '../actors/weapons.js';
 
-const WEAPON_GLYPH = { spritzer: '✦', roller: '▬', longshot: '➶', popper: '●' };
+const WEAPON_GLYPH = { shooter: '✦', dualies: '✧', roller: '▬', brush: '≋', slosher: '◒', blaster: '●', splatling: '⁂', brella: '☂', charger: '➶', stringer: '⌒', splatana: '⚔' };
 const SPLAT_PATH = 'M50 6c9 0 10 14 18 15s16-9 21-1-6 16-1 23 17 6 13 16-17 3-21 9 1 20-8 22-12-11-20-9-11 15-20 11 2-16-5-21-20 2-21-8 12-12 11-20-14-8-12-18 15-5 21-11-2-23 6-26 9 9 16 6 3-7 9-7z';
 
 export class BattleHUD {
@@ -77,11 +78,12 @@ export class BattleHUD {
     this.root.style.setProperty('--teamB', css(2));
     for (const t of [1, 2]) {
       const list = fighters.filter((f) => f.team === t);
-      this.teams[t].innerHTML = list.map((f, i) => `<div class="ico ${f === player ? 'me' : ''}" data-i="${i}" style="--c:${css(t)}"><span>${WEAPON_GLYPH[f.weapon.id] || '●'}</span></div>`).join('');
+      this.teams[t].innerHTML = list.map((f, i) => `<div class="ico ${f === player ? 'me' : ''}" data-i="${i}" style="--c:${css(t)}" title="${f.weapon.name}"><span>${WEAPON_GLYPH[f.weapon.type] || '●'}</span></div>`).join('');
       list.forEach((f, i) => { f._icon = this.teams[t].children[i]; });
     }
     this.$('.w-name').textContent = player.weapon.name;
-    const sp = { barrage: 'Paint Barrage', nova: 'Ink Nova' }[player.weapon.special];
+    this.$('.w-sub').innerHTML = `<span class="w-ico">●</span> ${SUBS[player.weapon.sub]?.name || 'Splash Bomb'} <small>RMB</small>`;
+    const sp = SPECIALS[player.weapon.special]?.name || 'Special';
     this.spName = sp;
     this.chargeRing.style.display = player.weapon.type === 'charger' ? '' : 'none';
     // nameplates

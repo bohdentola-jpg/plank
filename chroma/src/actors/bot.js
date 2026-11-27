@@ -187,7 +187,8 @@ export class Bot {
     this.goalT = 0;
     this.specialT = rand(2, 6);
     this.chargeHold = 0;
-    this.prefer = { shooter: 7, blaster: 6.5, roller: 1.5, charger: 19 }[fighter.weapon.type];
+    this.prefer = { shooter: 7, dualies: 6, blaster: 6.5, slosher: 7, splatling: 13, brella: 5.5, roller: 1.5, brush: 1.5, charger: 19, stringer: 15, splatana: 2.2 }[fighter.weapon.type] || 7;
+    this.tapT = 0; this.tapOn = false;
     this.homeZ = fighter.spawnPoint.z || (fighter.team === 1 ? -36 : 36);
     this.enemyBaseZ = -this.homeZ;
   }
@@ -202,13 +203,14 @@ export class Bot {
   findTarget() {
     const f = this.f;
     let best = null, bd = Infinity;
-    const range = (this.prefer + 9) * (this.f.weapon.type === 'charger' ? 1.2 : 1);
+    const range = (this.prefer + 9) * (this.f.weapon.type === 'charger' || this.f.weapon.type === 'stringer' ? 1.2 : 1);
     for (const e of this.world.fighters) {
       if (!e.alive || e.team === f.team) continue;
       const d = e.pos.distanceTo(f.pos);
       if (d > range) continue;
-      // submerged & still enemies are hard to spot
+      // submerged & still enemies are hard to spot; camouflaged ones only up close
       if (e.submerged && Math.hypot(e.vel.x, e.vel.z) < 4 && d > 4) continue;
+      if (e.camoT > 0 && d > 2.5) continue;
       if (d < bd && this.enemyVisible(e)) { bd = d; best = e; }
     }
     return best;
@@ -281,7 +283,7 @@ export class Bot {
       if (t !== this.target) { this.reactT = t ? this.sk.react * rand(0.7, 1.3) : 0; this.target = t; }
       if (t) this.seenT = 0;
       const prev = this.mode;
-      if (f.ink < Math.max(0.14, f.weapon.type === 'charger' ? f.weapon.ink : 0) && !(this.target && f.weapon.type === 'roller' && f.ink > 0.05)) this.mode = 'refill';
+      if (f.ink < Math.max(0.14, f.weapon.type === 'charger' || f.weapon.type === 'stringer' ? f.weapon.ink : 0) && !(this.target && f.weapon.type === 'roller' && f.ink > 0.05)) this.mode = 'refill';
       else if (this.mode === 'refill' && f.ink < 0.85 && !(this.target && this.target.pos.distanceTo(f.pos) < 5)) this.mode = 'refill';
       else if (this.target) this.mode = f.hp < 35 && f.ink < 0.3 ? 'retreat' : 'fight';
       else this.mode = 'paint';
@@ -332,7 +334,7 @@ export class Bot {
       if (this.strafeT <= 0) { this.strafeT = rand(0.6, 1.6); if (chance(0.5)) this.strafe *= -1; if (chance(0.15) && f.onGround) I.jump = true; }
       const ex = (e.pos.x - f.pos.x) / (dist || 1), ez = (e.pos.z - f.pos.z) / (dist || 1);
       let adv = dist > this.prefer + 1.5 ? 1 : dist < this.prefer - 2 ? -0.8 : 0;
-      if (type === 'roller') adv = 1;
+      if (type === 'roller' || type === 'brush' || type === 'splatana') adv = 1;
       if (!this.path || this.pi >= this.path.length) { mx = ex * adv - ez * this.strafe * 0.8; mz = ez * adv + ex * this.strafe * 0.8; }
       // aim with lead + error
       const lead = type === 'charger' ? 0 : dist / 30 * this.sk.lead;
@@ -344,14 +346,11 @@ export class Bot {
       }
       this.aim.set(e.pos.x + e.vel.x * lead, e.pos.y + e.hitHeight() * 0.55 + e.vel.y * lead * 0.5, e.pos.z + e.vel.z * lead).add(this.aimErr);
       const canShoot = this.reactT <= 0 && dist < this.prefer + 7;
-      if (type === 'charger') {
-        const cap = f.ink >= f.weapon.ink ? 0.98 : 0.39; // low ink caps the charge — release at the cap
-        if (canShoot) { fire = f.charge < cap || this.chargeHold < 0.15; this.chargeHold = f.charge >= cap ? this.chargeHold + dt : 0; }
-        if (f.charging) { mx *= 0.3; mz *= 0.3; }
-      } else if (type === 'roller') {
-        fire = canShoot && (dist < 3.2 || Math.random() < 0.05);
-        if (dist > 3.2 && dist < 6.5 && canShoot && f.flickCd <= 0 && chance(0.08)) { fire = true; }
-      } else fire = canShoot && Math.random() < this.sk.fireChance + 0.1;
+      fire = this.fireFor(type, canShoot, dist, dt);
+      if (type === 'charger' || type === 'stringer' || type === 'splatling') { if (f.charging) { mx *= 0.3; mz *= 0.3; } }
+      if ((type === 'roller' || type === 'brush') && dist > 3.2 && dist < 6.5 && canShoot && f.flickCd <= 0 && chance(0.08)) fire = true;
+      // dualies dodge-roll sideways now and then
+      if (type === 'dualies' && canShoot && f.onGround && f.dodges < 2 && chance(dt * 0.8)) { I.jump = true; mx = -ez * this.strafe; mz = ex * this.strafe; }
       // bombs
       if (dist > 5 && dist < 13 && f.ink > 0.8 && chance(this.sk.bomb * dt * 2)) I.sub = true;
     } else {
@@ -368,8 +367,10 @@ export class Bot {
       } else if (this.mode === 'retreat') {
         goo = true;
       } else {
-        if (type === 'roller') fire = f.ink > 0.05 && !(hereOwn && aheadOwn && chance(0.6));
-        else if (type === 'charger') fire = !aheadOwn && f.ink > 0.3 && (f.charge < 0.6 || chance(0.5));
+        if (type === 'roller' || type === 'brush') fire = f.ink > 0.05 && !(hereOwn && aheadOwn && chance(0.6));
+        else if (type === 'charger' || type === 'stringer') fire = !aheadOwn && f.ink > 0.3 ? this.chargeCycle(0.6) : false;
+        else if (type === 'splatling') fire = (!aheadOwn || f.spray.n > 0) && f.ink > 0.15 ? this.chargeCycle(0.8) : false;
+        else if (type === 'brella' || type === 'splatana') fire = !aheadOwn && f.ink > 0.1 && this.tap(dt);
         else fire = !aheadOwn && f.ink > 0.1;
         if (hereOwn && aheadOwn && !fire) goo = true;
         if (f.ink < 0.35 && hereOwn) goo = true;
@@ -395,11 +396,45 @@ export class Bot {
     I.aimPoint = this.mode === 'fight' ? (I.aimPoint || new THREE.Vector3()).copy(this.aim) : null;
   }
 
+  // press/release rhythm for tap weapons
+  tap(dt, period = 0.12) {
+    this.tapT -= dt;
+    if (this.tapT <= 0) { this.tapT = period; this.tapOn = !this.tapOn; }
+    return this.tapOn;
+  }
+
+  // hold to charge up to `cap`, then let go (release fires)
+  chargeCycle(cap) {
+    const f = this.f;
+    if (f.spray.n > 0) return false;
+    const limit = f.ink >= f.weapon.ink * (f.weapon.type === 'splatling' ? f.weapon.maxShots * 0.6 : 1) ? cap : 0.38;
+    if (f.charging && f.charge >= limit) return false;
+    return true;
+  }
+
+  fireFor(type, canShoot, dist, dt) {
+    const f = this.f;
+    if (!canShoot) return type === 'splatling' && f.charging ? f.charge < 0.4 : false;
+    switch (type) {
+      case 'charger': case 'stringer': {
+        const cap = f.ink >= f.weapon.ink ? 0.98 : 0.39;
+        const fire = f.charge < cap || this.chargeHold < 0.15;
+        this.chargeHold = f.charge >= cap ? this.chargeHold + dt : 0;
+        return fire;
+      }
+      case 'splatling': return this.chargeCycle(0.95);
+      case 'roller': case 'brush': return dist < 3.2 || Math.random() < 0.05;
+      case 'brella': return this.tap(dt, 0.15);
+      case 'splatana': return dist < 4 ? this.tap(dt, 0.1) : false;
+      default: return Math.random() < this.sk.fireChance + 0.1;
+    }
+  }
+
   planFight() {
     const f = this.f;
     if (!this.target) return;
     const dist = this.target.pos.distanceTo(f.pos);
-    if (dist > this.prefer + 6 || (f.weapon.type === 'roller' && dist > 2)) {
+    if (dist > this.prefer + 6 || ((f.weapon.type === 'roller' || f.weapon.type === 'brush' || f.weapon.type === 'splatana') && dist > 2)) {
       if (!this.path || this.goalT > 1.2) this.goTo(this.target.pos);
     } else this.path = null;
   }

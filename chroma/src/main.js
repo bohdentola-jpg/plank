@@ -5,7 +5,7 @@ import { Input } from './engine/input.js';
 import { Menus } from './ui/menus.js';
 import { Plaza } from './modes/plaza.js';
 import { Battle } from './modes/battle.js';
-import { randomLook } from './actors/character.js';
+import { randomLook, migrateLook, STARTER_GEAR } from './actors/gear.js';
 import { WEAPONS } from './actors/weapons.js';
 import { STAGE_IDS } from './world/stage.js';
 
@@ -19,7 +19,7 @@ const params = new URLSearchParams(location.search);
 
 function defaultProfile() {
   return {
-    v: 1, name: 'Rookie', created: false, look: randomLook(), ink: '#ff2e88', weapon: 'spritzer', owned: ['spritzer'],
+    v: 2, name: 'Rookie', created: false, look: { ...randomLook(), hat: 'cap_red', clothes: 'tee_basic', shoes: 'kicks_white' }, gear: [...STARTER_GEAR], ink: '#ff2e88', weapon: 'spritzer', owned: ['spritzer'],
     coins: 800, level: 1, xp: 0, lastSkill: 'normal', stats: { matches: 0, wins: 0, turf: 0, kills: 0 },
     settings: { sens: 1, invertY: false, music: 0.6, sfx: 0.85, quality: 'auto' },
   };
@@ -30,7 +30,9 @@ function loadProfile() {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return d;
     const p = JSON.parse(raw);
-    const out = { ...d, ...p, settings: { ...d.settings, ...(p.settings || {}) }, stats: { ...d.stats, ...(p.stats || {}) }, look: { ...d.look, ...(p.look || {}) } };
+    const out = { ...d, ...p, settings: { ...d.settings, ...(p.settings || {}) }, stats: { ...d.stats, ...(p.stats || {}) } };
+    out.look = migrateLook(p.look ? { ...p.look } : d.look);
+    out.gear = [...new Set([...(p.gear || []), ...STARTER_GEAR, out.look.hat, out.look.clothes, out.look.shoes])];
     out.owned = (out.owned || ['spritzer']).filter((w) => WEAPONS[w]);
     if (!out.owned.length) out.owned = ['spritzer'];
     if (!WEAPONS[out.weapon]) out.weapon = 'spritzer';
@@ -172,6 +174,8 @@ class App {
     audio.music('plaza');
     if (!this.profile.created) {
       pl.openUI('locker', { create: true });
+    } else if (!this.newsSeen) {
+      pl.startNews();
     } else {
       this.input.lock();
       pl.toast(`Welcome back, <b>${this.profile.name}</b>!`);
@@ -183,7 +187,8 @@ class App {
     const pl = await this.setMode(() => new Plaza(this, { from: this.mode instanceof Battle ? 'battle' : 'title' }), 'Heading back to Prism Plaza…');
     if (!pl) return;
     pl.setTitleMode(false);
-    pl.toast('Click to look around · <b>E</b> to interact');
+    if (!this.newsSeen && this.profile.created && !params.has('nonews')) pl.startNews();
+    else pl.toast('Click to look around · <b>E</b> to interact');
   }
 
   async startBattle(opts) {

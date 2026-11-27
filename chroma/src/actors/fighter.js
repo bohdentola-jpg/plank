@@ -1,23 +1,28 @@
 // A combatant (player or bot). Owns physics, ink/health, weapon handling and
-// its Dripkin model. Driven by an "intent" written by PlayerControl or a Bot.
+// its Chromeleon model. Driven by an "intent" written by PlayerControl or a Bot.
 import * as THREE from 'three';
 import { Dripkin } from './character.js';
 import { WEAPONS, SUBS, posOf } from './weapons.js';
+import { gearMods, migrateLook } from './gear.js';
 import { NONE } from '../world/paint.js';
 import { clamp, damp, dampAngle, angleDiff, rand } from '../util.js';
 
 const GRAV = 24;
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _muz = new THREE.Vector3(), _aim = new THREE.Vector3(), _raw = new THREE.Vector3();
+const _zAxis = new THREE.Vector3(0, 0, 1);
+const CHARGE_TYPES = new Set(['charger', 'stringer', 'splatling']);
 
 export class Fighter {
   constructor(world, { name, team, look, weapon = 'spritzer', isPlayer = false, color }) {
     this.world = world;
     this.name = name;
     this.team = team;
-    this.look = look;
+    this.look = migrateLook(look);
+    this.mods = gearMods(this.look);
     this.isPlayer = isPlayer;
-    this.weapon = WEAPONS[weapon];
-    this.model = new Dripkin(look, color || world.colors[team], weapon);
+    this.weapon = WEAPONS[weapon] || WEAPONS.spritzer;
+    this.model = new Dripkin(this.look, color || world.colors[team], this.weapon.id);
+    this.model.weaponType = this.weapon.type;
     world.scene.add(this.model.root);
     this.pos = new THREE.Vector3();
     this.vel = new THREE.Vector3();
@@ -29,6 +34,10 @@ export class Fighter {
     this.hp = 100; this.ink = 1; this.special = 0; this.specialReady = false;
     this.alive = true; this.respawnT = 0; this.invuln = 0;
     this.fireCd = 0; this.charge = 0; this.charging = false; this.flickCd = 0; this.rollDelay = 0; this.rolling = false;
+    this.holdT = 0; this.shieldOpen = false; this.shieldHP = 0; this.shieldCd = 0;
+    this.dodge = 0; this.dodgeDir = new THREE.Vector3(); this.dodges = 0; this.turretT = 0; this.alt = false;
+    this.spray = { n: 0, t: 0 };
+    this.jetT = 0; this.jetY = 0; this.camoT = 0;
     this.lastFire = -9; this.lastDamage = -9; this.time = 0; this.lastAttacker = null; this.lastAttackT = -9;
     this.damagers = new Map();
     this.rollHits = new Map();
@@ -40,14 +49,26 @@ export class Fighter {
     this.prevFire = false;
     this.lowInkT = 0;
     this.loops = {};
-    this.canFight = true; // false in plaza for npc-safe mode
+    this.canFight = true;
+    this.laser = null;
+    this.shieldHP = this.weapon.shieldHP || 0;
   }
 
   get color() { return this.world.colors[this.team]; }
 
   setWeapon(id) {
-    this.weapon = WEAPONS[id];
-    this.model.setWeapon(id);
+    this.weapon = WEAPONS[id] || WEAPONS.spritzer;
+    this.model.setWeapon(this.weapon.id, this.weapon.type);
+    this.model.weaponType = this.weapon.type;
+    this.charge = 0; this.charging = false; this.spray.n = 0; this.shieldOpen = false;
+    this.shieldHP = this.weapon.shieldHP || 0;
+  }
+
+  setLook(look) {
+    this.look = migrateLook(look);
+    this.mods = gearMods(this.look);
+    this.model.setLook(this.look);
+    this.model.weaponType = this.weapon.type;
   }
 
   hitHeight() { return this.form === 'goo' ? (this.submerged ? 0.3 : 0.55) : 1.25; }
@@ -69,8 +90,11 @@ export class Fighter {
       return;
     }
     this.invuln = Math.max(0, this.invuln - dt);
+    this.shieldCd = Math.max(0, this.shieldCd - dt);
+    if (this.shieldCd <= 0 && this.shieldHP <= 0) this.shieldHP = this.weapon.shieldHP || 0;
     const I = this.intent;
     this.aimYaw = I.aimYaw; this.aimPitch = I.aimPitch;
+    const M = this.mods;
 
     // ---- what am I standing in?
     this.surface = NONE;
@@ -80,53 +104,84 @@ export class Fighter {
     }
     const own = this.surface === this.team;
     const enemy = this.surface !== NONE && this.surface !== this.team;
+    const d = this.weapon;
+
+    // ---- specials with their own movement modes
+    if (this.camoT > 0) { this.camoT -= dt; this.ink = Math.min(1, this.ink + 0.2 * dt); if (this.camoT <= 0) w.audio?.sfx('camo_off', posOf(this.pos)); }
+    const jet = this.jetT > 0;
 
     // ---- form
-    const wantGoo = I.goo && !this.nova;
+    const wantGoo = I.goo && !this.nova && !jet && this.dodge <= 0;
     if (wantGoo && this.form === 'kid') {
       this.form = 'goo';
-      this.charge = 0; this.charging = false; this.rolling = false;
+      this.charge = 0; this.charging = false; this.rolling = false; this.shieldOpen = false; this.spray.n = 0;
       if (this.isPlayer || this.near()) w.audio?.sfx('goo_in', { ...posOf(this.pos), volume: 0.6 });
       w.fx.splash(_v.copy(this.pos).setY(this.pos.y + 0.4), _w.set(0, 1, 0), this.color, 6, 2.5, 0.07);
     } else if (!wantGoo && this.form === 'goo') {
-      this.form = 'goo_exit';
-    }
-    if (this.form === 'goo_exit') {
       this.form = 'kid';
       if (this.isPlayer || this.near()) w.audio?.sfx('goo_out', { ...posOf(this.pos), volume: 0.6 });
       if (this.submerged) w.fx.splash(_v.copy(this.pos).setY(this.pos.y + 0.2), _w.set(0, 1, 0), this.color, 8, 3, 0.07);
     }
     const goo = this.form === 'goo';
 
+    // ---- dualie dodge roll (JUMP while firing + a direction)
+    if (d.type === 'dualies' && I.jump && this.onGround && !goo && !jet && this.dodge <= 0 && this.dodges < 2 &&
+        (I.fire || this.time - this.lastFire < 0.3) && Math.hypot(I.mx, I.mz) > 0.3) {
+      if (this.useInk(d.rollInk)) {
+        this.dodge = 0.32; this.dodges++;
+        this.dodgeDir.set(I.mx, 0, I.mz).normalize();
+        this.turretT = 0.9;
+        I.jump = false;
+        w.audio?.sfx('dodge_roll', { ...posOf(this.pos), volume: 0.6 });
+        w.fx.splash(_v.copy(this.pos).setY(this.pos.y + 0.1), _w.set(0, 1, 0), this.color, 8, 3, 0.07);
+        this.paintUnder(0.7);
+      }
+    }
+
     // ---- weapons
     let firing = false;
-    if (!goo && this.canFight) firing = this.weaponUpdate(dt);
-    else { this.charging = false; this.charge = 0; this.rolling = false; this.stopLoop('charge'); this.stopLoop('roll'); }
+    if (jet) firing = this.jetUpdate(dt);
+    else if (!goo && this.canFight && this.dodge <= 0) firing = this.weaponUpdate(dt);
+    else this.cancelWeapon();
     this.prevFire = I.fire;
-    if (I.sub && this.canFight && !this.nova) this.throwSub();
-    if (I.special && this.specialReady && this.canFight && !this.nova) this.useSpecial();
+    if (I.sub && this.canFight && !this.nova && !jet) this.throwSub();
+    if (I.special && this.specialReady && this.canFight && !this.nova && !jet) this.useSpecial();
+    this.updateLaser();
 
     // ---- movement speed
     let maxSp;
     const rec = this.time - this.lastFire < 0.35;
-    if (goo) maxSp = own ? 10.6 : enemy ? 1.5 : (this.onGround ? 2.7 : 5);
+    const slowEnemy = (base, slow) => base - (base - slow) * M.inkResist;
+    if (jet) maxSp = 6.5;
+    else if (goo) maxSp = own ? 10.6 * M.swim : enemy ? 1.5 : (this.onGround ? 2.7 : 5);
     else {
-      maxSp = enemy ? 2.4 : 5.7;
-      if (this.charging) maxSp *= this.weapon.chargeMoveMul;
-      else if (this.rolling) maxSp = enemy ? 2.6 : 5.4 * this.weapon.moveMul;
-      else if (rec) maxSp *= this.weapon.moveMul;
+      maxSp = (enemy ? slowEnemy(5.7, 2.4) : 5.7) * M.run;
+      if (this.charging) maxSp *= d.chargeMoveMul || 0.5;
+      else if (this.rolling) maxSp = enemy ? slowEnemy(d.rollSpeed, 2.6) : d.rollSpeed * M.run;
+      else if (this.shieldOpen) maxSp *= 0.55;
+      else if (this.spray.n > 0) maxSp *= d.moveMul;
+      else if (rec) maxSp *= d.moveMul;
+      if (this.turretT > 0 && this.dodge <= 0) maxSp = (I.fire || this.time - this.lastFire < 0.2) ? 0 : maxSp;
     }
+    if (this.camoT > 0) maxSp *= 1.15;
     if (this.nova) maxSp = 3;
-    const mx = I.mx, mz = I.mz;
-    const tx = mx * maxSp, tz = mz * maxSp;
-    const accel = this.onGround ? (goo && own ? 70 : 46) : 16;
-    const dvx = tx - this.vel.x, dvz = tz - this.vel.z;
-    const dl = Math.hypot(dvx, dvz);
-    const maxDv = accel * dt;
-    if (dl > maxDv) { this.vel.x += (dvx / dl) * maxDv; this.vel.z += (dvz / dl) * maxDv; } else { this.vel.x = tx; this.vel.z = tz; }
-    if (!this.onGround && Math.hypot(this.vel.x, this.vel.z) > Math.max(maxSp, 6)) { this.vel.x *= 1 - 0.8 * dt; this.vel.z *= 1 - 0.8 * dt; }
+    let mx = I.mx, mz = I.mz;
+    if (this.dodge > 0) {
+      this.dodge -= dt;
+      this.vel.x = this.dodgeDir.x * 17; this.vel.z = this.dodgeDir.z * 17;
+      if (this.dodge <= 0) { this.vel.x *= 0.2; this.vel.z *= 0.2; }
+    } else {
+      if (this.turretT > 0) { this.turretT -= dt; if (this.turretT <= 0) this.dodges = 0; if (I.fire) this.turretT = Math.max(this.turretT, 0.25); }
+      const tx = mx * maxSp, tz = mz * maxSp;
+      const accel = this.onGround ? (goo && own ? 70 : 46) : jet ? 30 : 16;
+      const dvx = tx - this.vel.x, dvz = tz - this.vel.z;
+      const dl = Math.hypot(dvx, dvz);
+      const maxDv = accel * dt;
+      if (dl > maxDv) { this.vel.x += (dvx / dl) * maxDv; this.vel.z += (dvz / dl) * maxDv; } else { this.vel.x = tx; this.vel.z = tz; }
+      if (!this.onGround && !jet && Math.hypot(this.vel.x, this.vel.z) > Math.max(maxSp, 6)) { this.vel.x *= 1 - 0.8 * dt; this.vel.z *= 1 - 0.8 * dt; }
+    }
 
-    // ---- climbing
+    // ---- climbing (dive form + own ink on the wall)
     const wall = this.wall;
     this.climbing = false;
     if (goo && wall && wall.face && !this.nova) {
@@ -139,8 +194,7 @@ export class Fighter {
         }
         if (ownWall) {
           this.climbing = true;
-          this.vel.y = 6.8 * Math.min(1, press + 0.2);
-          // slide sideways along the wall, stick into it
+          this.vel.y = 6.8 * M.swim * Math.min(1, press + 0.2);
           const side = mx * -wall.nz + mz * wall.nx;
           this.vel.x = -wall.nz * side * 4 - wall.nx * 1.5;
           this.vel.z = wall.nx * side * 4 - wall.nz * 1.5;
@@ -154,12 +208,12 @@ export class Fighter {
     }
 
     // ---- jump
-    if (I.jump && (this.onGround || this.climbing)) {
+    if (I.jump && (this.onGround || this.climbing) && !jet) {
       if (this.climbing && wall) {
         this.vel.y = 7.4; this.vel.x += wall.nx * 4.5; this.vel.z += wall.nz * 4.5;
         this.climbing = false;
       } else {
-        this.vel.y = goo && own ? 9.2 : enemy ? 5.4 : 7.9;
+        this.vel.y = goo && own ? 9.2 : enemy ? 5.4 + 2.5 * (1 - M.inkResist) : 7.9;
       }
       this.onGround = false;
       if (this.isPlayer || this.near()) w.audio?.sfx('jump', { ...posOf(this.pos), volume: 0.5 });
@@ -167,7 +221,8 @@ export class Fighter {
     }
 
     // ---- gravity + integrate
-    if (!this.climbing) this.vel.y = Math.max(this.vel.y - GRAV * dt, -32);
+    if (jet) this.vel.y = clamp((this.jetY - this.pos.y) * 4, -6, 8);
+    else if (!this.climbing) this.vel.y = Math.max(this.vel.y - GRAV * dt, -32);
     const wasGround = this.onGround;
     const r = goo ? 0.3 : 0.36;
     const h = goo ? 0.55 : 1.45;
@@ -176,7 +231,6 @@ export class Fighter {
     this.wall = w.level.collide(this.pos, this.vel, r, h, wasGround ? 0.5 : 0.3);
     const prevY = this.pos.y;
     this.pos.y += this.vel.y * dt;
-    // test from the higher of old/new foot height so fast falls can't tunnel through floors
     const g = w.level.groundAt(this.pos.x, this.pos.z, Math.max(prevY, this.pos.y), 0.2, wasGround ? 0.55 : 0.12);
     if (g.solid && this.vel.y <= 0.01 && this.pos.y <= g.y + (wasGround ? 0.4 : 0.001)) {
       if (!wasGround && this.vel.y < -3) this.onLand(-this.vel.y);
@@ -200,35 +254,38 @@ export class Fighter {
       return;
     }
 
-    // ---- refresh surface after move
     this.submerged = goo && ((this.onGround && this.surface === this.team) || this.climbing);
 
     // ---- ink + health
     const sinceFire = this.time - this.lastFire;
-    if (this.submerged) this.ink += 0.36 * dt;
-    else if (!this.charging && !this.rolling && sinceFire > 0.6) this.ink += (goo ? 0.06 : 0.075) * dt;
+    if (this.submerged) this.ink += 0.36 * M.inkRecover * dt;
+    else if (!this.charging && !this.rolling && !this.shieldOpen && this.spray.n === 0 && sinceFire > 0.6) this.ink += (goo ? 0.06 : 0.075) * M.inkRecover * dt;
     if (this.ink > 1) {
       if (this.isPlayer && this.ink - 0.36 * dt < 1 && this.submerged) w.audio?.sfx('ink_full', { volume: 0.4 });
       this.ink = 1;
     }
-    if (this.onGround && enemy && this.invuln <= 0) {
-      if (this.hp > 45) { this.hp = Math.max(45, this.hp - 16 * dt); this.lastDamage = this.time; }
+    if (this.onGround && enemy && this.invuln <= 0 && !jet) {
+      const floor = 100 - 55 * M.inkResist;
+      if (this.hp > floor) { this.hp = Math.max(floor, this.hp - 16 * M.inkResist * dt); this.lastDamage = this.time; }
       if (this.isPlayer && Math.random() < dt * 3) w.audio?.sfx('enemy_ink', { volume: 0.35 });
     } else if (this.time - this.lastDamage > 1.1 && this.hp < 100) {
       this.hp = Math.min(100, this.hp + (this.submerged ? 55 : 20) * dt);
     }
 
     // ---- facing
-    const aimLock = !goo && (firing || this.charging || this.rolling || this.time - this.lastFire < 0.5 || (this.isPlayer && I.aimHold));
+    const aimLock = !goo && (firing || this.charging || this.rolling || this.shieldOpen || this.spray.n > 0 || jet || this.turretT > 0 || this.time - this.lastFire < 0.5 || (this.isPlayer && I.aimHold));
     const hs = Math.hypot(this.vel.x, this.vel.z);
-    if (aimLock) this.yaw = this.rolling ? dampAngle(this.yaw, this.aimYaw, 6, dt) : dampAngle(this.yaw, this.aimYaw, 30, dt);
+    if (aimLock) this.yaw = this.rolling ? dampAngle(this.yaw, this.aimYaw, d.type === 'brush' ? 9 : 6, dt) : dampAngle(this.yaw, this.aimYaw, 30, dt);
     else if (hs > 0.5) this.yaw = dampAngle(this.yaw, Math.atan2(this.vel.x, this.vel.z), goo ? 16 : 12, dt);
     else if (this.isPlayer && !goo) this.yaw = dampAngle(this.yaw, this.aimYaw, 3, dt);
 
     // ---- effects
     this.fxT -= dt;
     if (this.fxT <= 0) {
-      if (this.submerged && hs > 2) {
+      if (jet) {
+        this.fxT = 0.04;
+        w.fx.spawn(_v.set(this.pos.x, this.pos.y + 0.6, this.pos.z), _w.set(rand(-0.5, 0.5), -6, rand(-0.5, 0.5)), this.color, 0.09, 0.5, { stretch: 2 });
+      } else if (this.submerged && hs > 2) {
         this.fxT = 0.08;
         w.fx.ring(_v.copy(this.pos).setY(this.pos.y + 0.03), this.color, 0.15, 0.7, 0.45, { alpha: 0.55 });
         w.fx.spawn(_v.set(this.pos.x, this.pos.y + 0.1, this.pos.z), _w.set(rand(-1, 1), rand(1.5, 3), rand(-1, 1)), this.color, 0.05, 0.4);
@@ -241,7 +298,7 @@ export class Fighter {
         w.fx.splash(_v.copy(this.pos).setY(this.pos.y + 0.05), _w.set(0, 1, 0), w.colors[this.surface], 3, 1.8, 0.045);
       } else this.fxT = 0.05;
     }
-    if (this.isPlayer) this.updateLoops(hs, goo);
+    if (this.isPlayer) this.updateLoops(hs);
     this.syncModel(dt, firing, hs);
   }
 
@@ -253,12 +310,17 @@ export class Fighter {
     if (this.form === 'goo' || speed > 9) w.fx.splash(_v.copy(this.pos).setY(this.pos.y + 0.05), _w.set(0, 1, 0), this.color, 6, 2.5, 0.06);
   }
 
-  updateLoops(hs, goo) {
+  paintUnder(r) {
+    const down = this.world.level.raycast(_v.set(this.pos.x, this.pos.y + 0.4, this.pos.z), _w.set(0, -1, 0), 1.5);
+    if (down) this.world.combat.paint(this, down.point, r);
+  }
+
+  updateLoops(hs) {
     const a = this.world.audio;
     if (!a) return;
-    const swim = this.submerged && hs > 1;
-    if (swim) { if (!this.loops.swim) this.loops.swim = a.loop('swim'); this.loops.swim.setVolume(clamp(hs / 10, 0.2, 0.8)); }
+    if (this.submerged && hs > 1) { if (!this.loops.swim) this.loops.swim = a.loop('swim'); this.loops.swim.setVolume(clamp(hs / 10, 0.2, 0.8)); }
     else this.stopLoop('swim');
+    if (this.jetT > 0) { if (!this.loops.jet) this.loops.jet = a.loop('jetpack'); } else this.stopLoop('jet');
   }
 
   stopLoop(n) { if (this.loops[n]) { this.loops[n].stop(); this.loops[n] = null; } }
@@ -269,16 +331,20 @@ export class Fighter {
     m.root.position.copy(this.pos);
     m.root.rotation.y = this.yaw;
     m.root.visible = this.alive;
-    // relative movement direction for back-pedal animation
     const back = hs > 0.5 && Math.cos(angleDiff(this.yaw, Math.atan2(this.vel.x, this.vel.z))) < -0.3;
     m.setInk(this.ink);
     if (this.form === 'goo' && this.climbing && this.wall) m.root.rotation.y = Math.atan2(-this.wall.nx, -this.wall.nz);
+    // chameleon camo: nearly invisible (a little more visible to its own player)
+    const camoA = this.camoT > 0 ? (this.isPlayer || this.team === this.world.viewTeam ? 0.28 : 0.04 + Math.max(0, Math.sin(this.time * 9)) * 0.03) : 1;
+    m.setCamo(camoA);
     m.update(dt, {
       speed: hs, back, grounded: this.onGround || this.climbing, vy: this.vel.y, pitch: this.aimPitch,
-      aiming: (this.time - this.lastFire < 0.5) || this.charging || (this.isPlayer && this.intent.aimHold), firing, weapon: this.weapon.id,
+      aiming: (this.time - this.lastFire < 0.5) || this.charging || this.shieldOpen || this.spray.n > 0 || this.turretT > 0 || (this.isPlayer && this.intent.aimHold),
+      firing, weapon: this.weapon.id, wtype: this.weapon.type,
       goo: this.form === 'goo', submerged: this.submerged, climbing: this.climbing, rolling: this.rolling,
+      charge: this.charge, shield: this.shieldOpen, dodge: this.dodge > 0 ? 1 - this.dodge / 0.32 : 0, jet: this.jetT > 0,
+      chroma: this.world.chroma ?? 0.22,
     });
-    // in own ink the blob hides most of itself — enemies can barely see it
     if (this.submerged && !this.climbing) {
       const show = hs > 6 ? 1 : 0.35;
       m.goo.position.y = -0.1 * (1 - show);
@@ -291,27 +357,27 @@ export class Fighter {
     this.model.muzzleWorld(_raw);
     if (I.aimPoint) {
       out.subVectors(I.aimPoint, _raw);
-      const d = out.length();
-      if (d > 1.2) return out.divideScalar(d);
+      const dd = out.length();
+      if (dd > 1.2) return out.divideScalar(dd);
     }
     const cp = Math.cos(this.aimPitch);
     return out.set(Math.sin(this.aimYaw) * cp, Math.sin(this.aimPitch), Math.cos(this.aimYaw) * cp);
   }
 
-  muzzle(out) {
-    this.model.muzzleWorld(out);
-    // avoid spawning shots inside walls: clamp muzzle to body column
+  muzzle(out, left = false) {
+    this.model.muzzleWorld(out, left);
     _v.set(this.pos.x, this.pos.y + 1.05, this.pos.z);
     _w.subVectors(out, _v);
-    const d = _w.length();
-    if (d > 0.01) {
-      const hit = this.world.level.raycast(_v, _w.clone().divideScalar(d), d);
-      if (hit) out.copy(_v).addScaledVector(_w, Math.max(0, hit.t - 0.1) / d);
+    const dd = _w.length();
+    if (dd > 0.01) {
+      const hit = this.world.level.raycast(_v, _w.clone().divideScalar(dd), dd);
+      if (hit) out.copy(_v).addScaledVector(_w, Math.max(0, hit.t - 0.1) / dd);
     }
     return out;
   }
 
-  useInk(cost) {
+  useInk(cost, sub = false) {
+    cost *= sub ? this.mods.subInk : this.mods.inkUse;
     if (this.ink >= cost) { this.ink -= cost; return true; }
     this.noInk();
     return false;
@@ -324,104 +390,260 @@ export class Fighter {
     }
   }
 
+  cancelWeapon() {
+    this.charging = false; this.charge = 0; this.rolling = false; this.shieldOpen = false; this.spray.n = 0; this.holdT = 0;
+    this.stopLoop('charge'); this.stopLoop('roll');
+  }
+
+  sfxShot(name, o, vol = 0.45) { this.world.audio?.sfx(name, { ...posOf(o), volume: this.isPlayer ? vol + 0.1 : vol }); }
+
   weaponUpdate(dt) {
     const w = this.world, d = this.weapon, I = this.intent;
     this.fireCd -= dt; this.flickCd -= dt; this.rollDelay -= dt;
     let firing = false;
     const air = !this.onGround;
-    if (d.type === 'shooter' || d.type === 'blaster') {
-      if (I.fire && this.fireCd <= 0) {
-        if (this.useInk(d.ink)) {
-          this.fireCd += d.rate;
-          if (this.fireCd < -0.05) this.fireCd = d.rate;
-          const dir = this.aimDir(_aim), o = this.muzzle(_muz);
-          if (d.type === 'shooter') w.combat.shooter(this, o, dir, d, air);
-          else w.combat.blaster(this, o, dir, d);
-          w.audio?.sfx(d.type === 'shooter' ? 'shoot' : 'shoot_heavy', { ...posOf(o), volume: this.isPlayer ? 0.55 : 0.4 });
-          this.model.recoil = 1;
+    const pressed = I.fire && !this.prevFire;
+    this.holdT = I.fire ? this.holdT + dt : 0;
+    switch (d.type) {
+      case 'shooter': case 'blaster': case 'slosher': case 'dualies': {
+        if (I.fire && this.fireCd <= 0) {
+          if (this.useInk(d.ink)) {
+            this.fireCd += d.rate;
+            if (this.fireCd < -0.05) this.fireCd = d.rate;
+            const dir = this.aimDir(_aim);
+            if (d.type === 'dualies') {
+              this.alt = !this.alt;
+              const o = this.muzzle(_muz, this.alt);
+              w.combat.shooter(this, o, dir, d, air, this.turretT > 0 && this.dodge <= 0 ? 0.35 : 1);
+              if (this.alt) this.model.recoilL = 1; else this.model.recoil = 1;
+              this.sfxShot('dualie_shot', o, 0.4);
+            } else {
+              const o = this.muzzle(_muz);
+              if (d.type === 'shooter') { w.combat.shooter(this, o, dir, d, air); this.sfxShot('shoot', o); }
+              else if (d.type === 'blaster') { w.combat.blaster(this, o, dir, d); this.sfxShot('shoot_heavy', o, 0.5); }
+              else { w.combat.slosh(this, o, dir, d); this.model.flick = 1; this.sfxShot('slosh', o, 0.55); }
+              this.model.recoil = 1;
+            }
+            this.lastFire = this.time;
+            firing = true;
+          } else this.fireCd = 0.2;
+        }
+        if (!I.fire && this.fireCd < 0) this.fireCd = 0;
+        break;
+      }
+      case 'splatling': {
+        if (this.spray.n > 0) {
+          if (pressed) this.spray.n = 0; // interrupt to re-charge
+          this.spray.t -= dt;
+          while (this.spray.n > 0 && this.spray.t <= 0) {
+            if (!this.useInk(d.ink)) { this.spray.n = 0; break; }
+            const dir = this.aimDir(_aim), o = this.muzzle(_muz);
+            w.combat.shooter(this, o, dir, d, air);
+            if (this.spray.n % 2 === 0) this.sfxShot('splatling_fire', o, 0.4);
+            this.spray.n--; this.spray.t += d.rate;
+            this.model.recoil = 0.6;
+          }
           this.lastFire = this.time;
           firing = true;
-        } else this.fireCd = 0.2;
+        }
+        if (I.fire && this.spray.n === 0) {
+          if (!this.charging) { this.charging = true; this.charge = 0; if (this.isPlayer) this.loops.charge = w.audio?.loop('splatling_spin'); }
+          const maxC = clamp(this.ink / (d.maxShots * d.ink * this.mods.inkUse), 0.15, 1);
+          this.charge = Math.min(maxC, this.charge + dt / d.chargeTime);
+          this.loops.charge?.setPitch(1 + this.charge);
+          this.lastFire = this.time - 0.2;
+        } else if (this.charging) {
+          this.charging = false;
+          this.stopLoop('charge');
+          if (this.charge > 0.1 && w.combatOn !== false) this.spray = { n: Math.max(3, Math.round(d.maxShots * this.charge)), t: 0 };
+          this.charge = 0;
+        }
+        break;
       }
-      if (!I.fire && this.fireCd < 0) this.fireCd = 0;
-    } else if (d.type === 'charger') {
-      if (I.fire) {
-        if (!this.charging) { this.charging = true; this.charge = 0; if (this.isPlayer) this.loops.charge = w.audio?.loop('charge'); }
-        const canFull = this.ink >= d.ink;
-        this.charge = Math.min(canFull ? 1 : 0.4, this.charge + dt / d.chargeTime);
-        this.loops.charge?.setPitch(1 + this.charge);
-        this.lastFire = this.time - 0.2;
-      } else if (this.charging) {
-        this.charging = false;
-        this.stopLoop('charge');
-        if (this.charge > 0.08 && w.combatOn !== false) {
-          const cost = d.ink * Math.max(0.3, this.charge);
-          if (this.useInk(cost)) {
-            const dir = this.aimDir(_aim);
-            w.combat.beam(this, this.muzzle(_muz), dir, d, this.charge);
-            this.model.recoil = 1.5;
+      case 'charger': case 'stringer': {
+        if (I.fire) {
+          if (!this.charging) { this.charging = true; this.charge = 0; if (this.isPlayer) this.loops.charge = w.audio?.loop(d.type === 'stringer' ? 'bow_draw' : 'charge'); }
+          const canFull = this.ink >= d.ink * this.mods.inkUse;
+          this.charge = Math.min(canFull ? 1 : 0.39, this.charge + dt / d.chargeTime);
+          this.loops.charge?.setPitch(1 + this.charge);
+          this.lastFire = this.time - 0.2;
+        } else if (this.charging) {
+          this.charging = false;
+          this.stopLoop('charge');
+          if (this.charge > 0.08 && w.combatOn !== false) {
+            const cost = d.ink * Math.max(0.3, this.charge);
+            if (this.useInk(cost)) {
+              const dir = this.aimDir(_aim), o = this.muzzle(_muz);
+              if (d.type === 'charger') w.combat.beam(this, o, dir, d, this.charge);
+              else { w.combat.arrows(this, o, dir, d, this.charge); this.sfxShot('bow_release', o, 0.55); }
+              this.model.recoil = 1.5;
+              this.lastFire = this.time;
+              firing = true;
+            }
+          }
+          this.charge = 0;
+        }
+        break;
+      }
+      case 'roller': case 'brush': {
+        const brush = d.type === 'brush';
+        if (pressed && this.flickCd <= 0 && this.useInk(d.flickInk)) {
+          const dir = this.aimDir(_aim);
+          const vertical = !brush && air;
+          w.combat.flick(this, this.muzzle(_muz).setY(this.pos.y + 1.1), dir, d, vertical);
+          w.audio?.sfx(brush ? 'brush_swish' : 'roller_flick', { ...posOf(this.pos), volume: 0.6 });
+          this.model.flick = 1; this.model.flickKind = vertical ? 'v' : 'h';
+          this.flickCd = d.flickRate;
+          this.rollDelay = brush ? 0.12 : 0.38;
+          this.lastFire = this.time;
+          firing = true;
+        }
+        const hs = Math.hypot(this.vel.x, this.vel.z);
+        if (I.fire && this.onGround && this.rollDelay <= 0 && this.ink > 0.005) {
+          this.rolling = true;
+          this.lastFire = this.time;
+          if (hs > 0.6) {
+            this.ink = Math.max(0, this.ink - d.rollInk * this.mods.inkUse * dt);
+            const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
+            const reach = brush ? 0.75 : 1.05;
+            _v.set(this.pos.x + fx * reach, this.pos.y + 0.4, this.pos.z + fz * reach);
+            const down = w.level.raycast(_v, _w.set(0, -1, 0), 1.2);
+            if (down) w.combat.paint(this, down.point, d.rollWidth, { wobble: 0.08 });
+            for (const f of w.fighters) {
+              if (!f.alive || f.team === this.team || f.invuln > 0) continue;
+              const dx = f.pos.x - this.pos.x, dz = f.pos.z - this.pos.z;
+              const fwd = dx * fx + dz * fz, lat = Math.abs(dx * fz - dz * fx);
+              if (fwd > 0.2 && fwd < (brush ? 1.2 : 1.6) && lat < d.rollWidth + 0.05 && Math.abs(f.pos.y - this.pos.y) < 1.2) {
+                const last = this.rollHits.get(f) || -9;
+                if (this.time - last > d.rollHitCd) { this.rollHits.set(f, this.time); w.combat.damage(f, hs > 2.5 ? d.rollDmg : 30, this, 'roll'); }
+              }
+            }
+          }
+          if (this.isPlayer) {
+            if (!this.loops.roll) this.loops.roll = w.audio?.loop('roll');
+            this.loops.roll?.setVolume(clamp(hs / 6, 0, brush ? 0.4 : 0.7));
+            this.loops.roll?.setPitch(brush ? 1.6 : 1);
+          }
+        } else {
+          if (this.rolling && this.ink <= 0.005) this.noInk();
+          this.rolling = false;
+          this.stopLoop('roll');
+        }
+        break;
+      }
+      case 'brella': {
+        if (pressed && this.fireCd <= 0 && !this.shieldOpen) {
+          if (this.useInk(d.ink)) {
+            const dir = this.aimDir(_aim), o = this.muzzle(_muz);
+            w.combat.brella(this, o, dir, d);
+            this.sfxShot('brella_shot', o, 0.55);
+            this.fireCd = d.rate; this.model.recoil = 1.2;
             this.lastFire = this.time;
             firing = true;
           }
         }
-        this.charge = 0;
+        const wantShield = I.fire && this.holdT > 0.35 && this.shieldCd <= 0 && this.shieldHP > 0 && this.ink > 0.02;
+        if (wantShield && !this.shieldOpen) w.audio?.sfx('brella_open', { ...posOf(this.pos), volume: 0.5 });
+        this.shieldOpen = wantShield;
+        if (this.shieldOpen) { this.ink = Math.max(0, this.ink - d.shieldInk * dt); this.lastFire = this.time; }
+        break;
       }
-    } else if (d.type === 'roller') {
-      const pressed = I.fire && !this.prevFire;
-      if (pressed && this.flickCd <= 0) {
-        if (this.useInk(d.flickInk)) {
-          const dir = this.aimDir(_aim);
-          w.combat.flick(this, this.muzzle(_muz).setY(this.pos.y + 1.1), dir, d);
-          w.audio?.sfx('roller_flick', { ...posOf(this.pos), volume: 0.6 });
-          this.model.flick = 1;
-          this.flickCd = d.flickRate;
-          this.rollDelay = 0.38;
-          this.lastFire = this.time;
-          firing = true;
-        }
-      }
-      const hs = Math.hypot(this.vel.x, this.vel.z);
-      if (I.fire && this.onGround && this.rollDelay <= 0 && this.ink > 0.005) {
-        this.rolling = true;
-        this.lastFire = this.time;
-        if (hs > 0.6) {
-          this.ink = Math.max(0, this.ink - d.rollInk * dt);
-          const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
-          _v.set(this.pos.x + fx * 1.05, this.pos.y + 0.4, this.pos.z + fz * 1.05);
-          const down = w.level.raycast(_v, _w.set(0, -1, 0), 1.2);
-          if (down) w.combat.paint(this, down.point, d.rollWidth, { wobble: 0.08 });
-          // flatten enemies in front
-          for (const f of w.fighters) {
-            if (!f.alive || f.team === this.team || f.invuln > 0) continue;
-            const dx = f.pos.x - this.pos.x, dz = f.pos.z - this.pos.z;
-            const fwd = dx * fx + dz * fz, lat = Math.abs(dx * fz - dz * fx);
-            if (fwd > 0.2 && fwd < 1.6 && lat < 1.0 && Math.abs(f.pos.y - this.pos.y) < 1.2) {
-              const last = this.rollHits.get(f) || -9;
-              if (this.time - last > 0.4) { this.rollHits.set(f, this.time); w.combat.damage(f, hs > 2.5 ? d.rollDmg : 35, this, 'roll'); }
-            }
+      case 'splatana': {
+        if (pressed && this.fireCd <= 0) {
+          if (this.useInk(d.ink)) {
+            const dir = this.aimDir(_aim);
+            w.combat.slash(this, this.muzzle(_muz), dir, d, false);
+            w.audio?.sfx('blade_slash', { ...posOf(this.pos), volume: 0.55 });
+            this.model.flick = 1; this.model.flickKind = 'h';
+            this.fireCd = d.rate;
+            this.lastFire = this.time;
+            firing = true;
           }
         }
-        if (this.isPlayer) {
-          if (!this.loops.roll) this.loops.roll = w.audio?.loop('roll');
-          this.loops.roll?.setVolume(clamp(hs / 6, 0, 0.7));
+        if (I.fire && this.holdT > 0.2) {
+          this.charging = true;
+          this.charge = Math.min(this.ink >= d.chopInk ? 1 : 0.5, (this.holdT - 0.2) / d.chargeTime);
+          this.lastFire = this.time - 0.2;
+        } else if (this.charging) {
+          this.charging = false;
+          if (this.charge >= 0.999 && w.combatOn !== false && this.useInk(d.chopInk)) {
+            const dir = this.aimDir(_aim);
+            w.combat.slash(this, this.muzzle(_muz), dir, d, true);
+            w.audio?.sfx('blade_charge_slash', { ...posOf(this.pos), volume: 0.7 });
+            this.model.flick = 1; this.model.flickKind = 'v';
+            this.fireCd = d.rate;
+            this.lastFire = this.time;
+            firing = true;
+          }
+          this.charge = 0;
         }
-      } else {
-        if (this.rolling && this.ink <= 0.005) this.noInk();
-        this.rolling = false;
-        this.stopLoop('roll');
+        break;
       }
     }
     return firing;
   }
 
+  shieldHit(dmg) {
+    this.shieldHP -= dmg;
+    if (this.shieldHP <= 0) {
+      this.shieldOpen = false;
+      this.shieldCd = this.weapon.shieldCd || 6;
+      this.world.audio?.sfx('shield_break', posOf(this.pos));
+      this.world.fx.splash(this.pos.clone().setY(this.pos.y + 1), new THREE.Vector3(0, 1, 0), this.color, 14, 4, 0.08);
+    }
+  }
+
+  // charger laser sight: visible to everyone, gives away the sniper
+  updateLaser() {
+    const on = this.charging && this.weapon.type === 'charger' && this.alive;
+    if (!on) { if (this.laser) this.laser.visible = false; return; }
+    if (!this.laser) {
+      const g = new THREE.CylinderGeometry(1, 1, 1, 6, 1, true);
+      g.rotateX(Math.PI / 2); g.translate(0, 0, 0.5);
+      this.laser = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: this.color, transparent: true, opacity: 0.55, depthWrite: false }));
+      this.laser.frustumCulled = false;
+      this.world.scene.add(this.laser);
+    }
+    const o = this.muzzle(_muz), dir = this.aimDir(_aim);
+    const d = this.weapon;
+    const range = d.minRange + (d.maxRange - d.minRange) * this.charge;
+    const hit = this.world.level.raycast(o, dir, range);
+    const len = hit ? hit.t : range;
+    this.laser.visible = true;
+    this.laser.position.copy(o);
+    this.laser.quaternion.setFromUnitVectors(_zAxis, dir);
+    const th = 0.012 + this.charge * 0.012;
+    this.laser.scale.set(th, th, len);
+    this.laser.material.color.copy(this.color).multiplyScalar(this.charge >= 0.999 ? 3 : 1.6);
+  }
+
+  // Jet Pack special: hover and fire explosive shots
+  jetUpdate(dt) {
+    const w = this.world, I = this.intent;
+    this.jetT -= dt;
+    this.fireCd -= dt;
+    let firing = false;
+    if (I.fire && this.fireCd <= 0) {
+      const dir = this.aimDir(_aim), o = this.muzzle(_muz);
+      w.combat.blaster(this, o, dir, this.weapon, { speed: 24, direct: 125, splash: 55, blastR: 2.6, splat: 1.7, range: 40, grav: 1 });
+      this.sfxShot('shoot_heavy', o, 0.6);
+      this.fireCd = 0.5; this.model.recoil = 1;
+      this.lastFire = this.time;
+      firing = true;
+    }
+    if (this.jetT <= 0) { this.jetT = 0; this.stopLoop('jet'); }
+    return firing;
+  }
+
   throwSub() {
     const w = this.world;
-    if (this.form !== 'kid') return;
-    if (!this.useInk(SUBS.bomb.ink)) return;
+    if (this.form !== 'kid' || this.dodge > 0) return;
+    const kind = this.weapon.sub || 'bomb';
+    if (!this.useInk(SUBS[kind].ink, true)) return;
     const dir = this.aimDir(_aim).clone();
-    dir.y = Math.max(dir.y, -0.1) + 0.1;
-    const o = _v.set(this.pos.x, this.pos.y + 1.3, this.pos.z).addScaledVector(dir, 0.4);
-    w.combat.bomb(this, o.clone(), dir);
+    dir.y = Math.max(dir.y, -0.1) + (kind === 'skid' ? 0 : 0.1);
+    const o = _v.set(this.pos.x, this.pos.y + (kind === 'skid' ? 0.4 : 1.3), this.pos.z).addScaledVector(dir.clone().setY(0).normalize(), 0.4);
+    w.combat.throwSub(this, kind, o.clone(), dir);
     this.lastFire = this.time;
   }
 
@@ -432,15 +654,28 @@ export class Fighter {
     this.ink = 1;
     this.stats.specials++;
     if (this.form === 'goo') this.form = 'kid';
-    if (this.weapon.special === 'barrage') {
+    this.cancelWeapon();
+    const sp = this.weapon.special;
+    const aimTarget = () => {
       let target = this.intent.aimPoint?.clone();
       if (!target || target.distanceTo(this.pos) > 26) {
-        const d = this.aimDir(_aim);
-        target = this.pos.clone().addScaledVector(d.setY(0).normalize(), 14);
+        const dd = this.aimDir(_aim).clone().setY(0).normalize();
+        target = this.pos.clone().addScaledVector(dd, 13);
       }
       const hgt = w.level.heightAt(target.x, target.z).y;
       target.y = Number.isFinite(hgt) ? hgt : this.pos.y;
-      w.combat.barrage(this, target);
+      return target;
+    };
+    if (sp === 'barrage') w.combat.barrage(this, aimTarget());
+    else if (sp === 'rain') w.combat.rainCloud(this, aimTarget(), this.aimDir(_aim).clone());
+    else if (sp === 'shield') w.combat.bubble(this);
+    else if (sp === 'camo') { this.camoT = 8; w.audio?.sfx('camo_on', posOf(this.pos)); w.fx.splash(this.pos.clone().setY(this.pos.y + 0.8), new THREE.Vector3(0, 1, 0), this.color, 16, 3, 0.07); }
+    else if (sp === 'jetpack') {
+      const gy = w.level.groundAt(this.pos.x, this.pos.z, this.pos.y + 0.3, 0.3, 0.6).y;
+      this.jetY = (Number.isFinite(gy) ? gy : this.pos.y) + 5.2;
+      this.jetT = 7; this.fireCd = 0;
+      this.onGround = false;
+      w.audio?.sfx('jetpack_start', posOf(this.pos));
     } else {
       this.nova = { t: 0 };
       this.vel.y = 12; this.onGround = false;
@@ -452,8 +687,8 @@ export class Fighter {
   addTurf(m2) {
     if (!this.alive) return;
     this.stats.turf += m2;
-    if (!this.specialReady && !this.nova) {
-      this.special += m2;
+    if (!this.specialReady && !this.nova && this.jetT <= 0 && this.camoT <= 0) {
+      this.special += m2 * this.mods.special;
       if (this.special >= this.weapon.specialCost) {
         this.special = this.weapon.specialCost;
         this.specialReady = true;
@@ -466,9 +701,11 @@ export class Fighter {
   takeDamage(dmg, attacker, kind) {
     if (!this.alive || this.invuln > 0) return;
     if (this.nova) dmg *= 0.5;
+    if (this.jetT > 0) dmg *= 0.7;
     this.hp -= dmg;
     this.lastDamage = this.time;
     if (attacker && attacker !== this) { this.lastAttacker = attacker; this.lastAttackT = this.time; this.damagers.set(attacker, this.time); }
+    if (this.camoT > 0 && dmg > 10) this.camoT = Math.min(this.camoT, 0.6); // getting hit breaks camo
     this.model.flash();
     if (this.isPlayer) this.world.onPlayerHurt?.(dmg, attacker);
     if (this.hp <= 0) this.splatted(attacker, kind);
@@ -480,9 +717,10 @@ export class Fighter {
     this.alive = false;
     this.hp = 0;
     this.stats.deaths++;
-    this.respawnT = 6;
-    this.nova = null;
-    this.charging = false; this.rolling = false; this.charge = 0;
+    this.respawnT = 6 - this.mods.respawn;
+    this.nova = null; this.jetT = 0; this.camoT = 0; this.dodge = 0; this.turretT = 0;
+    this.cancelWeapon();
+    this.updateLaser();
     for (const k of Object.keys(this.loops)) this.stopLoop(k);
     this.model.root.visible = false;
     const col = attacker ? attacker.color : this.color;
@@ -496,9 +734,9 @@ export class Fighter {
     }
     this.special = this.specialReady ? this.weapon.specialCost * 0.5 : this.special * 0.5;
     this.specialReady = false;
-    if (attacker && attacker !== this) {
+    if (attacker && attacker !== this && attacker.stats) {
       attacker.stats.kills++;
-      for (const [f, t] of this.damagers) if (f !== attacker && f.team !== this.team && this.time - t < 5) f.stats.assists++;
+      for (const [f, t] of this.damagers) if (f !== attacker && f.team !== this.team && this.time - t < 5 && f.stats) f.stats.assists++;
     }
     this.damagers.clear();
     w.onSplat?.(this, attacker, kind);
@@ -509,6 +747,7 @@ export class Fighter {
     this.hp = 100; this.ink = 1;
     this.form = 'kid';
     this.invuln = 2.2;
+    this.shieldHP = this.weapon.shieldHP || 0; this.shieldCd = 0;
     this.place(this.spawnPoint.clone().setY(this.spawnPoint.y + 0.05), this.spawnYaw);
     this.model.root.visible = true;
     const w = this.world;
@@ -520,6 +759,7 @@ export class Fighter {
 
   dispose() {
     for (const k of Object.keys(this.loops)) this.stopLoop(k);
+    if (this.laser) { this.world.scene.remove(this.laser); this.laser.geometry.dispose(); this.laser.material.dispose(); }
     this.model.dispose();
   }
 }

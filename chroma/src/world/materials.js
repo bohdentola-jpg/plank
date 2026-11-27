@@ -28,5 +28,8 @@ export function levelMaterials(paint) {
     facade2: make('facade', { seed: 4 }, { roughness: 0.7, emissive: 0xffffff, normal: 0.6 }, 5, { bevel: 0.1, ao: 0.9 }),
     grass: make('grass', {}, { roughness: 0.95 }, 3, { bevel: 0 }),
     plain: make('plain', {}, { roughness: 0.55 }, 2),
+    woodFloor: make('wood', {}, { roughness: 0.6, env: 0.35 }, 2.4, { bevel: 0.05, ao: 1.1 }),
+    wallpaper: make('plain', { v: 236 }, { roughness: 0.85, env: 0.3 }, 3, { bevel: 0, ao: 1.1 }),
+    brick: make('concrete', { seams: 6, base: [196, 120, 96], seed: 21, stain: 0.3 }, { roughness: 0.85, normal: 0.9, env: 0.5 }, 3, { bevel: 0.05 }),
   };
 }

@@ -44,10 +44,15 @@ for (let i = 0; i < 60; i++) {
 }
 console.log('[qa] splats ms', Math.round(performance.now() - t1), 'coverage', JSON.stringify(stage.paint.coverage()));
 const kids = [];
-for (let i = 0; i < 4; i++) {
-  const k = new Dripkin(randomLook(), i < 2 ? '#ff2e88' : '#3cf03c', ['spritzer', 'roller', 'longshot', 'popper'][i]);
-  k.root.position.set(-3 + i * 2, 1.8, -2);
-  k.root.rotation.y = Math.PI * 0.85;
+const WL = ['spritzer','spritzer_jr','twin','roller','brush','bucketeer','popper','whirlpool','bumbershoot','longshot','arcbow','inkblade'];
+const TY = {spritzer:'shooter',spritzer_jr:'shooter',twin:'dualies',roller:'roller',brush:'brush',bucketeer:'slosher',popper:'blaster',whirlpool:'splatling',bumbershoot:'brella',longshot:'charger',arcbow:'stringer',inkblade:'splatana'};
+const nk = +(q.get('n') || 4);
+for (let i = 0; i < nk; i++) {
+  const wid = WL[(i + +(q.get('w0') || 0)) % WL.length];
+  const k = new Dripkin(randomLook(), i % 2 ? '#ff2e88' : '#3cf03c', wid);
+  k.weaponType = TY[wid];
+  k.root.position.set(-3 + (i % 4) * 2, 1.8, -2 + Math.floor(i / 4) * 2.2);
+  k.root.rotation.y = Math.PI * (q.get('back') ? 0.15 : 0.85);
   scene.add(k.root);
   kids.push(k);
 }
@@ -67,7 +72,7 @@ function frame() {
   const now = performance.now(), dt = Math.min(0.05, (now - last) / 1000); last = now;
   env.update(dt);
   stage.decor.update(now / 1000);
-  for (const k of kids) k.update(dt, { speed: q.get('run') ? 6 : 0, grounded: true, vy: 0, pitch: 0, aiming: !!q.get('aim'), firing: false });
+  for (const k of kids) k.update(dt, { speed: q.get('run') ? 6 : 0, grounded: true, vy: 0, pitch: 0, aiming: !!q.get('aim'), firing: false, wtype: k.weaponType, goo: !!q.get('goo'), submerged: false, charge: 0.6, shield: !!q.get('shield') });
   stage.paint.flush(renderer);
   post.render(scene, cam, dt);
   requestAnimationFrame(frame);

@@ -1,15 +1,12 @@
 // All overlay menus (DOM). Each takes callbacks; the app owns game state.
-import { WEAPONS, WEAPON_IDS, SPECIALS } from '../actors/weapons.js';
-import { SKIN_TONES, EYE_COLORS, HAIR_STYLES, OUTFIT_COLORS } from '../actors/character.js';
+import { WEAPONS, WEAPON_IDS, SPECIALS, SUBS } from '../actors/weapons.js';
+import { currentRotation } from '../world/rotation.js';
+import { SKIN_TONES, EYE_COLORS, CRESTS, PATTERNS, PATTERN_COLORS, BOTTOMS, CREST_LABEL, PATTERN_LABEL, HATS, CLOTHES, SHOES, ABILITIES } from '../actors/gear.js';
 import { COLOR_PAIRS, hexToCss } from '../util.js';
 import { STAGE_IDS, stageInfo } from '../world/stage.js';
 
 const SPLAT = 'M50 4c8 0 9 13 17 14s15-9 21-2-5 15 0 22 16 6 12 16-16 3-20 9 1 19-8 21-11-10-19-8-10 15-19 11 1-15-6-20-19 2-20-8 11-11 10-19-13-8-11-17 14-5 20-11-2-22 6-25 8 8 15 6 3-7 9-7z';
 const INK_CHOICES = [...new Set(COLOR_PAIRS.flatMap((c) => [c.a, c.b]))];
-const HAIR_LABEL = { drop: 'Droplet', twin: 'Twin Drips', mohawk: 'Splash Hawk', bob: 'Drip Bob' };
-const STYLE_LABEL = { hoodie: 'Hoodie', jacket: 'Track Jacket', tee: 'Tee' };
-const BOTTOMS = ['#23263a', '#3d405b', '#5a4a3a', '#2f5d62', '#1d3557', '#6d597a', '#f4f1ea', '#c8553d'];
-const SHOES = ['#ffffff', '#ffd166', '#06d6a0', '#ef476f', '#118ab2', '#f4f1ea', '#1b1530', '#ff7a00'];
 
 function el(html) {
   const t = document.createElement('template');
@@ -179,20 +176,22 @@ export class Menus {
   // ------------------------------------------------------------ lobby
   lobby({ onStart, onClose }) {
     const p = this.app.profile;
-    let weapon = p.weapon, skill = p.lastSkill || 'normal', stage = p.lastStage || 'random';
+    const rot = currentRotation();
+    let weapon = p.weapon, skill = p.lastSkill || 'normal', stage = ['random', ...rot.ids].includes(p.lastStage) ? p.lastStage : 'rotation';
     const node = el(`<div class="overlay dim lobby"><div class="panel wide">
       <div class="lobby-head"><h2>CLASH TOWER</h2><div class="mode-pill">TURF RUSH · 4v4 · 3:00</div></div>
       <div class="lobby-grid">
         <div>
           <h3>Your weapon</h3>
-          <div class="wpick">${p.owned.map((id) => `<button class="chip ${id === weapon ? 'sel' : ''}" data-w="${id}"><b>${WEAPONS[id].name}</b><small>${WEAPONS[id].type}</small></button>`).join('')}</div>
+          <div class="wpick">${p.owned.map((id) => `<button class="chip ${id === weapon ? 'sel' : ''}" data-w="${id}"><b>${WEAPONS[id].name}</b><small>${WEAPONS[id].cls}</small></button>`).join('')}</div>
           <p class="hint">Buy more at <b>Blastworks</b> in the plaza.</p>
         </div>
         <div>
           <h3>Opponents</h3>
           <div class="skill">${['easy', 'normal', 'hard'].map((s) => `<button class="chip ${s === skill ? 'sel' : ''}" data-k="${s}">${s.toUpperCase()}</button>`).join('')}</div>
           <h3>Stage</h3>
-          <div class="stages">${['random', ...STAGE_IDS].map((id) => `<button class="chip ${id === stage ? 'sel' : ''}" data-st="${id}">${id === 'random' ? 'Random' : stageInfo(id).name}</button>`).join('')}</div>
+          <div class="stages">${['rotation', ...rot.ids, 'random'].map((id) => `<button class="chip ${id === stage ? 'sel' : ''}" data-st="${id}">${id === 'random' ? 'Any stage' : id === 'rotation' ? 'Rotation pick' : stageInfo(id).name}</button>`).join('')}</div>
+          <p class="hint">Live rotation changes in <b>${rot.minutesLeft} min</b>.</p>
         </div>
       </div>
       <div class="lobby-slots"></div>
@@ -210,7 +209,7 @@ export class Menus {
     node.querySelector('[data-a="go"]').onclick = () => {
       this.sfx('ui_select');
       p.weapon = weapon; p.lastSkill = skill; p.lastStage = stage; this.app.save();
-      const chosen = stage === 'random' ? STAGE_IDS[Math.floor(Math.random() * STAGE_IDS.length)] : stage;
+      const chosen = stage === 'random' ? STAGE_IDS[Math.floor(Math.random() * STAGE_IDS.length)] : stage === 'rotation' ? rot.ids[Math.floor(Math.random() * rot.ids.length)] : stage;
       node.querySelector('.lobby-actions').innerHTML = '<div class="searching">Finding players<span>.</span><span>.</span><span>.</span></div>';
       const slots = node.querySelector('.lobby-slots');
       slots.innerHTML = Array.from({ length: 8 }, (_, i) => `<div class="slot ${i === 0 ? 'me filled' : ''}"><svg viewBox="0 0 100 100"><path d="${SPLAT}"/></svg><span>${i === 0 ? p.name : ''}</span></div>`).join('');
@@ -235,66 +234,125 @@ export class Menus {
     this.padNav(node);
   }
 
-  // ------------------------------------------------------------ shop
-  shop({ onEquip, onClose }) {
+  // ------------------------------------------------------------ weapon shop (Blastworks)
+  weaponShop({ onPreview, onEquip, onTry, onClose }) {
     const app = this.app, p = app.profile;
-    const node = el(`<div class="overlay side-right shop"><div class="panel tall">
-      <div class="shop-head"><h2>BLASTWORKS</h2><div class="coins"><span class="coin">◉</span> <b class="cv">${p.coins.toLocaleString()}</b></div></div>
-      <div class="shop-list"></div>
-      <button class="btn ghost" data-back>DONE</button>
+    let sel = p.weapon;
+    const node = el(`<div class="overlay side-right wshop"><div class="panel shopwide">
+      <div class="shop-head"><h2>BLASTWORKS</h2><div class="coins"><span class="coin">◉</span> <b class="cv"></b></div></div>
+      <div class="shop-cols"><div class="shop-list"></div><div class="shop-detail"></div></div>
+      <button class="btn ghost" data-back>LEAVE COUNTER</button>
     </div></div>`);
     const close = this.open(node);
-    const list = node.querySelector('.shop-list');
+    const list = node.querySelector('.shop-list'), det = node.querySelector('.shop-detail');
     const render = () => {
       node.querySelector('.cv').textContent = p.coins.toLocaleString();
       list.innerHTML = WEAPON_IDS.map((id) => {
         const w = WEAPONS[id];
-        const own = p.owned.includes(id), eq = p.weapon === id;
-        const locked = p.level < w.level;
-        const bars = Object.entries(w.stats).map(([k, v]) => `<div class="stat"><span>${k}</span><i><b style="width:${v * 100}%"></b></i></div>`).join('');
-        let action;
-        if (eq) action = '<div class="tag eq">EQUIPPED</div>';
-        else if (own) action = `<button class="btn small" data-eq="${id}">EQUIP</button>`;
-        else if (locked) action = `<div class="tag lock">LV ${w.level} REQUIRED</div>`;
-        else action = `<button class="btn small buy" data-buy="${id}" ${p.coins < w.price ? 'disabled' : ''}><span class="coin">◉</span> ${w.price.toLocaleString()}</button>`;
-        return `<div class="wcard ${eq ? 'eq' : ''}">
-          <div class="wc-top"><div><div class="wc-name">${w.name}</div><div class="wc-type">${w.type} · Splash Bomb · ${SPECIALS[w.special].name}</div></div>${action}</div>
-          <div class="wc-desc">${w.desc}</div>
-          <div class="stats">${bars}</div>
-        </div>`;
+        const own = p.owned.includes(id), locked = p.level < w.level;
+        return `<button class="witem ${id === sel ? 'sel' : ''} ${own ? 'own' : ''} ${locked ? 'locked' : ''}" data-id="${id}">
+          <b>${w.name}</b><small>${w.cls}${own ? ' · OWNED' : locked ? ` · LV ${w.level}` : ` · ◉ ${w.price}`}</small>${p.weapon === id ? '<i>★</i>' : ''}</button>`;
       }).join('');
-      list.querySelectorAll('[data-eq]').forEach((b) => b.onclick = () => { p.weapon = b.dataset.eq; app.save(); onEquip(p.weapon); this.sfx('ui_select'); render(); });
-      list.querySelectorAll('[data-buy]').forEach((b) => b.onclick = () => {
-        const w = WEAPONS[b.dataset.buy];
+      const w = WEAPONS[sel];
+      const own = p.owned.includes(sel), eq = p.weapon === sel, locked = p.level < w.level;
+      const bars = Object.entries(w.stats).map(([k, v]) => `<div class="stat"><span>${k}</span><i><b style="width:${v * 100}%"></b></i></div>`).join('');
+      let action;
+      if (eq) action = '<div class="tag eq">EQUIPPED</div>';
+      else if (own) action = `<button class="btn" data-eq>EQUIP</button>`;
+      else if (locked) action = `<div class="tag lock">REACH LV ${w.level}</div>`;
+      else action = `<button class="btn buy" data-buy ${p.coins < w.price ? 'disabled' : ''}><span class="coin">◉</span> ${w.price.toLocaleString()}</button>`;
+      det.innerHTML = `
+        <div class="wd-cls">${w.cls.toUpperCase()}</div>
+        <div class="wd-name">${w.name}</div>
+        <div class="wc-desc">${w.desc}</div>
+        <div class="kit"><div><small>SUB</small><b>${SUBS[w.sub].name}</b><span>${SUBS[w.sub].desc}</span></div><div><small>SPECIAL</small><b>${SPECIALS[w.special].name}</b><span>${SPECIALS[w.special].desc}</span></div></div>
+        <div class="stats">${bars}</div>
+        <div class="wd-actions">${action}${eq ? '' : '<button class="btn ghost small" data-try>TRY IT</button>'}</div>`;
+      list.querySelectorAll('[data-id]').forEach((b) => b.onclick = () => { sel = b.dataset.id; this.sfx('ui_move'); onPreview(sel); render(); });
+      det.querySelector('[data-eq]')?.addEventListener('click', () => { p.weapon = sel; app.save(); onEquip(sel); this.sfx('ui_select'); render(); });
+      det.querySelector('[data-try]')?.addEventListener('click', () => { onTry(sel); this.sfx('ui_select'); app.menus.flash(`Trying the <b>${w.name}</b> — head to the Practice Yard!`); });
+      det.querySelector('[data-buy]')?.addEventListener('click', () => {
         if (p.coins < w.price) { this.sfx('ui_error'); return; }
         p.coins -= w.price; p.owned.push(w.id); p.weapon = w.id; app.save();
         this.sfx('buy'); onEquip(w.id); render();
       });
     };
+    onPreview(sel);
     render();
     node.querySelector('[data-back]').onclick = () => { this.sfx('ui_back'); close(); onClose(); };
     this.padNav(node);
   }
 
-  // ------------------------------------------------------------ locker / creator
-  locker({ onChange, onEmote, onClose, create = false }) {
+  // ------------------------------------------------------------ gear shop (Scale & Thread)
+  gearShop({ onPreview, onEquip, onClose }) {
+    const app = this.app, p = app.profile;
+    let tab = 'hat';
+    const slots = { hat: HATS, clothes: CLOTHES, shoes: SHOES };
+    let sel = p.look[tab];
+    const node = el(`<div class="overlay side-right gshop"><div class="panel shopwide">
+      <div class="shop-head"><h2>SCALE &amp; THREAD</h2><div class="coins"><span class="coin">◉</span> <b class="cv"></b></div></div>
+      <div class="tabs">${Object.keys(slots).map((k) => `<button class="chip" data-tab="${k}">${{ hat: 'HEADGEAR', clothes: 'CLOTHING', shoes: 'SHOES' }[k]}</button>`).join('')}</div>
+      <div class="shop-cols"><div class="shop-list"></div><div class="shop-detail"></div></div>
+      <button class="btn ghost" data-back>LEAVE COUNTER</button>
+    </div></div>`);
+    const close = this.open(node);
+    const list = node.querySelector('.shop-list'), det = node.querySelector('.shop-detail');
+    const preview = () => onPreview({ ...p.look, [tab]: sel });
+    const render = () => {
+      node.querySelector('.cv').textContent = p.coins.toLocaleString();
+      node.querySelectorAll('[data-tab]').forEach((b) => b.classList.toggle('sel', b.dataset.tab === tab));
+      list.innerHTML = slots[tab].map((g) => {
+        const own = p.gear.includes(g.id);
+        return `<button class="witem ${g.id === sel ? 'sel' : ''} ${own ? 'own' : ''}" data-id="${g.id}">
+          <b><span class="swatchdot" style="--c:${g.c1 || '#888'}"></span>${g.name}</b><small>${g.ability ? ABILITIES[g.ability].glyph + ' ' + ABILITIES[g.ability].short : '—'}${own ? ' · OWNED' : ` · ◉ ${g.price}`}</small>${p.look[tab] === g.id ? '<i>★</i>' : ''}</button>`;
+      }).join('');
+      const g = slots[tab].find((x) => x.id === sel) || slots[tab][0];
+      const own = p.gear.includes(g.id), eq = p.look[tab] === g.id;
+      const ab = g.ability ? ABILITIES[g.ability] : null;
+      let action;
+      if (eq) action = '<div class="tag eq">WEARING</div>';
+      else if (own) action = `<button class="btn" data-eq>WEAR</button>`;
+      else action = `<button class="btn buy" data-buy ${p.coins < g.price ? 'disabled' : ''}><span class="coin">◉</span> ${g.price.toLocaleString()}</button>`;
+      det.innerHTML = `
+        <div class="wd-cls">${g.brand}</div>
+        <div class="wd-name">${g.name}</div>
+        ${ab ? `<div class="ability"><span class="ab-glyph">${ab.glyph}</span><div><b>${ab.name}</b><span>${ab.desc}</span></div></div>` : '<div class="wc-desc">No ability — just vibes.</div>'}
+        <div class="wd-actions">${action}</div>
+        <p class="hint">Your three gear abilities stack. Try on anything — it only changes when you wear it.</p>`;
+      node.querySelectorAll('[data-tab]').forEach((b) => b.onclick = () => { tab = b.dataset.tab; sel = p.look[tab]; this.sfx('ui_move'); preview(); render(); });
+      list.querySelectorAll('[data-id]').forEach((b) => b.onclick = () => { sel = b.dataset.id; this.sfx('ui_move'); preview(); render(); });
+      det.querySelector('[data-eq]')?.addEventListener('click', () => { p.look = { ...p.look, [tab]: sel }; app.save(); onEquip(p.look); this.sfx('ui_select'); render(); });
+      det.querySelector('[data-buy]')?.addEventListener('click', () => {
+        if (p.coins < g.price) { this.sfx('ui_error'); return; }
+        p.coins -= g.price; p.gear.push(g.id); p.look = { ...p.look, [tab]: g.id }; app.save();
+        this.sfx('buy'); onEquip(p.look); render();
+      });
+    };
+    render();
+    node.querySelector('[data-back]').onclick = () => { this.sfx('ui_back'); close(); onPreview(p.look); onClose(); };
+    this.padNav(node);
+  }
+
+  // ------------------------------------------------------------ salon / character creator
+  salon({ onChange, onEmote, onClose, create = false }) {
     const app = this.app, p = app.profile;
     const look = { ...p.look };
     let ink = p.ink;
     const sw = (key, arr, cur) => `<div class="swatches" data-key="${key}">${arr.map((c) => `<button class="swatch ${c === cur ? 'sel' : ''}" data-v="${c}" style="--c:${c}"></button>`).join('')}</div>`;
+    const chips = (key, arr, labels, cur) => `<div class="chips" data-key="${key}">${arr.map((h) => `<button class="chip ${h === cur ? 'sel' : ''}" data-v="${h}">${labels[h]}</button>`).join('')}</div>`;
     const node = el(`<div class="overlay side-left locker"><div class="panel tall">
-      <h2>${create ? 'CREATE YOUR DRIPKIN' : 'STYLE LAB'}</h2>
+      <h2>${create ? 'CREATE YOUR CHROMELEON' : 'THE SALON'}</h2>
       <div class="lk-scroll">
         <label class="field">Name <input class="name-in" maxlength="12" value="${p.name}" spellcheck="false"></label>
         <h3>Ink color</h3>${sw('ink', INK_CHOICES, ink)}
-        <h3>Drip style</h3><div class="chips" data-key="hair">${HAIR_STYLES.map((h) => `<button class="chip ${h === look.hair ? 'sel' : ''}" data-v="${h}">${HAIR_LABEL[h]}</button>`).join('')}</div>
-        <h3>Skin</h3>${sw('skin', SKIN_TONES, look.skin)}
+        <h3>Crest</h3>${chips('crest', CRESTS, CREST_LABEL, look.crest)}
+        <h3>Scales</h3>${sw('skin', SKIN_TONES, look.skin)}
+        <h3>Pattern</h3>${chips('pattern', PATTERNS, PATTERN_LABEL, look.pattern)}
+        ${sw('patternColor', PATTERN_COLORS, look.patternColor)}
         <h3>Eyes</h3>${sw('eyes', EYE_COLORS, look.eyes)}
-        <h3>Top</h3><div class="chips" data-key="topStyle">${Object.keys(STYLE_LABEL).map((h) => `<button class="chip ${h === look.topStyle ? 'sel' : ''}" data-v="${h}">${STYLE_LABEL[h]}</button>`).join('')}</div>
-        ${sw('top', OUTFIT_COLORS, look.top)}
-        <h3>Bottoms</h3>${sw('bottom', BOTTOMS, look.bottom)}
-        <h3>Kicks</h3>${sw('shoes', SHOES, look.shoes)}
-        <h3>Emotes</h3><div class="chips emotes">${['wave', 'dance', 'cheer', 'think'].map((e) => `<button class="chip" data-emote="${e}">${e}</button>`).join('')}</div>
+        <h3>Shorts</h3>${sw('bottom', BOTTOMS, look.bottom)}
+        <h3>Emotes</h3><div class="chips emotes">${['wave', 'dance', 'cheer', 'pose', 'tongue', 'think'].map((e) => `<button class="chip" data-emote="${e}">${e}</button>`).join('')}</div>
+        ${create ? '<p class="hint">Hats, clothes and shoes are sold at <b>Scale &amp; Thread</b> in the plaza.</p>' : ''}
       </div>
       <button class="btn big" data-back>${create ? "LET'S GO!" : 'DONE'}</button>
     </div></div>`);
@@ -309,19 +367,31 @@ export class Menus {
         apply();
       });
     });
-    node.querySelectorAll('[data-emote]').forEach((b) => b.onclick = () => { onEmote(b.dataset.emote); this.sfx('ui_select'); });
+    node.querySelectorAll('[data-emote]').forEach((b) => b.onclick = () => { onEmote(b.dataset.emote); this.sfx(b.dataset.emote === 'tongue' ? 'tongue' : 'ui_select'); });
     const nameIn = node.querySelector('.name-in');
     nameIn.addEventListener('keydown', (e) => e.stopPropagation());
     node.querySelector('[data-back]').onclick = () => {
-      const nm = nameIn.value.trim().replace(/[<>&"]/g, '').slice(0, 12);
+      const nm = nameIn.value.trim().replace(/[<>&"'`]/g, '').slice(0, 12);
       if (!nm) { nameIn.focus(); this.sfx('ui_error'); return; }
-      p.name = nm; p.look = look; p.ink = ink; p.created = true;
+      p.name = nm; p.look = { ...p.look, ...look }; p.ink = ink; p.created = true;
       app.save();
       this.sfx('ui_select');
       close();
       onClose();
     };
     if (create) setTimeout(() => nameIn.select(), 300);
+    this.padNav(node);
+  }
+
+  flash(html) { this.app.toast?.(html); }
+
+  // ------------------------------------------------------------ confirm
+  confirm({ title, text, yes = 'YES', no = 'NO', onYes, onNo }) {
+    const node = el(`<div class="overlay dim confirm"><div class="panel narrow"><h2>${title}</h2><p class="confirm-text">${text}</p>
+      <div class="rs-actions"><button class="btn ghost" data-back>${no}</button><button class="btn big" data-a="yes">${yes}</button></div></div></div>`);
+    const close = this.open(node);
+    node.querySelector('[data-a="yes"]').onclick = () => { this.sfx('ui_select'); close(); onYes?.(); };
+    node.querySelector('[data-back]').onclick = () => { this.sfx('ui_back'); close(); onNo?.(); };
     this.padNav(node);
   }
 
