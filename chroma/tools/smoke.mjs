@@ -93,6 +93,7 @@ await step('stage layouts are point-symmetric', async () => {
 await step('all modules parse + import', async () => {
   const mods = ['util', 'engine/post', 'engine/input', 'world/env', 'world/textures', 'world/materials', 'world/plaza', 'world/stage',
     'actors/character', 'actors/gear', 'world/news', 'world/rotation', 'actors/fighter', 'actors/weapons', 'actors/player', 'fx/particles', 'ui/hud', 'ui/menus', 'modes/battle', 'modes/plaza', 'audio'];
+  mods.push('story/kit', 'story/course', 'story/props', 'story/enemies', 'story/boss', 'story/levels', 'story/dialogue', 'story/hud', 'modes/story');
   for (const m of mods) await import(`../src/${m}.js`);
 });
 
