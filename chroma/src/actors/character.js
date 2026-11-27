@@ -45,7 +45,8 @@ function addMesh(parent, g, mat, opts = {}) {
     o.castShadow = false;
     m.add(o);
     LOD_SINK?.outlines.push(o);
-  } else if (opts.shadow === false || opts.detail) LOD_SINK?.details.push(m);
+  }
+  if (opts.detail || (opts.outline === false && opts.shadow === false)) LOD_SINK?.details.push(m);
   return m;
 }
 
@@ -490,15 +491,15 @@ export class Chromeleon {
     const style = cloth.style;
     addMesh(spine, geo('torso-' + style, () => torsoGeometry(style)), M.top, {});
     if (style === 'hoodie' || style === 'raincoat') {
-      addMesh(spine, geo('hood', () => new THREE.TorusGeometry(0.1, 0.045, 10, 20)), style === 'raincoat' ? M.top : M.accent, { pos: [0, 0.35, -0.07], rot: [Math.PI / 2 + 0.5, 0, 0] });
+      addMesh(spine, geo('hood', () => new THREE.TorusGeometry(0.1, 0.045, 10, 20)), style === 'raincoat' ? M.top : M.accent, { pos: [0, 0.35, -0.07], rot: [Math.PI / 2 + 0.5, 0, 0], detail: true });
       if (style === 'hoodie') addMesh(spine, geo('pocket', () => new THREE.BoxGeometry(0.2, 0.08, 0.02)), M.top, { pos: [0, 0.1, 0.13], outline: false, shadow: false });
     }
     if (style === 'jacket' || style === 'varsity' || style === 'raincoat') {
-      addMesh(spine, geo('collar', () => new THREE.TorusGeometry(0.085, 0.03, 8, 18)), M.accent, { pos: [0, 0.355, 0], rot: [Math.PI / 2, 0, 0] });
+      addMesh(spine, geo('collar', () => new THREE.TorusGeometry(0.085, 0.03, 8, 18)), M.accent, { pos: [0, 0.355, 0], rot: [Math.PI / 2, 0, 0], detail: true });
       addMesh(spine, geo('zip', () => new THREE.BoxGeometry(0.014, 0.3, 0.01)), style === 'varsity' ? M.accent : M.metal, { pos: [0, 0.17, 0.145], outline: false, shadow: false });
     }
     if (style === 'vest') {
-      for (const s of [-1, 1]) addMesh(spine, geo('vestPocket', () => new THREE.BoxGeometry(0.07, 0.07, 0.025)), M.accent, { pos: [0.07 * s, 0.17, 0.135], outline: false, shadow: false });
+      for (const s of [-1, 1]) addMesh(spine, geo('vestPocket', () => new THREE.BoxGeometry(0.07, 0.07, 0.025)), M.accent, { pos: [0.07 * s, 0.17, 0.135], outline: false, shadow: false, detail: true });
     }
     if (cloth.emblem && cloth.emblem !== 'none') {
       const em = { circle: () => new THREE.CircleGeometry(0.045, 18), star: () => { const s = new THREE.Shape(); for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2 + Math.PI / 2; const r = i % 2 ? 0.022 : 0.05; s[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, Math.sin(a) * r); } return new THREE.ShapeGeometry(s); }, stripe: () => new THREE.PlaneGeometry(0.3, 0.035), splat: () => new THREE.CircleGeometry(0.05, 9) }[cloth.emblem];
@@ -509,8 +510,8 @@ export class Chromeleon {
     pack.position.set(0, 0.2, -0.17);
     spine.add(pack);
     addMesh(pack, geo('can', () => new THREE.CylinderGeometry(0.085, 0.085, 0.26, 18, 1, true)), M.metal, {});
-    addMesh(pack, geo('canTop', () => new THREE.CylinderGeometry(0.088, 0.088, 0.03, 18)), M.dark, { pos: [0, 0.14, 0] });
-    addMesh(pack, geo('canTop', () => new THREE.CylinderGeometry(0.088, 0.088, 0.03, 18)), M.dark, { pos: [0, -0.14, 0] });
+    addMesh(pack, geo('canTop', () => new THREE.CylinderGeometry(0.088, 0.088, 0.03, 18)), M.dark, { pos: [0, 0.14, 0], detail: true });
+    addMesh(pack, geo('canTop', () => new THREE.CylinderGeometry(0.088, 0.088, 0.03, 18)), M.dark, { pos: [0, -0.14, 0], detail: true });
     addMesh(pack, geo('nozzle', () => new THREE.CylinderGeometry(0.018, 0.025, 0.06, 10)), M.dark, { pos: [0, 0.18, 0], outline: false, shadow: false });
     this.inkLevel = addMesh(pack, geo('canInk', () => new THREE.CylinderGeometry(0.075, 0.075, 1, 18).translate(0, 0.5, 0)), M.goo, { pos: [0, -0.125, 0.012], outline: false });
     this.inkLevel.scale.y = 0.25;
@@ -534,7 +535,7 @@ export class Chromeleon {
     neck.add(head);
     addMesh(head, geo('cHead', () => new THREE.SphereGeometry(0.2, 32, 24)), M.skinHead, { scale: [0.98, 0.9, 1.1] });
     addMesh(head, geo('cSnout', () => new THREE.SphereGeometry(0.13, 24, 16)), M.skinHead, { pos: [0, -0.04, 0.16], scale: [0.64, 0.6, 1.2], rot: [-0.12, 0, 0] });
-    addMesh(head, geo('cJaw', () => new THREE.SphereGeometry(0.12, 20, 12)), M.skinHead, { pos: [0, -0.1, 0.09], scale: [0.95, 0.55, 1.1], outline: false });
+    addMesh(head, geo('cJaw', () => new THREE.SphereGeometry(0.12, 20, 12)), M.skinHead, { pos: [0, -0.1, 0.09], scale: [0.95, 0.55, 1.1], outline: false, detail: true });
     // smile
     // long chameleon smile running from the snout tip back along the jaw
     this.mouth = addMesh(head, geo('cMouth', () => {
@@ -561,7 +562,7 @@ export class Chromeleon {
       const turret = new THREE.Group();
       mount.add(turret);
       addMesh(turret, geo('turret', () => new THREE.SphereGeometry(0.098, 20, 16)), M.skinHead, {});
-      addMesh(turret, geo('lidRing', () => new THREE.TorusGeometry(0.066, 0.016, 8, 22)), M.skinHead, { pos: [0, 0, 0.074], outline: false });
+      addMesh(turret, geo('lidRing', () => new THREE.TorusGeometry(0.066, 0.016, 8, 22)), M.skinHead, { pos: [0, 0, 0.074], outline: false, detail: true });
       const ball = new THREE.Group();
       ball.position.z = 0.042;
       turret.add(ball);
@@ -582,7 +583,7 @@ export class Chromeleon {
       sh.position.set(0.18 * side, 0.31, 0);
       spine.add(sh);
       addMesh(sh, geo('upperArm', () => new THREE.CapsuleGeometry(0.052, 0.12, 6, 10).translate(0, -0.09, 0)), sleeveMat, {});
-      if (!sleeveless) addMesh(sh, geo('shoulderPad', () => new THREE.SphereGeometry(0.065, 12, 10)), M.top, { outline: false, shadow: false });
+      if (!sleeveless) addMesh(sh, geo('shoulderPad', () => new THREE.SphereGeometry(0.065, 12, 10)), M.top, { outline: false, shadow: false, detail: true });
       const elbow = new THREE.Group();
       elbow.position.y = -0.19;
       sh.add(elbow);
@@ -591,7 +592,7 @@ export class Chromeleon {
       hand.position.y = -0.19;
       elbow.add(hand);
       addMesh(hand, geo('hand', () => new THREE.SphereGeometry(0.052, 12, 10)), M.skin, { scale: [0.9, 1, 1] });
-      addMesh(hand, geo('thumb', () => new THREE.SphereGeometry(0.03, 10, 8)), M.skin, { pos: [-0.04 * side, 0.0, 0.035], outline: false });
+      addMesh(hand, geo('thumb', () => new THREE.SphereGeometry(0.03, 10, 8)), M.skin, { pos: [-0.04 * side, 0.0, 0.035], outline: false, detail: true });
       this.arms.push({ sh, elbow, hand, side });
     }
     this.buildDive();
@@ -604,18 +605,18 @@ export class Chromeleon {
     if (style === 'boot') {
       addMesh(foot, geo('bootShaft', () => new THREE.CylinderGeometry(0.068, 0.072, 0.14, 14)), M.shoes, { pos: [0, 0.02, 0] });
       addMesh(foot, geo('bootToe', () => new THREE.SphereGeometry(0.08, 16, 12)), M.shoes, { pos: [0, -0.03, 0.05], scale: [0.95, 0.7, 1.3] });
-      addMesh(foot, geo('bootSole', () => new THREE.BoxGeometry(0.15, 0.05, 0.25)), M.sole, { pos: [0, -0.07, 0.035], outline: false });
+      addMesh(foot, geo('bootSole', () => new THREE.BoxGeometry(0.15, 0.05, 0.25)), M.sole, { pos: [0, -0.07, 0.035], outline: false, detail: true });
     } else if (style === 'hightop') {
       addMesh(foot, geo('htAnkle', () => new THREE.CylinderGeometry(0.066, 0.07, 0.1, 14)), M.shoes, { pos: [0, 0.0, -0.005] });
       addMesh(foot, geo('shoe', () => new THREE.SphereGeometry(0.08, 16, 12)), M.shoes, { pos: [0, -0.02, 0.035], scale: [0.95, 0.72, 1.45] });
-      addMesh(foot, geo('sole', () => new THREE.BoxGeometry(0.15, 0.035, 0.24)), M.sole, { pos: [0, -0.065, 0.035], outline: false });
-      addMesh(foot, geo('htStripe', () => new THREE.TorusGeometry(0.068, 0.01, 6, 16).rotateX(Math.PI / 2)), M.sole, { pos: [0, 0.03, -0.005], outline: false, shadow: false });
+      addMesh(foot, geo('sole', () => new THREE.BoxGeometry(0.15, 0.035, 0.24)), M.sole, { pos: [0, -0.065, 0.035], outline: false, detail: true });
+      addMesh(foot, geo('htStripe', () => new THREE.TorusGeometry(0.068, 0.01, 6, 16).rotateX(Math.PI / 2)), M.sole, { pos: [0, 0.03, -0.005], outline: false, shadow: false, detail: true });
     } else if (style === 'slipon') {
       addMesh(foot, geo('slip', () => new THREE.SphereGeometry(0.078, 16, 12)), M.shoes, { pos: [0, -0.03, 0.035], scale: [0.95, 0.6, 1.45] });
-      addMesh(foot, geo('slipSole', () => new THREE.BoxGeometry(0.15, 0.03, 0.24)), M.sole, { pos: [0, -0.068, 0.035], outline: false });
+      addMesh(foot, geo('slipSole', () => new THREE.BoxGeometry(0.15, 0.03, 0.24)), M.sole, { pos: [0, -0.068, 0.035], outline: false, detail: true });
     } else {
       addMesh(foot, geo('shoe', () => new THREE.SphereGeometry(0.08, 16, 12)), M.shoes, { pos: [0, -0.02, 0.035], scale: [0.95, 0.72, 1.45] });
-      addMesh(foot, geo('sole', () => new THREE.BoxGeometry(0.15, 0.035, 0.24)), M.sole, { pos: [0, -0.065, 0.035], outline: false });
+      addMesh(foot, geo('sole', () => new THREE.BoxGeometry(0.15, 0.035, 0.24)), M.sole, { pos: [0, -0.065, 0.035], outline: false, detail: true });
     }
   }
 
@@ -637,11 +638,11 @@ export class Chromeleon {
     } else if (kind === 'horns') {
       addMesh(c, geo('hornN', () => new THREE.ConeGeometry(0.03, 0.15, 12)), M.goo, { pos: [0, 0.03, 0.25], rot: [1.25, 0, 0] });
       for (const s of [-1, 1]) addMesh(c, geo('hornB', () => new THREE.ConeGeometry(0.026, 0.13, 12)), M.goo, { pos: [0.075 * s, 0.13, 0.13], rot: [1.0, 0, -0.25 * s] });
-      addMesh(c, geo('hornRidge', () => new THREE.ConeGeometry(0.06, 0.14, 4)), M.goo, { pos: [0, 0.19, -0.12], rot: [-0.9, Math.PI / 4, 0], scale: [0.6, 1, 1] });
+      addMesh(c, geo('hornRidge', () => new THREE.ConeGeometry(0.06, 0.14, 4)), M.goo, { pos: [0, 0.19, -0.12], rot: [-0.9, Math.PI / 4, 0], scale: [0.6, 1, 1], detail: true });
     } else {
       addMesh(c, geo('dome', () => new THREE.SphereGeometry(0.225, 30, 18, 0, Math.PI * 2, 0, Math.PI * 0.55)), M.goo, { pos: [0, 0.01, -0.04], rot: [-0.35, 0, 0], scale: [1.02, 1.05, 1.25] });
       for (let i = -2; i <= 2; i++) {
-        addMesh(c, geo('domeDrip', () => new THREE.CapsuleGeometry(0.022, 0.06, 4, 8)), M.goo, { pos: [i * 0.07, -0.1, -0.21 + Math.abs(i) * 0.03], outline: false });
+        addMesh(c, geo('domeDrip', () => new THREE.CapsuleGeometry(0.022, 0.06, 4, 8)), M.goo, { pos: [i * 0.07, -0.1, -0.21 + Math.abs(i) * 0.03], outline: false, detail: true });
       }
     }
     LOD_SINK = prev;
@@ -728,12 +729,12 @@ export class Chromeleon {
     if (!this.casters) { this.casters = []; this.root.traverse((o) => { if (o.isMesh && o.castShadow) this.casters.push(o); }); }
     if ((level === 2) !== (this.lod.level === 2)) for (const c of this.casters) c.castShadow = level < 2;
     this.lod.level = level;
-    for (const o of this.lod.outlines) o.visible = level < 2 && this.camoA > 0.9;
+    for (const o of this.lod.outlines) o.visible = level < 1 && this.camoA > 0.9;
     for (const d of this.lod.details) d.visible = level < 1;
   }
   lodFor(camPos) {
     const d2 = this.root.position.distanceToSquared(camPos);
-    this.setLOD(d2 > 34 * 34 ? 2 : d2 > 16 * 16 ? 1 : 0);
+    this.setLOD(d2 > 30 * 30 ? 2 : d2 > 18 * 18 ? 1 : 0);
   }
 
   // Chroma Camo: fade the whole model (a = 1 visible .. ~0 invisible)
@@ -751,7 +752,7 @@ export class Chromeleon {
       m.opacity = m === W_MATS.glass ? 0.32 * a : a;
       m.depthWrite = !now;
     }
-    for (const o of this.lod.outlines) o.visible = !now && this.lod.level < 2;
+    for (const o of this.lod.outlines) o.visible = !now && this.lod.level < 1;
   }
 
   // st: {speed, back, grounded, vy, pitch, aiming, firing, weapon, wtype, goo, submerged, climbing, rolling, charge, shield, dodge, jet, chroma}

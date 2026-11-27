@@ -267,6 +267,7 @@ function buildPlazaDecor(scene, trees) {
   const bulbG = new THREE.SphereGeometry(0.09, 8, 6);
   const bulbMats = [0xffe2a8, 0xff9ec7, 0x9ee8ff, 0xc6ff9e].map((c) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 5 }));
   const wireMat = new THREE.LineBasicMaterial({ color: 0x2b2f45 });
+  const bulbPos = bulbMats.map(() => []);
   const strand = (a, b, sag = 1.1) => {
     const pts = [];
     for (let i = 0; i <= 16; i++) {
@@ -274,7 +275,7 @@ function buildPlazaDecor(scene, trees) {
       const p = a.clone().lerp(b, t);
       p.y -= Math.sin(t * Math.PI) * sag;
       pts.push(p);
-      if (i % 2 === 1) { const bulb = new THREE.Mesh(bulbG, bulbMats[(i >> 1) % bulbMats.length]); bulb.position.copy(p).setY(p.y - 0.12); g.add(bulb); }
+      if (i % 2 === 1) bulbPos[(i >> 1) % bulbMats.length].push(p.clone().setY(p.y - 0.12));
     }
     g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wireMat));
   };
@@ -283,6 +284,13 @@ function buildPlazaDecor(scene, trees) {
   strand(lamps[6], new THREE.Vector3(10, 8, -30));
   strand(new THREE.Vector3(-30, 7, -20), new THREE.Vector3(30, 7, -20), 1.6);
   strand(new THREE.Vector3(-30, 7.5, -10), new THREE.Vector3(30, 7.5, -8), 1.8);
+  // all bulbs as a handful of instanced meshes
+  const _m4 = new THREE.Matrix4();
+  bulbMats.forEach((mat, k) => {
+    const im = new THREE.InstancedMesh(bulbG, mat, bulbPos[k].length);
+    bulbPos[k].forEach((p, i) => im.setMatrixAt(i, _m4.makeTranslation(p.x, p.y, p.z)));
+    g.add(im);
+  });
 
   // ---- Clash Tower dressing
   neon('CLASH TOWER', 13, 2.4, 150, '#ff2e88', new THREE.Vector3(0, 7.4, -29.95));
@@ -436,24 +444,31 @@ function buildPlazaDecor(scene, trees) {
   flagGeo.setAttribute('position', new THREE.Float32BufferAttribute([-0.25, 0, 0, 0.25, 0, 0, 0, -0.5, 0], 3));
   flagGeo.computeVertexNormals();
   const flagMats = flagCols.map((c) => std(c, 0.8, 0, { side: THREE.DoubleSide }));
-  const flags = [];
+  const flags = flagMats.map(() => []);
   const bunting = (a, b) => {
     const n = Math.floor(a.distanceTo(b) / 0.9);
     for (let i = 1; i < n; i++) {
       const t = i / n;
       const p = a.clone().lerp(b, t);
       p.y -= Math.sin(t * Math.PI) * 1.4;
-      const f = new THREE.Mesh(flagGeo, flagMats[i % flagMats.length]);
+      const f = new THREE.Object3D();
       f.position.copy(p);
       f.lookAt(p.x + (b.z - a.z), p.y, p.z - (b.x - a.x));
       f.userData.ph = i * 0.6;
-      g.add(f); flags.push(f);
+      f.userData.q = f.quaternion.clone();
+      flags[i % flagMats.length].push(f);
     }
   };
   bunting(new THREE.Vector3(-16, 9, -30), new THREE.Vector3(16, 9, -30));
   bunting(new THREE.Vector3(-30, 8, 26), new THREE.Vector3(28, 8, 26));
   bunting(new THREE.Vector3(-30, 8.5, 0), new THREE.Vector3(30, 8.5, 0));
-  updaters.push((t) => { for (const f of flags) f.rotation.x = Math.sin(t * 3 + f.userData.ph) * 0.35; });
+  const flagMeshes = flagMats.map((mat, k) => { const im = new THREE.InstancedMesh(flagGeo, mat, flags[k].length); im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); g.add(im); return im; });
+  updaters.push((t) => {
+    flagMeshes.forEach((im, k) => {
+      flags[k].forEach((f, i) => { f.quaternion.copy(f.userData.q); f.rotateX(Math.sin(t * 3 + f.userData.ph) * 0.35); f.updateMatrix(); im.setMatrixAt(i, f.matrix); });
+      im.instanceMatrix.needsUpdate = true;
+    });
+  });
 
   // ---- vending machines + trash bins (decor)
   for (const [x, z, c] of [[27.5, -2, 0xff2e88], [27.5, 0.5, 0x1e6bff], [-27.5, -26, 0x3cf03c]]) {

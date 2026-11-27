@@ -267,6 +267,7 @@ export class Plaza {
     this.showcase = null;
     this.uiOpen = false;
     this.hitT = 0;
+    this.applyVisibility();
     app.renderer.compile(scene, this.camera);
     app.audio?.music('plaza');
     this.fountainLoop = app.audio?.loop('fountain', { x: 0, y: 1, z: 4 });
@@ -284,7 +285,7 @@ export class Plaza {
     this.npcs = [];
     const add = (o) => { const n = new NPC(world, { name: nm(), color: npcColor(), ...o }); this.npcs.push(n); return n; };
     // wanderers
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < 7; i++) {
       let pos;
       for (;;) { pos = new THREE.Vector3(rand(-24, 24), 0, rand(-22, 28)); if (Math.hypot(pos.x, pos.z - 4) > 7 && pz.level.heightAt(pos.x, pos.z).y < 0.05) break; }
       add({ pos });
@@ -299,7 +300,7 @@ export class Plaza {
       }
     }
     // sitters on the tower steps, dancers at the DJ booth
-    for (let i = 0; i < 5; i++) add({ pos: new THREE.Vector3(-7 + i * 3.4 + rand(-0.4, 0.4), 0.37, -27.1), mode: 'fixed', emote: 'sit', yaw: 0 });
+    for (let i = 0; i < 4; i++) add({ pos: new THREE.Vector3(-6 + i * 4 + rand(-0.4, 0.4), 0.37, -27.1), mode: 'fixed', emote: 'sit', yaw: 0 });
     for (let i = 0; i < 4; i++) add({ pos: new THREE.Vector3(-25 + (i % 2) * 1.6, 0.6, 4 + i * 1.3), mode: 'fixed', emote: 'dance', yaw: Math.PI / 2 + rand(-0.5, 0.5) });
     add({ pos: new THREE.Vector3(-26.2, 0.6, 6), mode: 'fixed', emote: 'dance', yaw: Math.PI / 2, name: 'DJ Wobble', lines: ['This track? Fresh out of my brain. You like it?', 'Requests are closed. The vibe decides.'] });
     // ink swimmers in a painted patch by the fountain
@@ -318,6 +319,7 @@ export class Plaza {
     this.staff = {};
     for (const s of staff) {
       const n = add({ ...s, color: npcColor(), mode: 'fixed', emote: s.emote ?? null });
+      n.room = s.name === 'Vex' ? 'weapons' : s.name === 'Lumi' || s.name === 'Kiko' ? 'gear' : 'plaza';
       this.staff[s.name] = n;
     }
   }
@@ -430,6 +432,7 @@ export class Plaza {
         this.shopLoop?.stop(); this.shopLoop = null;
       }
       this.env.follow(p.pos);
+      this.applyVisibility();
       setTimeout(() => { this.fadeEl.classList.remove('on'); this.fading = false; }, 120);
     }, 280);
   }
@@ -486,6 +489,16 @@ export class Plaza {
         onClose: () => { close(); if (opts.create) this.startNews(); },
       });
     }
+  }
+
+  // only draw what can be seen: the plaza outside, or the room you're in
+  applyVisibility() {
+    const outside = this.location === 'plaza';
+    this.pz.decor.group.visible = outside;
+    this.pz.interiors.group.visible = !outside;
+    for (const n of this.npcs) n.model.root.visible = (n.room || 'plaza') === this.location || (!outside && n.room === this.location);
+    for (const b of this.bots) b.root.visible = outside && b.alive;
+    this.env.sky.visible = outside;
   }
 
   showOnPedestal(id) {
