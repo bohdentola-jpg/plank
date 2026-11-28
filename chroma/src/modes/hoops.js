@@ -366,7 +366,7 @@ export class HoopsRules {
         if (v.y < -1.6) this.bounce(v, down.normal, 0.58, 0.9, host);
         else {
           v.y = 0;
-          const k = Math.exp(-1.4 * h);
+          const k = Math.exp(-2.4 * h); // rolling friction
           v.x *= k; v.z *= k;
           const nn = down.normal;
           if (nn.y < 0.995) { v.x += BALL_G * nn.y * nn.x * h; v.z += BALL_G * nn.y * nn.z * h; }
@@ -872,6 +872,7 @@ export class HoopsRules {
       open: { 1: this.hoops[1].open, 2: this.hoops[2].open }, prog: { 1: this.hoops[1].prog, 2: this.hoops[2].prog },
     });
     const cam = b.camera;
+    cam.updateMatrixWorld(); // project markers with this frame's camera, not last frame's
     const playing = b.state === 'play' || b.state === 'countdown';
     const enemyHoop = this.hoops[3 - my], myHoop = this.hoops[my];
     const mine = ball.carrier === me && ball.st === ST.held;

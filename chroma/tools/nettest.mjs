@@ -22,7 +22,9 @@ const transport = process.argv.includes('--peerjs') ? '' : '&net=local';
 const argv = (n, d) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? process.argv[i + 1] : d; };
 const MODE = argv('mode', 'turf');
 const SIM = +argv('sim', MODE === 'turf' ? '1' : '4');
-const MATCH_T = +argv('time', MODE === 'turf' ? '25' : '45');
+const MATCH_T = +argv('time', MODE === 'turf' ? '25' : '60');
+// the mode variants pin a small stage so a short match still sees captures / scores
+const STAGE = argv('stage', MODE === 'zones' ? 'terminal' : MODE === 'hoops' ? 'skyline' : null);
 const proxy = (!transport) && process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: '127.0.0.1,localhost' } : undefined;
 const browser = await chromium.launch({ proxy, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-features=WebRtcHideLocalIpsWithMdns'] });
 const ctx = await browser.newContext({ viewport: { width: 1000, height: 640 } });
@@ -68,6 +70,7 @@ const gset = await guest.evaluate(() => window.__chroma.room.settings.time);
 check('settings sync to guest', gset === 60, String(gset));
 // headless software rendering runs at a few fps, so play a short match
 await host.evaluate((t) => window.__chroma.room.setSettings({ time: t }), MATCH_T);
+if (STAGE) await host.evaluate((st) => window.__chroma.room.setSettings({ stage: st }), STAGE);
 if (MODE !== 'turf') {
   await host.selectOption('.netroom [data-set="mode"]', MODE);
   await host.waitForTimeout(800);
