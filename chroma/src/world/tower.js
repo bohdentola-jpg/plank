@@ -88,7 +88,7 @@ export function buildTower(scene, renderer, env, opts = {}) {
   // ---- slabs (each slab's underside is the ceiling of the floor below)
   for (let i = 0; i < F.length; i++) {
     const y = floorY(i), c = floorColors[i];
-    const mat = i === 5 ? 'woodFloor' : 'concrete';
+    const mat = i === 5 ? 'floor' : 'concrete';
     const o = { mat, color: c, bottom: i > 0, paintable: true };
     if (i === 0) { B([-HALF, -0.6, -HALF], [HALF, 0, HALF], o); continue; }
     B([-HALF, y - 0.5, -HALF], [HALF, y, -WELL], o);
