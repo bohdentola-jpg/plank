@@ -230,6 +230,28 @@ Something gray is bubbling up from under the city. Climb down the manhole in the
 alley to find Captain Veil and the secret Chroma Guard. Then take back the stolen Hue
 Cores, level by level, from Baron Grisaille and his colorless Drab.
 
+The campaign runs about an hour on a first playthrough: three sectors of five levels, each
+ending in a boss.
+
+| Sector | Levels | Boss |
+| --- | --- | --- |
+| 1. The Paint Works | First Splash · Ghost Walk · Turret Alley · Drone Heights | The Gray Engine (4 phases) |
+| 2. The Rinse Reservoir | Sponge Sluice · Rising Tide · Bottling Line · Pump Station | The Grimewyrm (3 phases) |
+| 3. Grisaille Manor | Lights Out · Crumbling Gallery · Chroma Locks · The Grand Ascent | Baron Grisaille (3 phases) |
+
+- **Mechanics** get a level of their own before they are mixed: moving and orbiting platforms,
+  crumbling floors, sponges that grow when painted, paint switches (some timed), grind rails,
+  updraft fans, conveyors, rising floods you stop by painting the drains, swim-only membranes,
+  wave arenas, and pitch-dark rooms lit by painting lanterns.
+- **Enemies** always warn you first and can be countered: Wardens (shielded, flank them),
+  Glints (laser sight, then a shot), Rumblers (they charge and stun themselves on walls),
+  Goopers (hiding in gray puddles), Splotches (they split) and Pilfers (they steal your ink).
+- **Collect** 39 Lost Swatches (in the Swatch Book in each hub) and Hue Shards, which Dabble's
+  Swap Shop trades for upgrades: Tough Scales, Quick Refill, Super Charge, Prism Burst,
+  Bold Hues and Shard Magnet.
+- Each hub gets its color back as you return its cores. Clearing a boss opens the gate to
+  the next sector's hub.
+
 Progress (name, look, gear, coins, level, weapons, house, story, settings) is saved in your
 browser.
 
@@ -258,11 +280,12 @@ browser.
 node chroma/tools/smoke.mjs               # paint counts, collision, raycasts, pathfinding, module imports
 node chroma/tools/shot.mjs "index.html?quick&skipintro&qa&autoplay" battle.png --wait 20000
 node chroma/tools/playtest.mjs plaza      # drives real keyboard/mouse input
-node chroma/tools/flowtest.mjs            # title -> creator -> plaza -> lobby -> battle
+node chroma/tools/flowtest.mjs            # title -> house (creator) -> plaza -> tower -> CPU lobby -> battle
 node chroma/tools/towertest.mjs           # tower floors, elevator, terminals, minigame, exit
 node chroma/tools/nettest.mjs [--peerjs]  # two-player private match (local or real transport)
 node chroma/tools/quicktest.mjs [--peerjs] # two-player online quick match
 node chroma/tools/housetest.mjs           # house: grab a weapon, door, plaza + back, buy, decorate, reload
+node chroma/tools/storytest.mjs [s1 s2 s3 hub shop migrate cycle ending l1..l15] [--shots]  # story (STORY_SLOW=<factor> on slow machines)
 ```
 
 URL flags:
@@ -272,7 +295,7 @@ URL flags:
 | `?quick` | Straight into a battle |
 | `?plaza` | Straight into the plaza |
 | `?house` | Straight into your house |
-| `?story[=hub\|l1..l5]` | Straight into story mode |
+| `?story[=hub\|hub2\|hub3\|l1..l15]` | Straight into story mode (a hub or a level) |
 | `?tower[=0..5]` | Straight into the Clash Tower (optionally on a floor) |
 | `&stage=terminal\|skyline\|fizzwater\|mesa\|frostbite` | Pick the stage |
 | `&weapon=<id>` | Pick the weapon |

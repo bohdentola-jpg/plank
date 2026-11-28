@@ -124,7 +124,7 @@ await step('house: starter layout is valid, saves migrate, furniture blocks', as
 await step('all modules parse + import', async () => {
   const mods = ['util', 'engine/post', 'engine/input', 'world/env', 'world/textures', 'world/materials', 'world/plaza', 'world/stage',
     'actors/character', 'actors/gear', 'world/news', 'world/rotation', 'actors/fighter', 'actors/weapons', 'actors/player', 'fx/particles', 'ui/hud', 'ui/menus', 'modes/battle', 'modes/plaza', 'audio'];
-  mods.push('story/kit', 'story/course', 'story/props', 'story/enemies', 'story/boss', 'story/levels', 'story/dialogue', 'story/hud', 'modes/story');
+  mods.push('story/kit', 'story/info', 'story/progress', 'story/course', 'story/build', 'story/props', 'story/enemies', 'story/enemies2', 'story/mechanics', 'story/npcs', 'story/boss', 'story/boss2', 'story/boss3', 'story/hubs', 'story/sector1', 'story/sector2', 'story/sector3', 'story/levels', 'story/dialogue', 'story/hud', 'modes/story');
   mods.push('net/transport', 'net/room', 'net/netbattle', 'ui/minigame', 'world/tower', 'modes/tower');
   mods.push('world/furniture', 'world/house', 'ui/house', 'modes/house');
   for (const m of mods) await import(`../src/${m}.js`);
