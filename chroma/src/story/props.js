@@ -279,9 +279,11 @@ function hatchSignTexture(num, name, status, color, swatch) {
     ctx.fillStyle = status === 'cleared' ? '#7dff7a' : status === 'open' ? '#ffd21a' : '#8a8794';
     ctx.fillText(status === 'cleared' ? 'CLEARED ✓' : status === 'open' ? 'OPEN · PRESS E' : 'SEALED', 168, 148);
     if (status !== 'locked') {
-      ctx.fillStyle = swatch ? '#ffd21a' : 'rgba(255,255,255,.25)';
+      const sw = typeof swatch === 'object' && swatch ? swatch : { n: swatch ? 1 : 0, total: 1 };
+      const all = sw.n >= sw.total;
+      ctx.fillStyle = all ? '#ffd21a' : sw.n ? '#ffe9a0' : 'rgba(255,255,255,.3)';
       ctx.font = `800 26px ${BFONT}`;
-      ctx.fillText(swatch ? '◆ Swatch found' : '◇ Swatch missing', 168, 196);
+      ctx.fillText(sw.total > 1 ? `${all ? '◆' : '◇'} Swatches ${sw.n}/${sw.total}` : all ? '◆ Swatch found' : '◇ Swatch missing', 168, 196);
     }
   });
 }

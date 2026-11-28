@@ -1,14 +1,22 @@
-// The Gray Engine: Baron Grisaille's colour-draining machine (level 5 boss).
+// The Gray Engine: Baron Grisaille's colour-draining machine (sector 1 boss).
 //   Phase 1  paint the four valve shutters to crack them open, then burst the valves
 //   Phase 2  the lid opens: shoot the stolen Prism Heart between its orbiting shields
-//   Phase 3  meltdown: faster double sweeps, shockwave rings, heavier mortar fire
-// Attacks: a gray sweep beam you dodge by swimming under it in your own ink,
-// lobbed gray mortars, and Smudges summoned from the drain pipes.
+//            while gray geysers erupt from the floor vents (watch for the bubbling)
+//   Phase 3  overdrive: the heart hides and coolant tanks rise on the four pillars.
+//            Ride the jump pads up and burst them all; the Engine overheats and
+//            drops its heart, unshielded, for a few seconds: punish it!
+//   Phase 4  meltdown: faster double sweeps, shockwave rings, geysers, heavier mortars
+// Attacks: a gray sweep beam you dodge by swimming under it in your own ink (or by
+// standing on a pillar), lobbed gray mortars, and Smudges from the drain pipes.
+// The finish: a cinematic boiler blow-out that paints the room in your colour.
 import * as THREE from 'three';
 import { part, rod, std, gooMat, glowMat, OUTLINE_S, OUTLINE_M, OUTLINE_L, posOf, disposeTree } from './kit.js';
 import { GRAY_HEX } from './enemies.js';
 
-export const VALVE_HP = 160, HEART_HP = 1500;
+export const VALVE_HP = 160, HEART_HP = 1500, TANK_HP = 140;
+const P2_END = 0.6; // heart fraction where overdrive starts
+const PILLARS = [[-13, -13], [13, -13], [-13, 13], [13, 13]];
+const VENTS = Array.from({ length: 6 }, (_, i) => { const a = (i / 6) * Math.PI * 2 + Math.PI / 6; return [Math.cos(a) * 11, Math.sin(a) * 11]; });
 const DIRS = [{ face: 'px', x: 1, z: 0 }, { face: 'nx', x: -1, z: 0 }, { face: 'pz', x: 0, z: 1 }, { face: 'nz', x: 0, z: -1 }];
 export const DRAINS = [[-18.6, 18.6], [18.6, 18.6], [-18.6, -18.6], [18.6, -18.6]];
 const UP = new THREE.Vector3(0, 1, 0);
@@ -44,10 +52,11 @@ export class GrisailleEngine {
     this.state = 'dormant'; this.phase = 0; this.t = 0; this.frame = 0; this.stateT = 0;
     this.valveHp = DIRS.map(() => VALVE_HP);
     this.heartHp = HEART_HP;
-    this.max = VALVE_HP * DIRS.length + HEART_HP;
+    this.max = VALVE_HP * DIRS.length + HEART_HP + TANK_HP * PILLARS.length;
     this.flash = 0; this.hurtSfxT = 0;
     this.topYaw = Math.PI; // facing the entrance (-z)
-    this.lobs = []; this.rings = []; this.geysers = []; this.lobQueue = [];
+    this.lobs = []; this.rings = []; this.geysers = []; this.lobQueue = []; this.vents = []; this.ventT = 6;
+    this.tankHp = PILLARS.map(() => TANK_HP);
     this.sweep = null; this.sweepT = 7; this.lobT = 3; this.summonT = 14; this.ringT = 5; this.sweepHitT = 0;
     this.saidValve = false;
     this.build();
@@ -56,19 +65,33 @@ export class GrisailleEngine {
     this.hearts = [[0, 0], [0.78, 0], [-0.78, 0], [0, 0.78], [0, -0.78]].map(([x, z], i) => { const p = new Part(this, 'heart', i, 2.5); p.off = new THREE.Vector3(x, -1.25, z); return p; });
     this.shields = [];
     for (let s = 0; s < 3; s++) for (const k of [0.22, 0.72]) { const p = new Part(this, 'shield', s, 3.0); p.plate = s; p.k = k; this.shields.push(p); }
-    this.parts = [...this.valves, ...this.hearts, ...this.shields];
+    this.tanks = PILLARS.map(([x, z], i) => { const p = new Part(this, 'tank', i, 2.0); p.name = 'Coolant Tank'; p.pos.set(x, 3.5, z); return p; });
+    this.parts = [...this.valves, ...this.hearts, ...this.shields, ...this.tanks];
     for (const p of this.parts) world.fighters.push(p);
   }
 
   get color() { return this.world.colors[2]; }
-  get frac() { return Math.max(0, this.valveHp.reduce((a, b) => a + Math.max(0, b), 0) + Math.max(0, this.heartHp)) / this.max; }
+  get frac() { return Math.max(0, this.valveHp.reduce((a, b) => a + Math.max(0, b), 0) + Math.max(0, this.heartHp) + this.tankHp.reduce((a, b) => a + Math.max(0, b), 0)) / this.max; }
+  get title() { return 'BARON GRISAILLE\'S GRAY ENGINE'; }
+  get marks() { const m = this.max; return [(HEART_HP + TANK_HP * 4) / m, (HEART_HP * P2_END + TANK_HP * 4) / m, (HEART_HP * P2_END) / m]; }
+  get dormantText() { return 'Head through the door into the <b>Engine Room</b>'; }
+  get objective() {
+    if (this.state === 'p3' || this.state === 'trans2') return `Ride the pads up and burst the <b>coolant tanks</b>: <b>${4 - this.tanksLeft}/4</b>`;
+    if (this.state === 'vent') return 'It\'s overheating! <b>Hit the Prism Heart now!</b>';
+    return 'Defeat <b>Baron Grisaille\'s Gray Engine</b>';
+  }
+  get downText() { return 'The Engine is down!'; }
+  get tanksLeft() { return this.tankHp.filter((h) => h > 0).length; }
   get valvesLeft() { return this.valveHp.filter((h) => h > 0).length; }
-  get fighting() { return this.state === 'p1' || this.state === 'p2' || this.state === 'p3'; }
+  get fighting() { return this.state === 'p1' || this.state === 'p2' || this.state === 'p3' || this.state === 'vent' || this.state === 'p4'; }
   get label() {
     if (this.state === 'p1') return `PHASE 1 · PAINT THE SHUTTERS, BURST THE VALVES (${DIRS.length - this.valvesLeft}/${DIRS.length})`;
     if (this.state === 'trans') return 'THE LID IS OPENING…';
-    if (this.state === 'p2') return 'PHASE 2 · STRIKE THE PRISM HEART';
-    if (this.state === 'p3') return 'PHASE 3 · MELTDOWN!';
+    if (this.state === 'p2') return 'PHASE 2 · STRIKE THE PRISM HEART · WATCH THE VENTS';
+    if (this.state === 'trans2') return 'OVERDRIVE! COOLANT TANKS RISING…';
+    if (this.state === 'p3') return `PHASE 3 · BURST THE COOLANT TANKS ON THE PILLARS (${4 - this.tanksLeft}/4)`;
+    if (this.state === 'vent') return 'OVERHEATED! THE HEART IS EXPOSED!';
+    if (this.state === 'p4') return 'PHASE 4 · MELTDOWN!';
     if (this.state === 'dying' || this.state === 'dead') return 'THE ENGINE IS BREAKING DOWN!';
     return '';
   }
@@ -210,6 +233,31 @@ export class GrisailleEngine {
     this.lobMat = gooMat(GRAY_HEX);
     this.ringGeo = new THREE.TorusGeometry(1, 0.32, 8, 72);
     this.ringMat = glowMat(0xb9b5c4, 1.4, { transparent: true, opacity: 0.85 });
+    // coolant tanks that rise out of the pillars in overdrive
+    this.tankVis = PILLARS.map(([x, z]) => {
+      const g = new THREE.Group();
+      g.position.set(x, 3.5 - 2.6, z);
+      g.visible = false;
+      this.world.scene.add(g);
+      part(g, new THREE.CylinderGeometry(0.85, 0.95, 0.3, 18), iron, { pos: [0, 0.15, 0], outline: OUTLINE_S });
+      const glass = new THREE.MeshPhysicalMaterial({ color: 0xbff0ff, roughness: 0.05, clearcoat: 1, transparent: true, opacity: 0.45, depthWrite: false });
+      part(g, new THREE.CylinderGeometry(0.75, 0.75, 1.9, 18, 1, true), glass, { pos: [0, 1.25, 0], shadow: false });
+      const cool = new THREE.MeshStandardMaterial({ color: 0x5fd8ff, emissive: 0x2a8cff, emissiveIntensity: 1.2, roughness: 0.2 });
+      const fill = part(g, new THREE.CylinderGeometry(0.66, 0.66, 1.6, 16), cool, { pos: [0, 1.15, 0], shadow: false });
+      part(g, new THREE.CylinderGeometry(0.85, 0.85, 0.25, 18), iron, { pos: [0, 2.3, 0], outline: OUTLINE_S });
+      const bulb = part(g, new THREE.SphereGeometry(0.18, 10, 8), glowMat(0xff5050, 2), { pos: [0, 2.55, 0], shadow: false });
+      return { g, glass, cool, fill, bulb, broken: false };
+    });
+    // vent geyser columns
+    this.geyserMat = gooMat(GRAY_HEX, { transparent: true, opacity: 0.9 });
+    this.ventVis = VENTS.map(([x, z]) => {
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.35, 1, 16, 1, true), this.geyserMat);
+      m.position.set(x, 0, z);
+      m.visible = false;
+      m.castShadow = false;
+      this.world.scene.add(m);
+      return m;
+    });
   }
 
   buildBaron() {
@@ -265,12 +313,21 @@ export class GrisailleEngine {
       if (this.t - (this.clankT || 0) > 0.12) { this.clankT = this.t; w.audio?.sfx('hit', { ...posOf(part.pos), volume: 0.35, pitch: 0.45 }); }
       return;
     }
+    if (attacker && attacker === w.player) dmg *= w.dmgMul || 1;
     if (part.kind === 'heart') {
       if (kind === 'blast' || kind === 'big') { if (this.blastFrame === this.frame) return; this.blastFrame = this.frame; }
+      if (this.state === 'p3') return;
       this.heartHp -= dmg;
+      if (this.state === 'p2' && this.heartHp <= HEART_HP * P2_END) { this.heartHp = HEART_HP * P2_END; this.enterOverdrive(); }
       this.flash = 1;
-      if (this.phase === 2 && this.heartHp <= HEART_HP * 0.45) this.enterPhase3();
       if (this.heartHp <= 0) { this.heartHp = 0; this.defeat(attacker); return; }
+    } else if (part.kind === 'tank') {
+      const i = part.i;
+      if (this.tankHp[i] <= 0 || this.state !== 'p3') return;
+      this.tankHp[i] -= dmg;
+      this.flash = 0.6;
+      this.tankVis[i].g.scale.setScalar(1.08);
+      if (this.tankHp[i] <= 0) this.burstTank(i, attacker);
     } else if (part.kind === 'valve') {
       const i = part.i;
       if (this.valveHp[i] <= 0) return;
@@ -319,19 +376,101 @@ export class GrisailleEngine {
     ]);
   }
 
-  enterPhase3() {
-    this.state = 'p3'; this.phase = 3; this.stateT = 0;
+  // heart at 60%: it retreats and coolant tanks rise on the pillars
+  enterOverdrive() {
+    this.state = 'trans2'; this.stateT = 0; this.phase = 3;
+    this.sweep = null; for (const b of this.beams) b.visible = false;
+    for (const h of this.hearts) h.alive = false;
+    for (const s of this.shields) s.alive = false;
+    this.world.audio?.sfx('boss_roar', { volume: 1, pitch: 0.9 });
+    this.hooks.shake(0.8, 1.4);
+    for (const t of this.tankVis) t.g.visible = true;
+    this.hooks.say([
+      { who: 'baron', text: 'Overdrive! OVERDRIVE! Coolant to the pillars, you rusty contraption!' },
+      { who: 'veil', radio: true, text: 'Coolant tanks on all four <b>pillars</b>! Ride the <b>jump pads</b> up and burst them. No coolant, no Engine!' },
+    ]);
+    this.hooks.warn('⚠ Burst the <b>coolant tanks</b> on the pillars!', 3);
+  }
+  burstTank(i, attacker) {
+    const w = this.world, t = this.tankVis[i], [x, z] = PILLARS[i];
+    this.tankHp[i] = 0;
+    this.tanks[i].alive = false;
+    t.broken = true;
+    t.glass.opacity = 0.12; t.fill.visible = false; t.bulb.visible = false;
+    const p = new THREE.Vector3(x, 5.2, z);
+    w.fx.explosion(p, 0x5fd8ff, 2.6);
+    w.fx.splash(p, UP, 0xd8f6ff, 30, 7, 0.1, 1.2);
+    w.audio?.sfx('explode', { ...posOf(p), volume: 1 });
+    this.hooks.shake(0.5, 0.5);
+    if (attacker) w.combat.paint(w.player, new THREE.Vector3(x, 3.55, z), 1.8, { drips: 3 });
+    // steam blasts from the boiler: the Engine is cooking itself
+    this.geysers.push({ p: new THREE.Vector3(Math.sign(x) * 3.2, 5.5, Math.sign(z) * 3.2), n: new THREE.Vector3(Math.sign(x), 1.4, Math.sign(z)).normalize(), t: 2.5, steam: true });
+    const left = this.tanksLeft;
+    if (left === 0) this.enterVent();
+    else this.hooks.say(left === 3 ? [{ who: 'baron', text: 'My coolant! That was IMPORTED gray!' }] : left === 2 ? [{ who: 'veil', radio: true, text: 'Halfway! The boiler\'s glowing, keep going!' }] : [{ who: 'baron', text: 'It\'s getting rather HOT in here…' }]);
+  }
+  // all tanks burst: the heart pops out, unshielded, low enough to pummel
+  enterVent() {
+    this.state = 'vent'; this.stateT = 0;
+    this.sweep = null; for (const b of this.beams) b.visible = false;
+    for (const h of this.hearts) h.alive = true;
+    this.shieldG.visible = false;
+    this.world.audio?.sfx('boss_roar', { volume: 1, pitch: 0.7 });
+    this.hooks.shake(1.0, 1.4);
+    this.hooks.clearMinions();
+    this.hooks.warn('⚠ <b>OVERHEATED!</b> The heart is exposed. <b>Hit it with everything!</b>', 3);
+    this.hooks.say([{ who: 'veil', radio: true, text: 'The heart\'s out and the shields are down! <b>NOW, rookie!</b>' }]);
+  }
+  enterMeltdown() {
+    this.state = 'p4'; this.phase = 4; this.stateT = 0;
+    this.shieldG.visible = true;
+    for (const s of this.shields) s.alive = true;
     this.world.audio?.sfx('boss_roar', { volume: 1, pitch: 1.15 });
     this.hooks.shake(0.8, 1.2);
-    this.ringT = 3; this.summonT = 6;
+    this.ringT = 3; this.summonT = 6; this.sweepT = 3; this.ventT = 4;
+    this.hooks.music?.('battle_c_final');
     this.hooks.say([
-      { who: 'baron', text: 'No, no, NO! The Engine is overheating! Somebody fetch my spare hat!' },
-      { who: 'veil', radio: true, text: 'Shockwaves on the floor! <b>Jump</b> the rings, <b>swim</b> the beam!' },
+      { who: 'baron', text: 'No, no, NO! The Engine is melting down! Somebody fetch my spare hat!' },
+      { who: 'veil', radio: true, text: 'Shockwaves on the floor! <b>Jump</b> the rings, <b>swim</b> the beam, and finish it!' },
     ]);
+  }
+  // gray geysers from the floor vents: bubbling telegraph, then a column
+  startGeysers(n) {
+    const order = VENTS.map((_, i) => i).sort(() => Math.random() - 0.5).slice(0, n);
+    for (const i of order) this.vents.push({ i, t: 0, state: 'warn', hit: false });
+    this.world.audio?.sfx('goo_in', { volume: 0.6, pitch: 0.5 });
+  }
+  updateVents(dt, p) {
+    const w = this.world;
+    for (let k = this.vents.length - 1; k >= 0; k--) {
+      const v = this.vents[k], [x, z] = VENTS[v.i], m = this.ventVis[v.i];
+      v.t += dt;
+      if (v.state === 'warn') {
+        if (Math.random() < dt * 30) w.fx.spawn(new THREE.Vector3(x + rand(-1, 1), 0.1, z + rand(-1, 1)), new THREE.Vector3(0, rand(1, 3), 0), GRAY_HEX, rand(0.08, 0.16), 0.4);
+        v.ringT = (v.ringT || 0) - dt;
+        if (v.ringT <= 0) { v.ringT = 0.2; w.fx.ring(new THREE.Vector3(x, 0.08, z), 0xffb020, 1.9, 0.4, 0.25, { alpha: 0.9 }); }
+        if (v.t >= 1.4) { v.state = 'erupt'; v.t = 0; w.audio?.sfx('explode', { x, y: 1, z, volume: 0.7, pitch: 0.7 }); w.combat.paint(this, new THREE.Vector3(x, 0.05, z), 2.3, { wobble: 0.3 }); }
+      } else {
+        const k2 = Math.min(1, v.t / 0.25) * (v.t > 0.9 ? Math.max(0, 1 - (v.t - 0.9) / 0.3) : 1);
+        m.visible = k2 > 0.01;
+        m.scale.set(1, 7 * k2 + 0.01, 1);
+        m.position.y = 3.5 * k2;
+        if (Math.random() < dt * 40) w.fx.spawn(new THREE.Vector3(x + rand(-0.8, 0.8), 6 * k2, z + rand(-0.8, 0.8)), new THREE.Vector3(rand(-2, 2), rand(3, 6), rand(-2, 2)), GRAY_HEX, rand(0.1, 0.18), 0.8);
+        if (!v.hit && k2 > 0.5 && p.alive && p.invuln <= 0 && Math.hypot(p.pos.x - x, p.pos.z - z) < 1.7 && p.pos.y < 5) {
+          v.hit = true;
+          w.combat.damage(p, 40, this, 'geyser');
+          p.vel.y = Math.max(p.vel.y, 9);
+        }
+        if (v.t > 1.2) { m.visible = false; this.vents.splice(k, 1); }
+      }
+    }
   }
 
   defeat(attacker) {
     this.state = 'dying'; this.stateT = 0;
+    this.vents = []; for (const m of this.ventVis) m.visible = false;
+    this.hooks.cine?.({ pos: new THREE.Vector3(9, 6.5, -13), look: new THREE.Vector3(0, 5, 0) });
+    this.hooks.music?.(null);
     this.sweep = null; for (const b of this.beams) b.visible = false;
     for (const p of this.parts) p.alive = false;
     for (const l of this.lobs) this.world.scene.remove(l.mesh);
@@ -364,7 +503,7 @@ export class GrisailleEngine {
     const pa = Math.atan2(-player.pos.z, player.pos.x);
     const dir = Math.random() < 0.5 ? 1 : -1;
     const arms = this.phase >= 2 ? 2 : 1;
-    this.sweep = { state: 'warn', t: 0, ang: pa + Math.PI * 0.85 * -dir, dir, done: 0, arms, total: arms === 2 ? Math.PI * 1.25 : Math.PI * 2, speed: this.phase === 3 ? 1.55 : this.phase === 2 ? 1.25 : 1.05, paintT: 0 };
+    this.sweep = { state: 'warn', t: 0, ang: pa + Math.PI * 0.85 * -dir, dir, done: 0, arms, total: arms === 2 ? Math.PI * 1.25 : Math.PI * 2, speed: this.phase >= 4 ? 1.55 : this.phase === 3 ? 1.35 : this.phase === 2 ? 1.25 : 1.05, paintT: 0 };
     this.hooks.warn('⚠ SWEEP! Hold <b>SHIFT</b> in your ink to swim under it!', 2.4);
     this.world.audio?.sfx('boss_roar', { volume: 0.55, pitch: 1.5 });
   }
@@ -529,7 +668,7 @@ export class GrisailleEngine {
     this.animBaron(dt);
     const glow = this.state === 'dead' ? 0 : this.state === 'dormant' ? 0.8 : 1.2 + this.phase * 0.5 + Math.sin(this.t * (2 + this.phase * 2)) * 0.5;
     this.portMat.color.setRGB(1, 0.6, 0.25).multiplyScalar(glow);
-    for (const n of this.needles) n.rotation.z =Math.sin(this.t * (this.phase === 3 ? 14 : 3) + n.userData.s) * (this.phase === 3 ? 1.2 : 0.6);
+    for (const n of this.needles) n.rotation.z = Math.sin(this.t * (this.phase >= 3 ? 14 : 3) + n.userData.s) * (this.phase >= 3 ? 1.2 : 0.6);
     // flash
     if (this.flash > 0) {
       this.flash = Math.max(0, this.flash - dt * 6);
@@ -562,7 +701,7 @@ export class GrisailleEngine {
     for (let i = this.geysers.length - 1; i >= 0; i--) {
       const g = this.geysers[i];
       g.t -= dt;
-      if (Math.random() < dt * 26) w.fx.spawn(g.p, g.n.clone().multiplyScalar(rand(4, 7)).add(new THREE.Vector3(rand(-1, 1), rand(1, 3), rand(-1, 1))), new THREE.Color().setHSL(Math.random(), 0.9, 0.6), rand(0.06, 0.12), 1.2, { stretch: 1.4 });
+      if (Math.random() < dt * 26) w.fx.spawn(g.p, g.n.clone().multiplyScalar(rand(4, 7)).add(new THREE.Vector3(rand(-1, 1), rand(1, 3), rand(-1, 1))), g.steam ? 0xe8f4ff : new THREE.Color().setHSL(Math.random(), 0.9, 0.6), rand(0.06, 0.12) * (g.steam ? 2 : 1), 1.2, { stretch: 1.4 });
       if (g.t <= 0) this.geysers.splice(i, 1);
     }
     // phase logic
@@ -576,29 +715,62 @@ export class GrisailleEngine {
         this.shieldG.visible = true;
         for (const h of this.hearts) h.alive = true;
         for (const s of this.shields) s.alive = true;
-        this.sweepT = 4; this.lobT = 2; this.summonT = 8;
+        this.sweepT = 4; this.lobT = 2; this.summonT = 8; this.ventT = 5;
       }
     }
-    if (this.fighting) {
+    // overdrive: tanks rise, heart sinks back in
+    if (this.state === 'trans2') {
+      const k = Math.min(1, this.stateT / 2.5);
+      this.tankVis.forEach((t) => { t.g.position.y = 3.5 - 2.6 * (1 - k); });
+      this.heart.position.y = 8.6 - k * 4.2;
+      this.lidPivot.rotation.x = -1.35 * (1 - k * 0.7);
+      this.shieldG.visible = k < 0.5;
+      if (this.stateT > 2.7) {
+        this.state = 'p3'; this.stateT = 0;
+        for (const t of this.tanks) t.alive = true;
+        this.sweepT = 3.5; this.lobT = 2; this.summonT = 9;
+      }
+    }
+    if (this.state === 'vent') {
+      const k = Math.min(1, this.stateT / 0.8);
+      this.lidPivot.rotation.x = -1.35 * (0.3 + k * 0.7);
+      this.heart.position.y = 4.4 + k * 3.2 + Math.sin(this.t * 9) * 0.06;
+      if (Math.random() < dt * 20) w.fx.spawn(new THREE.Vector3(rand(-2, 2), 6.4, rand(-2, 2)), new THREE.Vector3(rand(-1, 1), rand(3, 6), rand(-1, 1)), 0xffe0c0, rand(0.15, 0.3), 1.2, { grav: -0.1, drag: 0.6 });
+      if (this.stateT > 7.5) this.enterMeltdown();
+    }
+    if (this.state === 'p4') this.heart.position.y += (8.6 - this.heart.position.y) * (1 - Math.exp(-2 * dt));
+    if (this.fighting && this.state !== 'vent') {
+      const ph = this.phase;
       this.sweepT -= dt; this.lobT -= dt; this.summonT -= dt;
       if (!this.sweep && this.sweepT <= 0 && !this.rings.length) {
         this.startSweep(p);
-        this.sweepT = this.phase === 3 ? 7.5 : this.phase === 2 ? 9 : 11;
+        this.sweepT = ph >= 4 ? 7 : ph === 3 ? 8 : ph === 2 ? 9 : 11;
       }
       if (this.lobT <= 0 && p.alive) {
-        const n = this.phase === 3 ? 3 : this.phase === 2 ? 2 : 1;
+        const n = ph >= 4 ? 3 : ph >= 2 ? 2 : 1;
         for (let i = 0; i < n; i++) this.lobQueue.push(i * 0.28);
-        this.lobT = this.phase === 3 ? 2.6 : this.phase === 2 ? 3.2 : 3.8;
+        this.lobT = ph >= 4 ? 2.6 : ph === 3 ? 3.0 : ph === 2 ? 3.2 : 3.8;
       }
       if (this.summonT <= 0) {
-        this.summon(this.phase === 1 ? 1 : 2);
-        this.summonT = this.phase === 3 ? 11 : this.phase === 2 ? 14 : 18;
+        this.summon(ph === 1 ? 1 : 2);
+        this.summonT = ph >= 4 ? 11 : ph === 3 ? 12 : ph === 2 ? 14 : 18;
       }
-      if (this.phase === 3) {
+      if (ph === 2 || ph >= 4) {
+        this.ventT -= dt;
+        if (this.ventT <= 0 && !this.vents.length) { this.startGeysers(ph >= 4 ? 3 : 2); this.ventT = ph >= 4 ? rand(5, 6.5) : rand(6, 8); }
+      }
+      if (ph >= 4) {
         this.ringT -= dt;
         if (this.ringT <= 0 && !this.sweep) { this.launchRing(); this.ringT = rand(5, 7); }
       }
     }
+    this.updateVents(dt, p);
+    // tanks: bob + blink while they're up
+    this.tankVis.forEach((t, i) => {
+      if (!t.g.visible) return;
+      t.g.scale.lerp(_w.set(1, 1, 1), 1 - Math.exp(-8 * dt));
+      if (!t.broken) { t.cool.emissiveIntensity = 1 + Math.sin(this.t * 5 + i) * 0.4; t.bulb.visible = Math.sin(this.t * 6 + i) > -0.2; }
+    });
     for (let i = this.lobQueue.length - 1; i >= 0; i--) {
       this.lobQueue[i] -= dt;
       if (this.lobQueue[i] <= 0) { this.lobQueue.splice(i, 1); if (this.fighting && p.alive) this.launchLob(p); }
@@ -608,14 +780,14 @@ export class GrisailleEngine {
     this.updateRings(dt, p);
     // heart + shields
     if (this.heart.visible) {
-      this.heartGem.rotation.y += dt * (this.phase === 3 ? 2.2 : 0.8);
+      this.heartGem.rotation.y += dt * (this.phase >= 4 ? 2.2 : this.state === 'vent' ? 4 : 0.8);
       const c = this.heartMat.color;
       const hue = (this.t * 0.08) % 1;
       const satK = this.state === 'dying' || this.state === 'dead' ? 0.9 : 0.12 + (1 - this.heartHp / HEART_HP) * 0.55;
       c.setHSL(hue, satK, 0.62);
       this.heartMat.emissive.setHSL(hue, satK, 0.45);
       this.heartLight.color.copy(c);
-      const sp = this.phase === 3 ? 1.9 : 1.15;
+      const sp = this.phase >= 4 ? 1.9 : 1.15;
       this.shieldG.rotation.y += dt * sp;
       this.heart.updateMatrixWorld(true);
       for (const h of this.hearts) h.pos.copy(this.heart.position).add(h.off);
@@ -627,6 +799,10 @@ export class GrisailleEngine {
       this.shieldPlates.forEach((pv, i) => { pv.rotation.y = (i * Math.PI * 2) / 3; });
     }
     if (this.state === 'dying') {
+      // the boiler bursts: a rainbow fountain that paints the room in the player's colour
+      if (this.stateT > 2 && Math.random() < dt * 30) w.fx.spawn(new THREE.Vector3(rand(-1, 1), 7, rand(-1, 1)), new THREE.Vector3(rand(-6, 6), rand(8, 14), rand(-6, 6)), new THREE.Color().setHSL(Math.random(), 0.9, 0.6), rand(0.1, 0.2), 2, { stretch: 1.3 });
+      if (this.stateT > 2.2 && Math.random() < dt * 10) { const a = rand(0, Math.PI * 2), r = rand(6, 20); w.combat.paint(w.player, new THREE.Vector3(Math.cos(a) * r, 0.05, Math.sin(a) * r), rand(1.6, 3), { wobble: 0.3 }); }
+      if (!this.flashed && this.stateT > 4.6) { this.flashed = true; this.hooks.flash?.(0xffffff, 0.8); this.hooks.shake(1, 0.8); }
       if (Math.random() < dt * 9) {
         const a = rand(0, Math.PI * 2);
         const q = new THREE.Vector3(Math.cos(a) * rand(2, 4.6), rand(1, 8), Math.sin(a) * rand(2, 4.6));
@@ -641,11 +817,12 @@ export class GrisailleEngine {
       this.root.position.y = -Math.min(1.6, this.stateT * 0.35);
       this.heart.position.y = 8.6 + Math.sin(this.t * 2) * 0.2;
       this.shieldG.visible = false;
-      if (this.stateT > 5) {
+      if (this.stateT > 5.4) {
+        this.hooks.cine?.(null);
         this.state = 'dead';
         this.heart.visible = false;
         this.baron.visible = false;
-        this.hooks.onDefeated();
+        this.hooks.onDefeated(new THREE.Vector3(0, 0, -9.5));
       }
     }
   }
@@ -685,6 +862,9 @@ export class GrisailleEngine {
     for (const l of this.lobs) this.world.scene.remove(l.mesh);
     for (const r of this.rings) { this.world.scene.remove(r.mesh); r.mesh.material.dispose(); }
     this.lobGeo.dispose(); this.lobMat.dispose(); this.ringGeo.dispose(); this.ringMat.dispose();
+    for (const t of this.tankVis) disposeTree(t.g);
+    for (const m of this.ventVis) { this.world.scene.remove(m); m.geometry.dispose(); }
+    this.geyserMat.dispose();
     this.heartLight.dispose?.();
     disposeTree(this.root);
   }

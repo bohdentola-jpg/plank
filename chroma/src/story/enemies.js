@@ -40,11 +40,16 @@ export class Drab {
   }
   get color() { return this.world.colors[2]; }
   hitHeight() { return 1; }
+  // subclasses: shields, armour, weak spots (return 0 to block)
+  modDamage(dmg) { this.blocked = false; return dmg; }
   center(out = _v) { return out.copy(this.pos).setY(this.pos.y + this.hitHeight() * 0.55); }
   trackFlash(m) { this.flashMats.push({ m, base: m.emissive.clone() }); return m; }
 
   takeDamage(dmg, attacker, kind) {
     if (!this.alive || this.invuln > 0) return;
+    if (attacker && attacker === this.world.player) dmg *= this.world.dmgMul || 1;
+    dmg = this.modDamage(dmg, attacker, kind);
+    if (dmg <= 0) return;
     this.hp -= dmg;
     this.flash = 1;
     if (attacker && attacker !== this) { this.lastAttacker = attacker; this.lastAttackT = this.time; this.aggro = true; }
@@ -490,7 +495,7 @@ export class Drone extends Drab {
 }
 
 export function makeEnemy(world, def) {
-  const o = { group: def.group, yaw: def.yaw, big: def.big, radius: def.radius, leash: def.leash, spawnIn: def.spawnIn };
+  const o = { ...def, group: def.group, yaw: def.yaw, big: def.big, radius: def.radius, leash: def.leash, spawnIn: def.spawnIn };
   if (def.kind === 'blotter') return new Blotter(world, def.pos, o);
   if (def.kind === 'drone') return new Drone(world, def.pos, o);
   return new Smudge(world, def.pos, o);
