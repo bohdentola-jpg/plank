@@ -9,7 +9,7 @@ import { Bot, NavGrid, botNames } from '../actors/bot.js';
 import { CameraRig, PlayerControl } from '../actors/player.js';
 import { randomLook } from '../actors/character.js';
 import { BattleHUD } from '../ui/hud.js';
-import { COLOR_PAIRS, pick, hexToCss, damp, clamp, lerp, rand, angleDiff } from '../util.js';
+import { COLOR_PAIRS, pick, hexToCss, damp, clamp, lerp, rand, angleDiff, disposeScene } from '../util.js';
 import { TEAM_A, TEAM_B } from '../world/paint.js';
 
 const MATCH_TIME = 180;
@@ -359,6 +359,7 @@ export class Battle {
     this.env.dispose();
     this.hud.show(false);
     this.hudRoot.innerHTML = '';
-    this.scene.traverse((o) => { if (o.geometry) o.geometry.dispose?.(); });
+    this.stage.paint.uniforms.uNoise.value?.dispose();
+    disposeScene(this.scene);
   }
 }

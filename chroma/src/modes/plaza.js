@@ -13,7 +13,7 @@ import { Dripkin, buildWeaponModel } from '../actors/character.js';
 import { randomLook } from '../actors/gear.js';
 import { CameraRig, PlayerControl } from '../actors/player.js';
 import { BOT_NAMES } from '../actors/bot.js';
-import { damp, dampAngle, rand, pick, clamp, COLOR_PAIRS } from '../util.js';
+import { damp, dampAngle, rand, pick, clamp, COLOR_PAIRS, disposeScene } from '../util.js';
 
 const NPC_LINES = [
   'Hold <b>SHIFT</b> to dive into your ink. You swim super fast and refill your tank!',
@@ -707,6 +707,7 @@ export class Plaza {
     this.fadeEl.classList.remove('on');
     document.getElementById('plaza-reticle').classList.remove('on');
     document.getElementById('plaza-cover').classList.remove('on');
-    this.scene.traverse((o) => { if (o.geometry) o.geometry.dispose?.(); });
+    this.pz.paint.uniforms.uNoise.value?.dispose();
+    disposeScene(this.scene);
   }
 }

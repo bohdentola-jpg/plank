@@ -94,6 +94,9 @@ export class Environment {
     scene.environment = this.envRT.texture;
     pm.dispose();
     envSkyMat.dispose();
+    envSky.geometry.dispose();
+    groundDisc.geometry.dispose();
+    groundDisc.material.dispose();
 
     this.hemi = new THREE.HemisphereLight(P.hemiSky, P.hemiGround, P.hemiI);
     scene.add(this.hemi);

@@ -123,3 +123,17 @@ export const COLOR_PAIRS = [
   { a: '#ff3b3b', b: '#20d0ff', name: 'Cherry vs Sky' },
   { a: '#c8ff00', b: '#7a2cff', name: 'Acid vs Violet' },
 ];
+
+// Free GPU resources of a scene graph (geometries, textures, non-shared materials).
+export function disposeScene(scene) {
+  const mats = new Set();
+  scene.traverse((o) => {
+    o.geometry?.dispose?.();
+    const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+    for (const m of ms) mats.add(m);
+  });
+  for (const m of mats) {
+    for (const k of ['map', 'normalMap', 'emissiveMap', 'roughnessMap', 'alphaMap', 'aoMap']) m[k]?.dispose?.();
+    if (!m.userData?.shared && m.name !== 'outline') m.dispose?.();
+  }
+}

@@ -186,7 +186,8 @@ class App {
 
   async goPlaza() {
     this.input.unlock();
-    const pl = await this.setMode(() => new Plaza(this, { from: this.mode instanceof Battle ? 'battle' : 'title' }), 'Heading back to Prism Plaza…');
+    const from = this.mode instanceof Battle ? 'battle' : this.mode instanceof Story ? 'story' : 'title';
+    const pl = await this.setMode(() => new Plaza(this, { from }), from === 'story' ? 'Climbing back up to the plaza…' : 'Heading back to Prism Plaza…');
     if (!pl) return;
     pl.setTitleMode(false);
     if (!this.newsSeen && this.profile.created && !params.has('nonews')) pl.startNews();

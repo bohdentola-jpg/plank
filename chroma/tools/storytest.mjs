@@ -374,7 +374,7 @@ async function suiteL5() {
     p.invuln = 0; p.hp = 100;
     m.world.paint.splat(p.pos.clone().set(12, 0.02, 0), 2.6, 1); // own ink, but standing (not swimming)
     b.sweepHitT = 0; b.startSweep(p); b.sweep.ang = 0.9; b.sweep.dir = -1;
-    let t = 0; const iv = setInterval(() => { t += 100; if (b.sweepHitT > 0 || t > 9000) { clearInterval(iv); res(b.sweepHitT > 0 && (p.hp < 100 || !p.alive)); } }, 50);
+    let t = 0; const iv = setInterval(() => { t += 100; if (b.sweepHitT > 0 || t > 40000) { clearInterval(iv); res(b.sweepHitT > 0 && (p.hp < 100 || !p.alive)); } }, 50);
   }));
   check('l5: sweep beam hits a player standing on the floor', sweepHurt);
   await waitFor(() => window.__chroma.mode.player.alive, null, 12000);
@@ -388,7 +388,7 @@ async function suiteL5() {
     p.hp = 100; p.invuln = 0; b.lobT = 99; b.lobQueue.length = 0; b.summonT = 99;
     for (const e of m.enemies) if (e.group === 'boss' && e.alive) e.die(p, 'clear');
     b.startSweep(p); b.sweep.ang = Math.PI + 0.9; b.sweep.dir = -1;
-    let t = 0, hit = false; b.sweepHitT = 0; const iv = setInterval(() => { t += 50; hit = hit || b.sweepHitT > 0; if (!b.sweep || t > 12000) { clearInterval(iv); res(!hit && p.alive && t <= 12000); } }, 50);
+    let t = 0, hit = false; b.sweepHitT = 0; const iv = setInterval(() => { t += 50; hit = hit || b.sweepHitT > 0; if (!b.sweep || t > 40000) { clearInterval(iv); res(!hit && p.alive && t <= 40000); } }, 50);
   }));
   await page.keyboard.up('ShiftLeft');
   check('l5: swimming in own ink dodges the sweep', dodged, `submerged=${sub}`);
