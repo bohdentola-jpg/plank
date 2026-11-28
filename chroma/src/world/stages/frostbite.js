@@ -18,6 +18,8 @@ export const FROSTBITE = {
   killY: -1.3,
   half: { minX: -28, maxX: 28, minZ: -56, maxZ: 56 },
   spawnZ: 52, spawnY: 1.6,
+  // Zone Clash rects [x0,z0,x1,z1,y], Hue Hoops pad for team A's hoop + tip-off spot
+  modes: { zones: [[-6, -15, 6, -9.5, 0], [-6, 9.5, 6, 15, 0]], hoop: { x: 0, z: -40, y: 0, r: 4 }, tip: [-2.5, 2.0, -2.0] },
   sym: [
     ['box', [-22, -3, -14], [22, 0, 14], { mat: 'plain', color: K.ice }],
     // central funbox + grind box

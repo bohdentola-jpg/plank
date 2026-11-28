@@ -26,6 +26,9 @@ const STAGES = {
     water: 0x178fa8,
     half: { minX: -21, maxX: 21, minZ: -40, maxZ: 40 },
     spawnZ: 36.4, spawnY: 1.4,
+    // extra battle modes: zone rects [x0,z0,x1,z1,y]; team A's hoop pad (team B
+    // scores there, team B's hoop is its point mirror); tip-off landing spot
+    modes: { zones: [[-5.5, -3.8, 5.5, 3.8, 1.8]], hoop: { x: 0, z: -26, y: 0, r: 3.8 }, tip: [-3.6, 1.8, -1.5] },
     sym: [
       ['box', [-21, -3, -40], [21, 0, 40], { mat: 'floor' }],
       ['box', [-6, 0, -5], [6, 1.8, 5], { mat: 'concrete' }],
@@ -77,6 +80,7 @@ const STAGES = {
     killY: -6,
     half: { minX: -20, maxX: 20, minZ: -36, maxZ: 36 },
     spawnZ: 33, spawnY: 1.2,
+    modes: { zones: [[-7, -5, 7, 5, 0.9]], hoop: { x: 0, z: -23, y: 0, r: 3.8 }, tip: [-4, 0.9, -2] },
     sym: [
       ['box', [-15, -6, -5], [15, 0, 5], { mat: 'concrete' }],
       ['box', [-8, 0, -7], [8, 0.9, 7], { mat: 'floor' }],
