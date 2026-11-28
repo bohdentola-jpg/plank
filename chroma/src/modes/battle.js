@@ -12,19 +12,25 @@ import { BattleHUD } from '../ui/hud.js';
 import { COLOR_PAIRS, pick, hexToCss, damp, clamp, lerp, rand, angleDiff, disposeScene } from '../util.js';
 import { TEAM_A, TEAM_B } from '../world/paint.js';
 import { NetHost, NetClient, paintEvent } from '../net/netbattle.js';
+// --- extra modes (Zone Clash, Hue Hoops) ---
+import { ZoneRules } from './zones.js';
+import { HoopsRules } from './hoops.js';
+import { MODE_INFO } from './modeinfo.js';
+const RULES = { zones: ZoneRules, hoops: HoopsRules };
 
 const MATCH_TIME = 180;
 
 export class Battle {
   constructor(app, opts = {}) {
     this.app = app;
-    this.opts = { stage: 'terminal', weapon: 'spritzer', skill: 'normal', time: MATCH_TIME, ...opts };
+    this.opts = { stage: 'terminal', weapon: 'spritzer', skill: 'normal', time: MATCH_TIME, mode: 'turf', ...opts };
+    if (!MODE_INFO[this.opts.mode]) this.opts.mode = 'turf';
   }
 
   async init() {
     const app = this.app, o = this.opts;
     const net = o.net || null;
-    if (net) { o.stage = net.match.stage; o.time = net.match.time; o.skill = net.match.skill || 'normal'; }
+    if (net) { o.stage = net.match.stage; o.time = net.match.time; o.skill = net.match.skill || 'normal'; o.mode = MODE_INFO[net.match.mode] ? net.match.mode : 'turf'; }
     const scene = this.scene = new THREE.Scene();
     const camera = this.camera = new THREE.PerspectiveCamera(66, innerWidth / innerHeight, 0.08, 1500);
     const sInfo = stageInfo(o.stage);
@@ -121,6 +127,10 @@ export class Battle {
     this.hud.show(true);
     this.hud.showPlayUI(false);
     this.timeLeft = Number.isFinite(o.time) && o.time > 0 ? o.time : MATCH_TIME;
+    // mode rules (Turf Rush has none: it is judged on painted floor)
+    this.rules = RULES[o.mode] ? new RULES[o.mode](this) : null;
+    world.rules = this.rules;
+    this.rules?.init();
     this.state = 'intro';
     this.stateT = 0;
     this.oneMin = false;
@@ -129,7 +139,8 @@ export class Battle {
     // warm up shaders
     app.renderer.compile(scene, camera);
     app.audio?.music('lobby');
-    this.hud.showBanner(`<span class="mode">TURF RUSH</span>`, net ? `${st.name} · ONLINE` : st.name, 'intro', 3.6);
+    const modeTitle = this.rules ? MODE_INFO[o.mode].name.toUpperCase() : 'TURF RUSH';
+    this.hud.showBanner(`<span class="mode">${modeTitle}</span>`, (net ? `${st.name} · ONLINE` : st.name) + (this.rules ? `<br><small>${MODE_INFO[o.mode].tag}</small>` : ''), 'intro', 3.6);
     this.introFrom = Math.random() < 0.5 ? 1 : -1;
     const bb = st.bounds;
     this.sizeK = Math.max(1, (bb.maxZ - bb.minZ) / 80);
@@ -151,6 +162,7 @@ export class Battle {
   }
 
   onSplat(victim, attacker, kind) {
+    this.rules?.onSplat(victim, attacker, kind);
     if (this.net?.role === 'host') this.net.emit({ e: 'kill', v: victim.netId, a: attacker && attacker.netId >= 0 ? attacker.netId : -1, k: kind });
     const c = (f) => hexToCss(f.color);
     if (attacker && attacker !== victim) {
@@ -204,7 +216,7 @@ export class Battle {
     } else if (state === 'end') {
       w.combatOn = false;
       w.canRespawn = false;
-      this.hud.showBanner('TIME!', '', 'time', 2.4);
+      this.hud.showBanner(this.rules?.endBanner() || 'TIME!', '', 'time', 2.4);
       app.audio?.sfx('whistle');
       app.audio?.music(null);
     }
@@ -223,7 +235,11 @@ export class Battle {
       if (f) { f.stats.turf = st[0]; f.stats.kills = st[1]; f.stats.deaths = st[2]; f.stats.assists = st[3]; }
     });
     if (this.state !== 'end') this.enter('end');
-    this.startJudge({ a: r.a, b: r.b, winner: r.winner });
+    if (r.mode && this.rules) { // keep the host's final mode state on screen
+      if (r.mode === 'zones') { this.rules.count[1] = r.a; this.rules.count[2] = r.b; this.rules.ko = r.ko ? r.winner : 0; }
+      else { this.rules.score[1] = r.a; this.rules.score[2] = r.b; }
+    }
+    this.startJudge(r.mode ? { mode: r.mode, a: r.a, b: r.b, winner: r.winner, ko: r.ko, ot: r.ot, target: r.target } : { a: r.a, b: r.b, winner: r.winner });
   }
 
   onLockLost() {
@@ -270,8 +286,9 @@ export class Battle {
       }
       if (this.timeLeft <= 0 && !client) {
         this.timeLeft = 0;
-        this.enter('end');
+        if (!this.rules?.holdOvertime()) this.enter('end');
       }
+      if (this.rules?.finished && !client && this.state === 'play') this.enter('end');
     } else if (this.state === 'end') {
       if (this.stateT > 2.6 && !client) this.startJudge();
     } else if (this.state === 'judge') {
@@ -310,6 +327,7 @@ export class Battle {
     for (const b of this.bots) b.update(dt);
     for (const f of w.fighters) f.update(dt);
     this.combat.update(dt);
+    this.rules?.update(dt);
     this.fx.update(dt);
     this.env.update(dt);
     this.env.follow(p.alive ? p.pos : this.rig.pivot);
@@ -340,6 +358,7 @@ export class Battle {
     if (this.scene.fog) this.scene.fog.density *= 0.35;
     this.hud.hideBanner();
     if (given) this.result = given;
+    else if (this.rules) this.result = this.rules.result();
     else {
       const cov = this.stage.paint.coverage();
       const a = cov.a * 100, b = cov.b * 100;
@@ -385,6 +404,14 @@ export class Battle {
     }
     this.app.input.unlock();
     const summary = { won, coins, xp, turf: turfPts, kills: p.stats.kills, deaths: p.stats.deaths, stage: this.stage.name, weapon: p.weapon.id, pct: won ? Math.max(r.a, r.b) : Math.min(r.a, r.b) };
+    if (r.mode) { // scores / counts instead of turf %
+      const c = (t) => hexToCss(this.colors[t]);
+      summary.mode = r.mode;
+      summary.coins += (p.stats.hoopPts || 0) * 60 + (won && r.ko ? 150 : 0);
+      summary.scoreHTML = r.mode === 'zones'
+        ? `<b style="color:${c(1)}">${r.a}</b> vs <b style="color:${c(2)}">${r.b}</b> <small>COUNT${r.ko ? ' · KNOCKOUT!' : r.ot ? ' · OVERTIME' : ''}</small>`
+        : `<b style="color:${c(1)}">${r.a}</b> – <b style="color:${c(2)}">${r.b}</b> <small>${r.ot ? 'OVERTIME' : 'POINTS'}</small>`;
+    }
     const prog = this.app.grantRewards(summary);
     if (this.net) {
       this.app.menus.results({ ...summary, rows, colors: this.colors, myTeam: p.team, result: r, prog, plazaLabel: 'LEAVE ROOM', againLabel: 'BACK TO ROOM' }, {
@@ -438,6 +465,7 @@ export class Battle {
   }
 
   dispose() {
+    this.rules?.dispose();
     this.net?.dispose();
     this.world.net = null;
     for (const f of this.world.fighters) f.dispose();

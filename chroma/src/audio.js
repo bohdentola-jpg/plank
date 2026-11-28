@@ -1226,6 +1226,64 @@ const SFX = {
     blast(t, 0.16, 0.22);
     blast(t + 0.26, 0.75, 0.24);
   },
+  // — Zone Clash / Hue Hoops —
+  zone_capture(out, t, p) {
+    const s = semis(p);
+    [67, 71, 74, 79, 83].forEach((m, i) => vBell(out, t + i * 0.06, m + s, 0.25, 0.8, 0.8));
+    vChord(out, t + 0.28, [55, 62, 67, 71].map((m) => m + s), 0.8, 0.7, 'brass');
+    noise(out, t, { f: 500, to: 5000, dt: 0.35, q: 1.2, a: 0.2, d: 0.25, g: 0.18 });
+    vKick(out, t + 0.28, 0.6);
+  },
+  zone_lost(out, t, p) {
+    const s = semis(p);
+    [76, 72, 67, 63].forEach((m, i) => vBell(out, t + i * 0.09, m + s, 0.3, 0.7, 0.7));
+    vChord(out, t + 0.36, [51, 58, 63].map((m) => m + s), 0.9, 0.6, 'pad');
+    tone(out, t + 0.3, 220 * p, { type: 'sawtooth', to: 110 * p, dt: 0.5, lp: 900, a: 0.02, d: 0.5, g: 0.12 });
+  },
+  crowd_cheer(out, t, p) {
+    // stadium roar: swelling pink-noise bed, clapping flutter, chattering voices, a couple of whistles
+    noise(out, t, { f: 900, q: 0.6, pink: true, a: 0.25, h: 0.9, d: 0.9, g: 0.55 });
+    noise(out, t, { f: 2400, q: 0.9, a: 0.3, h: 0.7, d: 0.8, g: 0.16, am: [11, 0.5] });
+    for (let i = 0; i < 16; i++) { const F = pick(VOWELS); syllable(out, t + Math.random() * 1.1, rnd(180, 420) * p, F[0], F[1], rnd(0.12, 0.3), 0.05, rnd(-0.8, 0.8)); }
+    for (let i = 0; i < 2; i++) tone(out, t + 0.2 + Math.random() * 0.6, 2400 * rnd(0.9, 1.1), { to: 3200, dt: 0.25, a: 0.02, h: 0.15, d: 0.1, g: 0.05 });
+  },
+  ball_bounce(out, t, p) {
+    tone(out, t, 150 * p, { to: 70 * p, dt: 0.08, a: 0.001, d: 0.12, g: 0.5 });
+    noise(out, t, { ft: 'lowpass', f: 900 * p, a: 0.001, d: 0.05, g: 0.35 });
+    tone(out, t, 420 * p, { type: 'triangle', to: 300 * p, dt: 0.05, a: 0.001, d: 0.06, g: 0.12 });
+  },
+  ball_grab(out, t, p) {
+    tone(out, t, 660 * p, { type: 'triangle', to: 1320 * p, dt: 0.08, a: 0.002, d: 0.12, g: 0.25 });
+    tone(out, t + 0.06, 1760 * p, { a: 0.002, d: 0.18, g: 0.14 });
+    noise(out, t, { ft: 'lowpass', f: 1200, a: 0.001, d: 0.05, g: 0.3 });
+  },
+  ball_throw(out, t, p) {
+    noise(out, t, { f: 500 * p, to: 2600 * p, dt: 0.18, q: 1.4, a: 0.03, h: 0.04, d: 0.15, g: 0.4 });
+    tone(out, t, 300 * p, { to: 600 * p, dt: 0.12, a: 0.005, d: 0.12, g: 0.12 });
+  },
+  rim_clang(out, t, p) {
+    for (const [f, g, d] of [[523, 0.22, 0.5], [1307, 0.12, 0.35], [2140, 0.07, 0.25], [3020, 0.04, 0.2]]) tone(out, t, f * p * rnd(0.98, 1.02), { a: 0.001, d, g });
+    noise(out, t, { ft: 'highpass', f: 3000, a: 0.001, d: 0.04, g: 0.25 });
+  },
+  swish(out, t, p) {
+    noise(out, t, { ft: 'highpass', f: 2500 * p, a: 0.02, h: 0.06, d: 0.2, g: 0.35 });
+    noise(out, t + 0.03, { f: 4200 * p, to: 1800 * p, dt: 0.25, q: 1.2, a: 0.03, d: 0.25, g: 0.25 });
+    const s = semis(p);
+    [79, 83, 86, 91].forEach((m, i) => vBell(out, t + 0.12 + i * 0.05, m + s, 0.18, 0.7, 0.8));
+  },
+  dunk_slam(out, t, p) {
+    vKick(out, t, 1); vSnare(out, t, 0.8); vCrash(out, t + 0.02, 0.8);
+    tone(out, t, 120 * p, { to: 40, dt: 0.3, a: 0.002, d: 0.4, g: 0.7 });
+    SFX.rim_clang(out, t, p * 0.8);
+    noise(out, t, { ft: 'lowpass', f: 2200, to: 200, dt: 0.4, a: 0.002, d: 0.45, g: 0.5 });
+    const s = semis(p);
+    vChord(out, t + 0.1, [60, 64, 67, 72].map((m) => m + s), 0.6, 0.8, 'brass');
+  },
+  shield_block(out, t, p) {
+    tone(out, t, 880 * p, { type: 'square', to: 300 * p, dt: 0.12, lp: 3000, a: 0.001, d: 0.15, g: 0.14 });
+    tone(out, t, 1400 * p, { to: 2600 * p, dt: 0.08, a: 0.001, d: 0.2, g: 0.12, vib: [40, 80] });
+    noise(out, t, { f: 3500, q: 2, a: 0.001, d: 0.12, g: 0.25 });
+  },
   judge_drum(out, t) {
     // accelerating, swelling snare roll over a timpani rumble, then the reveal hit at ~2.45 s
     for (let x = 0, i = 0; x < 2.4; i++) {
