@@ -404,3 +404,58 @@ button { font: inherit; cursor: pointer; }
 .elevator-ui .fbtn b { font-family: var(--hfont); font-weight: 400; font-size: 19px; letter-spacing: .5px; display: block; }
 .elevator-ui .fbtn small { opacity: .75; }
 .elevator-ui .fbtn em { margin-left: auto; font-style: normal; font-family: var(--hfont); font-size: 12px; color: var(--c); }
+/* ------------------------------------------------------------------ v4: your house (Prism Heights) */
+#house-hint { position: fixed; left: 50%; bottom: 18px; transform: translate(-50%, 10px); z-index: 15; background: rgba(27,21,48,.78); padding: 8px 18px; border-radius: 999px;
+  font-weight: 800; font-size: 14px; white-space: nowrap; opacity: 0; transition: all .25s; pointer-events: none; }
+#house-hint.on { opacity: 1; transform: translate(-50%, 0); }
+#house-hint b { color: var(--sun); font-family: var(--hfont); font-weight: 400; }
+#house-hint .hh-tip { color: #9fffd0; }
+.hcat .panel.shopwide { width: min(940px, 66vw); }
+.hc-tabs { flex-wrap: wrap; gap: 6px; }
+.hc-tabs .chip { padding: 6px 11px; font-size: 13px; }
+.hc-cols { grid-template-columns: 1.25fr 1fr; }
+.hc-grid { overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; align-content: start; padding: 2px 6px 2px 2px; }
+.hc-grid::-webkit-scrollbar { width: 6px; } .hc-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 3px; }
+.hc-sec { grid-column: 1 / -1; margin: 4px 0 0 !important; }
+.hcard { position: relative; border: 0; border-radius: 16px; padding: 8px 8px 9px; background: rgba(255,255,255,.07); color: #fff; box-shadow: inset 0 0 0 2px rgba(255,255,255,.07);
+  display: flex; flex-direction: column; align-items: center; gap: 2px; transition: transform .12s, background .12s; text-align: center; }
+.hcard:hover, .hcard.focus { background: rgba(255,255,255,.15); transform: translateY(-2px); }
+.hcard.sel { background: rgba(255,46,136,.25); box-shadow: inset 0 0 0 2px var(--pink); }
+.hcard b { font-family: var(--hfont); font-weight: 400; font-size: 14px; line-height: 1.1; }
+.hcard small { font-weight: 900; font-size: 11px; color: var(--sun); }
+.hcard small em { color: #9dffb0; font-style: normal; }
+.hcard.own small { color: #9dffb0; }
+.hthumb { width: 84px; height: 84px; object-fit: contain; border-radius: 12px; background: radial-gradient(circle at 50% 40%, rgba(255,255,255,.16), rgba(255,255,255,0) 70%); opacity: .35; transition: opacity .3s; }
+.hthumb.ready { opacity: 1; }
+.hcard.style .hthumb { border-radius: 10px; box-shadow: 0 0 0 2px rgba(0,0,0,.35); }
+.hc-big { width: 100%; height: 150px; flex: none; object-fit: contain; border-radius: 16px; background: radial-gradient(circle at 50% 45%, rgba(255,220,180,.25), rgba(255,255,255,.03) 70%); }
+.hc-big.style { object-fit: cover; height: 120px; }
+.hc-own { font-weight: 800; font-size: 13px; color: #d8d2ff; } .hc-own b { color: #9dffb0; font-family: var(--hfont); font-weight: 400; }
+.hc-actions { display: flex; justify-content: space-between; gap: 10px; }
+#house-deco { position: fixed; left: 50%; bottom: 14px; transform: translate(-50%, 30px); width: min(1100px, 96vw); z-index: 40; opacity: 0; transition: all .25s;
+  background: rgba(27,21,48,.9); border: 3px solid rgba(255,255,255,.12); border-radius: 22px; padding: 10px 14px 12px; box-shadow: 0 16px 40px rgba(0,0,0,.45); }
+#house-deco.on { opacity: 1; transform: translate(-50%, 0); }
+#house-deco.hidden { opacity: 0; pointer-events: none; }
+.hd-top { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.hd-title { font-family: var(--hfont); font-weight: 400; font-size: 22px; color: var(--sun); letter-spacing: 1px; text-shadow: 0 2px 0 var(--ink); }
+.hd-help { font-weight: 800; font-size: 13px; color: #e6e1ff; } .hd-help b { color: var(--sun); font-family: var(--hfont); font-weight: 400; } .hd-help .bad { color: #ff8b8b; }
+.hd-sp { flex: 1; }
+.hd-top kbd { font-family: var(--hfont); background: rgba(0,0,0,.18); border-radius: 6px; padding: 0 6px; margin-left: 4px; font-size: 13px; }
+.hd-row { display: flex; gap: 14px; align-items: stretch; }
+.hd-inv { flex: 1; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; min-height: 92px; }
+.hd-inv::-webkit-scrollbar { height: 6px; } .hd-inv::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 3px; }
+.hd-card { position: relative; flex: none; width: 92px; border: 0; border-radius: 14px; padding: 4px 4px 6px; background: rgba(255,255,255,.08); color: #fff; display: flex; flex-direction: column; align-items: center;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.08); transition: transform .12s, background .12s; }
+.hd-card:hover { background: rgba(255,255,255,.18); transform: translateY(-3px); }
+.hd-card .hthumb { width: 64px; height: 64px; }
+.hd-card span { font-family: var(--hfont); font-size: 11.5px; line-height: 1.1; text-align: center; }
+.hd-card i { position: absolute; top: 4px; right: 6px; font-style: normal; font-family: var(--hfont); font-size: 13px; color: var(--ink); background: var(--sun); border-radius: 999px; padding: 0 6px; }
+.hd-empty { align-self: center; color: #a9a3c9; font-weight: 800; font-size: 13px; } .hd-empty b { color: var(--sun); }
+.hd-styles { display: flex; flex-direction: column; gap: 6px; justify-content: center; border-left: 2px solid rgba(255,255,255,.08); padding-left: 12px; max-width: 360px; }
+.hd-sty { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.hd-sty small { font-weight: 900; font-size: 10px; color: #a9a3c9; letter-spacing: 1px; width: 44px; }
+.hd-sw { border: 0; padding: 0; width: 34px; height: 34px; border-radius: 9px; overflow: hidden; box-shadow: 0 0 0 2px rgba(0,0,0,.4); transition: transform .12s; background: none; }
+.hd-sw img { width: 100%; height: 100%; display: block; }
+.hd-sw:hover { transform: scale(1.12); } .hd-sw.sel { box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--sun); }
+#house-cursor { position: fixed; left: -9px; top: -9px; width: 18px; height: 18px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 2px var(--ink); z-index: 45; pointer-events: none; display: none; }
+@media (max-width: 900px) { .hc-cols { grid-template-columns: 1fr; } .hcat .panel.shopwide { width: 94vw; } .hd-styles { display: none; } }

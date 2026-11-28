@@ -33,6 +33,11 @@ await page.screenshot({ path: join(qa, 'flow_creator.png') });
 await page.click('.locker [data-back]'); await page.waitForTimeout(800);
 const prof = await page.evaluate(() => ({ name: window.__chroma.profile.name, crest: window.__chroma.profile.look.crest, ink: window.__chroma.profile.ink, created: window.__chroma.profile.created }));
 step('profile ' + JSON.stringify(prof));
+// PLAY now wakes you up at home: grab a weapon and head out the front door
+step('house -> plaza');
+await page.evaluate(() => { const m = window.__chroma.mode; if (m.constructor.name === 'House') { m.setHeld(window.__chroma.profile.owned[0]); m.leave(); } });
+await page.waitForFunction(() => window.__chroma.mode?.constructor.name === 'Plaza' && !window.__chroma.loadingNow, null, { timeout: 180000 });
+await page.waitForTimeout(1500);
 step('walk to tower');
 await page.evaluate(() => { const m = window.__chroma.mode, p = m.player; p.place(p.pos.clone().set(0, 0.3, -30.5), Math.PI); m.rig.yaw = Math.PI; });
 await page.waitForTimeout(1500);

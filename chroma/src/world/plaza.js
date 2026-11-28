@@ -21,6 +21,7 @@ export const PLAZA_SPOTS = {
   gearDoor: new THREE.Vector3(28.8, 0, 10),
   manhole: new THREE.Vector3(-41, 0, 19),
   yard: new THREE.Vector3(0, 0, 34),
+  home: new THREE.Vector3(27.6, 0, 29.5), // Prism Heights: the player's front door
 };
 
 // Room descriptors (centre, size). Entry point is just inside the south wall.
@@ -449,6 +450,8 @@ function buildPlazaDecor(scene, trees) {
     updaters.push((t) => { w.rotation.y = -Math.PI / 2 + Math.sin(t * 0.8 + i) * 0.5; });
   }
 
+  buildHomeEntrance(g, updaters);
+
   // ---- west side: records / café / DJ
   neon('GLOOP RECORDS', 10, 1.8, 120, '#a335ff', new THREE.Vector3(-29.94, 6.4, -18), Math.PI / 2);
   neon('DRIP CAFÉ', 8, 1.6, 140, '#ffd21a', new THREE.Vector3(-29.94, 6.4, -9), Math.PI / 2);
@@ -480,7 +483,7 @@ function buildPlazaDecor(scene, trees) {
     [new THREE.Vector3(-29.93, 5, 6), Math.PI / 2, 14, 7, ['STAY', 'FRESH']],
     [new THREE.Vector3(-20, 9, -29.94), 0, 10, 5, ['INK']],
     [new THREE.Vector3(26, 7, -29.94), 0, 9, 4.5, ['SPLASH!']],
-    [new THREE.Vector3(27.94, 6, 34), -Math.PI / 2, 14, 7, ['COLOR', 'IS LIFE']],
+    [new THREE.Vector3(27.94, 6.4, 38.6), -Math.PI / 2, 11, 5.6, ['COLOR', 'IS LIFE']],
     [new THREE.Vector3(-27.94, 6, 34), Math.PI / 2, 14, 7, ['HUE', 'CREW']],
     [new THREE.Vector3(-38, 4, 21.94), Math.PI, 12, 6, ['???']],
   ];
@@ -723,4 +726,47 @@ function buildInteriorDecor(scene) {
     group: g, display, lights,
     update(t) { display.rotation.y = t * 0.8; pedRing.material.emissiveIntensity = 1.5 + Math.sin(t * 3) * 0.5; },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Prism Heights: the player's home entrance on the west face of the south-east block
+function buildHomeEntrance(g, updaters) {
+  const { x, z } = PLAZA_SPOTS.home;
+  const X = 27.95, ry = -Math.PI / 2;
+  const put = (geo, mat, px, py, pz, rot = ry) => { const m = new THREE.Mesh(geo, mat); m.position.set(px, py, pz); m.rotation.y = rot; m.castShadow = true; m.receiveShadow = true; g.add(m); return m; };
+  const trim = std(0xfffaf2, 0.45), teal = new THREE.MeshPhysicalMaterial({ color: 0x2a9d8f, roughness: 0.4, clearcoat: 0.8 });
+  const brass = std(0xe0b04a, 0.3, 0.9);
+  void x;
+  // door + frame + porthole (same door as inside)
+  put(new THREE.BoxGeometry(1.7, 2.8, 0.1), teal, X - 0.02, 1.4, z);
+  for (const s of [-1, 1]) for (const y of [0.6, 1.45]) put(new THREE.BoxGeometry(0.55, 0.6, 0.04), new THREE.MeshPhysicalMaterial({ color: 0x34b3a4, roughness: 0.4, clearcoat: 0.8 }), X - 0.08, y, z + s * 0.36);
+  const port = put(new THREE.CircleGeometry(0.2, 28), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffd9a0, emissiveIntensity: 1.6 }), X - 0.08, 2.2, z);
+  void port;
+  put(new THREE.TorusGeometry(0.21, 0.035, 8, 28), brass, X - 0.08, 2.2, z);
+  put(new THREE.SphereGeometry(0.06, 12, 10), brass, X - 0.12, 1.15, z - 0.6);
+  for (const s of [-1, 1]) put(new THREE.BoxGeometry(0.18, 3.0, 0.14), trim, X - 0.04, 1.5, z + s * 0.94);
+  put(new THREE.BoxGeometry(2.1, 0.2, 0.16), trim, X - 0.05, 3.0, z);
+  // neon sign + little HOME plate
+  const neon = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 0.95), new THREE.MeshBasicMaterial({ map: signTexture('PRISM HEIGHTS', { w: 1024, h: 212, size: 120, accent: '#2ec4b6' }), toneMapped: false }));
+  neon.position.set(X - 0.03, 4.55, z); neon.rotation.y = ry; g.add(neon);
+  const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.42), new THREE.MeshBasicMaterial({ map: signTexture('⌂ HOME', { w: 512, h: 214, size: 110, accent: '#ffd21a', bg: '#1b1e2b' }), toneMapped: false }));
+  plate.position.set(X - 0.03, 2.0, z + 1.65); plate.rotation.y = ry; g.add(plate);
+  awning(g, new THREE.Vector3(X - 0.5, 3.55, z), 3.4, ry, ['#2ec4b6', '#fff4e0']);
+  // wall lanterns
+  const glow = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffd39a, emissiveIntensity: 3 });
+  const lamps = [];
+  for (const s of [-1, 1]) {
+    put(new THREE.BoxGeometry(0.1, 0.1, 0.3), std(0x2b2f45, 0.4, 0.6), X - 0.15, 2.45, z + s * 1.3, 0);
+    lamps.push(put(new THREE.SphereGeometry(0.15, 14, 10), glow, X - 0.32, 2.4, z + s * 1.3));
+  }
+  updaters.push((t) => { glow.emissiveIntensity = 2.6 + Math.sin(t * 2.3) * 0.25; });
+  // doormat, plants, mailbox
+  put(new THREE.BoxGeometry(1.1, 0.02, 1.7), std(0xc98b4a, 0.95), X - 0.7, 0.01, z);
+  for (const s of [-1, 1]) {
+    put(new THREE.CylinderGeometry(0.32, 0.25, 0.6, 16), std(0xd97b4f, 0.7), X - 0.45, 0.3, z + s * 1.95);
+    for (let i = 0; i < 4; i++) put(new THREE.IcosahedronGeometry(0.28, 1), std(i % 2 ? 0x4fb04a : 0x6cc551, 0.8), X - 0.45 + Math.sin(i * 1.7) * 0.15, 0.85 + (i % 2) * 0.2, z + s * 1.95 + Math.cos(i * 1.7) * 0.15);
+  }
+  put(new THREE.CylinderGeometry(0.04, 0.04, 1.0, 8), std(0x2b2f45, 0.4, 0.6), X - 0.7, 0.5, z - 2.7);
+  put(new THREE.BoxGeometry(0.35, 0.3, 0.5), std(0xff2e88, 0.4, 0.2), X - 0.7, 1.12, z - 2.7);
+  void lamps;
 }

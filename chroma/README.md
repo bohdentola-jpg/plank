@@ -5,7 +5,8 @@ turret eyes that swivel independently, a curly tail and a glossy team-colored cr
 skin shifts toward your ink color. You spray ink, dive into it to swim at high speed, climb
 any wall you've painted, and fight 4v4 to cover the most floor in three minutes. Between
 matches you hang out in **Prism Plaza**, a busy city square with walk-in shops, a live news
-broadcast, crowds of locals, and a secret way down into a story mode.
+broadcast, crowds of locals, and a secret way down into a story mode. Every day starts in
+**your own house**, which you can furnish and decorate however you like.
 
 Everything is generated in code: models, textures, levels, music and sound effects. There
 are no asset files and no build step.
@@ -37,7 +38,8 @@ Any static server works if you serve the **repository root** (the game imports
 | Sub weapon | Right mouse | RB |
 | Special | Q (or E in battle) | Y / △ |
 | Turf map | Hold Tab | Back / Share |
-| Interact (plaza) | E | X / □ |
+| Interact (plaza, house) | E | X / □ |
+| Decorate (house) | F | Y / △ |
 | Tongue flick (plaza) | T | |
 | Pause | Esc | Start / Options |
 | Mute | M | |
@@ -190,13 +192,45 @@ You can also host your own PeerJS signalling server and add
 `?peerhost=your.server&peerport=443&peerpath=/` to the URL. To test with two windows on one
 computer without the internet, add `?net=local` to both tabs.
 
+### Your house (Prism Heights)
+
+**PLAY** on the title screen wakes you up at home: a sunny loft with a big window over the
+city. You're not carrying anything indoors (no painting inside!). Your weapons live on the
+**gear wall** by the front door, and each class is shown its own way: rollers lean against
+the wall, chargers rest on wall hooks, shooters and blasters hang on a pegboard, dualies
+sit crossed on a little shelf, brushes stand in a paint bucket, sloshers sit on a mat,
+brellas go in an umbrella stand, splatlings rest on a floor stand, stringers hang from a
+peg and splatanas lie on a sword stand. Walk up, aim at one and press **E** to grab it.
+Press E on another to swap, or on the one you're holding to put it back. The front door
+won't open until you've picked a weapon. Step out and you're in Prism Plaza, by the
+**PRISM HEIGHTS** door on the south-east block. Press E at that door to go home again.
+
+- **NEST & NOOK catalog:** use the laptop on your desk to buy furniture with your coins.
+  There are 48 pieces in 10 categories (beds, sofas, beanbags, tables, bookshelves, lamps,
+  plants, rugs, posters, a clock that shows the real time, an aquarium, an arcade cabinet,
+  a DJ deck, a fridge, a fireplace and more), plus wallpapers and floors. You start with a
+  bed, a TV corner, a bookshelf and a few other things, so the house never looks empty.
+- **Decorate mode (F):** the roof comes off and you get an overhead view. Click a piece to
+  pick it up, move it on the grid and click to place it. The ghost turns red where it won't
+  fit. **R** (or right-click) rotates, **X** / Delete puts it back in storage, **Esc**
+  cancels, **Q/E** turns the view, the mouse wheel zooms and **WASD** pans. Bought items wait
+  in the storage tray at the bottom. Small things (lamps, the TV, plants, the globe…) also
+  fit on tables, desks, dressers and counters. Posters, clocks, mirrors and shelves go on
+  the walls. With a controller, the left stick moves a cursor, A picks up and places, Y
+  rotates, X stores, LB/RB turn the view and B backs out.
+- **Use things:** sit on chairs, sofas and beanbags, nap in the bed, switch lamps and the TV
+  on and off, play INK INVADERS on the arcade, check the mirror to change your look, or start
+  a house party at the DJ deck (stand still to dance).
+- Big furniture blocks your way (and you can jump on the bed). Everything is saved with your
+  profile.
+
 ### Story mode: The Underside
 
 Something gray is bubbling up from under the city. Climb down the manhole in the back
 alley to find Captain Veil and the secret Chroma Guard. Then take back the stolen Hue
 Cores, level by level, from Baron Grisaille and his colorless Drab.
 
-Progress (name, look, gear, coins, level, weapons, story, settings) is saved in your
+Progress (name, look, gear, coins, level, weapons, house, story, settings) is saved in your
 browser.
 
 ## Under the hood
@@ -228,6 +262,7 @@ node chroma/tools/flowtest.mjs            # title -> creator -> plaza -> lobby -
 node chroma/tools/towertest.mjs           # tower floors, elevator, terminals, minigame, exit
 node chroma/tools/nettest.mjs [--peerjs]  # two-player private match (local or real transport)
 node chroma/tools/quicktest.mjs [--peerjs] # two-player online quick match
+node chroma/tools/housetest.mjs           # house: grab a weapon, door, plaza + back, buy, decorate, reload
 ```
 
 URL flags:
@@ -236,6 +271,7 @@ URL flags:
 | --- | --- |
 | `?quick` | Straight into a battle |
 | `?plaza` | Straight into the plaza |
+| `?house` | Straight into your house |
 | `?story[=hub\|l1..l5]` | Straight into story mode |
 | `?tower[=0..5]` | Straight into the Clash Tower (optionally on a floor) |
 | `&stage=terminal\|skyline\|fizzwater\|mesa\|frostbite` | Pick the stage |

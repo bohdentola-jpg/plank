@@ -90,11 +90,43 @@ await step('stage layouts are point-symmetric', async () => {
   }
 });
 
+await step('house: starter layout is valid, saves migrate, furniture blocks', async () => {
+  const F = await import('../src/world/furniture.js');
+  const H = await import('../src/world/house.js');
+  const d = F.defaultHouse();
+  for (const it of d.items) {
+    const def = F.FURNITURE[it.id];
+    if (!def) throw new Error('unknown starter item ' + it.id);
+    let ok;
+    if (it.wall != null) ok = H.canPlaceWall(d.items, def, it.wall, it.x, it.y, it.uid);
+    else if (it.on != null) ok = H.canPlaceOn(d.items, def, d.items.find((o) => o.uid === it.on), it.x, it.z, it.r, it.uid);
+    else ok = H.canPlaceFloor(d.items, def, it.x, it.z, it.r, it.uid);
+    if (!ok) throw new Error('starter item misplaced: ' + it.id);
+  }
+  for (const [id, def] of Object.entries(F.FURNITURE)) {
+    if (!(def.price >= 0) || !F.CATS[def.cat] || !['floor', 'small', 'rug', 'wall'].includes(def.kind) || !(def.w > 0) || typeof def.build !== 'function') throw new Error('bad catalog entry ' + id);
+  }
+  if (F.FURNITURE_IDS.length < 30) throw new Error('catalog too small');
+  const m = F.migrateHouse({ items: [{ uid: 1, id: 'nope', x: 0, z: 0 }, { uid: 2, id: 'sofa', x: 1, z: 1, r: 7 }, { uid: 3, id: 'tv', on: 99, x: 0, z: 0 }], owned: { sofa: 0, lava_lamp: 3 }, wall: 'bogus' });
+  if (m.items.some((i) => i.id === 'nope' || i.id === 'tv')) throw new Error('bad items survived migration');
+  if (m.items.find((i) => i.id === 'sofa').r !== 3) throw new Error('rotation not normalised');
+  if (!m.items.some((i) => i.id === 'desk')) throw new Error('desk not restored');
+  if (m.owned.sofa !== 1 || m.owned.lava_lamp !== 3 || m.wall !== 'cream') throw new Error('owned/styles ' + JSON.stringify(m));
+  if (new Set(m.items.map((i) => i.uid)).size !== m.items.length || m.nextUid <= Math.max(...m.items.map((i) => i.uid))) throw new Error('uids');
+  if (F.migrateHouse(null).items.length !== d.items.length) throw new Error('missing house -> default');
+  const lvl = H.buildHouseLevel(H.furnitureColliders(d.items));
+  const bed = d.items.find((i) => i.id === 'bed_single');
+  if (!(lvl.groundAt(bed.x, bed.z, 2, 0.1, 0).y > 0.4)) throw new Error('bed has no collider');
+  if (lvl.groundAt(0, 2, 0.1, 0.1, 0.2).y !== 0) throw new Error('open floor blocked');
+  if (H.canPlaceFloor(d.items, F.FURNITURE.sofa, H.DOOR.x, 5.0, 0)) throw new Error('furniture allowed in the doorway');
+});
+
 await step('all modules parse + import', async () => {
   const mods = ['util', 'engine/post', 'engine/input', 'world/env', 'world/textures', 'world/materials', 'world/plaza', 'world/stage',
     'actors/character', 'actors/gear', 'world/news', 'world/rotation', 'actors/fighter', 'actors/weapons', 'actors/player', 'fx/particles', 'ui/hud', 'ui/menus', 'modes/battle', 'modes/plaza', 'audio'];
   mods.push('story/kit', 'story/course', 'story/props', 'story/enemies', 'story/boss', 'story/levels', 'story/dialogue', 'story/hud', 'modes/story');
   mods.push('net/transport', 'net/room', 'net/netbattle', 'ui/minigame', 'world/tower', 'modes/tower');
+  mods.push('world/furniture', 'world/house', 'ui/house', 'modes/house');
   for (const m of mods) await import(`../src/${m}.js`);
 });
 

@@ -54,7 +54,7 @@ export class Menus {
         </div>
         <div class="press">PRESS ANY BUTTON</div>
         <div class="title-menu">
-          <button class="btn big" data-a="plaza">${firstTime ? '✦ CREATE YOUR CHROMELEON' : '▶ ENTER PRISM PLAZA'}</button>
+          <button class="btn big" data-a="plaza">${firstTime ? '✦ CREATE YOUR CHROMELEON' : '▶ PLAY'}</button>
           <button class="btn online-btn" data-a="online">🌐 PLAY ONLINE</button>
           <button class="btn" data-a="quick">⚡ QUICK CPU BATTLE</button>
           <button class="btn ghost" data-a="settings">⚙ SETTINGS</button>
