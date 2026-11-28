@@ -124,15 +124,37 @@ news and the big screen tell you which.
 - **Locals:** chat with dozens of Chromeleons. They hang out in groups, dance at the DJ
   booth, sit on the tower steps and swim in the ink by the fountain, and they share tips.
 - **Practice Yard:** pop Bopbots with any weapon.
-- **Clash Tower:** the lobby. Pick a weapon, an opponent difficulty and a stage, then queue
-  for Turf Rush.
+- **Clash Tower:** a ~95 m glass skyscraper with LED corner strips, a glowing crown and a
+  spire. Walk through the doors to go inside (see below).
 - **Painting:** you can paint the whole plaza, and it stays painted for the session.
 - **The back alley** by the DJ booth hides a loose manhole cover…
 
+### Inside the Clash Tower
+
+Six levels are stacked around an open atrium, with a glass elevator riding up the middle.
+Walk into the car and press **E** to pick a floor (or press **1–6**). Walking up to the doors
+calls the car to your floor. Each floor's glowing terminal starts a different kind of match:
+
+| Floor | What's there |
+| --- | --- |
+| **L · Lobby** | CPU Turf Rush, the rotation board, the exit back to the plaza |
+| **2 · Open Battle** | Online match: the always-on queue |
+| **3 · Private Rooms** | Make a room and share its code, or join a friend's |
+| **4 · Zone Clash** | Zone Clash vs CPUs |
+| **5 · Ink Hoops** | Ink Hoops vs CPUs |
+| **R · Sky Deck** | Open-air roof with the best view in the city, and the arcade |
+
+After a match you come back to the floor you queued from.
+
+**Tongue Snack** is a little minigame you can play while you're searching for players or
+waiting in a room: click (or press SPACE) to flick your tongue at bugs. Gold butterflies
+are worth the most, gray goo gums up your tongue, and catching bugs in a row builds a
+combo. Your best score is saved. You can also play it full size at the Sky Deck arcade.
+
 ## Online play (play with friends)
 
-Open the **Clash Tower** in the plaza, or press **PLAY ONLINE** on the title screen, and
-pick a mode:
+Go to floor **2** (online match) or **3** (private rooms) of the **Clash Tower**, or press
+**PLAY ONLINE** on the title screen, which takes you straight to floor 2:
 
 - **Online Match:** an always-on queue. The game keeps looking for other players, puts
   you in a shared lobby, and starts the match 30 seconds after a second player joins (or
@@ -203,6 +225,9 @@ node chroma/tools/smoke.mjs               # paint counts, collision, raycasts, p
 node chroma/tools/shot.mjs "index.html?quick&skipintro&qa&autoplay" battle.png --wait 20000
 node chroma/tools/playtest.mjs plaza      # drives real keyboard/mouse input
 node chroma/tools/flowtest.mjs            # title -> creator -> plaza -> lobby -> battle
+node chroma/tools/towertest.mjs           # tower floors, elevator, terminals, minigame, exit
+node chroma/tools/nettest.mjs [--peerjs]  # two-player private match (local or real transport)
+node chroma/tools/quicktest.mjs [--peerjs] # two-player online quick match
 ```
 
 URL flags:
@@ -212,6 +237,7 @@ URL flags:
 | `?quick` | Straight into a battle |
 | `?plaza` | Straight into the plaza |
 | `?story[=hub\|l1..l5]` | Straight into story mode |
+| `?tower[=0..5]` | Straight into the Clash Tower (optionally on a floor) |
 | `&stage=terminal\|skyline\|fizzwater\|mesa\|frostbite` | Pick the stage |
 | `&weapon=<id>` | Pick the weapon |
 | `&skill=easy\|normal\|hard` | Bot difficulty |

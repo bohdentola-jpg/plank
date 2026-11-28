@@ -12,6 +12,7 @@ import { HATS, CLOTHES, SHOES } from '../actors/gear.js';
 import { rng } from '../util.js';
 
 const UNDER = -60; // interiors live in rooms below the plaza
+const TOWER_TOP = 96; // Clash Tower roof (the spire goes higher)
 
 export const PLAZA_SPOTS = {
   spawn: new THREE.Vector3(0, 0, 20),
@@ -51,11 +52,9 @@ export function buildPlaza(scene, renderer, env) {
   // fountain (collision; visuals in decor)
   B([-4.6, 0, -0.6], [4.6, 0.75, 8.6], { render: false, paintable: false });
   B([-1.3, 0.75, 2.7], [1.3, 3.2, 5.3], { render: false, paintable: false });
-  // ---- Clash Tower
+  // ---- Clash Tower: a paintable podium; the glass tower above is decor
   B([-11, 0, -48], [11, 10, -30], { mat: 'facade', color: 0xf0e4ff });
-  B([-8, 10, -45], [8, 22, -32], { mat: 'facade', color: 0xe2d4ff });
-  B([-5.5, 22, -43], [5.5, 34, -34.5], { mat: 'facade2', color: 0xd4c4ff });
-  B([-1.6, 34, -40.4], [1.6, 41, -37.2], { mat: 'concreteDark' });
+  B([-8, 10, -45], [8, TOWER_TOP, -32], { render: false, paintable: false });
   B([-9.5, 0, -30], [9.5, 0.35, -26.5], { mat: 'concrete' });
   B([-8.5, 0.35, -30], [8.5, 0.7, -28], { mat: 'concrete' });
   B([-13, 0, -30.5], [-11, 7, -29.5], { mat: 'concreteDark' });
@@ -198,6 +197,107 @@ function posterTexture(title, sub, accent, seed) {
   return t;
 }
 
+// The Clash Tower above its podium: a glass skyscraper with LED corner
+// strips, lit floors, setbacks, a glowing crown and a spire.
+function curtainTexture(cols, rows, seed, lit) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 512;
+  const x = c.getContext('2d');
+  const R = rng(seed);
+  const cw = 256 / cols, rh = 512 / rows;
+  // base: reflective glass (white = let the material color + env show)
+  x.fillStyle = '#e8eef8'; x.fillRect(0, 0, 256, 512);
+  x.fillStyle = '#3a3f58';
+  for (let i = 0; i <= cols; i++) x.fillRect(i * cw - 1.5, 0, 3, 512);
+  for (let j = 0; j <= rows; j++) x.fillRect(0, j * rh - 3, 256, 6);
+  const em = document.createElement('canvas');
+  em.width = 256; em.height = 512;
+  const e = em.getContext('2d');
+  e.fillStyle = '#000'; e.fillRect(0, 0, 256, 512);
+  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+    if (R() > lit) continue;
+    const t = R();
+    e.fillStyle = t < 0.55 ? '#ffd6a0' : t < 0.85 ? '#fff2dc' : '#ff9ad0';
+    e.globalAlpha = 0.35 + R() * 0.5;
+    e.fillRect(i * cw + 2, j * rh + 4, cw - 4, rh - 8);
+  }
+  // a thin light line along every floor
+  e.globalAlpha = 0.9; e.fillStyle = '#ffffff';
+  for (let j = 0; j <= rows; j++) e.fillRect(0, j * rh - 1, 256, 2);
+  const map = new THREE.CanvasTexture(c), emap = new THREE.CanvasTexture(em);
+  for (const t of [map, emap]) { t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; }
+  return { map, emap };
+}
+
+function buildTowerExterior(g, updaters) {
+  const mats = [];
+  const glassBox = (x0, y0, z0, x1, y1, z1, seed, lit) => {
+    const w = x1 - x0, h = y1 - y0, d = z1 - z0;
+    const { map, emap } = curtainTexture(4, 8, seed, lit);
+    // ~3 m panels, 4 m floors
+    const mat = new THREE.MeshStandardMaterial({ color: 0x9ab8e6, roughness: 0.12, metalness: 0.85, envMapIntensity: 1.5, map, emissive: 0xffffff, emissiveMap: emap, emissiveIntensity: 0.55 });
+    const geo = new THREE.BoxGeometry(w, h, d);
+    // per-face UV scale so panels stay square-ish on every face
+    const uv = geo.attributes.uv;
+    for (let f = 0; f < 6; f++) {
+      const fw = f < 2 ? d : w, fh = f === 2 || f === 3 ? d : h;
+      for (let k = 0; k < 4; k++) { const i = f * 4 + k; uv.setXY(i, uv.getX(i) * fw / 12, uv.getY(i) * fh / 32); }
+    }
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+    m.castShadow = true; m.receiveShadow = true;
+    g.add(m); mats.push(mat);
+    return m;
+  };
+  // main shaft, setback, crown
+  glassBox(-8, 10, -45, 8, 62, -32, 31, 0.42);
+  glassBox(-6.4, 62, -43.6, 6.4, 84, -33.4, 32, 0.35);
+  glassBox(-4.6, 84, -42.2, 4.6, TOWER_TOP, -34.8, 33, 0.25);
+  const metal = new THREE.MeshStandardMaterial({ color: 0x2b2f45, roughness: 0.35, metalness: 0.8 });
+  // ledges at each setback
+  for (const [w, d, y, z] of [[16.8, 13.8, 62, -38.5], [13.2, 11, 84, -38.5], [9.6, 8.2, TOWER_TOP, -38.5]]) {
+    const l = new THREE.Mesh(new THREE.BoxGeometry(w, 0.6, d), metal); l.position.set(0, y, z); l.castShadow = true; g.add(l);
+  }
+  // LED corner strips that chase colors up the tower
+  const strips = [];
+  const corner = (x, z, y0, y1) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.22, y1 - y0, 0.22), new THREE.MeshBasicMaterial({ color: 0xff2e88, toneMapped: false }));
+    m.position.set(x, (y0 + y1) / 2, z); g.add(m); strips.push(m);
+  };
+  for (const [hx, z0, z1, y0, y1] of [[8.05, -45.05, -31.95, 10, 62], [6.45, -43.65, -33.35, 62, 84], [4.65, -42.25, -34.75, 84, TOWER_TOP]]) {
+    for (const sx of [-1, 1]) for (const z of [z0, z1]) corner(sx * hx, z, y0, y1);
+  }
+  const cA = new THREE.Color('#ff2e88'), cB = new THREE.Color('#19d3ff'), tmp = new THREE.Color();
+  updaters.push((t) => {
+    strips.forEach((m, i) => { const k = 0.5 + 0.5 * Math.sin(t * 1.2 + i * 0.5); m.material.color.copy(tmp.copy(cA).lerp(cB, k)).multiplyScalar(2.2); });
+  });
+  // glowing crown ring + spire + beacon
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(5.4, 0.22, 8, 48), new THREE.MeshBasicMaterial({ color: new THREE.Color('#ff2e88').multiplyScalar(2.4), toneMapped: false }));
+  ring.rotation.x = Math.PI / 2; ring.position.set(0, TOWER_TOP + 1.2, -38.5); g.add(ring);
+  const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.9, 30, 10), new THREE.MeshStandardMaterial({ color: 0xd8dde8, roughness: 0.25, metalness: 0.9 }));
+  spire.position.set(0, TOWER_TOP + 15, -38.5); g.add(spire);
+  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.7, 12, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color('#ff3050').multiplyScalar(4), toneMapped: false }));
+  beacon.position.set(0, TOWER_TOP + 30.5, -38.5); g.add(beacon);
+  updaters.push((t) => { beacon.visible = Math.sin(t * 3) > 0; ring.rotation.z = t * 0.3; });
+  // vertical name sign on the front-right edge
+  const sc = document.createElement('canvas');
+  sc.width = 160; sc.height = 1024;
+  const sx = sc.getContext('2d');
+  sx.fillStyle = '#1b1530'; sx.fillRect(0, 0, 160, 1024);
+  sx.strokeStyle = '#19d3ff'; sx.lineWidth = 10; sx.strokeRect(6, 6, 148, 1012);
+  sx.fillStyle = '#ffffff'; sx.font = '96px Bungee, "Arial Black", sans-serif'; sx.textAlign = 'center'; sx.textBaseline = 'middle';
+  'CLASH'.split('').forEach((ch, i) => sx.fillText(ch, 80, 100 + i * 170));
+  const st = new THREE.CanvasTexture(sc); st.colorSpace = THREE.SRGBColorSpace;
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 14), new THREE.MeshBasicMaterial({ map: st, toneMapped: false }));
+  sign.position.set(6.4, 37, -31.85); g.add(sign);
+  // a glass canopy over the entrance steps
+  const canopy = new THREE.Mesh(new THREE.BoxGeometry(14, 0.25, 4), new THREE.MeshStandardMaterial({ color: 0xbfe6ff, roughness: 0.05, metalness: 0.7, transparent: true, opacity: 0.45 }));
+  canopy.position.set(0, 9.6, -28.4); g.add(canopy);
+  for (const x of [-6.8, 6.8]) { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 9.6, 8), metal); c.position.set(x, 4.8, -26.6); c.castShadow = true; g.add(c); }
+  const edge = new THREE.Mesh(new THREE.BoxGeometry(14.1, 0.08, 0.08), new THREE.MeshBasicMaterial({ color: new THREE.Color('#19d3ff').multiplyScalar(2), toneMapped: false }));
+  edge.position.set(0, 9.48, -26.4); g.add(edge);
+}
+
 function buildPlazaDecor(scene, trees) {
   const g = new THREE.Group();
   scene.add(g);
@@ -293,22 +393,23 @@ function buildPlazaDecor(scene, trees) {
   });
 
   // ---- Clash Tower dressing
+  buildTowerExterior(g, updaters);
   neon('CLASH TOWER', 13, 2.4, 150, '#ff2e88', new THREE.Vector3(0, 7.4, -29.95));
   const door = plane(4.4, 4.6, new THREE.MeshStandardMaterial({ color: 0x111326, emissive: 0x6a5cff, emissiveIntensity: 1.8, roughness: 0.2 }), new THREE.Vector3(0, 3.0, -29.97));
   void door;
   const frame = new THREE.Mesh(new THREE.TorusGeometry(2.5, 0.18, 8, 4, Math.PI), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xff2e88, emissiveIntensity: 3 }));
   frame.position.set(0, 3.0, -29.9); frame.scale.set(1, 1.15, 1); g.add(frame);
   // the news screen (texture assigned by the plaza mode)
-  const screen = plane(14, 7.875, new THREE.MeshBasicMaterial({ color: 0x222233, toneMapped: false }), new THREE.Vector3(0, 16.5, -31.95));
+  const screen = plane(14, 7.875, new THREE.MeshBasicMaterial({ color: 0x222233, toneMapped: false }), new THREE.Vector3(0, 16.5, -31.88));
   screen.name = 'newsScreen';
-  const bezel = new THREE.Mesh(new THREE.BoxGeometry(14.8, 8.6, 0.4), std(0x1b1e2b, 0.4, 0.5));
-  bezel.position.set(0, 16.5, -32.2); g.add(bezel);
+  const bezel = new THREE.Mesh(new THREE.BoxGeometry(14.8, 8.6, 0.1), std(0x1b1e2b, 0.4, 0.5));
+  bezel.position.set(0, 16.5, -31.96); g.add(bezel);
   const ticker = document.createElement('canvas');
   ticker.width = 1024; ticker.height = 64;
   const tctx = ticker.getContext('2d');
   const tickTex = new THREE.CanvasTexture(ticker);
   tickTex.colorSpace = THREE.SRGBColorSpace;
-  const tick = plane(14, 0.9, new THREE.MeshBasicMaterial({ map: tickTex, toneMapped: false }), new THREE.Vector3(0, 12.1, -31.94));
+  const tick = plane(14, 0.9, new THREE.MeshBasicMaterial({ map: tickTex, toneMapped: false }), new THREE.Vector3(0, 12.1, -31.88));
   void tick;
   let tickText = 'PRISM NEWS · TURF RUSH IS LIVE · NEW GEAR AT SCALE & THREAD · BLASTWORKS RESTOCKED · ';
   let tickX = 0;

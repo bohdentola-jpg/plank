@@ -8,6 +8,7 @@ import { Battle } from './modes/battle.js';
 import { randomLook, migrateLook, STARTER_GEAR } from './actors/gear.js';
 // --- story mode (The Underside) ---
 import { Story } from './modes/story.js';
+import { Tower } from './modes/tower.js';
 import { WEAPONS } from './actors/weapons.js';
 import { STAGE_IDS } from './world/stage.js';
 import { quickMatch, createPrivateRoom, joinPrivateRoom, MAX_PLAYERS } from './net/room.js';
@@ -166,7 +167,7 @@ class App {
       firstTime: !this.profile.created,
       onPlaza: () => this.enterPlazaFromTitle(),
       onQuick: () => this.startBattle({ weapon: this.profile.weapon, skill: this.profile.lastSkill, stage: STAGE_IDS[Math.floor(Math.random() * STAGE_IDS.length)] }),
-      onOnline: () => { this.enterPlazaFromTitle(true); },
+      onOnline: () => { if (this.profile.created) { this.towerFloor = 1; this.goTower({ floor: 1 }); } else this.enterPlazaFromTitle(true); },
       onSettings: () => this.menus.settings(),
     });
   }
@@ -189,12 +190,24 @@ class App {
 
   async goPlaza() {
     this.input.unlock();
-    const from = this.mode instanceof Battle ? 'battle' : this.mode instanceof Story ? 'story' : 'title';
+    const from = this.mode instanceof Battle ? 'battle' : this.mode instanceof Story ? 'story' : this.mode instanceof Tower ? 'tower' : 'title';
     const pl = await this.setMode(() => new Plaza(this, { from }), from === 'story' ? 'Climbing back up to the plaza…' : 'Heading back to Prism Plaza…');
     if (!pl) return;
     pl.setTitleMode(false);
     if (!this.newsSeen && this.profile.created && !params.has('nonews')) pl.startNews();
     else pl.toast('Click to look around · <b>E</b> to interact');
+  }
+
+  // the Clash Tower interior (floors = match types)
+  async goTower(opts = {}) {
+    this.input.unlock();
+    return this.setMode(() => new Tower(this, opts), 'Taking you up the Clash Tower…');
+  }
+
+  // after a match: back to the tower floor you queued from (or the plaza)
+  afterBattle() {
+    if (this.towerFloor != null) return this.goTower({ floor: this.towerFloor, from: 'battle' });
+    return this.goPlaza();
   }
 
   // --- story mode (The Underside) ---
@@ -217,11 +230,15 @@ class App {
     this.menus.towerMenu({
       onCPU: () => this.menus.lobby({ onStart: (o) => this.startBattle(o), onClose }),
       onOnline: () => this.startQuickMatch(onClose),
-      onPrivate: () => this.menus.privateMenu({
-        onCreate: async () => { const r = await createPrivateRoom(this.me()); this.enterRoom(r, onClose); },
-        onJoin: async (code) => { const r = await joinPrivateRoom(code, this.me()); this.enterRoom(r, onClose); },
-        onClose,
-      }),
+      onPrivate: () => this.openPrivate(onClose),
+      onClose,
+    });
+  }
+
+  openPrivate(onClose) {
+    this.menus.privateMenu({
+      onCreate: async () => { const r = await createPrivateRoom(this.me()); this.enterRoom(r, onClose); },
+      onJoin: async (code) => { const r = await joinPrivateRoom(code, this.me()); this.enterRoom(r, onClose); },
       onClose,
     });
   }
@@ -280,11 +297,11 @@ class App {
 
   async backToRoom() {
     const room = this.room;
-    if (!room || room.closed) { this.room = null; this.goPlaza(); return; }
+    if (!room || room.closed) { this.room = null; this.afterBattle(); return; }
     if (room.isHost) room.endMatch();
-    await this.goPlaza();
+    await this.afterBattle();
     const pl = this.mode;
-    if (pl instanceof Plaza && this.room === room) {
+    if ((pl instanceof Plaza || pl instanceof Tower) && this.room === room) {
       this.roomOnClose = pl.holdUI();
       this.showRoom();
     }
@@ -352,6 +369,9 @@ if (params.has('quick')) {
 } else if (params.has('plaza')) {
   app.profile.created = true;
   app.goPlaza();
+} else if (params.has('tower')) {
+  app.profile.created = true;
+  app.goTower({ floor: +(params.get('tower') || 0) });
 } else if (params.has('story')) { // --- story mode (The Underside) ---
   app.profile.created = true;
   app.goStory(params.get('story') || 'hub');

@@ -5,6 +5,7 @@ import { MODES } from '../net/room.js';
 import { SKIN_TONES, EYE_COLORS, CRESTS, PATTERNS, PATTERN_COLORS, BOTTOMS, CREST_LABEL, PATTERN_LABEL, HATS, CLOTHES, SHOES, ABILITIES } from '../actors/gear.js';
 import { COLOR_PAIRS, hexToCss } from '../util.js';
 import { STAGE_IDS, stageInfo } from '../world/stage.js';
+import { TongueSnack } from './minigame.js';
 
 const SPLAT = 'M50 4c8 0 9 13 17 14s15-9 21-2-5 15 0 22 16 6 12 16-16 3-20 9 1 19-8 21-11-10-19-8-10 15-19 11 1-15-6-20-19 2-20-8 11-11 10-19-13-8-11-17 14-5 20-11-2-22 6-25 8 8 15 6 3-7 9-7z';
 const INK_CHOICES = [...new Set(COLOR_PAIRS.flatMap((c) => [c.a, c.b]))];
@@ -195,14 +196,55 @@ export class Menus {
     this.padNav(node);
   }
 
+  // the queue minigame (Tongue Snack), mounted into a slot of any menu
+  snack(slot, compact = true) {
+    const app = this.app;
+    return new TongueSnack(slot, { ink: app.profile.ink, audio: app.audio, best: app.profile.snackBest || 0, compact, onBest: (b) => { app.profile.snackBest = b; app.save(); } });
+  }
+
+  // Clash Tower elevator: pick a floor
+  elevator({ floors, here, onPick, onClose }) {
+    const node = el(`<div class="overlay dim elevator-ui"><div class="panel narrow">
+      <h2>ELEVATOR</h2>
+      <div class="floors">${floors.map((f, i) => `<button class="fbtn ${i === here ? 'here' : ''}" data-f="${i}" style="--c:${f.accent}"><span class="n">${f.label}</span><span><b>${f.name}</b><small>${f.sub}</small></span>${i === here ? '<em>YOU ARE HERE</em>' : `<em>${i + 1}</em>`}</button>`).join('')}</div>
+      <div class="lobby-actions"><button class="btn ghost" data-back>STAY HERE</button><span class="hint">Tip: press <b>1–6</b> in the car to ride straight there.</span></div>
+    </div></div>`);
+    const close = this.open(node);
+    const pickF = (i) => { this.sfx('ui_select'); removeEventListener('keydown', onKey, true); close(); onPick(i); };
+    const onKey = (e) => {
+      const n = +e.key;
+      if (n >= 1 && n <= floors.length) { e.preventDefault(); e.stopPropagation(); pickF(n - 1); }
+      else if (e.code === 'Escape') { e.preventDefault(); e.stopPropagation(); removeEventListener('keydown', onKey, true); this.sfx('ui_back'); close(); onClose(); }
+    };
+    addEventListener('keydown', onKey, true);
+    node.querySelectorAll('[data-f]').forEach((b) => b.onclick = () => pickF(+b.dataset.f));
+    node.querySelector('[data-back]').onclick = () => { removeEventListener('keydown', onKey, true); this.sfx('ui_back'); close(); onClose(); };
+    this.padNav?.(node);
+  }
+
+  // Sky Deck arcade cabinet: Tongue Snack, full size
+  arcade({ onClose }) {
+    const node = el(`<div class="overlay dim arcade"><div class="panel">
+      <div class="lobby-head"><h2>SKY DECK ARCADE</h2><div class="mode-pill">TONGUE SNACK</div></div>
+      <div class="mg-slot"></div>
+      <div class="lobby-actions"><button class="btn ghost" data-back>LEAVE</button><span class="hint">Click (or SPACE) to flick your tongue. Chain catches for a combo!</span></div>
+    </div></div>`);
+    const close = this.open(node);
+    const game = this.snack(node.querySelector('.mg-slot'), false);
+    node.querySelector('[data-back]').onclick = () => { this.sfx('ui_back'); game.destroy(); close(); onClose?.(); };
+  }
+
   searching({ onCancel }) {
     const node = el(`<div class="overlay dim searching-ui"><div class="panel narrow">
       <h2>ONLINE MATCH</h2>
       <div class="search-anim"><i></i><i></i><i></i></div>
       <div class="search-status">Connecting…</div>
+      <div class="mg-slot"></div>
       <button class="btn ghost" data-back>CANCEL</button>
     </div></div>`);
-    const close = this.open(node);
+    const close0 = this.open(node);
+    const game = this.snack(node.querySelector('.mg-slot'));
+    const close = () => { game.destroy(); close0(); };
     node.querySelector('[data-back]').onclick = () => { this.sfx('ui_back'); close(); onCancel(); };
     return {
       status: (t) => { node.querySelector('.search-status').textContent = t; },
@@ -246,10 +288,20 @@ export class Menus {
         <div><h3>Your weapon</h3><div class="wpick"></div></div>
         <div class="room-settings"></div>
       </div>
+      <div class="room-snack ${priv ? '' : 'open'}"><button class="mini snack-toggle">🎮 TONGUE SNACK — play while you wait</button><div class="mg-slot"></div></div>
       <div class="lobby-actions"><button class="btn ghost" data-back>LEAVE ROOM</button><div class="room-start"></div></div>
     </div></div>`);
     const close = this.open(node);
-    this._netRoomClose = () => { off(); close(); this._netRoomClose = null; };
+    let game = null;
+    const snackBox = node.querySelector('.room-snack');
+    const toggleSnack = (on) => {
+      snackBox.classList.toggle('open', on);
+      if (on && !game) game = this.snack(snackBox.querySelector('.mg-slot'));
+      else if (!on && game) { game.destroy(); game = null; }
+    };
+    snackBox.querySelector('.snack-toggle').onclick = () => { this.sfx('ui_select'); toggleSnack(!game); };
+    if (!priv) toggleSnack(true);
+    this._netRoomClose = () => { off(); game?.destroy(); close(); this._netRoomClose = null; };
     const stages = [['random', 'Random'], ['rotation', 'Rotation pick'], ...STAGE_IDS.map((id) => [id, stageInfo(id).name])];
     // only touch the DOM when a part really changed, so the countdown ticking
     // doesn't rebuild buttons under the cursor or close an open dropdown

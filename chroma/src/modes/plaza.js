@@ -38,7 +38,7 @@ const NPC_LINES = [
   'I painted the fountain once. They were NOT happy.',
 ];
 
-class NPC {
+export class NPC {
   constructor(world, opts) {
     this.world = world;
     this.name = opts.name;
@@ -226,7 +226,7 @@ export class Plaza {
     const weapon = app.tryWeapon || prof.weapon;
     const player = this.player = new Fighter(world, { name: prof.name, team: 1, look: prof.look, weapon, isPlayer: true, color: this.colors[1] });
     let sp, yaw = Math.PI;
-    if (this.opts.from === 'battle') sp = PLAZA_SPOTS.tower.clone().add(new THREE.Vector3(0, 0, 3.4));
+    if (this.opts.from === 'battle' || this.opts.from === 'tower') sp = PLAZA_SPOTS.tower.clone().add(new THREE.Vector3(0, 0, 3.4));
     else if (this.opts.from === 'story') { sp = PLAZA_SPOTS.manhole.clone().add(new THREE.Vector3(2.4, 0, 0)); yaw = Math.PI / 2; }
     else sp = PLAZA_SPOTS.spawn.clone();
     player.place(sp, yaw);
@@ -399,6 +399,7 @@ export class Plaza {
       });
       return;
     }
+    if (it.kind === 'tower') { app.audio?.sfx('door'); app.goTower({ floor: 0, from: 'plaza' }); return; }
     app.audio?.sfx('ui_select');
     this.openUI(it.kind);
   }

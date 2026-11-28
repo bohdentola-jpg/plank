@@ -172,7 +172,7 @@ export class Battle {
     if (p) for (const k of Object.keys(this.player.loops)) this.player.stopLoop(k);
     this.app.menus.pause(p, {
       onResume: () => { this.setPaused(false); this.app.input.lock(); },
-      onQuit: () => { this.app.menus.pause(false); if (this.net) this.app.leaveRoom(); this.app.goPlaza(); },
+      onQuit: () => { this.app.menus.pause(false); if (this.net) this.app.leaveRoom(); this.app.afterBattle(); },
       quitLabel: this.net ? 'LEAVE ONLINE MATCH' : 'FORFEIT & RETURN TO PLAZA',
     });
   }
@@ -182,7 +182,7 @@ export class Battle {
     this.app.menus.pause(false);
     this.app.toast(why || 'Lost connection to the host.');
     this.app.leaveRoom();
-    this.app.goPlaza();
+    this.app.afterBattle();
   }
 
   // ---------------------------------------------------------------- state changes (shared by host + clients)
@@ -388,12 +388,12 @@ export class Battle {
     const prog = this.app.grantRewards(summary);
     if (this.net) {
       this.app.menus.results({ ...summary, rows, colors: this.colors, myTeam: p.team, result: r, prog, plazaLabel: 'LEAVE ROOM', againLabel: 'BACK TO ROOM' }, {
-        onPlaza: () => { this.app.leaveRoom(); this.app.goPlaza(); },
+        onPlaza: () => { this.app.leaveRoom(); this.app.afterBattle(); },
         onAgain: () => this.app.backToRoom(),
       });
     } else {
-      this.app.menus.results({ ...summary, rows, colors: this.colors, myTeam: p.team, result: r, prog }, {
-        onPlaza: () => this.app.goPlaza(),
+      this.app.menus.results({ ...summary, rows, colors: this.colors, myTeam: p.team, result: r, prog, plazaLabel: this.app.towerFloor != null ? 'BACK TO TOWER' : undefined }, {
+        onPlaza: () => this.app.afterBattle(),
         onAgain: () => this.app.startBattle({ ...this.opts }),
       });
     }
