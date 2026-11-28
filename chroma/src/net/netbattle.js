@@ -75,6 +75,7 @@ export class NetHost {
       case 'beamfx': c.beamVisual(f.team, V(a.p), V(a.d), a.l, a.c); this.emit({ e: 'beam', p: a.p, d: a.d, l: a.l, c: a.c, t: f.team }, this.fromPeer); break;
       case 'special': f.specialReady = false; f.special = 0; f.stats.specials++; w.onSpecial?.(f); break;
       case 'fell': if (f.alive) f.splatted(f.time - f.lastAttackT < 6 ? f.lastAttacker : null, 'fall'); break;
+      case 'md': this.b.rules?.action(f, a); break; // mode requests (grab / throw / dunk)
     }
   }
 
@@ -82,7 +83,9 @@ export class NetHost {
     this.snapT -= dt;
     if (this.snapT <= 0) {
       this.snapT = 1 / 15;
-      this.room.broadcast({ t: 'snap', tl: Math.round(this.b.timeLeft * 10) / 10, f: this.b.world.fighters.map((f) => f.netPack()) });
+      const snap = { t: 'snap', tl: Math.round(this.b.timeLeft * 10) / 10, f: this.b.world.fighters.map((f) => f.netPack()) };
+      if (this.b.rules) snap.md = this.b.rules.netPack(); // compact mode state (zones / ball)
+      this.room.broadcast(snap);
     }
     if (!this.events.length && !this.direct.length) return;
     for (const [id] of this.room.conns) {
@@ -131,6 +134,7 @@ export class NetClient {
         if (f === b.player) { if (f.alive && a[11] > 0) f.hp = a[11]; f.special = a[12]; f.specialReady = !!(a[9] & 2048); }
         else f.netApply(a);
       });
+      if (m.md && b.rules) b.rules.netApply(m.md);
     } else if (m.t === 'ev') {
       for (const e of m.e) this.event(e);
     } else if (m.t === 'phase') {
@@ -183,6 +187,7 @@ export class NetClient {
       case 'hit': b.onHit(b.player, w.fighters[e.v] || { alive: e.k !== 1 }, e.d, e.k === 1); break;
       case 'hurt': { const a = w.fighters[e.a]; w.onPlayerHurt?.(e.d, a); b.player.lastDamage = b.player.time; b.player.model.flash(); break; }
       case 'sp': { const f = w.fighters[e.f]; if (f && f !== b.player) w.onSpecial?.(f); break; }
+      case 'md': b.rules?.event(e); break;
     }
   }
 

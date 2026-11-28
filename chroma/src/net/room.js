@@ -9,13 +9,15 @@ import { randomLook } from '../actors/gear.js';
 import { BOT_NAMES } from '../actors/bot.js';
 import { COLOR_PAIRS } from '../util.js';
 import { currentRotation } from '../world/rotation.js';
+import { MODE_INFO } from '../modes/modeinfo.js';
 
 export const MAX_PLAYERS = 8;
 export const PUBLIC_SLOTS = 6;
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const REJECT_TEXT = { full: 'That room is full.', 'in-progress': 'That match already started.', version: 'Your game version doesn\'t match the host\'s — everyone needs the same version.' };
 
-export const MODES = { turf: { name: 'Turf Rush', desc: 'Paint the most floor in the time limit.' } };
+// battle modes the host can pick (official names live in modes/modeinfo.js)
+export const MODES = MODE_INFO;
 
 export function defaultSettings(kind) {
   return { stage: kind === 'quick' ? 'rotation' : 'random', mode: 'turf', time: 180, bots: true, skill: 'normal', teamLock: false };

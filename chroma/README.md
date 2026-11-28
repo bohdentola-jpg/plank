@@ -52,8 +52,27 @@ Any static server works if you serve the **repository root** (the game imports
   about twice as fast, refill your ink in about 3 seconds, heal faster and are nearly
   invisible.
 - **Climb anything.** Paint a wall, then swim into it to climb straight up.
-- **Turf Rush.** After three minutes the judges count painted floor; the team with the
-  higher percentage wins. You earn coins and XP either way.
+- **Three battle modes** (pick one in the Clash Tower lobby or a private room):
+  - **Turf Rush.** After three minutes the judges count painted floor; the team with the
+    higher percentage wins. You earn coins and XP either way.
+  - **Zone Clash.** Every stage has one or two glowing zones in the middle. Cover at least
+    70% of the total zone area with your ink to capture it. While your team holds it, your
+    count drops from 100. If you take the zone back from the other team, you first burn off a
+    short penalty (shown as +N). If the holders drop below 50%, the zone turns neutral. Reach
+    0 for a **knockout**; otherwise the lower count wins at time-up. If the trailing team holds
+    the zone when time runs out, **overtime** lasts until they lose it or take the lead.
+  - **Hue Hoops.** The Glowball tips off from the middle. Touch it to grab it. The carrier
+    can't use their weapon, so FIRE throws it (hold to throw harder; a dotted arc shows the
+    path). Use it to pass or shoot. The ball's glow shows everyone where the carrier is, even
+    when they swim, and it soaks up ink: carriers take 45% less damage and get a moment of
+    safety after a catch. Splat the carrier and they drop it. Each team has a hoop in front
+    of its base. The enemy hoop is **shielded** until your team has painted 40% of the pad
+    around it (the ring on the floor fills up); it closes again if the defenders wipe your
+    ink below 20%. A shot through the rim scores **2**; jump at the rim while carrying for a
+    **dunk** worth **3**. After a score the pad gets a fresh coat of the defenders' ink, the
+    shield comes back up, and the conceding team gets the next tip-off. First to 12 wins
+    (fewer in short matches), otherwise the higher score at time-up. A tie goes to
+    sudden-death overtime. The carrier has 15 seconds to get rid of the ball.
 
 ### Weapons: 12 weapons in 11 classes (Blastworks)
 
@@ -143,7 +162,7 @@ calls the car to your floor. Each floor's glowing terminal starts a different ki
 | **2 · Open Battle** | Online match: the always-on queue |
 | **3 · Private Rooms** | Make a room and share its code, or join a friend's |
 | **4 · Zone Clash** | Zone Clash vs CPUs |
-| **5 · Ink Hoops** | Ink Hoops vs CPUs |
+| **5 · Hue Hoops** | Hue Hoops vs CPUs |
 | **R · Sky Deck** | Open-air roof with the best view in the city, and the arcade |
 
 After a match you come back to the floor you queued from.
@@ -286,6 +305,9 @@ node chroma/tools/nettest.mjs [--peerjs]  # two-player private match (local or r
 node chroma/tools/quicktest.mjs [--peerjs] # two-player online quick match
 node chroma/tools/housetest.mjs           # house: grab a weapon, door, plaza + back, buy, decorate, reload
 node chroma/tools/storytest.mjs [s1 s2 s3 hub shop migrate cycle ending l1..l15] [--shots]  # story (STORY_SLOW=<factor> on slow machines)
+node chroma/tools/modetest.mjs            # Zone Clash + Hue Hoops CPU matches on 2 stages, asserts captures / scores / results
+node chroma/tools/nettest.mjs --mode zones|hoops  # online private match in a new mode
+node chroma/tools/shot.mjs "index.html?quick&skipintro&qa&autoplay&fast&sim=5&mode=hoops&stage=mesa&time=60" hoops.png --wait 40000
 ```
 
 URL flags:
@@ -297,6 +319,7 @@ URL flags:
 | `?house` | Straight into your house |
 | `?story[=hub\|hub2\|hub3\|l1..l15]` | Straight into story mode (a hub or a level) |
 | `?tower[=0..5]` | Straight into the Clash Tower (optionally on a floor) |
+| `&mode=turf\|zones\|hoops` | Pick the mode for `?quick` (Turf Rush, Zone Clash, Hue Hoops) |
 | `&stage=terminal\|skyline\|fizzwater\|mesa\|frostbite` | Pick the stage |
 | `&weapon=<id>` | Pick the weapon |
 | `&skill=easy\|normal\|hard` | Bot difficulty |
@@ -305,6 +328,8 @@ URL flags:
 | `&nonews` | Skip the news broadcast |
 | `&autoplay` | A bot drives your character |
 | `&qa` | Low-cost rendering for headless runs |
+| `&fast` | Bigger frame-time cap, so slow headless runs advance faster |
+| `&sim=<n>` | QA: run n simulation steps per rendered frame (headless GPUs are slow) |
 
 Screenshots go to `chroma/qa/` (git-ignored).
 

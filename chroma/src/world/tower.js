@@ -20,7 +20,7 @@ export const TOWER_FLOORS = [
   { id: 'open', label: '2', name: 'OPEN BATTLE', sub: 'Online match — always looking for players', accent: '#19d3ff', kind: 'online', term: 'JOIN THE QUEUE' },
   { id: 'private', label: '3', name: 'PRIVATE ROOMS', sub: 'Make a room, share the code', accent: '#b04dff', kind: 'private', term: 'ROOM DESK' },
   { id: 'zones', label: '4', name: 'ZONE CLASH', sub: 'Hold the zones — vs CPUs', accent: '#ff8a1a', kind: 'cpu', mode: 'zones', term: 'ZONE CLASH' },
-  { id: 'hoops', label: '5', name: 'INK HOOPS', sub: 'Ink basketball — vs CPUs', accent: '#3cf03c', kind: 'cpu', mode: 'hoops', term: 'INK HOOPS' },
+  { id: 'hoops', label: '5', name: 'HUE HOOPS', sub: 'Glowball basketball — vs CPUs', accent: '#3cf03c', kind: 'cpu', mode: 'hoops', term: 'HUE HOOPS' },
   { id: 'deck', label: 'R', name: 'SKY DECK', sub: 'Arcade · best view in the city', accent: '#ffd21a', kind: 'arcade', term: 'ARCADE' },
 ];
 
@@ -509,7 +509,7 @@ function buildTowerDecor(scene, kiosks, opts) {
   neon('HOLD THE ZONE', 6, 0.9, 80, '#ff8a1a', -HALF + 0.36, y4 + 2.6, -1, Math.PI / 2);
   for (const [x, z] of [[13, -13], [13, 13]]) planter(x, y4, z);
 
-  // 5 — INK HOOPS: a hoop on the east wall + court lines + a ball
+  // 5 — HUE HOOPS: a hoop on the east wall + court lines + a ball
   const y5 = floorY(4);
   {
     const post = new THREE.Mesh(new THREE.BoxGeometry(0.6, 4, 0.6), metal); P(post, 13.8, y5 + 2, 0);

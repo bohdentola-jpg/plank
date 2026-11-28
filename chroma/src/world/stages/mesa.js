@@ -18,6 +18,8 @@ export const MESA = {
   killY: -8,
   half: { minX: -30, maxX: 30, minZ: -58, maxZ: 58 },
   spawnZ: 54.5, spawnY: 2.0,
+  // Zone Clash rects [x0,z0,x1,z1,y], Hue Hoops pad for team A's hoop + tip-off spot
+  modes: { zones: [[-7.5, -6, 7.5, 6, 3.5]], hoop: { x: -2, z: -42, y: 0, r: 3.4 }, tip: [-5.5, 3.5, -3] },
   sym: [
     ['box', [-24, -4, -22], [24, 0, 22], { mat: 'tiles', color: K.tile }],
     // the big central terrace, a dais and the sun obelisk

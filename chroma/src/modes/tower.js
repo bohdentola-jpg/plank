@@ -18,7 +18,7 @@ const STAFF = [
   { floor: 1, name: 'Zap', pos: [-3.2, 0, 10.4], yaw: Math.PI * 0.85, lines: ['The queue never sleeps. Somebody\'s always looking for a match!', 'While you wait you can play <b>Tongue Snack</b>. My best is 212.', 'If nobody shows up, CPUs fill the empty seats. No waiting forever!'] },
   { floor: 2, name: 'Pim', pos: [3.2, 0, 10.4], yaw: -Math.PI * 0.85, lines: ['Create a room, then read your friends the 4-letter code.', 'The host picks the stage, time, mode and teams. Very fancy.', 'After a match, hit <b>Back to room</b> and go again with the same crew.'] },
   { floor: 3, name: 'Torque', pos: [-3.2, 0, 10.4], yaw: Math.PI * 0.85, lines: ['Zone Clash! Ink the zones and hold them to run your counter down.', 'Losing the zone hurts. Take it back fast!'] },
-  { floor: 4, name: 'Swish', pos: [3.2, 0, 10.4], yaw: -Math.PI * 0.85, lines: ['Ink Hoops: grab the ball, ink the enemy hoop pad, then shoot!', 'Dunks are worth more. Jump at the rim while you carry the ball!'] },
+  { floor: 4, name: 'Swish', pos: [3.2, 0, 10.4], yaw: -Math.PI * 0.85, lines: ['Hue Hoops: grab the Glowball, paint the enemy hoop pad to break its shield, then shoot!', 'A shot is 2, a dunk is 3. Jump at the rim while you carry the ball!'] },
   { floor: 5, name: 'Gazer', pos: [-11, 0, -10.6], yaw: Math.PI * 0.75, lines: ['You can see the whole city from up here. Is that the plaza fountain?', 'The arcade has Tongue Snack. Same game as the queue, but bragging rights are real.'] },
 ];
 
@@ -249,7 +249,7 @@ export class Tower {
     const release = this.hold();
     const onClose = () => { release(); app.audio?.music('lobby'); };
     app.towerFloor = i;
-    if (fl.kind === 'cpu') app.menus.lobby({ mode: fl.mode, onStart: (o) => app.startBattle({ ...o, mode: fl.mode }), onClose });
+    if (fl.kind === 'cpu') app.menus.lobby({ mode: fl.mode, onStart: (o) => app.startBattle({ mode: fl.mode, ...o }), onClose });
     else if (fl.kind === 'online') app.startQuickMatch(onClose);
     else if (fl.kind === 'private') app.openPrivate(onClose);
     else if (fl.kind === 'arcade') app.menus.arcade({ onClose });

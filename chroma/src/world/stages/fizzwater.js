@@ -21,6 +21,8 @@ export const FIZZWATER = {
   killY: -1.3,
   half: { minX: -29, maxX: 29, minZ: -57, maxZ: 57 },
   spawnZ: 53, spawnY: 1.6,
+  // Zone Clash rects [x0,z0,x1,z1,y], Hue Hoops pad for team A's hoop + tip-off spot
+  modes: { zones: [[-22.5, -7.5, -14.5, 3.5, 2.2], [14.5, -3.5, 22.5, 7.5, 2.2]], hoop: { x: 0, z: -41.5, y: 0, r: 3.6 }, tip: [-3.8, 2.2, -2.8] },
   sym: [
     ['box', [-23, -3, -20], [23, 0, 20], { mat: 'floor', color: K.pave }],
     // the Carbonator: raised deck with a CO2 tank on top (climbable perch)

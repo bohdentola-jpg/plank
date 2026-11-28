@@ -204,13 +204,17 @@ export class Bot {
     const f = this.f;
     let best = null, bd = Infinity;
     const range = (this.prefer + 9) * (this.f.weapon.type === 'charger' || this.f.weapon.type === 'stringer' ? 1.2 : 1);
+    const pref = this.plan?.prefer; // mode objective (e.g. the enemy ball carrier)
+    if (pref && pref.alive && pref.team !== f.team && pref.pos.distanceTo(f.pos) < range * 1.3 && this.enemyVisible(pref)) return pref;
     for (const e of this.world.fighters) {
       if (!e.alive || e.team === f.team) continue;
       const d = e.pos.distanceTo(f.pos);
       if (d > range) continue;
       // submerged & still enemies are hard to spot; camouflaged ones only up close
-      if (e.submerged && Math.hypot(e.vel.x, e.vel.z) < 4 && d > 4) continue;
-      if (e.camoT > 0 && d > 2.5) continue;
+      // (a glowing ball carrier can't hide)
+      const glow = this.world.rules?.ball?.carrier === e;
+      if (!glow && e.submerged && Math.hypot(e.vel.x, e.vel.z) < 4 && d > 4) continue;
+      if (!glow && e.camoT > 0 && d > 2.5) continue;
       if (d < bd && this.enemyVisible(e)) { bd = d; best = e; }
     }
     return best;
@@ -283,12 +287,26 @@ export class Bot {
       if (t !== this.target) { this.reactT = t ? this.sk.react * rand(0.7, 1.3) : 0; this.target = t; }
       if (t) this.seenT = 0;
       const prev = this.mode;
-      if (f.ink < Math.max(0.14, f.weapon.type === 'charger' || f.weapon.type === 'stringer' ? f.weapon.ink : 0) && !(this.target && f.weapon.type === 'roller' && f.ink > 0.05)) this.mode = 'refill';
+      // battle-mode objective (Zone Clash / Hue Hoops); null in Turf Rush
+      const plan = this.plan = w.rules?.botPlan ? w.rules.botPlan(this) : null;
+      if (plan?.carry) this.mode = 'carry';
+      else if (plan?.key === 'ball' && !(this.target && this.target.pos.distanceTo(f.pos) < 6)) this.mode = 'objective'; // loose ball beats a refill
+      else if (f.ink < Math.max(0.14, f.weapon.type === 'charger' || f.weapon.type === 'stringer' ? f.weapon.ink : 0) && !(this.target && f.weapon.type === 'roller' && f.ink > 0.05)) this.mode = 'refill';
       else if (this.mode === 'refill' && f.ink < 0.85 && !(this.target && this.target.pos.distanceTo(f.pos) < 5)) this.mode = 'refill';
-      else if (this.target) this.mode = f.hp < 35 && f.ink < 0.3 ? 'retreat' : 'fight';
+      else if (this.target && !(plan?.urgent && this.target !== plan.prefer && this.target.pos.distanceTo(f.pos) > 6)) this.mode = f.hp < 35 && f.ink < 0.3 ? 'retreat' : 'fight';
+      else if (plan?.urgent) this.mode = 'objective';
       else this.mode = 'paint';
       if (this.mode !== prev) { this.path = null; }
-      if (this.mode === 'paint' && (!this.path || this.pi >= this.path.length || this.goalT > 9)) this.pickPaintGoal();
+      if (plan && plan.key !== this.planKey) { this.planKey = plan.key; if (this.mode === 'paint') this.path = null; }
+      this.direct = null;
+      if ((this.mode === 'carry' || this.mode === 'objective') && plan.goal) {
+        if (!this.path || this.pi >= this.path.length || this.goalT > 3 || !this.goal || this.goal.distanceTo(plan.goal) > 1.5) {
+          if (!this.goTo(plan.goal)) { this.path = null; this.direct = plan.goal; }
+        }
+      } else if (this.mode === 'carry') this.path = null;
+      if (this.mode === 'paint' && plan?.goal && (!this.path || this.pi >= this.path.length || this.goalT > 7) && !(plan.keep && this.path)) { if (!this.goTo(plan.goal)) this.pickPaintGoal(); }
+      else if (this.mode === 'paint' && plan?.keep && !plan.goal) { /* already in the objective area: paint around */ }
+      else if (this.mode === 'paint' && (!this.path || this.pi >= this.path.length || this.goalT > 9)) this.pickPaintGoal();
       if (this.mode === 'refill' && (!this.path || this.pi >= this.path.length) && this.ownerAround(f.pos) !== f.team) this.pickRefillGoal();
       if (this.mode === 'retreat' && !this.path) this.goTo(new THREE.Vector3(f.pos.x * 0.6, 0, this.homeZ * 0.85));
       if (this.mode === 'fight') this.planFight();
@@ -310,6 +328,9 @@ export class Bot {
         mx = dx / d; mz = dz / d;
         if (wp.jump && d < 1.6 && f.onGround && wp.y - f.pos.y > 0.4) I.jump = true;
       }
+    } else if (this.direct) {
+      const dx = this.direct.x - f.pos.x, dz = this.direct.z - f.pos.z, d = Math.hypot(dx, dz);
+      if (d > 0.6) { mx = dx / d; mz = dz / d; if (this.direct.y - f.pos.y > 0.6 && f.onGround && d < 2) I.jump = true; }
     }
     // ---- stuck handling
     this.progressT += dt;
@@ -358,10 +379,14 @@ export class Bot {
       this.sweep += dt * (type === 'charger' ? 1.2 : 3.2);
       const yaw = Math.atan2(mx || Math.sin(f.yaw), mz || Math.cos(f.yaw)) + Math.sin(this.sweep) * 0.6;
       const reach = type === 'charger' ? 16 : type === 'blaster' ? 8 : 5;
-      this.aim.set(f.pos.x + Math.sin(yaw) * reach, f.pos.y, f.pos.z + Math.cos(yaw) * reach);
+      const pa = this.plan?.aim;
+      if (pa && this.mode !== 'carry' && pa.distanceToSquared(f.pos) < 81) this.aim.set(pa.x + Math.sin(this.sweep * 1.7) * 0.8, pa.y, pa.z + Math.cos(this.sweep * 1.3) * 0.8);
+      else this.aim.set(f.pos.x + Math.sin(yaw) * reach, f.pos.y, f.pos.z + Math.cos(yaw) * reach);
       const aheadOwn = this.ownerAround(this.aim) === f.team;
       const hereOwn = f.surface === f.team;
-      if (this.mode === 'refill') {
+      if (this.mode === 'carry') {
+        goo = hereOwn; // swim / lurk in our ink with the ball (it still glows)
+      } else if (this.mode === 'refill') {
         goo = hereOwn || (f.ink < 0.02);
         if (hereOwn && f.ink < 0.85) { mx *= 0.2; mz *= 0.2; if (!this.path || this.pi >= this.path.length) { mx = 0; mz = 0; } }
       } else if (this.mode === 'retreat') {
@@ -377,6 +402,7 @@ export class Bot {
       }
     }
     if (fire) goo = false;
+    if (this.mode === 'carry') fire = false;
     // never walk off the map: check the cell we're heading into
     if (mx || mz) {
       const k = this.nav.idx(f.pos.x + mx * 0.9, f.pos.z + mz * 0.9, false);
@@ -387,6 +413,7 @@ export class Bot {
     I.mx = mx; I.mz = mz;
     I.goo = goo;
     I.fire = fire;
+    if (this.plan) w.rules?.botFrame?.(this, dt); // fine control for mode moves (dunks)
     // aim angles
     _v.set(f.pos.x, f.pos.y + 1.2, f.pos.z);
     _e.subVectors(this.aim, _v);
