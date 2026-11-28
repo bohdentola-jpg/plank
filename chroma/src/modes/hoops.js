@@ -995,7 +995,7 @@ export class HoopsRules {
     const valid = (role) => (role === 'chase' ? !!c && c.team !== team : role === 'ball' ? !c : role === 'escort' ? !!c && c.team === team : !!role);
     let role = bot.hoopRole;
     const age = this.time - (bot.hoopRoleT || -99);
-    if (role !== want && (!valid(role) || age > 7 || ((want === 'ball' || want === 'chase') && d < 9))) { role = want; bot.hoopRoleT = this.time; }
+    if (role !== want && (!valid(role) || age > 7 || ((want === 'ball' || want === 'chase') && r === 0 && d < 9))) { role = want; bot.hoopRoleT = this.time; }
     bot.hoopRole = role;
     switch (role) {
       case 'ball': return { key: 'ball', goal: target.clone(), urgent: true };

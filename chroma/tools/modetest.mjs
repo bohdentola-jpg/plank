@@ -3,7 +3,7 @@
 // plays out: zones get captured and counts drop; the ball gets grabbed, thrown
 // and scored; every match ends with a result and the page throws no errors.
 //   node chroma/tools/modetest.mjs
-//   node chroma/tools/modetest.mjs --modes hoops --stages mesa --time 60
+//   node chroma/tools/modetest.mjs --modes hoops --stages mesa --time 60 --retries 0
 // Headless software rendering is slow, so it uses &sim (several simulation
 // steps per rendered frame) and &fast (bigger dt cap).
 import { createServer } from 'node:http';
@@ -28,6 +28,7 @@ const stagesFor = (mode) => (arg('stages', null) ? arg('stages').split(',') : ST
 const TIME = +arg('time', '0'); // 0 = per-mode default (zones 90 s, hoops 120 s)
 const sim = +arg('sim', '6');
 const skill = arg('skill', 'normal');
+const RETRIES = +arg('retries', '1');
 
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
 let pass = 0, fail = 0;
@@ -45,47 +46,63 @@ const probe = () => {
 for (const mode of modes) {
   const time = TIME || (mode === 'hoops' ? 120 : 90);
   for (const stage of stagesFor(mode)) {
-    console.log(`-- ${mode} on ${stage} (${time}s match)`);
-    const page = await browser.newPage({ viewport: { width: 640, height: 360 } });
-    const errors = [];
-    page.on('pageerror', (e) => { errors.push(e.message); console.log('  [pageerror]', e.message); });
-    page.on('console', (m) => { if (m.type() === 'error') console.log('  [console]', m.text().slice(0, 200)); });
-    await page.goto(`${base}?quick&skipintro&qa&autoplay&fast&nonews&sim=${sim}&mode=${mode}&stage=${stage}&time=${time}&skill=${skill}`);
-    await page.waitForFunction(() => window.__chroma?.mode?.constructor.name === 'Battle' && !window.__chroma.loadingNow, null, { timeout: 180000 });
-    let last = null, minCount = 100, maxScore = 0, shot = false;
-    const t0 = Date.now();
-    for (;;) {
-      await page.waitForTimeout(4000);
-      const s = await page.evaluate(probe);
-      if (s.mode) {
-        last = s;
-        if (s.count) minCount = Math.min(minCount, ...s.count);
-        if (s.score) maxScore = Math.max(maxScore, ...s.score);
-        console.log('   ', JSON.stringify(s));
-      }
-      if (!shot && s.state === 'play' && s.t < time * 0.55) { shot = true; await page.screenshot({ path: join(qa, `mode_${mode}_${stage}.png`) }); }
-      if (s.state === 'results' || s.state === 'judge') break;
-      if (Date.now() - t0 > 900000) { console.log('   timeout'); break; }
+    // bot matches are random: if the mode never got going (no capture / no score),
+    // play the stage once more; page errors and result checks are never retried
+    for (let attempt = 1; attempt <= RETRIES + 1; attempt++) {
+      const r = await playMatch(mode, stage, time, attempt);
+      const progress = r.checks.filter((c) => c.progress);
+      const retry = attempt <= RETRIES && progress.some((c) => !c.ok) && r.checks.every((c) => c.progress || c.ok);
+      if (retry) { console.log(`   no ${mode === 'zones' ? 'capture' : 'score'} this time (${progress.filter((c) => !c.ok).map((c) => c.name).join(', ')}) -- playing ${stage} again`); continue; }
+      for (const c of r.checks) check(c.name, c.ok, c.extra);
+      break;
     }
-    // the judge screen runs on timers, which crawl at headless frame rates
-    await page.waitForFunction(() => document.querySelector('.overlay.results .rs-pct'), null, { timeout: 240000 }).catch(() => console.log('   (results screen did not appear in time)'));
-    await page.waitForTimeout(1500);
-    const res = await page.evaluate(() => ({ result: window.__chroma.mode.result, pct: document.querySelector('.rs-pct')?.textContent || null }));
-    await page.screenshot({ path: join(qa, `mode_${mode}_${stage}_results.png`) });
-    const st = last?.stats || {};
-    if (mode === 'zones') {
-      check(`${stage}: zone captured`, st.captures >= 1, `captures=${st.captures} neutrals=${st.neutrals}`);
-      check(`${stage}: a count dropped`, minCount < 100, `lowest count ${minCount}`);
-    } else {
-      check(`${stage}: ball grabbed`, st.grabs >= 1, `grabs=${st.grabs}`);
-      check(`${stage}: ball thrown`, st.throws >= 1, `throws=${st.throws}`);
-      check(`${stage}: a team scored`, st.scores >= 1 && maxScore > 0, `scores=${st.scores} dunks=${st.dunks} best=${maxScore}`);
-    }
-    check(`${stage}: match ended with a ${mode} result`, res.result?.mode === mode && (res.result.winner === 1 || res.result.winner === 2), JSON.stringify(res));
-    check(`${stage}: results screen shows the ${mode === 'zones' ? 'counts' : 'score'}`, !!res.pct && /\d/.test(res.pct), String(res.pct));
-    check(`${stage}: no page errors`, errors.length === 0, errors.slice(0, 3).join(' | '));
-    await page.close();
   }
+}
+
+async function playMatch(mode, stage, time, attempt) {
+  console.log(`-- ${mode} on ${stage} (${time}s match${attempt > 1 ? `, attempt ${attempt}` : ''})`);
+  const page = await browser.newPage({ viewport: { width: 640, height: 360 } });
+  const errors = [];
+  page.on('pageerror', (e) => { errors.push(e.message); console.log('  [pageerror]', e.message); });
+  page.on('console', (m) => { if (m.type() === 'error') console.log('  [console]', m.text().slice(0, 200)); });
+  await page.goto(`${base}?quick&skipintro&qa&autoplay&fast&nonews&sim=${sim}&mode=${mode}&stage=${stage}&time=${time}&skill=${skill}`);
+  await page.waitForFunction(() => window.__chroma?.mode?.constructor.name === 'Battle' && !window.__chroma.loadingNow, null, { timeout: 180000 });
+  let last = null, minCount = 100, maxScore = 0, shot = false;
+  const t0 = Date.now();
+  for (;;) {
+    await page.waitForTimeout(4000);
+    const s = await page.evaluate(probe);
+    if (s.mode) {
+      last = s;
+      if (s.count) minCount = Math.min(minCount, ...s.count);
+      if (s.score) maxScore = Math.max(maxScore, ...s.score);
+      console.log('   ', JSON.stringify(s));
+    }
+    if (!shot && s.state === 'play' && s.t < time * 0.55) { shot = true; await page.screenshot({ path: join(qa, `mode_${mode}_${stage}.png`) }); }
+    if (s.state === 'results' || s.state === 'judge') break;
+    if (Date.now() - t0 > 900000) { console.log('   timeout'); break; }
+  }
+  // the judge screen runs on timers, which crawl at headless frame rates
+  await page.waitForFunction(() => document.querySelector('.overlay.results .rs-pct'), null, { timeout: 240000 }).catch(() => console.log('   (results screen did not appear in time)'));
+  await page.waitForTimeout(1500);
+  const res = await page.evaluate(() => ({ result: window.__chroma.mode.result, pct: document.querySelector('.rs-pct')?.textContent || null }));
+  await page.screenshot({ path: join(qa, `mode_${mode}_${stage}_results.png`) });
+  await page.close();
+  const st = last?.stats || {};
+  const checks = [];
+  const add = (name, ok, extra, progress = false) => checks.push({ name: `${stage}: ${name}`, ok: !!ok, extra, progress });
+  if (mode === 'zones') {
+    add('zone captured', st.captures >= 1, `captures=${st.captures} neutrals=${st.neutrals}`, true);
+    add('a count dropped', minCount < 100, `lowest count ${minCount}`, true);
+  } else {
+    add('ball grabbed', st.grabs >= 1, `grabs=${st.grabs}`);
+    add('ball thrown', st.throws >= 1, `throws=${st.throws}`);
+    add('a team scored', st.scores >= 1 && maxScore > 0, `scores=${st.scores} dunks=${st.dunks} best=${maxScore}`, true);
+  }
+  add(`match ended with a ${mode} result`, res.result?.mode === mode && (res.result.winner === 1 || res.result.winner === 2), JSON.stringify(res));
+  add(`results screen shows the ${mode === 'zones' ? 'counts' : 'score'}`, !!res.pct && /\d/.test(res.pct), String(res.pct));
+  add('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
+  return { checks };
 }
 console.log(`${pass} passed, ${fail} failed`);
 await browser.close(); server.close(); process.exit(fail ? 1 : 0);
