@@ -1,4 +1,4 @@
-// End-to-end UI flow: title -> creator -> plaza -> tower lobby -> battle.
+// End-to-end UI flow: title -> creator -> plaza -> Clash Tower -> CPU lobby -> battle.
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
 import { extname, join } from 'node:path';
@@ -39,6 +39,13 @@ await page.waitForTimeout(1500);
 console.log('state', await page.evaluate(() => { const m = window.__chroma.mode; return JSON.stringify({ ui: m.uiOpen, news: m.newsOn, title: m.titleMode, loc: m.location, pos: m.player.pos, near: m.nearest()?.kind, fading: m.fading }); }));
 const prompt = await page.evaluate(() => document.getElementById('prompt').innerText);
 step('prompt: ' + prompt);
+await page.keyboard.press('KeyE');
+step('into the tower');
+await page.waitForFunction(() => window.__chroma.mode?.constructor.name === 'Tower' && !window.__chroma.loadingNow, null, { timeout: 240000 });
+await page.waitForTimeout(1500);
+await page.evaluate(() => { const m = window.__chroma.mode; m.player.place(m.tw.kiosks[0].spot.clone(), Math.PI * 0.75 + Math.PI); });
+await page.waitForTimeout(800);
+step('tower prompt: ' + await page.evaluate(() => document.getElementById('prompt').innerText));
 await page.keyboard.press('KeyE'); await page.waitForTimeout(1200);
 await page.screenshot({ path: join(qa, 'flow_lobby.png') });
 await page.click('.lobby [data-k="hard"]');
