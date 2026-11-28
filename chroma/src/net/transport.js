@@ -39,7 +39,7 @@ export async function openPeer(id) {
   return new Promise((resolve, reject) => {
     const peer = id ? new Peer(id, peerOptions()) : new Peer(peerOptions());
     let done = false;
-    const t = setTimeout(() => { if (!done) { done = true; try { peer.destroy(); } catch { /* */ } reject(Object.assign(new Error('Timed out contacting the matchmaking server.'), { type: 'timeout' })); } }, 12000);
+    const t = setTimeout(() => { if (!done) { done = true; try { peer.destroy(); } catch { /* */ } reject(Object.assign(new Error('Timed out contacting the matchmaking server.'), { type: 'timeout' })); } }, 20000);
     peer.on('open', () => { if (done) return; done = true; clearTimeout(t); resolve(peer); });
     peer.on('error', (err) => {
       if (done) return;
@@ -51,7 +51,7 @@ export async function openPeer(id) {
 }
 
 // Connect to a host peer; resolves with an open DataConnection.
-export function connectTo(peer, hostId, timeout = 6000) {
+export function connectTo(peer, hostId, timeout = 15000) {
   return new Promise((resolve, reject) => {
     const conn = peer.connect(hostId, { reliable: true, serialization: 'json' });
     let done = false;

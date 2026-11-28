@@ -184,7 +184,7 @@ export class NetRoom {
     r.hostConn = conn;
     r.hostId = hostId;
     return new Promise((resolve, reject) => {
-      const t = setTimeout(() => { reject(Object.assign(new Error('The room didn\'t answer.'), { type: 'timeout' })); r.close(); }, 7000);
+      const t = setTimeout(() => { reject(Object.assign(new Error('The room didn\'t answer.'), { type: 'timeout' })); r.close(); }, 12000);
       let welcomed = false;
       conn.on('data', (msg) => {
         if (!welcomed) {
@@ -241,8 +241,16 @@ export async function createPrivateRoom(me) {
 export async function joinPrivateRoom(code, me) {
   code = String(code || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
   if (code.length !== 4) throw new Error('Room codes are 4 letters.');
-  try { return await NetRoom.join(`${NET_PREFIX}-room-${code}`, me, 'private'); }
-  catch (e) { if (e.type === 'peer-unavailable' || e.type === 'timeout') throw new Error(`No room called ${code} — check the code with your friend.`); throw e; }
+  // slow computers / networks can need a second try; a missing room fails fast
+  for (let attempt = 0; ; attempt++) {
+    try { return await NetRoom.join(`${NET_PREFIX}-room-${code}`, me, 'private'); }
+    catch (e) {
+      if (e.type === 'timeout' && attempt < 1) continue;
+      if (e.type === 'peer-unavailable') throw new Error(`No room called ${code} — check the code with your friend.`);
+      if (e.type === 'timeout') throw new Error(`Room ${code} didn't answer. Check the code, or ask the host to make a new room.`);
+      throw e;
+    }
+  }
 }
 
 // "Always looking": keep trying public slots — join a waiting host, or become one.

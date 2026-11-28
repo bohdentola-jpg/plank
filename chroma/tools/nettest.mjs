@@ -2,7 +2,8 @@
 // ?net=local). Host creates a private room, guest joins by code, host starts,
 // both sides autoplay; asserts that the guest's actions reach the host and the
 // host's world (paint, players, timer, results) reaches the guest.
-//   node chroma/tools/nettest.mjs
+//   node chroma/tools/nettest.mjs           (BroadcastChannel transport)
+//   node chroma/tools/nettest.mjs --peerjs  (real PeerJS broker + WebRTC)
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
 import { extname, join } from 'node:path';
@@ -48,7 +49,7 @@ await guest.click('.tower [data-a="private"]');
 await guest.waitForTimeout(500);
 await guest.fill('.code-in', code);
 await guest.click('.privmenu [data-a="join"]');
-await guest.waitForSelector('.netroom', { timeout: 30000 });
+await guest.waitForSelector('.netroom', { timeout: 90000 });
 await host.waitForTimeout(1500);
 const hm = await host.evaluate(() => window.__chroma.room.members.map((m) => m.name));
 const gm = await guest.evaluate(() => window.__chroma.room.members.map((m) => m.name));
