@@ -228,6 +228,7 @@ export class Plaza {
     let sp, yaw = Math.PI;
     if (this.opts.from === 'battle') sp = PLAZA_SPOTS.tower.clone().add(new THREE.Vector3(0, 0, 3.4));
     else if (this.opts.from === 'story') { sp = PLAZA_SPOTS.manhole.clone().add(new THREE.Vector3(2.4, 0, 0)); yaw = Math.PI / 2; }
+    else if (this.opts.from === 'house') { sp = PLAZA_SPOTS.home.clone().add(new THREE.Vector3(-2.6, 0, 0)); yaw = Math.PI; }
     else sp = PLAZA_SPOTS.spawn.clone();
     player.place(sp, yaw);
     player.spawnPoint.copy(sp); player.spawnYaw = yaw;
@@ -353,6 +354,7 @@ export class Plaza {
       if (near(S.weaponDoor, 2.8)) return { kind: 'enter', room: 'weapons', label: 'Enter <b>Blastworks</b>' };
       if (near(S.gearDoor, 2.8)) return { kind: 'enter', room: 'gear', label: 'Enter <b>Scale &amp; Thread</b>' };
       if (near(S.manhole, 1.9)) return { kind: 'manhole', label: 'Lift the loose <b>manhole cover</b>…' };
+      if (near(S.home, 2.4)) return { kind: 'home', label: 'Enter your <b>home</b>' };
     } else if (this.location === 'weapons') {
       if (near(W.exit, 2)) return { kind: 'exit', label: 'Back outside' };
       if (near(new THREE.Vector3(W.cx, W.counter.y, W.counter.z + 1), 2.6)) return { kind: 'shop', label: 'Talk to <b>Vex</b> — browse weapons' };
@@ -386,6 +388,13 @@ export class Plaza {
     }
     if (it.kind === 'enter') { this.goRoom(it.room); return; }
     if (it.kind === 'exit') { this.goRoom(null); return; }
+    if (it.kind === 'home') { // Prism Heights: back to your house
+      app.input.unlock();
+      app.audio?.sfx('door');
+      this.fadeEl.classList.add('on');
+      setTimeout(() => app.goHouse(), 260);
+      return;
+    }
     if (it.kind === 'manhole') {
       app.input.unlock();
       this.uiOpen = true;

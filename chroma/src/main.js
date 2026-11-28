@@ -11,6 +11,9 @@ import { Story } from './modes/story.js';
 import { WEAPONS } from './actors/weapons.js';
 import { STAGE_IDS } from './world/stage.js';
 import { quickMatch, createPrivateRoom, joinPrivateRoom, MAX_PLAYERS } from './net/room.js';
+// --- your house (Prism Heights) ---
+import { House } from './modes/house.js';
+import { defaultHouse, migrateHouse } from './world/furniture.js';
 
 let audio = null;
 try { audio = (await import('./audio.js')).audio; } catch (e) { console.warn('audio unavailable', e); }
@@ -25,6 +28,7 @@ function defaultProfile() {
     v: 2, name: 'Rookie', created: false, look: { ...randomLook(), hat: 'cap_red', clothes: 'tee_basic', shoes: 'kicks_white' }, gear: [...STARTER_GEAR], ink: '#ff2e88', weapon: 'spritzer', owned: ['spritzer'],
     coins: 800, level: 1, xp: 0, lastSkill: 'normal', stats: { matches: 0, wins: 0, turf: 0, kills: 0 },
     settings: { sens: 1, invertY: false, music: 0.6, sfx: 0.85, quality: 'auto' },
+    house: defaultHouse(),
   };
 }
 function loadProfile() {
@@ -39,6 +43,7 @@ function loadProfile() {
     out.owned = (out.owned || ['spritzer']).filter((w) => WEAPONS[w]);
     if (!out.owned.length) out.owned = ['spritzer'];
     if (!WEAPONS[out.weapon]) out.weapon = 'spritzer';
+    out.house = migrateHouse(p.house);
     return out;
   } catch { return d; }
 }
@@ -164,7 +169,7 @@ class App {
     plaza.setTitleMode(true);
     this.menus.title({
       firstTime: !this.profile.created,
-      onPlaza: () => this.enterPlazaFromTitle(),
+      onPlaza: () => this.goHouse(),
       onQuick: () => this.startBattle({ weapon: this.profile.weapon, skill: this.profile.lastSkill, stage: STAGE_IDS[Math.floor(Math.random() * STAGE_IDS.length)] }),
       onOnline: () => { this.enterPlazaFromTitle(true); },
       onSettings: () => this.menus.settings(),
@@ -189,12 +194,23 @@ class App {
 
   async goPlaza() {
     this.input.unlock();
-    const from = this.mode instanceof Battle ? 'battle' : this.mode instanceof Story ? 'story' : 'title';
-    const pl = await this.setMode(() => new Plaza(this, { from }), from === 'story' ? 'Climbing back up to the plaza…' : 'Heading back to Prism Plaza…');
+    const from = this.mode instanceof Battle ? 'battle' : this.mode instanceof Story ? 'story' : this.mode instanceof House ? 'house' : 'title';
+    const pl = await this.setMode(() => new Plaza(this, { from }), from === 'story' ? 'Climbing back up to the plaza…' : from === 'house' ? 'Heading out to Prism Plaza…' : 'Heading back to Prism Plaza…');
     if (!pl) return;
     pl.setTitleMode(false);
     if (!this.newsSeen && this.profile.created && !params.has('nonews')) pl.startNews();
     else pl.toast('Click to look around · <b>E</b> to interact');
+  }
+
+  // --- your house: PLAY from the title starts here; the plaza's home door leads back ---
+  async goHouse() {
+    this.input.unlock();
+    const from = this.mode instanceof Plaza && !this.mode.titleMode ? 'plaza' : 'title';
+    const h = await this.setMode(() => new House(this, { from }), from === 'plaza' ? 'Heading home…' : 'Waking up at home…');
+    if (!h) return null;
+    if (!this.profile.created) h.openUI('locker', { create: true });
+    else h.welcome();
+    return h;
   }
 
   // --- story mode (The Underside) ---
@@ -352,6 +368,9 @@ if (params.has('quick')) {
 } else if (params.has('plaza')) {
   app.profile.created = true;
   app.goPlaza();
+} else if (params.has('house')) { // --- your house ---
+  app.profile.created = true;
+  app.goHouse();
 } else if (params.has('story')) { // --- story mode (The Underside) ---
   app.profile.created = true;
   app.goStory(params.get('story') || 'hub');
