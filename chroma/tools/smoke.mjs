@@ -90,10 +90,45 @@ await step('stage layouts are point-symmetric', async () => {
   }
 });
 
+await step('mode layouts: zones + hoop pads on walkable floor, symmetric, reachable', async () => {
+  const { stageInfo, stageLevel, STAGE_IDS } = await import('../src/world/stage.js');
+  for (const id of STAGE_IDS) {
+    const d = stageInfo(id), m = d.modes;
+    if (!m?.zones?.length || !m.hoop || !m.tip) throw new Error(`${id}: missing modes data`);
+    const lvl = stageLevel(d, new PaintSystem({ size: 1024 }));
+    const nav = new NavGrid(lvl, d.half, 1);
+    const flat = (x, z, y) => Math.abs(lvl.heightAt(x, z).y - y) < 0.05;
+    const spawns = [new THREE.Vector3(0, d.spawnY, -d.spawnZ), new THREE.Vector3(0, d.spawnY, d.spawnZ)];
+    const reach = (p, what) => { for (const s of spawns) if (!nav.path(s, p, 20000)) throw new Error(`${id}: ${what} unreachable from spawn z=${s.z}`); };
+    // zones: mostly flat at their height, the set is point-symmetric, bots can reach them
+    const key = (z) => z.map((v) => v.toFixed(2)).join(',');
+    const keys = new Set(m.zones.map(key));
+    for (const [x0, z0, x1, z1, y] of m.zones) {
+      if (!keys.has(key([-x1, -z1, -x0, -z0, y]))) throw new Error(`${id}: zone ${[x0, z0, x1, z1]} has no mirror`);
+      let n = 0, k = 0, walk = null;
+      for (let x = x0 + 0.25; x < x1; x += 0.5) for (let z = z0 + 0.25; z < z1; z += 0.5) { k++; if (flat(x, z, y)) { n++; walk ||= new THREE.Vector3(x, y, z); } }
+      if (n / k < 0.75) throw new Error(`${id}: zone only ${Math.round(n / k * 100)}% walkable`);
+      reach(walk, 'zone');
+    }
+    // hoop pads (team A's and its mirror) + tip-off spots
+    for (const s of [1, -1]) {
+      const { x, z, y, r } = m.hoop;
+      let n = 0, k = 0;
+      for (let a = -r; a <= r; a += 0.4) for (let b = -r; b <= r; b += 0.4) { if (a * a + b * b > r * r) continue; k++; if (flat(x * s + a, z * s + b, y)) n++; }
+      if (n / k < 0.9) throw new Error(`${id}: hoop pad only ${Math.round(n / k * 100)}% flat`);
+      reach(new THREE.Vector3(x * s, y, (z + 1.5) * s), 'hoop');
+      const [tx, ty, tz] = m.tip;
+      if (!flat(tx * s, tz * s, ty)) throw new Error(`${id}: tip-off spot not on floor at y=${ty}`);
+      reach(new THREE.Vector3(tx * s, ty, tz * s), 'tip-off spot');
+    }
+  }
+});
+
 await step('all modules parse + import', async () => {
   const mods = ['util', 'engine/post', 'engine/input', 'world/env', 'world/textures', 'world/materials', 'world/plaza', 'world/stage',
     'actors/character', 'actors/gear', 'world/news', 'world/rotation', 'actors/fighter', 'actors/weapons', 'actors/player', 'fx/particles', 'ui/hud', 'ui/menus', 'modes/battle', 'modes/plaza', 'audio'];
   mods.push('story/kit', 'story/course', 'story/props', 'story/enemies', 'story/boss', 'story/levels', 'story/dialogue', 'story/hud', 'modes/story');
+  mods.push('modes/modeinfo', 'modes/modekit', 'modes/zones', 'modes/hoops', 'ui/modehud');
   for (const m of mods) await import(`../src/${m}.js`);
 });
 
