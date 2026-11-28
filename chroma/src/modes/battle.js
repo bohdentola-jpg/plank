@@ -11,6 +11,7 @@ import { randomLook } from '../actors/character.js';
 import { BattleHUD } from '../ui/hud.js';
 import { COLOR_PAIRS, pick, hexToCss, damp, clamp, lerp, rand, angleDiff, disposeScene } from '../util.js';
 import { TEAM_A, TEAM_B } from '../world/paint.js';
+import { NetHost, NetClient, paintEvent } from '../net/netbattle.js';
 
 const MATCH_TIME = 180;
 
@@ -22,21 +23,27 @@ export class Battle {
 
   async init() {
     const app = this.app, o = this.opts;
+    const net = o.net || null;
+    if (net) { o.stage = net.match.stage; o.time = net.match.time; o.skill = net.match.skill || 'normal'; }
     const scene = this.scene = new THREE.Scene();
     const camera = this.camera = new THREE.PerspectiveCamera(66, innerWidth / innerHeight, 0.08, 1500);
     const sInfo = stageInfo(o.stage);
     this.env = new Environment(scene, app.renderer, sInfo.sky);
     const st = this.stage = buildStage(o.stage, scene, app.renderer, this.env);
-    const pair = o.colors || pick(COLOR_PAIRS);
-    const flip = Math.random() < 0.5;
-    const ca = new THREE.Color(flip ? pair.b : pair.a), cb = new THREE.Color(flip ? pair.a : pair.b);
+    let ca, cb;
+    if (net) { ca = new THREE.Color(net.match.colors[0]); cb = new THREE.Color(net.match.colors[1]); }
+    else {
+      const pair = o.colors || pick(COLOR_PAIRS);
+      const flip = Math.random() < 0.5;
+      ca = new THREE.Color(flip ? pair.b : pair.a); cb = new THREE.Color(flip ? pair.a : pair.b);
+    }
     this.colors = { 0: new THREE.Color(0xffffff), 1: ca, 2: cb };
     st.paint.setColors(ca, cb);
     st.decor.setTeamColors(ca, cb);
     // pre-paint spawn pads
     for (const t of [1, 2]) {
       const c = st.spawns[t].reduce((a, p) => a.add(p), new THREE.Vector3()).divideScalar(4);
-      st.paint.splat(c.clone().setY(c.y + 0.02), 3.6, t, { wobble: 0.12 });
+      st.paint.splat(c.clone().setY(c.y + 0.02), 3.6, t, { wobble: 0.12, phase: 1.7 + t }); // deterministic for netplay
     }
 
     const fx = this.fx = new Particles(scene);
@@ -47,19 +54,32 @@ export class Battle {
       onSplat: (v, a, kind) => this.onSplat(v, a, kind),
       onPlayerHurt: (dmg, a) => { this.hud.hurt(a ? a.color : this.colors[3 - this.player.team]); this.rig.shake(0.4, 0.25); app.audio?.sfx('hurt', { volume: 0.6 }); },
       onLowInk: () => this.hud.lowInkWarn(),
-      onSpecial: (f) => { if (f !== this.player) this.hud.feedMsg(`<b style="color:${hexToCss(f.color)}">${f.name}</b> used a special!`); },
+      onSpecial: (f) => {
+        if (f !== this.player) this.hud.feedMsg(`<b style="color:${hexToCss(f.color)}">${f.name}</b> used a special!`);
+        if (this.net?.role === 'host') this.net.emit({ e: 'sp', f: f.netId });
+      },
       onExplosion: (p, r) => { if (this.player && p.distanceTo(this.player.pos) < r * 3) this.rig.shake(0.5 * r / 3, 0.35); },
     };
     world.combat = this.combat = new Combat(world);
+    if (net) {
+      this.net = world.net = net.room.isHost ? new NetHost(this, net.room) : new NetClient(this, net.room);
+      if (this.net.role === 'host') st.paint.onSplat = (p, r, team, ph, wob, drips) => this.net.emit(paintEvent(p, r, team, ph, wob, drips));
+      else { st.paint.locked = true; world.canRespawn = false; }
+    }
 
     // fighters
     const prof = app.profile;
-    const names = botNames(7, [prof.name]);
-    const weapons = WEAPON_IDS;
-    const roster = [];
-    roster.push({ name: prof.name, team: 1, look: prof.look, weapon: o.weapon, isPlayer: true });
-    for (let i = 0; i < 3; i++) roster.push({ name: names[i], team: 1, look: randomLook(), weapon: pick(weapons) });
-    for (let i = 0; i < 4; i++) roster.push({ name: names[3 + i], team: 2, look: randomLook(), weapon: pick(weapons) });
+    let roster = [];
+    if (net) {
+      const myId = net.room.myId;
+      roster = net.match.roster.map((r) => ({ name: r.name, team: r.team, look: r.look, weapon: r.weapon, isPlayer: r.id === myId, bot: r.bot, peer: r.bot ? null : r.id }));
+    } else {
+      const names = botNames(7, [prof.name]);
+      const weapons = WEAPON_IDS;
+      roster.push({ name: prof.name, team: 1, look: prof.look, weapon: o.weapon, isPlayer: true });
+      for (let i = 0; i < 3; i++) roster.push({ name: names[i], team: 1, look: randomLook(), weapon: pick(weapons), bot: true });
+      for (let i = 0; i < 4; i++) roster.push({ name: names[3 + i], team: 2, look: randomLook(), weapon: pick(weapons), bot: true });
+    }
     const nav = this.nav = new NavGrid(st.level, st.bounds, 1);
     this.bots = [];
     const counters = { 1: 0, 2: 0 };
@@ -69,10 +89,16 @@ export class Battle {
       f.spawnPoint.copy(st.spawns[r.team][idx]);
       f.spawnYaw = r.team === 1 ? 0 : Math.PI;
       f.place(f.spawnPoint, f.spawnYaw);
+      f.netId = world.fighters.length;
       world.fighters.push(f);
       if (r.isPlayer) this.player = f;
-      else this.bots.push(new Bot(f, world, nav, o.skill));
+      else if (!net || this.net.role === 'host') {
+        if (r.bot) this.bots.push(new Bot(f, world, nav, o.skill));
+        else { f.puppet = 'host'; f.peer = r.peer; this.net.byPeer.set(r.peer, f); }
+      } else f.puppet = 'client';
     }
+    world.viewTeam = this.player.team;
+    world.onRespawn = (f) => { if (this.net?.role === 'host') this.net.emit({ e: 'spawn', v: f.netId }); };
     this.autoplay = new URLSearchParams(location.search).has('autoplay');
     if (this.autoplay) this.bots.push(new Bot(this.player, world, nav, o.skill));
     this.rig = new CameraRig(camera);
@@ -103,23 +129,29 @@ export class Battle {
     // warm up shaders
     app.renderer.compile(scene, camera);
     app.audio?.music('lobby');
-    this.hud.showBanner(`<span class="mode">TURF RUSH</span>`, st.name, 'intro', 3.6);
+    this.hud.showBanner(`<span class="mode">TURF RUSH</span>`, net ? `${st.name} · ONLINE` : st.name, 'intro', 3.6);
     this.introFrom = Math.random() < 0.5 ? 1 : -1;
     const bb = st.bounds;
     this.sizeK = Math.max(1, (bb.maxZ - bb.minZ) / 80);
     this.song = pick(['battle', 'battle_b', 'battle_c']);
     if (new URLSearchParams(location.search).has('skipintro')) this.stateT = 99;
+    if (this.net?.role === 'client') net.room.send({ t: 'ready' });
   }
 
   // ---------------------------------------------------------------- events
-  onHit(attacker, victim, dmg) {
+  onHit(attacker, victim, dmg, kill) {
     if (attacker === this.player && victim !== this.player) {
-      this.hud.hitMarker(!victim.alive);
+      this.hud.hitMarker(kill ?? !victim.alive);
       this.app.audio?.sfx('hit', { volume: 0.5 });
+    }
+    if (this.net?.role === 'host') {
+      if (attacker?.peer) this.net.to(attacker.peer, { e: 'hit', v: victim.netId, d: Math.round(dmg), k: victim.alive ? 0 : 1 });
+      if (victim?.peer) this.net.to(victim.peer, { e: 'hurt', a: attacker ? attacker.netId : -1, d: Math.round(dmg) });
     }
   }
 
   onSplat(victim, attacker, kind) {
+    if (this.net?.role === 'host') this.net.emit({ e: 'kill', v: victim.netId, a: attacker && attacker.netId >= 0 ? attacker.netId : -1, k: kind });
     const c = (f) => hexToCss(f.color);
     if (attacker && attacker !== victim) {
       this.hud.feedMsg(`<b style="color:${c(attacker)}">${attacker.name}</b> <span class="fx">splashed</span> <b style="color:${c(victim)}">${victim.name}</b>`);
@@ -140,9 +172,58 @@ export class Battle {
     if (p) for (const k of Object.keys(this.player.loops)) this.player.stopLoop(k);
     this.app.menus.pause(p, {
       onResume: () => { this.setPaused(false); this.app.input.lock(); },
-      onQuit: () => { this.app.menus.pause(false); this.app.goPlaza(); },
-      quitLabel: 'FORFEIT & RETURN TO PLAZA',
+      onQuit: () => { this.app.menus.pause(false); if (this.net) this.app.leaveRoom(); this.app.goPlaza(); },
+      quitLabel: this.net ? 'LEAVE ONLINE MATCH' : 'FORFEIT & RETURN TO PLAZA',
     });
+  }
+
+  onHostLost(why) {
+    if (this.app.mode !== this) return;
+    this.app.menus.pause(false);
+    this.app.toast(why || 'Lost connection to the host.');
+    this.app.leaveRoom();
+    this.app.goPlaza();
+  }
+
+  // ---------------------------------------------------------------- state changes (shared by host + clients)
+  enter(state) {
+    const app = this.app, w = this.world;
+    if (this.state === state) return;
+    this.state = state; this.stateT = 0;
+    if (state === 'countdown') {
+      this.hud.showPlayUI(true);
+      this.hud.showBanner('READY?', '', 'ready', 1.4);
+      app.audio?.sfx('countdown');
+      app.audio?.music(this.song);
+      this.goShown = false;
+      this.hud.showHint(app.input.usingPad
+        ? '<b>L-stick</b> move · <b>R-stick</b> aim · <b>RT</b> fire · <b>LT</b> swim · <b>A</b> jump · <b>RB</b> sub · <b>Y</b> special · <b>Back</b> map'
+        : '<b>WASD</b> move · <b>Mouse</b> aim · <b>LMB</b> fire · <b>SHIFT</b> swim in ink · <b>SPACE</b> jump · <b>RMB</b> sub · <b>Q</b> special · <b>TAB</b> map', 9);
+    } else if (state === 'play') {
+      w.combatOn = true;
+    } else if (state === 'end') {
+      w.combatOn = false;
+      w.canRespawn = false;
+      this.hud.showBanner('TIME!', '', 'time', 2.4);
+      app.audio?.sfx('whistle');
+      app.audio?.music(null);
+    }
+    if (this.net?.role === 'host') this.net.phase(state);
+  }
+
+  netPhase(m) {
+    if (m.s === 'countdown' && this.state === 'intro') this.enter('countdown');
+    else if (m.s === 'play' && (this.state === 'countdown' || this.state === 'intro')) { if (this.state === 'intro') this.enter('countdown'); this.enter('play'); }
+    else if (m.s === 'end' && this.state !== 'end' && this.state !== 'judge' && this.state !== 'results') this.enter('end');
+  }
+
+  netResult(r) {
+    r.stats?.forEach((st, i) => {
+      const f = this.world.fighters[i];
+      if (f) { f.stats.turf = st[0]; f.stats.kills = st[1]; f.stats.deaths = st[2]; f.stats.assists = st[3]; }
+    });
+    if (this.state !== 'end') this.enter('end');
+    this.startJudge({ a: r.a, b: r.b, winner: r.winner });
   }
 
   onLockLost() {
@@ -153,10 +234,12 @@ export class Battle {
     const app = this.app, inp = app.input;
     if (this.state === 'results') { this.renderOnly = true; this.env.update(dt); this.fx.update(dt); return; }
     if (inp.action('pause') && (this.state === 'play' || this.state === 'countdown')) { this.setPaused(!this.paused); if (this.paused) inp.unlock(); }
-    if (this.paused) return;
+    if (this.paused && !this.net) return; // online matches keep running behind the menu
     this.time += dt;
     this.stateT += dt;
     const w = this.world;
+    const client = this.net?.role === 'client';
+    this.net?.update(dt);
     // ---- states
     if (this.state === 'intro') {
       const t = clamp(this.stateT / 4, 0, 1);
@@ -167,21 +250,14 @@ export class Battle {
       const fz = this.player.team === 1 ? -1 : 1;
       this.camera.position.set(Math.cos(a) * R, H, Math.sin(a) * R * fz * -1 + fz * 10 * e * k);
       this.camera.lookAt(0, 0, fz * 12 * e * k);
-      if (this.stateT > 4 || (this.stateT > 0.8 && (inp.action('confirm') || inp.mousePressed[0]))) {
-        this.state = 'countdown'; this.stateT = 0;
-        this.hud.showPlayUI(true);
-        this.hud.showBanner('READY?', '', 'ready', 1.4);
-        app.audio?.sfx('countdown');
-        app.audio?.music(this.song);
-        this.hud.showHint(app.input.usingPad
-          ? '<b>L-stick</b> move · <b>R-stick</b> aim · <b>RT</b> fire · <b>LT</b> swim · <b>A</b> jump · <b>RB</b> bomb · <b>Y</b> special · <b>Back</b> map'
-          : '<b>WASD</b> move · <b>Mouse</b> aim · <b>LMB</b> fire · <b>SHIFT</b> swim in ink · <b>SPACE</b> jump · <b>RMB</b> bomb · <b>Q</b> special · <b>TAB</b> map', 9);
-      }
+      const skip = !this.net && this.stateT > 0.8 && (inp.action('confirm') || inp.mousePressed[0]);
+      const loaded = !this.net || client || this.net.allReady() || this.stateT > 15;
+      if (!client && ((this.stateT > (this.net ? 5 : 4) && loaded) || skip)) this.enter('countdown');
     } else if (this.state === 'countdown') {
       if (this.stateT > 1.5 && !this.goShown) { this.goShown = true; this.hud.showBanner('GO!', '', 'go', 1.0); app.audio?.sfx('go'); }
-      if (this.stateT > 1.9) { this.state = 'play'; this.stateT = 0; w.combatOn = true; }
+      if (!client && this.stateT > 1.9) this.enter('play');
     } else if (this.state === 'play') {
-      this.timeLeft -= dt;
+      this.timeLeft = Math.max(0, this.timeLeft - dt);
       if (this.timeLeft <= 60 && !this.oneMin) {
         this.oneMin = true;
         this.hud.showBanner('1 MINUTE LEFT!', '', 'warn', 2);
@@ -192,17 +268,12 @@ export class Battle {
         this.lastTick = Math.ceil(this.timeLeft);
         app.audio?.sfx('countdown', { volume: 0.6 });
       }
-      if (this.timeLeft <= 0) {
+      if (this.timeLeft <= 0 && !client) {
         this.timeLeft = 0;
-        this.state = 'end'; this.stateT = 0;
-        w.combatOn = false;
-        w.canRespawn = false;
-        this.hud.showBanner('TIME!', '', 'time', 2.4);
-        app.audio?.sfx('whistle');
-        app.audio?.music(null);
+        this.enter('end');
       }
     } else if (this.state === 'end') {
-      if (this.stateT > 2.6) this.startJudge();
+      if (this.stateT > 2.6 && !client) this.startJudge();
     } else if (this.state === 'judge') {
       this.updateJudge(dt);
       this.env.update(dt);
@@ -252,6 +323,7 @@ export class Battle {
     u.uDesat.value += ((p.alive ? hurtK * 0.3 : 0.45) - u.uDesat.value) * damp(6, dt);
     // ---- HUD
     if (this.state !== 'intro') this.hud.update(dt, this.camera, { aimTarget: this.control.aimTarget, pad: inp.usingPad });
+    this.net?.flush(dt);
     this.mapOpen = inp.action('map') && this.state !== 'intro';
     // click to lock pointer
     if (!inp.locked && inp.mousePressed[0] && this.state !== 'intro') inp.lock();
@@ -259,16 +331,24 @@ export class Battle {
   }
 
   // ---------------------------------------------------------------- judge
-  startJudge() {
+  startJudge(given = null) {
+    if (this.state === 'judge' || this.state === 'results') return;
     this.state = 'judge'; this.stateT = 0;
     this.app.post.resetGrade();
     this.hud.showPlayUI(false);
     this.hud.cover(false);
     if (this.scene.fog) this.scene.fog.density *= 0.35;
     this.hud.hideBanner();
-    const cov = this.stage.paint.coverage();
-    const a = cov.a * 100, b = cov.b * 100;
-    this.result = { a, b, winner: a >= b ? 1 : 2 };
+    if (given) this.result = given;
+    else {
+      const cov = this.stage.paint.coverage();
+      const a = cov.a * 100, b = cov.b * 100;
+      this.result = { a, b, winner: a >= b ? 1 : 2 };
+    }
+    if (this.net?.role === 'host') {
+      this.net.result({ ...this.result, stats: this.world.fighters.map((f) => [Math.round(f.stats.turf), f.stats.kills, f.stats.deaths, f.stats.assists]) });
+      this.net.flush(0);
+    }
     for (const f of this.world.fighters) f.model.root.visible = f.alive;
     this.app.menus.judge(this.result, this.colors, this.player.team, () => this.showResults());
     this.app.audio?.sfx('judge_drum');
@@ -306,10 +386,17 @@ export class Battle {
     this.app.input.unlock();
     const summary = { won, coins, xp, turf: turfPts, kills: p.stats.kills, deaths: p.stats.deaths, stage: this.stage.name, weapon: p.weapon.id, pct: won ? Math.max(r.a, r.b) : Math.min(r.a, r.b) };
     const prog = this.app.grantRewards(summary);
-    this.app.menus.results({ ...summary, rows, colors: this.colors, myTeam: p.team, result: r, prog }, {
-      onPlaza: () => this.app.goPlaza(),
-      onAgain: () => this.app.startBattle({ ...this.opts }),
-    });
+    if (this.net) {
+      this.app.menus.results({ ...summary, rows, colors: this.colors, myTeam: p.team, result: r, prog, plazaLabel: 'LEAVE ROOM', againLabel: 'BACK TO ROOM' }, {
+        onPlaza: () => { this.app.leaveRoom(); this.app.goPlaza(); },
+        onAgain: () => this.app.backToRoom(),
+      });
+    } else {
+      this.app.menus.results({ ...summary, rows, colors: this.colors, myTeam: p.team, result: r, prog }, {
+        onPlaza: () => this.app.goPlaza(),
+        onAgain: () => this.app.startBattle({ ...this.opts }),
+      });
+    }
     // winners pose on their spawn deck for the background
     this.resultCam = true;
     const wt = r.winner;
@@ -351,6 +438,8 @@ export class Battle {
   }
 
   dispose() {
+    this.net?.dispose();
+    this.world.net = null;
     for (const f of this.world.fighters) f.dispose();
     this.combat.dispose();
     this.fx.dispose();

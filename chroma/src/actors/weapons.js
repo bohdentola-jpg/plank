@@ -150,6 +150,13 @@ export class Combat {
 
   color(team) { return this.world.colors[team]; }
 
+  // ---- networking helpers
+  get net() { return this.world.net || null; }
+  isClientLocal(owner) { const n = this.world.net; return n && n.role === 'client' && owner === n.local; }
+  isClient() { return this.world.net?.role === 'client'; }
+  emit(e) { const n = this.world.net; if (n && n.role === 'host' && !this.silent) n.emit(e, n.fromPeer); }
+  emitAll(e) { const n = this.world.net; if (n && n.role === 'host') n.emit(e, null); }
+
   alloc() {
     for (let k = 0; k < this.max; k++) {
       const p = this.proj[this.cursor];
@@ -164,7 +171,27 @@ export class Combat {
     p.alive = true; p.kind = kind; p.owner = owner; p.team = owner.team;
     p.pos.copy(origin); p.vel.copy(vel);
     p.travelled = 0; p.trailAcc = 0;
-    Object.assign(p, { dmg: 0, splat: 0.7, range: 99, trailEvery: 0, trail: 0, size: 0.1, grav: 0, def: null, blastR: 0, falloff: 0.6, burst: false, life: 0 }, opts);
+    Object.assign(p, { dmg: 0, splat: 0.7, range: 99, trailEvery: 0, trail: 0, size: 0.1, grav: 0, def: null, blastR: 0, falloff: 0.6, burst: false, life: 0, cosmetic: false, fell: false }, opts);
+    p.splashDmg = opts?.splashDmg;
+    const n = this.world.net;
+    if (n?.role === 'client') {
+      p.cosmetic = true;
+      if (owner === n.local && !this.silent) {
+        const o = {}; for (const k of ['dmg', 'splat', 'range', 'trailEvery', 'trail', 'size', 'grav', 'blastR', 'splashDmg', 'falloff', 'burst']) if (p[k] !== undefined) o[k] = p[k];
+        n.action({ m: 'fire', k: kind, p: v3a(origin), v: v3a(vel), o }, owner);
+      }
+    } else if (n?.role === 'host' && !this.silent) {
+      n.emit({ e: 'proj', k: kind, p: v3a(origin), v: v3a(vel), s: p.size, g: p.grav, r: Math.round(p.range * 10) / 10, t: p.team, b: p.burst ? 1 : 0 }, n.fromPeer);
+    }
+    return p;
+  }
+
+  // a projectile that only exists to be seen (clients render host projectiles this way)
+  fireCosmetic(team, kind, origin, vel, size, grav, range) {
+    const p = this.alloc();
+    p.alive = true; p.kind = kind; p.owner = null; p.team = team;
+    p.pos.copy(origin); p.vel.copy(vel);
+    Object.assign(p, { travelled: 0, trailAcc: 0, dmg: 0, splat: 0.7, range, trailEvery: 0, trail: 0, size, grav, def: null, blastR: 0, falloff: 0.6, burst: false, life: 0, cosmetic: true, fell: false });
     return p;
   }
 
@@ -306,11 +333,27 @@ export class Combat {
     b.mesh.scale.set(0.06 + charge * 0.05, 0.06 + charge * 0.05, end);
     b.mesh.material.color.copy(col).multiplyScalar(2.2);
     w.audio?.sfx(full ? 'charge_shot' : 'shoot_heavy', { ...posOf(origin), volume: 0.9 });
+    const fx = { e: 'beam', p: v3a(origin), d: v3a(dir), l: Math.round(end * 100) / 100, c: Math.round(charge * 100) / 100, t: owner.team };
+    if (this.isClientLocal(owner)) this.net.action({ m: 'beamfx', ...fx }, owner);
+    else this.emit(fx);
+  }
+
+  beamVisual(team, origin, dir, len, charge) {
+    const b = this.beams.find((x) => x.t <= 0) || this.beams[0];
+    b.t = 0.28; b.max = 0.28;
+    b.mesh.visible = true;
+    b.mesh.position.copy(origin);
+    b.mesh.quaternion.setFromUnitVectors(_zAxis, dir);
+    b.mesh.scale.set(0.06 + charge * 0.05, 0.06 + charge * 0.05, len);
+    b.mesh.material.color.copy(this.color(team)).multiplyScalar(2.2);
+    this.world.audio?.sfx(charge >= 0.999 ? 'charge_shot' : 'shoot_heavy', { ...posOf(origin), volume: 0.8 });
   }
 
   // ---------------------------------------------------------------- subs
-  throwSub(owner, kind, origin, dir) {
+  throwSub(owner, kind, origin, dir, cosmetic = false) {
     const w = this.world;
+    if (this.isClientLocal(owner)) { this.net.action({ m: 'sub', k: kind, p: v3a(origin), d: v3a(dir) }, owner); cosmetic = true; }
+    else if (this.isClient()) cosmetic = true;
     const m = buildBombModel(this.color(owner.team), kind);
     m.position.copy(origin);
     w.scene.add(m);
@@ -318,7 +361,8 @@ export class Combat {
     if (kind === 'skid') { vel.y = 0; vel.normalize().multiplyScalar(9); vel.y = 2; }
     else if (kind === 'popbomb') { vel.multiplyScalar(14); vel.y += 3.5; }
     else { vel.multiplyScalar(11.5); vel.y += 4.5; }
-    const b = { kind, owner, team: owner.team, mesh: m, pos: origin.clone(), vel, fuse: -1, beeps: 0, life: 0, landed: false, stuck: false, trailAcc: 0 };
+    const b = { kind, owner, team: owner.team, mesh: m, pos: origin.clone(), vel, fuse: -1, beeps: 0, life: 0, landed: false, stuck: false, trailAcc: 0, cosmetic };
+    if (!cosmetic) this.emit({ e: 'bomb', k: kind, p: v3a(origin), d: v3a(dir), t: owner.team });
     if (kind === 'sprinkler') {
       for (const s of this.sprinklers) if (s.owner === owner) s.life = 999; // one per owner
     }
@@ -328,6 +372,7 @@ export class Combat {
 
   // ---------------------------------------------------------------- specials
   barrage(owner, target) {
+    if (this.isClientLocal(owner)) { this.net.action({ m: 'barrage', p: v3a(target) }, owner); this.world.audio?.sfx('special_go', posOf(owner.pos)); return; }
     for (let i = 0; i < 9; i++) {
       this.pending.push({ t: i * 0.11, owner, target: target.clone().add(new THREE.Vector3(rand(-5, 5), 0, rand(-5, 5))) });
     }
@@ -341,8 +386,10 @@ export class Combat {
     this.fire(owner, 'big', from, vel, { dmg: 75, splat: 2.4, grav: 1, size: 0.42, blastR: 2.0, splashDmg: 75 });
   }
 
-  rainCloud(owner, target, dir) {
+  rainCloud(owner, target, dir, cosmetic = false) {
     const w = this.world;
+    if (this.isClientLocal(owner)) { this.net.action({ m: 'rain', p: v3a(target), d: v3a(dir) }, owner); return; }
+    if (!cosmetic) this.emitAll({ e: 'cloud', p: v3a(target), d: v3a(dir), t: owner.team });
     const grp = new THREE.Group();
     const mat = new THREE.MeshPhysicalMaterial({ color: this.color(owner.team), roughness: 0.6, clearcoat: 0.5, transparent: true, opacity: 0.85 });
     const dark = new THREE.MeshStandardMaterial({ color: 0x3a3550, roughness: 0.9, transparent: true, opacity: 0.85 });
@@ -357,25 +404,32 @@ export class Combat {
     grp.position.set(target.x, y, target.z);
     w.scene.add(grp);
     const d = dir.clone().setY(0).normalize().multiplyScalar(1.2);
-    this.clouds.push({ owner, team: owner.team, grp, mats: [mat, dark], vel: d, t: 7, dropT: 0, hitT: 0 });
+    this.clouds.push({ owner, team: owner.team, grp, mats: [mat, dark], vel: d, t: 7, dropT: 0, hitT: 0, cosmetic: cosmetic || this.isClient() });
     w.audio?.sfx('rain_start', posOf(target));
   }
 
-  bubble(owner) {
+  bubble(owner, cosmetic = false, at = null) {
     const w = this.world;
+    if (this.isClientLocal(owner)) { this.net.action({ m: 'bubble' }, owner); return; }
     const mat = new THREE.MeshPhysicalMaterial({ color: this.color(owner.team), roughness: 0.05, transparent: true, opacity: 0.22, clearcoat: 1, side: THREE.DoubleSide, depthWrite: false, emissive: this.color(owner.team), emissiveIntensity: 0.25 });
     const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 20), mat);
     mesh.geometry.userData.own = true;
-    const pos = owner.pos.clone().setY(owner.pos.y + 0.4);
+    const pos = at ? at.clone() : owner.pos.clone().setY(owner.pos.y + 0.4);
+    if (!cosmetic) this.emitAll({ e: 'dome', p: v3a(pos), t: owner.team });
     mesh.position.copy(pos);
     mesh.scale.setScalar(0.1);
     w.scene.add(mesh);
-    this.domes.push({ owner, team: owner.team, pos, r: 3.6, mesh, t: 6.5, hp: 1200 });
+    this.domes.push({ owner, team: owner.team, pos, r: 3.6, mesh, t: 6.5, hp: 1200, cosmetic: cosmetic || this.isClient() });
     w.audio?.sfx('shield_up', posOf(pos));
   }
 
   explode(pos, owner, radius, dmgMax, dmgMin, paintR, opts = {}) {
     const w = this.world;
+    if (this.isClient()) {
+      if (owner === this.net.local) this.net.action({ m: 'explode', p: v3a(pos), r: radius, a: dmgMax, b: dmgMin, pr: paintR, x: opts.extra ?? 4, s: opts.sound || null }, owner);
+      return; // the host's 'boom' event draws it
+    }
+    this.emitAll({ e: 'boom', p: v3a(pos), r: radius, t: owner.team, s: opts.sound || null });
     const col = this.color(owner.team);
     this.paint(owner, pos, paintR, { drips: 3 });
     for (let i = 0; i < (opts.extra ?? 4); i++) {
@@ -400,12 +454,20 @@ export class Combat {
   }
 
   paint(owner, p, r, opts) {
+    if (this.isClient()) {
+      if (owner === this.net.local) this.net.action({ m: 'paint', p: v3a(p), r: Math.round(r * 100) / 100, o: opts ? { drips: opts.drips || 0, wobble: opts.wobble } : null }, owner);
+      return 0;
+    }
     const gained = this.world.paint.splat(p, r, owner.team, opts);
     if (gained > 0) owner.addTurf?.(gained);
     return gained;
   }
 
   damage(victim, dmg, attacker, kind) {
+    if (this.isClient()) {
+      if (attacker === this.net.local && victim.netId >= 0) this.net.action({ m: 'dmg', v: victim.netId, d: Math.round(dmg), k: kind }, attacker);
+      return;
+    }
     if (!victim.alive) return;
     victim.takeDamage(dmg, attacker, kind);
     this.world.onHit?.(attacker, victim, dmg);
@@ -515,6 +577,7 @@ export class Combat {
     if (step < 1e-5) return;
     _v.copy(p.vel).divideScalar(step / dt).normalize();
     _a.copy(p.pos); _b.copy(p.pos).addScaledVector(_v, step);
+    if (p.cosmetic) { this.stepCosmetic(p, step); return; }
     // shields
     if (this.domes.length || w.fighters.some((f) => f.shieldOpen)) {
       const blk = this.blocked(_a, _b, p.team, p.dmg);
@@ -574,6 +637,19 @@ export class Combat {
     if (p.pos.y < w.level.killY - 2 || p.life > 6) p.alive = false;
   }
 
+  stepCosmetic(p, step) {
+    const w = this.world;
+    const hit = w.level.raycast(p.pos, _v, step);
+    if (hit) {
+      w.fx.splash(hit.point, hit.normal, this.color(p.team), p.kind === 'slosh' ? 8 : 4, 2.4, 0.05);
+      p.alive = false;
+      return;
+    }
+    p.pos.addScaledVector(_v, step);
+    p.travelled += step;
+    if ((p.kind === 'blob' && p.travelled > p.range && !p.grav) || (p.kind === 'wave' && p.travelled > p.range) || p.pos.y < w.level.killY - 2 || p.life > 6) p.alive = false;
+  }
+
   updateBombs(dt) {
     const w = this.world;
     for (let i = this.bombs.length - 1; i >= 0; i--) {
@@ -594,7 +670,7 @@ export class Combat {
               b.fuse = b.kind === 'sticky' ? 1.25 : -1;
               w.audio?.sfx(b.kind === 'sticky' ? 'sticky_attach' : 'sprinkler_place', posOf(b.pos));
               if (b.kind === 'sprinkler') {
-                this.sprinklers.push({ owner: b.owner, team: b.team, pos: b.pos.clone(), normal: b.normal, mesh: b.mesh, life: 0, t: 0 });
+                this.sprinklers.push({ owner: b.owner, team: b.team, pos: b.pos.clone(), normal: b.normal, mesh: b.mesh, life: 0, t: 0, cosmetic: b.cosmetic });
                 b.mesh.quaternion.setFromUnitVectors(_up, b.normal);
                 this.bombs.splice(i, 1);
                 continue;
@@ -632,7 +708,7 @@ export class Combat {
         if (beat > b.beeps && b.beeps < 4 && (b.kind !== 'skid' || b.fuse < 0.6)) { b.beeps = beat; w.audio?.sfx('bomb_beep', { ...posOf(b.pos), pitch: 1 + b.beeps * 0.12 }); }
       }
       if (done || (b.fuse < 0 && (b.landed || b.stuck)) || b.life > 6 || b.pos.y < w.level.killY - 1) {
-        if (b.pos.y > w.level.killY) {
+        if (b.pos.y > w.level.killY && !b.cosmetic) {
           if (b.kind === 'popbomb') this.explode(b.pos.clone(), b.owner, 2.1, 60, 25, 1.6, { extra: 2, sound: 'pop_bomb' });
           else if (b.kind === 'sticky') this.explode(b.pos.clone(), b.owner, 3.8, 180, 35, 3.4, { extra: 7 });
           else if (b.kind === 'skid') this.explode(b.pos.clone(), b.owner, 2.9, 180, 30, 2.6, { extra: 5 });
@@ -646,6 +722,7 @@ export class Combat {
 
   updateSprinklers(dt) {
     const w = this.world;
+    this.silent = true; // drops are simulated on every machine, never sent
     for (let i = this.sprinklers.length - 1; i >= 0; i--) {
       const s = this.sprinklers[i];
       s.life += dt; s.t -= dt;
@@ -656,15 +733,19 @@ export class Combat {
         for (let k = 0; k < 2; k++) {
           const a = Math.random() * Math.PI * 2;
           _v.set(Math.cos(a), 0, Math.sin(a)).addScaledVector(s.normal, 1.3).normalize().multiplyScalar(rand(6, 9));
-          this.fire(s.owner, 'flick', s.pos.clone().addScaledVector(s.normal, 0.25), _v, { dmg: 18, splat: 0.6, grav: 1, size: 0.11 });
+          const o = s.pos.clone().addScaledVector(s.normal, 0.25);
+          if (s.cosmetic) this.fireCosmetic(s.team, 'flick', o, _v, 0.11, 1, 0);
+          else this.fire(s.owner, 'flick', o, _v, { dmg: 18, splat: 0.6, grav: 1, size: 0.11 });
         }
       }
-      if (s.life > 20 || !s.owner.alive && s.life > 2) { this.disposeMesh(s.mesh); this.sprinklers.splice(i, 1); }
+      if (s.life > 20 || (!s.cosmetic && !s.owner.alive && s.life > 2)) { this.disposeMesh(s.mesh); this.sprinklers.splice(i, 1); }
     }
+    this.silent = false;
   }
 
   updateClouds(dt) {
     const w = this.world;
+    this.silent = true;
     for (let i = this.clouds.length - 1; i >= 0; i--) {
       const c = this.clouds[i];
       c.t -= dt;
@@ -675,13 +756,15 @@ export class Combat {
         c.dropT = 0.05;
         for (let k = 0; k < 2; k++) {
           _a.set(c.grp.position.x + rand(-2.4, 2.4), c.grp.position.y - 0.8, c.grp.position.z + rand(-1.8, 1.8));
-          this.fire(c.owner, 'flick', _a, _v.set(0, -14, 0), { dmg: 9, splat: 0.55, grav: 1, size: 0.08 });
+          if (c.cosmetic) this.fireCosmetic(c.team, 'flick', _a, _v.set(0, -14, 0), 0.08, 1, 0);
+          else this.fire(c.owner, 'flick', _a, _v.set(0, -14, 0), { dmg: 9, splat: 0.55, grav: 1, size: 0.08 });
         }
       }
       const k = clamp(c.t / 0.6, 0, 1) * clamp((7 - c.t) / 0.4, 0, 1);
       for (const m of c.mats) m.opacity = 0.85 * k;
       if (c.t <= 0) { this.disposeMesh(c.grp); this.clouds.splice(i, 1); }
     }
+    this.silent = false;
   }
 
   updateDomes(dt) {
@@ -691,8 +774,8 @@ export class Combat {
       const grow = Math.min(1, (6.5 - d.t) / 0.35);
       d.mesh.scale.setScalar(d.r * grow * (1 + Math.sin(d.t * 6) * 0.01));
       d.mesh.material.opacity = 0.22 * Math.min(1, d.t / 0.5);
-      // allies inside regain ink
-      for (const f of this.world.fighters) if (f.team === d.team && f.alive && f.pos.distanceTo(d.pos) < d.r) f.ink = Math.min(1, f.ink + 0.3 * dt);
+      // allies inside regain ink (each machine refills its own player)
+      for (const f of this.world.fighters) if (f.team === d.team && f.alive && !f.puppet && f.pos.distanceTo(d.pos) < d.r) f.ink = Math.min(1, f.ink + 0.3 * dt);
       if (d.t <= 0 || d.hp <= 0) {
         this.world.fx.splash(d.pos, _up, this.color(d.team), 24, 6, 0.1, 1.5);
         this.world.audio?.sfx('shield_break', posOf(d.pos));
@@ -729,3 +812,4 @@ export class Combat {
 }
 
 export function posOf(v) { return { x: v.x, y: v.y, z: v.z }; }
+export function v3a(v) { return [Math.round(v.x * 1000) / 1000, Math.round(v.y * 1000) / 1000, Math.round(v.z * 1000) / 1000]; }

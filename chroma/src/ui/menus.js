@@ -1,6 +1,7 @@
 // All overlay menus (DOM). Each takes callbacks; the app owns game state.
 import { WEAPONS, WEAPON_IDS, SPECIALS, SUBS } from '../actors/weapons.js';
 import { currentRotation } from '../world/rotation.js';
+import { MODES } from '../net/room.js';
 import { SKIN_TONES, EYE_COLORS, CRESTS, PATTERNS, PATTERN_COLORS, BOTTOMS, CREST_LABEL, PATTERN_LABEL, HATS, CLOTHES, SHOES, ABILITIES } from '../actors/gear.js';
 import { COLOR_PAIRS, hexToCss } from '../util.js';
 import { STAGE_IDS, stageInfo } from '../world/stage.js';
@@ -42,7 +43,7 @@ export class Menus {
   }
 
   // ------------------------------------------------------------ title
-  title({ onPlaza, onQuick, onSettings, firstTime }) {
+  title({ onPlaza, onQuick, onOnline, onSettings, firstTime }) {
     const node = el(`
       <div class="overlay title-screen">
         <div class="logo">
@@ -53,7 +54,8 @@ export class Menus {
         <div class="press">PRESS ANY BUTTON</div>
         <div class="title-menu">
           <button class="btn big" data-a="plaza">${firstTime ? '✦ CREATE YOUR CHROMELEON' : '▶ ENTER PRISM PLAZA'}</button>
-          <button class="btn" data-a="quick">⚡ QUICK BATTLE</button>
+          <button class="btn online-btn" data-a="online">🌐 PLAY ONLINE</button>
+          <button class="btn" data-a="quick">⚡ QUICK CPU BATTLE</button>
           <button class="btn ghost" data-a="settings">⚙ SETTINGS</button>
         </div>
         <div class="title-foot">An original game · Built with Three.js · Mouse + keyboard or controller</div>
@@ -81,6 +83,7 @@ export class Menus {
       this.sfx('ui_select');
       if (a === 'plaza') { done(); onPlaza(); }
       if (a === 'quick') { done(); onQuick(); }
+      if (a === 'online') { done(); if (firstTime) onPlaza(); else onOnline(); }
       if (a === 'settings') onSettings();
     }));
     this.padNav(node, () => armed);
@@ -172,6 +175,161 @@ export class Menus {
     setTimeout(() => { if (this._pauseEsc === esc) addEventListener('keydown', esc, true); }, 50);
     this.padNav(node);
   }
+
+  // ------------------------------------------------------------ tower: pick how to play
+  towerMenu({ onCPU, onOnline, onPrivate, onClose }) {
+    const node = el(`<div class="overlay dim tower"><div class="panel wide">
+      <div class="lobby-head"><h2>CLASH TOWER</h2><div class="mode-pill">TURF RUSH</div></div>
+      <div class="tower-cards">
+        <button class="tcard online" data-a="online"><div class="tc-ico">🌐</div><b>ONLINE MATCH</b><span>Jump into the queue — we'll keep looking for players until a match fills. CPUs fill any empty seats.</span></button>
+        <button class="tcard private" data-a="private"><div class="tc-ico">🔒</div><b>PRIVATE MATCH</b><span>Make a room, share the 4-letter code with friends, and set the stage, time, teams and CPUs.</span></button>
+        <button class="tcard cpu" data-a="cpu"><div class="tc-ico">🤖</div><b>CPU MATCH</b><span>Play offline against bots right now. Pick your stage and difficulty.</span></button>
+      </div>
+      <div class="lobby-actions"><button class="btn ghost" data-back>LEAVE</button><span class="hint">Online play connects players directly — everyone needs this same game version.</span></div>
+    </div></div>`);
+    const close = this.open(node);
+    node.querySelector('[data-a="online"]').onclick = () => { this.sfx('ui_select'); close(); onOnline(); };
+    node.querySelector('[data-a="private"]').onclick = () => { this.sfx('ui_select'); close(); onPrivate(); };
+    node.querySelector('[data-a="cpu"]').onclick = () => { this.sfx('ui_select'); close(); onCPU(); };
+    node.querySelector('[data-back]').onclick = () => { this.sfx('ui_back'); close(); onClose(); };
+    this.padNav(node);
+  }
+
+  searching({ onCancel }) {
+    const node = el(`<div class="overlay dim searching-ui"><div class="panel narrow">
+      <h2>ONLINE MATCH</h2>
+      <div class="search-anim"><i></i><i></i><i></i></div>
+      <div class="search-status">Connecting…</div>
+      <button class="btn ghost" data-back>CANCEL</button>
+    </div></div>`);
+    const close = this.open(node);
+    node.querySelector('[data-back]').onclick = () => { this.sfx('ui_back'); close(); onCancel(); };
+    return {
+      status: (t) => { node.querySelector('.search-status').textContent = t; },
+      error: (t) => { node.querySelector('.search-status').innerHTML = `<span class="err">${t}</span>`; node.querySelector('.search-anim').style.display = 'none'; },
+      close,
+    };
+  }
+
+  privateMenu({ onCreate, onJoin, onClose }) {
+    const node = el(`<div class="overlay dim privmenu"><div class="panel narrow">
+      <h2>PRIVATE MATCH</h2>
+      <button class="btn big" data-a="create">CREATE A ROOM</button>
+      <div class="or">— or join a friend —</div>
+      <label class="field">Room code <input class="code-in" maxlength="4" placeholder="ABCD" spellcheck="false" autocomplete="off"></label>
+      <button class="btn" data-a="join">JOIN ROOM</button>
+      <div class="priv-status"></div>
+      <button class="btn ghost" data-back>BACK</button>
+    </div></div>`);
+    const close = this.open(node);
+    const st = node.querySelector('.priv-status');
+    const inp = node.querySelector('.code-in');
+    inp.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') node.querySelector('[data-a="join"]').click(); });
+    inp.addEventListener('input', () => { inp.value = inp.value.toUpperCase().replace(/[^A-Z]/g, ''); });
+    const busy = (t) => { st.innerHTML = t; node.querySelectorAll('button').forEach((b) => { if (!b.dataset.back) b.disabled = true; }); };
+    const fail = (t) => { st.innerHTML = `<span class="err">${t}</span>`; node.querySelectorAll('button').forEach((b) => { b.disabled = false; }); };
+    node.querySelector('[data-a="create"]').onclick = () => { this.sfx('ui_select'); busy('Creating your room…'); onCreate().then(() => close()).catch((e) => fail(e.message || String(e))); };
+    node.querySelector('[data-a="join"]').onclick = () => { this.sfx('ui_select'); busy(`Looking for room ${inp.value}…`); onJoin(inp.value).then(() => close()).catch((e) => fail(e.message || String(e))); };
+    node.querySelector('[data-back]').onclick = () => { this.sfx('ui_back'); close(); onClose(); };
+    setTimeout(() => inp.focus(), 250);
+  }
+
+  // The room screen (quick-match waiting room or private room)
+  netRoom(room, { onLeave, onStart }) {
+    const app = this.app, p = app.profile;
+    const priv = room.kind === 'private';
+    const node = el(`<div class="overlay dim netroom"><div class="panel wide">
+      <div class="lobby-head"><h2>${priv ? 'PRIVATE ROOM' : 'ONLINE MATCH'}</h2>${priv ? `<div class="room-code" title="Click to copy">CODE <b>${room.code}</b></div>` : '<div class="mode-pill live">● LOOKING FOR PLAYERS</div>'}</div>
+      <div class="room-status"></div>
+      <div class="room-teams"><div class="rteam" data-team="1"><h3>ALPHA</h3><div class="rlist"></div></div><div class="rteam" data-team="2"><h3>BRAVO</h3><div class="rlist"></div></div></div>
+      <div class="room-cols">
+        <div><h3>Your weapon</h3><div class="wpick"></div></div>
+        <div class="room-settings"></div>
+      </div>
+      <div class="lobby-actions"><button class="btn ghost" data-back>LEAVE ROOM</button><div class="room-start"></div></div>
+    </div></div>`);
+    const close = this.open(node);
+    this._netRoomClose = () => { off(); close(); this._netRoomClose = null; };
+    const stages = [['random', 'Random'], ['rotation', 'Rotation pick'], ...STAGE_IDS.map((id) => [id, stageInfo(id).name])];
+    // only touch the DOM when a part really changed, so the countdown ticking
+    // doesn't rebuild buttons under the cursor or close an open dropdown
+    const put = (target, html) => { const e = typeof target === 'string' ? node.querySelector(target) : target; if (e && e._h !== html) { e._h = html; e.innerHTML = html; } };
+    const render = () => {
+      if (!node.isConnected) return;
+      const s = room.settings;
+      const me = room.me;
+      const host = room.isHost;
+      const humans = room.members.length;
+      // status
+      let status;
+      if (room.phase === 'match') status = 'Match in progress…';
+      else if (!priv) status = room.countdown != null ? `Match starts in <b>${room.countdown}</b> — more players can still join!` : humans < 2 ? `Waiting for players to join… <b>${humans}/8</b>` : 'Get ready…';
+      else status = host ? `Share the code <b>${room.code}</b> with your friends, then press START.` : 'Waiting for the host to start…';
+      put('.room-status', status);
+      // teams
+      for (const t of [1, 2]) {
+        const list = room.members.filter((m) => m.team === t);
+        const slots = [];
+        for (let i = 0; i < 4; i++) {
+          const m = list[i];
+          if (m) slots.push(`<div class="rslot ${m.id === room.myId ? 'me' : ''}" style="--c:${m.ink || '#fff'}"><i></i><b>${m.name}</b><small>${WEAPONS[m.weapon]?.name || ''}${m.host ? ' · HOST' : ''}</small>${host && priv && m.id !== room.myId ? `<button class="mini" data-swap="${m.id}">⇄</button>` : ''}</div>`);
+          else slots.push(`<div class="rslot empty">${s.bots ? 'CPU' : 'open'}</div>`);
+        }
+        put(`.rteam[data-team="${t}"] .rlist`, slots.join(''));
+      }
+      if (priv && me && !s.teamLock) {
+        for (const t of [1, 2]) {
+          put(`.rteam[data-team="${t}"] h3`, `${t === 1 ? 'ALPHA' : 'BRAVO'}${me.team !== t ? ' <button class="mini" data-join-team="' + t + '">JOIN</button>' : ''}`);
+        }
+      }
+      // weapon picker (own)
+      put('.wpick', p.owned.map((id) => `<button class="chip ${me?.weapon === id ? 'sel' : ''}" data-w="${id}"><b>${WEAPONS[id].name}</b><small>${WEAPONS[id].cls}</small></button>`).join(''));
+      // settings
+      const set = node.querySelector('.room-settings');
+      if (priv && host) {
+        put(set, `<h3>Match settings</h3>
+          <label class="field-row">Mode <select data-set="mode">${Object.entries(MODES).map(([k, v]) => `<option value="${k}" ${s.mode === k ? 'selected' : ''}>${v.name}</option>`).join('')}</select></label>
+          <label class="field-row">Stage <select data-set="stage">${stages.map(([k, v]) => `<option value="${k}" ${s.stage === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+          <label class="field-row">Time <select data-set="time">${[60, 120, 180, 240, 300].map((t) => `<option value="${t}" ${s.time === t ? 'selected' : ''}>${t / 60} min</option>`).join('')}</select></label>
+          <label class="field-row">CPU players <select data-set="bots"><option value="1" ${s.bots ? 'selected' : ''}>Fill empty seats</option><option value="0" ${!s.bots ? 'selected' : ''}>None</option></select></label>
+          <label class="field-row">CPU skill <select data-set="skill">${['easy', 'normal', 'hard'].map((k) => `<option ${s.skill === k ? 'selected' : ''}>${k}</option>`).join('')}</select></label>
+          <label class="field-row">Teams <select data-set="teamLock"><option value="0" ${!s.teamLock ? 'selected' : ''}>Players choose</option><option value="1" ${s.teamLock ? 'selected' : ''}>Host decides</option></select></label>
+          <button class="btn small ghost" data-a="shuffle">SHUFFLE TEAMS</button>`);
+      } else {
+        const stName = s.stage === 'random' ? 'Random' : s.stage === 'rotation' ? 'Rotation pick' : stageInfo(s.stage)?.name;
+        put(set, `<h3>Match</h3><div class="set-ro">${MODES[s.mode]?.name || 'Turf Rush'} · ${stName} · ${s.time / 60} min · CPUs ${s.bots ? 'on' : 'off'} (${s.skill})</div>`);
+      }
+      // start button
+      const startEl = node.querySelector('.room-start');
+      if (host && room.phase === 'lobby') {
+        const ok = priv ? (s.bots || (room.members.some((m) => m.team === 1) && room.members.some((m) => m.team === 2))) : true;
+        put(startEl, `<button class="btn big go" data-a="start" ${ok ? '' : 'disabled'}>${priv ? 'START MATCH' : humans < 2 ? 'START NOW WITH CPUs' : 'START NOW'}</button>`);
+      } else put(startEl, '');
+      bind();
+    };
+    const bind = () => {
+      node.querySelectorAll('[data-w]').forEach((b) => b.onclick = () => { this.sfx('ui_select'); p.weapon = b.dataset.w; app.save(); room.updateMe({ weapon: b.dataset.w }); if (!room.isHost) { room.me && (room.me.weapon = b.dataset.w); render(); } });
+      node.querySelectorAll('[data-swap]').forEach((b) => b.onclick = () => { const m = room.members.find((x) => x.id === b.dataset.swap); if (m) room.setTeam(m.id, m.team === 1 ? 2 : 1); this.sfx('ui_move'); });
+      node.querySelectorAll('[data-join-team]').forEach((b) => b.onclick = () => { const t = +b.dataset.joinTeam; this.sfx('ui_move'); if (room.isHost) room.setTeam(room.myId, t); else room.updateMe({ team: t }); });
+      node.querySelectorAll('[data-set]').forEach((sel) => sel.onchange = () => {
+        const k = sel.dataset.set;
+        let v = sel.value;
+        if (k === 'time') v = +v;
+        if (k === 'bots' || k === 'teamLock') v = v === '1';
+        room.setSettings({ [k]: v });
+        this.sfx('ui_select');
+      });
+      const sh = node.querySelector('[data-a="shuffle"]'); if (sh) sh.onclick = () => { room.shuffleTeams(); this.sfx('ui_select'); };
+      const go = node.querySelector('[data-a="start"]'); if (go) go.onclick = () => { this.sfx('special_ready'); onStart(); };
+    };
+    const off = room.on('lobby', render);
+    node.querySelector('.room-code')?.addEventListener('click', () => { navigator.clipboard?.writeText(room.code).catch(() => {}); app.toast(`Copied room code <b>${room.code}</b>`); });
+    node.querySelector('[data-back]').onclick = () => { this.sfx('ui_back'); this._netRoomClose?.(); onLeave(); };
+    render();
+    return { close: () => this._netRoomClose?.(), render };
+  }
+
+  closeNetRoom() { this._netRoomClose?.(); }
 
   // ------------------------------------------------------------ lobby
   lobby({ onStart, onClose }) {
@@ -448,8 +606,8 @@ export class Menus {
           <div class="lvl">LV <b>${pg.level}</b><div class="xpbar"><i style="width:${pg.pct}%"></i></div>${pg.levelUp ? '<span class="lvup">LEVEL UP!</span>' : ''}</div>
         </div>
         <div class="rs-actions">
-          <button class="btn ghost" data-a="plaza">BACK TO PLAZA</button>
-          <button class="btn big" data-a="again">PLAY AGAIN</button>
+          <button class="btn ghost" data-a="plaza">${s.plazaLabel || 'BACK TO PLAZA'}</button>
+          <button class="btn big" data-a="again">${s.againLabel || 'PLAY AGAIN'}</button>
         </div>
       </div>
     </div>`);

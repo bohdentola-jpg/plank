@@ -448,7 +448,7 @@ export class Plaza {
     if (kind === 'tower') {
       app.audio?.sfx('door');
       app.audio?.music('lobby');
-      app.menus.lobby({ onStart: (o) => { app.startBattle(o); }, onClose: () => { app.audio?.music('plaza'); close(); } });
+      app.openTower(() => { app.audio?.music('plaza'); close(); });
     } else if (kind === 'shop') {
       const W = ROOMS.weapons;
       const P = W.pedestal.clone().setY(W.pedestal.y + 1.55);
@@ -499,6 +499,16 @@ export class Plaza {
     for (const n of this.npcs) n.model.root.visible = (n.room || 'plaza') === this.location || (!outside && n.room === this.location);
     for (const b of this.bots) b.root.visible = outside && b.alive;
     this.env.sky.visible = outside;
+  }
+
+  // let an outside flow (e.g. an online room) own the screen; returns the release function
+  holdUI() {
+    this.uiOpen = true;
+    this.app.input.unlock();
+    this.prompt.classList.remove('on');
+    this.plazaHud.classList.remove('on');
+    this.app.audio?.music('lobby');
+    return () => { this.uiOpen = false; this.plazaHud.classList.add('on'); this.updatePlazaHud(); this.app.audio?.music('plaza'); this.app.input.lock(); };
   }
 
   showOnPedestal(id) {

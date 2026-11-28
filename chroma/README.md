@@ -129,6 +129,45 @@ news and the big screen tell you which.
 - **Painting:** you can paint the whole plaza, and it stays painted for the session.
 - **The back alley** by the DJ booth hides a loose manhole cover…
 
+## Online play (play with friends)
+
+Open the **Clash Tower** in the plaza, or press **PLAY ONLINE** on the title screen, and
+pick a mode:
+
+- **Online Match:** an always-on queue. The game keeps looking for other players, puts
+  you in a shared lobby, and starts the match 30 seconds after a second player joins (or
+  immediately with 8 players). CPUs fill any empty seats. The host can also start right
+  away with CPUs.
+- **Private Match:** create a room and share its **4-letter code**. Friends type it in
+  under *Join room*. The host picks the mode, stage, time limit (1–5 min), whether CPUs
+  fill empty seats and their skill, and how teams are chosen (players choose, or the host
+  decides, with a shuffle button). Everyone picks their own weapon in the room. After a
+  match, *Back to room* returns everyone to the same room for the next round.
+- **CPU Match:** the offline game against bots, as before.
+
+**How it works:** players connect **directly to each other** (WebRTC). A free public
+PeerJS service introduces them, so nobody has to run a server. The player who created the
+room is the **host**: their browser runs bots, scoring and the paint, and everybody else
+streams it. Your own character runs on your machine, so movement and aiming feel
+instant. If a player drops out, a CPU takes over their character. If the host leaves,
+the match ends for everyone.
+
+**What everybody needs:**
+1. **The same version of the game.** The room rejects anyone whose version doesn't match.
+2. **The game running in the browser,** in either of these ways:
+   - **Easiest: GitHub Pages.** In this repository on GitHub, open *Settings → Pages*, set
+     *Source: Deploy from a branch*, pick the branch with the game, folder `/ (root)`, and
+     save. After a minute everyone can play at `https://<your-user>.github.io/plank/chroma/`.
+     There's nothing to install, and it works on any computer with a modern browser.
+   - **Or each player runs it locally** with `chroma/play.bat` / `python3 chroma/serve.py`
+     from the same version of the repo. Online play still works between local copies.
+3. **Internet access.** Very strict networks (some schools and offices) can block
+   peer-to-peer connections.
+
+You can also host your own PeerJS signalling server and add
+`?peerhost=your.server&peerport=443&peerpath=/` to the URL. To test with two windows on one
+computer without the internet, add `?net=local` to both tabs.
+
 ### Story mode: The Underside
 
 Something gray is bubbling up from under the city. Climb down the manhole in the back

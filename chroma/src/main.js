@@ -10,6 +10,7 @@ import { randomLook, migrateLook, STARTER_GEAR } from './actors/gear.js';
 import { Story } from './modes/story.js';
 import { WEAPONS } from './actors/weapons.js';
 import { STAGE_IDS } from './world/stage.js';
+import { quickMatch, createPrivateRoom, joinPrivateRoom, MAX_PLAYERS } from './net/room.js';
 
 let audio = null;
 try { audio = (await import('./audio.js')).audio; } catch (e) { console.warn('audio unavailable', e); }
@@ -165,15 +166,17 @@ class App {
       firstTime: !this.profile.created,
       onPlaza: () => this.enterPlazaFromTitle(),
       onQuick: () => this.startBattle({ weapon: this.profile.weapon, skill: this.profile.lastSkill, stage: STAGE_IDS[Math.floor(Math.random() * STAGE_IDS.length)] }),
+      onOnline: () => { this.enterPlazaFromTitle(true); },
       onSettings: () => this.menus.settings(),
     });
   }
 
-  enterPlazaFromTitle() {
+  enterPlazaFromTitle(online = false) {
     const pl = this.mode;
     if (!(pl instanceof Plaza)) { this.goPlaza(); return; }
     pl.setTitleMode(false);
     audio.music('plaza');
+    if (online && this.profile.created) { this.newsSeen = true; pl.openUI('tower'); return; }
     if (!this.profile.created) {
       pl.openUI('locker', { create: true });
     } else if (!this.newsSeen) {
@@ -205,6 +208,101 @@ class App {
     const o = { ...opts };
     if (params.get('time')) o.time = +params.get('time');
     await this.setMode(() => new Battle(this, o), 'Warping to the stage…');
+  }
+
+  // ---------------------------------------------------------------- online play
+  me() { const p = this.profile; return { name: p.name, look: p.look, weapon: p.weapon, ink: p.ink }; }
+
+  openTower(onClose) {
+    this.menus.towerMenu({
+      onCPU: () => this.menus.lobby({ onStart: (o) => this.startBattle(o), onClose }),
+      onOnline: () => this.startQuickMatch(onClose),
+      onPrivate: () => this.menus.privateMenu({
+        onCreate: async () => { const r = await createPrivateRoom(this.me()); this.enterRoom(r, onClose); },
+        onJoin: async (code) => { const r = await joinPrivateRoom(code, this.me()); this.enterRoom(r, onClose); },
+        onClose,
+      }),
+      onClose,
+    });
+  }
+
+  async startQuickMatch(onClose) {
+    const token = { cancelled: false };
+    const ui = this.menus.searching({ onCancel: () => { token.cancelled = true; onClose?.(); } });
+    try {
+      const room = await quickMatch(this.me(), (t) => ui.status(t), token);
+      if (!room) return;
+      ui.close();
+      this.enterRoom(room, onClose);
+    } catch (e) { ui.error(e.message || 'Could not connect to online play.'); }
+  }
+
+  enterRoom(room, onClose) {
+    this.leaveRoom();
+    this.room = room;
+    this.roomOnClose = onClose;
+    room.on('start', (match) => this.startNetMatch(match));
+    room.on('closed', (why) => this.onRoomClosed(why));
+    room.on('join', (name) => { if (!(this.mode instanceof Battle)) this.toast(`<b>${name}</b> joined the room`); this.audio.sfx?.('ui_select'); });
+    room.on('leave', (id, name) => { if (!(this.mode instanceof Battle) && name) this.toast(`<b>${name}</b> left`); });
+    this.showRoom();
+    if (room.isHost && room.kind === 'quick') {
+      clearInterval(this.quickLoop);
+      this.quickLoop = setInterval(() => {
+        const r = this.room;
+        if (!r || r !== room || r.closed) { clearInterval(this.quickLoop); return; }
+        if (r.phase !== 'lobby') return;
+        const humans = r.members.length;
+        if (humans >= MAX_PLAYERS) { r.countdown = null; r.startMatch(); return; }
+        if (humans >= 2) {
+          r.countdown = r.countdown == null ? 30 : r.countdown - 1;
+          if (r.countdown <= 0) { r.countdown = null; r.startMatch(); return; }
+          r.syncLobby();
+        } else if (r.countdown != null) { r.countdown = null; r.syncLobby(); }
+      }, 1000);
+    }
+  }
+
+  showRoom() {
+    if (!this.room) return;
+    this.menus.netRoom(this.room, {
+      onLeave: () => { this.leaveRoom(); this.roomOnClose?.(); },
+      onStart: () => { if (this.room?.isHost) { this.room.countdown = null; this.room.startMatch(); } },
+    });
+  }
+
+  startNetMatch(match) {
+    this.menus.closeNetRoom();
+    this.menus.pause(false);
+    this.input.unlock();
+    this.setMode(() => new Battle(this, { net: { room: this.room, match } }), 'Joining the online match…');
+  }
+
+  async backToRoom() {
+    const room = this.room;
+    if (!room || room.closed) { this.room = null; this.goPlaza(); return; }
+    if (room.isHost) room.endMatch();
+    await this.goPlaza();
+    const pl = this.mode;
+    if (pl instanceof Plaza && this.room === room) {
+      this.roomOnClose = pl.holdUI();
+      this.showRoom();
+    }
+  }
+
+  leaveRoom() {
+    clearInterval(this.quickLoop);
+    if (this.room) { this.room.close(); this.room = null; }
+    this.menus.closeNetRoom();
+  }
+
+  onRoomClosed(why) {
+    clearInterval(this.quickLoop);
+    if (this.mode instanceof Battle) return; // the battle shows its own message
+    this.menus.closeNetRoom();
+    this.room = null;
+    this.toast(why || 'The room closed.');
+    this.roomOnClose?.();
   }
 
   grantRewards(s) {

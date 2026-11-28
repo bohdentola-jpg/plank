@@ -109,8 +109,10 @@ export class PaintSystem {
   // Paint a sphere of radius r at world point p. Returns floor m² newly claimed.
   splat(p, r, team, opts = {}) {
     if (!this.data || team === NONE) return 0;
+    if (this.locked && !opts.force) return 0; // network clients only paint what the host says
     const ph = opts.phase ?? Math.random() * 100;
     const wob = opts.wobble ?? 0.22;
+    if (this.onSplat) this.onSplat(p, r, team, ph, wob, opts.drips || 0);
     let gained = 0;
     const faces = this.faces;
     for (let k = 0; k < faces.length; k++) {

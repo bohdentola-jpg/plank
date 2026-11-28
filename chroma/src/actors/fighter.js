@@ -52,6 +52,102 @@ export class Fighter {
     this.canFight = true;
     this.laser = null;
     this.shieldHP = this.weapon.shieldHP || 0;
+    this.puppet = null; // 'host' (remote human seen by the host) | 'client' (anyone else seen by a client)
+    this.netT = null; // latest network state target
+    this.netId = -1;
+  }
+
+  // ---------------------------------------------------------------- networking
+  // compact state: [x,y,z, vx,vy,vz, yaw, aimYaw, aimPitch, flags, charge, hp, special]
+  netPack() {
+    const r2 = (v) => Math.round(v * 100) / 100, r3 = (v) => Math.round(v * 1000) / 1000;
+    let f = 0;
+    if (this.alive) f |= 1;
+    if (this.form === 'goo') f |= 2;
+    if (this.submerged) f |= 4;
+    if (this.climbing) f |= 8;
+    if (this.charging) f |= 16;
+    if (this.rolling) f |= 32;
+    if (this.shieldOpen) f |= 64;
+    if (this.jetT > 0) f |= 128;
+    if (this.camoT > 0) f |= 256;
+    if (this.onGround) f |= 512;
+    if (this.time - this.lastFire < 0.18) f |= 1024;
+    if (this.specialReady) f |= 2048;
+    if (this.spray.n > 0) f |= 4096;
+    if (this.dodge > 0) f |= 8192;
+    if (this.turretT > 0) f |= 16384;
+    return [r2(this.pos.x), r2(this.pos.y), r2(this.pos.z), r2(this.vel.x), r2(this.vel.y), r2(this.vel.z),
+      r3(this.yaw), r3(this.aimYaw), r3(this.aimPitch), f, r2(this.charge), Math.round(this.hp), Math.round(this.special)];
+  }
+
+  netApply(a) {
+    this.netT = a;
+    this.netAt = performance.now();
+    if (!this.puppetInit) { this.puppetInit = true; this.pos.set(a[0], a[1], a[2]); this.yaw = a[6]; }
+  }
+
+  puppetUpdate(dt) {
+    const a = this.netT;
+    this.time += dt;
+    if (!a) { this.syncModel(dt); return; }
+    const f = a[9];
+    const age = Math.min(0.15, (performance.now() - this.netAt) / 1000);
+    const tx = a[0] + a[3] * age, ty = a[1] + a[4] * age, tz = a[2] + a[5] * age;
+    const d2 = (tx - this.pos.x) ** 2 + (ty - this.pos.y) ** 2 + (tz - this.pos.z) ** 2;
+    if (d2 > 16) this.pos.set(tx, ty, tz);
+    else { const k = damp(14, dt); this.pos.x += (tx - this.pos.x) * k; this.pos.y += (ty - this.pos.y) * k; this.pos.z += (tz - this.pos.z) * k; }
+    this.vel.set(a[3], a[4], a[5]);
+    this.yaw = dampAngle(this.yaw, a[6], 18, dt);
+    this.aimYaw = this.intent.aimYaw = a[7];
+    this.aimPitch = this.intent.aimPitch = a[8];
+    this.form = f & 2 ? 'goo' : 'kid';
+    this.submerged = !!(f & 4);
+    this.climbing = !!(f & 8);
+    this.charging = !!(f & 16);
+    this.rolling = !!(f & 32);
+    this.shieldOpen = !!(f & 64);
+    this.jetT = f & 128 ? 1 : 0;
+    this.camoT = f & 256 ? 1 : 0;
+    this.onGround = !!(f & 512);
+    this.spray.n = f & 4096 ? 1 : 0;
+    this.dodge = f & 8192 ? 0.2 : 0;
+    this.turretT = f & 16384 ? 0.2 : 0;
+    this.charge = a[10];
+    const firing = !!(f & 1024);
+    if (firing) this.lastFire = this.time;
+    if (this.puppet === 'client') {
+      this.hp = a[11];
+      this.special = a[12];
+      this.specialReady = !!(f & 2048);
+      const alive = !!(f & 1);
+      if (alive && !this.alive) { this.alive = true; this.model.root.visible = true; }
+      if (!alive && this.alive) { this.alive = false; this.model.root.visible = false; }
+    }
+    if (this.puppet === 'host') this.hostPuppetRules(dt);
+    this.updateLaser();
+    this.syncModel(dt, firing, Math.hypot(this.vel.x, this.vel.z));
+  }
+
+  // host-side rules for remote players: health regen, enemy-ink chip, respawn timer
+  hostPuppetRules(dt) {
+    const w = this.world;
+    if (!this.alive) {
+      this.respawnT -= dt;
+      if (this.respawnT <= 0 && w.canRespawn !== false) this.respawn();
+      return;
+    }
+    this.invuln = Math.max(0, this.invuln - dt);
+    let enemy = false;
+    if (this.onGround && !this.jetT) {
+      const g = w.level.groundAt(this.pos.x, this.pos.z, this.pos.y + 0.05, 0.2, 0.3);
+      const face = g.solid?.sideFace?.top;
+      if (face) { const o = w.paint.ownerAt(face, this.pos); enemy = o !== NONE && o !== this.team; }
+    }
+    if (enemy && this.invuln <= 0) {
+      const floor = 100 - 55 * this.mods.inkResist;
+      if (this.hp > floor) { this.hp = Math.max(floor, this.hp - 16 * this.mods.inkResist * dt); this.lastDamage = this.time; }
+    } else if (this.time - this.lastDamage > 1.1 && this.hp < 100) this.hp = Math.min(100, this.hp + (this.submerged ? 55 : 20) * dt);
   }
 
   get color() { return this.world.colors[this.team]; }
@@ -82,6 +178,7 @@ export class Fighter {
 
   // ---------------------------------------------------------------- update
   update(dt) {
+    if (this.puppet) { this.puppetUpdate(dt); return; }
     const w = this.world;
     this.time += dt;
     if (!this.alive) {
@@ -250,6 +347,7 @@ export class Fighter {
     }
     if (this.pos.y < w.level.killY) {
       const recent = this.time - this.lastAttackT < 6 ? this.lastAttacker : null;
+      w.net?.action?.({ m: 'fell' }, this);
       this.splatted(recent, 'fall');
       return;
     }
@@ -649,6 +747,7 @@ export class Fighter {
 
   useSpecial() {
     const w = this.world;
+    w.net?.action?.({ m: 'special' }, this);
     this.specialReady = false;
     this.special = 0;
     this.ink = 1;
