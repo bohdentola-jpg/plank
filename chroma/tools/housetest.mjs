@@ -27,10 +27,15 @@ const SHOTS = process.argv.includes('--shots');
 const KEY = 'chroma-clash-profile-v1';
 
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const errors = [];
-page.on('pageerror', (e) => { errors.push(e.message); console.log('  [pageerror]', e.message, (e.stack || '').split('\n').slice(1, 3).join(' | ')); });
-page.on('console', (m) => { if (m.type() === 'error') { errors.push(m.text()); console.log('  [console.error]', m.text().slice(0, 300)); } });
+let page;
+const newPage = async () => {
+  if (page) await page.close().catch(() => {});
+  page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  page.on('pageerror', (e) => { errors.push(e.message); console.log('  [pageerror]', e.message, (e.stack || '').split('\n').slice(1, 3).join(' | ')); });
+  page.on('console', (m) => { if (m.type() === 'error') { errors.push(m.text()); console.log('  [console.error]', m.text().slice(0, 300)); } });
+};
+await newPage();
 
 let fails = 0, passes = 0;
 const check = (name, ok, detail = '') => {
@@ -234,6 +239,7 @@ check('coins + weapon persisted', s.coins === coins0 - 1400 && s.weapon === 'rol
 
 console.log('house: first-time creation from the title');
 await ev(() => localStorage.clear());
+await newPage(); // a fresh tab keeps long software-GL sessions from piling up
 await page.goto(`${BASE}index.html?qa&nonews`);
 check('title loads', await modeIs('Plaza'));
 await wait(1200);

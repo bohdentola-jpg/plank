@@ -222,7 +222,8 @@ export class House {
     if (created) this.toast(`Welcome home, <b>${n}</b>! Your weapons are by the <b>front door</b>.`);
     else if (this.opts.from === 'plaza') this.toast('Home sweet home! Press <b>F</b> to decorate.');
     else this.toast(`Good morning, <b>${n}</b>! Grab a weapon by the door to head out.`);
-    this.app.input.lock();
+    // no pointer-lock request here: a second request right after a menu's own lock()
+    // cancels the first, which reads as "lock lost" and pops the pause menu
   }
 
   // ---------------------------------------------------------------- interactions

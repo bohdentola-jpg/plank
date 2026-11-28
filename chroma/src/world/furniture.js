@@ -6,7 +6,9 @@ import { rng, fbm } from '../util.js';
 
 // ---------------------------------------------------------------- geometry helpers
 const GEO = new Map();
-const cg = (key, make) => { let g = GEO.get(key); if (!g) { g = make(); GEO.set(key, g); } return g; };
+const SHARED = new WeakSet();
+const cg = (key, make) => { let g = GEO.get(key); if (!g) { g = make(); GEO.set(key, g); SHARED.add(g); } return g; };
+export const isSharedGeo = (g) => SHARED.has(g);
 export const box = (w, h, d) => cg(`b${w},${h},${d}`, () => new THREE.BoxGeometry(w, h, d));
 export const cyl = (rt, rb, h, s = 20, open = false) => cg(`c${rt},${rb},${h},${s},${open}`, () => new THREE.CylinderGeometry(rt, rb, h, s, 1, open));
 export const sph = (r, ws = 20, hs = 14) => cg(`s${r},${ws},${hs}`, () => new THREE.SphereGeometry(r, ws, hs));

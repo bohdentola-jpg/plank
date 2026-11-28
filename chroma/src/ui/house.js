@@ -1,7 +1,7 @@
 // House UI: the NEST & NOOK catalog (a laptop on your desk), the decorate-mode
 // tray, the key-hint bar, and 3D thumbnails rendered from the real models.
 import * as THREE from 'three';
-import { FURNITURE, FURNITURE_IDS, CATS, WALLPAPERS, FLOORS, styleThumb } from '../world/furniture.js';
+import { FURNITURE, FURNITURE_IDS, CATS, WALLPAPERS, FLOORS, styleThumb, isSharedGeo } from '../world/furniture.js';
 
 function el(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; }
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
@@ -70,6 +70,13 @@ export class Thumbs {
     try { r.readRenderTargetPixels(this.rt, 0, 0, S * 2, S * 2, this.buf); } catch { ok = false; }
     r.setRenderTarget(prevRT); r.setClearColor(prevC, prevA); r.shadowMap.enabled = prevShadow;
     this.scene.remove(g);
+    // free the one-off parts (screens, merged books...); cached geometry + kit materials stay
+    const kitMats = new Set(this.kit.cache.values());
+    g.traverse((m) => {
+      if (m.geometry && !isSharedGeo(m.geometry)) m.geometry.dispose();
+      const mt = m.material;
+      if (mt && !kitMats.has(mt)) { mt.map?.dispose(); mt.emissiveMap?.dispose(); mt.dispose(); }
+    });
     if (!ok) return BLANK;
     // ACES-ish tonemap + sRGB, flip Y
     const tm = (v) => { v *= 1.05; v = (v * (2.51 * v + 0.03)) / (v * (2.43 * v + 0.59) + 0.14); v = Math.min(1, Math.max(0, v)); return v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1 / 2.4) - 0.055; };
