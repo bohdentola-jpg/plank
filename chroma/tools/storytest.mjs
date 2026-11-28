@@ -2,6 +2,7 @@
 //   node chroma/tools/storytest.mjs                 # every suite
 //   node chroma/tools/storytest.mjs l2 l5 --shots   # some suites, with screenshots in chroma/qa/
 // Suites: hub shop migrate l1..l15 cycle ending (also: s1 s2 s3 = that sector's levels).
+// Set STORY_SLOW=<factor> to stretch every wait on very slow machines (default 2.5).
 // Teleports the player through each level's objectives (checkpoints, jump pads,
 // swatches, shards, every mechanic in the level, death + respawn, seals, the Hue
 // Core), forces the bosses through their phases, and fails on any assertion or
@@ -46,7 +47,9 @@ const check = (name, ok, detail = '') => {
 };
 const ev = (fn, arg) => page.evaluate(fn, arg);
 const wait = (ms) => page.waitForTimeout(ms);
-const waitFor = async (fn, arg, timeout = 15000) => { try { await page.waitForFunction(fn, arg, { timeout, polling: 100 }); return true; } catch { return false; } };
+// software GL runs the game at a fraction of real time (worse with parallel runs): waits scale up
+const SLOW = Number(process.env.STORY_SLOW || 2.5);
+const waitFor = async (fn, arg, timeout = 15000) => { try { await page.waitForFunction(fn, arg, { timeout: timeout * SLOW, polling: 100 }); return true; } catch { return false; } };
 const shot = async (name) => { if (SHOTS) await page.screenshot({ path: join(qaDir, `st_${name}.png`) }); };
 const before = (id) => ORDER.slice(0, ORDER.indexOf(id));
 // v2 profile (sector progress up to a level)
@@ -60,12 +63,14 @@ async function boot(level, prof) {
   await page.goto(`${BASE}index.html?story=${level}&qa&fast`);
   const ok = await waitFor((lv) => { const a = window.__chroma; return a?.mode?.levelId === lv && !a.loadingNow && a.mode.player; }, level, 150000);
   check(`${level}: story mode loaded`, ok);
+  if (ok) await ev((k) => { window.__SLOW = k; }, SLOW);
   await wait(400);
   return ok;
 }
 const tp = (x, y, z, yaw = 0) => ev(([x, y, z, yaw]) => {
   const m = window.__chroma.mode, p = m.player;
   if (!p.alive) { p.respawn(); m.hud.splatted(false); }
+  m.flight = null; if (m.mech) { m.mech.ride = null; m.mech.rideCool = 0.5; }
   p.place(new p.pos.constructor(x, y, z), yaw);
   m.rig.snap(p, yaw);
 }, [x, y, z, yaw]);
@@ -77,12 +82,14 @@ const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 const domCounts = () => ev(() => ({ hud: document.querySelectorAll('#story-hud').length, style: document.querySelectorAll('#story-style').length }));
 // keep the game thinking the mouse is captured so PlayerControl writes intents
 const fakeLock = () => ev(() => { const i = window.__chroma.input; i.lock = () => {}; i.locked = true; });
+const revivePlayer = () => ev(() => { const m = window.__chroma.mode, p = m.player; if (!p.alive) { p.respawn(); m.hud.splatted(false); } m.flight = null; if (m.mech) m.mech.ride = null; p.invuln = 999; });
 const godMode = (on) => ev((on) => { window.__chroma.mode.player.invuln = on ? 999 : 0; }, on);
 const advanceDialog = async (max = 40) => { for (let i = 0; i < max && (await ev(() => window.__chroma.mode.hud.dialogBlocking)); i++) { await page.keyboard.press('Space'); await wait(300); } };
 
 // ------------------------------------------------------------------ generic level checks
 async function checkpoints(id) {
   const cps = await ev(() => window.__chroma.mode.checkpoints.map((c) => [...c.pos.toArray(), c.yaw]));
+  if (SHOTS) await fakeLock();
   check(`${id}: has checkpoints`, cps.length >= 2, cps.length);
   for (let i = 0; i < cps.length; i++) {
     const [x, y, z, yaw] = cps[i];
@@ -156,21 +163,21 @@ async function mechanics(id) {
   const n = await ev(() => { const M = window.__chroma.mode.mech; return { movers: M.movers.length, crumbles: M.crumbles.length, sponges: M.sponges.length, switches: M.switches.filter((s) => !s.disabled).length, rails: M.rails.length, fans: M.fans.length, conveyors: M.conveyors.length, floods: M.floods.length, gates: M.gates.length, arenas: M.arenas.length, pumps: M.pumps.length, lanterns: M.lanterns.length, doors: M.doors.length }; });
   console.log(`  mechanics: ${JSON.stringify(n)}`);
   await godMode(true);
-  for (let i = 0; i < n.movers; i++) await moverCheck(id, i);
-  for (let i = 0; i < Math.min(2, n.crumbles); i++) await crumbleCheck(id, i);
-  for (let i = 0; i < n.sponges; i++) await spongeCheck(id, i);
-  for (let i = 0; i < n.floods; i++) await floodCheck(id, i);
+  for (let i = 0; i < n.movers; i++) { await revivePlayer(); await moverCheck(id, i); }
+  for (let i = 0; i < Math.min(2, n.crumbles); i++) { await revivePlayer(); await crumbleCheck(id, i); }
+  for (let i = 0; i < n.sponges; i++) { await revivePlayer(); await spongeCheck(id, i); }
+  for (let i = 0; i < n.floods; i++) { await revivePlayer(); await floodCheck(id, i); }
   const plain = await ev(() => window.__chroma.mode.mech.switches.filter((s) => !s.disabled && !s.drain).length);
-  for (let i = 0; i < plain; i++) await switchCheck(id, i);
+  for (let i = 0; i < plain; i++) { await revivePlayer(); await switchCheck(id, i); }
   const needDoors = await ev(() => window.__chroma.mode.mech.doors.filter((d) => d.need).map((d) => ({ id: d.id, open: d.open })));
   if (needDoors.length) check(`${id}: doors that need several switches open once all are painted`, needDoors.every((d) => d.open), JSON.stringify(needDoors));
-  for (let i = 0; i < n.rails; i++) await railCheck(id, i);
-  for (let i = 0; i < n.fans; i++) await fanCheck(id, i);
-  for (let i = 0; i < n.conveyors; i++) await conveyorCheck(id, i);
-  for (let i = 0; i < n.gates; i++) await membraneCheck(id, i);
-  for (let i = 0; i < n.lanterns; i++) await lanternCheck(id, i, i === 0);
-  for (let i = 0; i < n.pumps; i++) await pumpCheck(id, i);
-  for (let i = 0; i < n.arenas; i++) await arenaCheck(id, i);
+  for (let i = 0; i < n.rails; i++) { await revivePlayer(); await railCheck(id, i); }
+  for (let i = 0; i < n.fans; i++) { await revivePlayer(); await fanCheck(id, i); }
+  for (let i = 0; i < n.conveyors; i++) { await revivePlayer(); await conveyorCheck(id, i); }
+  for (let i = 0; i < n.gates; i++) { await revivePlayer(); await membraneCheck(id, i); }
+  for (let i = 0; i < n.lanterns; i++) { await revivePlayer(); await lanternCheck(id, i, i === 0); }
+  for (let i = 0; i < n.pumps; i++) { await revivePlayer(); await pumpCheck(id, i); }
+  for (let i = 0; i < n.arenas; i++) { await revivePlayer(); await arenaCheck(id, i); }
   await godMode(false);
   return n;
 }
@@ -185,7 +192,7 @@ async function moverCheck(id, i) {
     const iv = setInterval(() => {
       n++;
       const moved = mv.dyn.offset.distanceTo(off0);
-      if (moved > 1.2 || n > 140) {
+      if (moved > 1.2 || n > 140 * (window.__SLOW || 1)) {
         clearInterval(iv);
         const dx = Math.abs(p.pos.x - s.center.x), dz = Math.abs(p.pos.z - s.center.z);
         res({ moved, onIt: dx < (s.max.x - s.min.x) / 2 + 0.2 && dz < (s.max.z - s.min.z) / 2 + 0.2 && Math.abs(p.pos.y - s.max.y) < 0.35, kind: mv.orbit ? 'orbit' : mv.trigger || 'path' });
@@ -252,7 +259,7 @@ async function railCheck(id, i) {
     const iv = setInterval(() => {
       n++;
       if (M.riding) rode = true;
-      if ((rode && !M.riding && p.onGround) || n > 220) { clearInterval(iv); res({ rode, d: Math.hypot(p.pos.x - end.x, p.pos.z - end.z), alive: p.alive }); }
+      if ((rode && !M.riding && p.onGround) || n > 220 * (window.__SLOW || 1)) { clearInterval(iv); res({ rode, d: Math.hypot(p.pos.x - end.x, p.pos.z - end.z), alive: p.alive }); }
     }, 100);
   }), i);
   check(`${id}: ink rail ${i + 1} grabs the player and carries them to the far end`, r.rode && r.d < 6 && r.alive, JSON.stringify(r));
@@ -265,7 +272,7 @@ async function fanCheck(id, i) {
     p.place(f.pos.clone().setY(f.pos.y + 0.4), 0);
     const y0 = p.pos.y;
     let top = y0, n = 0;
-    const iv = setInterval(() => { n++; top = Math.max(top, p.pos.y); if (top - y0 > 4 || n > 100) { clearInterval(iv); f.on = was; res({ rise: top - y0 }); } }, 100);
+    const iv = setInterval(() => { n++; top = Math.max(top, p.pos.y); if (top - y0 > 4 || n > 100 * (window.__SLOW || 1)) { clearInterval(iv); f.on = was; res({ rise: top - y0 }); } }, 100);
   }), i);
   check(`${id}: updraft fan ${i + 1} lifts the player`, r.rise > 4, JSON.stringify(r));
 }
@@ -279,7 +286,7 @@ async function conveyorCheck(id, i) {
     p.place(c, 0);
     const p0 = p.pos.clone();
     let n = 0;
-    const iv = setInterval(() => { n++; const d = p.pos.clone().sub(p0); const along = d.dot(cv.dir); if (along > 0.6 || n > 120) { clearInterval(iv); res({ along, alive: p.alive }); } }, 100);
+    const iv = setInterval(() => { n++; const d = p.pos.clone().sub(p0); const along = d.dot(cv.dir); if (along > 0.6 || n > 120 * (window.__SLOW || 1)) { clearInterval(iv); res({ along, alive: p.alive }); } }, 100);
   }), i);
   check(`${id}: conveyor belt ${i + 1} pushes the player along`, r.along > 0.6, JSON.stringify(r));
 }
@@ -295,7 +302,7 @@ async function floodCheck(id, i) {
       for (const d of f.drains) { const sw = M.switches.find((s) => s.id === d); if (sw && !sw.active) M.activateSwitch(sw); }
       const t1 = M.floodTarget(f);
       res({ rose, y0, y: f.y, t0, t1, drains: f.drains.length });
-    }, 6000);
+    }, 6000 * (window.__SLOW || 1));
   }), i);
   const lowered = r.drains === 0 || r.t1 < r.t0;
   check(`${id}: gray flood ${i + 1} rises${r.drains ? ' and painting the drains pulls it down' : ' (a chase, no drains)'}`, r.rose && lowered, JSON.stringify(r));
@@ -468,6 +475,7 @@ async function enemyTells(id) {
   const ws = await ev(() => { const m = window.__chroma.mode; const k = new Set(); for (const a of m.mech.arenas) for (const w of a.waves) for (const e of w) k.add(e.kind); for (const p of m.mech.pumps) for (const w of p.waves) for (const e of w.list) k.add(e.kind); return [...k]; });
   console.log(`  enemies: ${kinds.join(', ')}${ws.length ? ' | waves: ' + ws.join(', ') : ''}`);
   await godMode(true);
+  await ev(() => { window.__chroma.mode.state = 'tells'; });
   const revive = () => ev(() => { const m = window.__chroma.mode, p = m.player; if (!p.alive) { p.respawn(); m.hud.splatted(false); } p.invuln = 999; p.hp = 100; });
   if (kinds.includes('Gooper')) {
     await revive();
@@ -479,7 +487,7 @@ async function enemyTells(id) {
         const hp0 = g.hp; g.state = 'hidden'; g.k = 0; m.world.combat.damage(g, 50, m.player, 'drop');
         const immune = g.hp === hp0;
         m.world.paint.splat(g.pos.clone().setY(g.pos.y + 0.05), 2.6, 1);
-        let n = 0; const iv = setInterval(() => { n++; if (g.state === 'exposed' || n > 60) { clearInterval(iv); res({ immune, exposed: g.state === 'exposed' }); } }, 100);
+        let n = 0; const iv = setInterval(() => { n++; if (g.state === 'exposed' || n > 60 * (window.__SLOW || 1)) { clearInterval(iv); res({ immune, exposed: g.state === 'exposed' }); } }, 100);
       }, 3000);
     }));
     check(`${id}: Gooper is immune in its puddle, painting the puddle flushes it out`, r.immune && r.exposed, JSON.stringify(r));
@@ -495,7 +503,7 @@ async function enemyTells(id) {
       const m = window.__chroma.mode, g = m.enemies.find((e) => e.name === 'Glint' && e.alive), p = m.player;
       p.place(g.pos.clone().add(new g.pos.constructor(Math.sin(g.yaw) * 10, 0, Math.cos(g.yaw) * 10)).setY(g.pos.y), 0);
       p.invuln = 999; p.hp = 100; const seen = new Set(); let n = 0;
-      const iv = setInterval(() => { n++; seen.add(g.state); if (g.laser.visible) seen.add('laser'); if ((seen.has('lock') && g.state === 'idle') || n > 150) { clearInterval(iv); p.invuln = 999; res([...seen]); } }, 100);
+      const iv = setInterval(() => { n++; seen.add(g.state); if (g.laser.visible) seen.add('laser'); if ((seen.has('lock') && g.state === 'idle') || n > 150 * (window.__SLOW || 1)) { clearInterval(iv); p.invuln = 999; res([...seen]); } }, 100);
     }));
     check(`${id}: Glint tracks with a visible laser, locks (red), then fires`, r.includes('aim') && r.includes('lock') && r.includes('laser'), JSON.stringify(r));
   }
@@ -505,7 +513,7 @@ async function enemyTells(id) {
       const m = window.__chroma.mode, f = m.enemies.find((e) => e.name === 'Pilfer' && e.alive), p = m.player;
       p.ink = 1; p.place(f.pos.clone().add(new f.pos.constructor(0.9, 0, 0)), 0); f.aggro = true; f.losT = 0;
       let n = 0;
-      const iv = setInterval(() => { n++; if (f.stolen > 0 || n > 120) { clearInterval(iv); const ink = p.ink; f.takeDamage(9999, p, 'test'); setTimeout(() => res({ stolen: f.stolen, inkAfterTheft: ink, inkBack: p.ink }), 300); } }, 100);
+      const iv = setInterval(() => { n++; if (f.stolen > 0 || n > 120 * (window.__SLOW || 1)) { clearInterval(iv); const ink = p.ink; f.takeDamage(9999, p, 'test'); setTimeout(() => res({ stolen: f.stolen, inkAfterTheft: ink, inkBack: p.ink }), 300); } }, 100);
     }));
     check(`${id}: Pilfer steals ink, splashing it gives the ink back`, r.stolen > 0.2 && r.inkBack > r.inkAfterTheft + 0.2, JSON.stringify(r));
   }
@@ -522,11 +530,14 @@ async function enemyTells(id) {
     await revive();
     const r = await ev(() => new Promise((res) => {
       const m = window.__chroma.mode, u = m.enemies.find((e) => e.name === 'Rumbler' && e.alive), p = m.player;
-      p.place(u.pos.clone().add(new u.pos.constructor(0, 0, -9)), 0); u.aggro = true; u.cool = 0; const seen = new Set(); let n = 0;
-      const iv = setInterval(() => { n++; seen.add(u.state); if (seen.has('charge') || n > 150) { clearInterval(iv); res([...seen]); } }, 100);
+      p.place(u.pos.clone().add(new u.pos.constructor(-6, 0, 0)), 0); u.aggro = true; u.cool = 0; const seen = new Set(); let n = 0;
+      const iv = setInterval(() => { n++; seen.add(u.state); if (seen.has('charge') || n > 150 * (window.__SLOW || 1)) { clearInterval(iv); res([...seen]); } }, 100);
     }));
     check(`${id}: Rumbler revs up then charges`, r.includes('rev') && r.includes('charge'), JSON.stringify(r));
   }
+  // back to the spawn before triggers run again (some tells happen right next to the core)
+  await revive();
+  await ev(() => { const m = window.__chroma.mode, p = m.player; p.vel.set(0, 0, 0); p.place(p.spawnPoint.clone(), 0); m.state = 'play'; });
   await godMode(false);
 }
 
@@ -647,7 +658,7 @@ async function suiteL10() {
     p.place(p.pos.clone().set(0, 0, -15), 0);
     b.act = { kind: 'rise', t: 0, at: new p.pos.constructor(0, 0, -10) };
     const seen = new Set(); let n = 0;
-    const iv = setInterval(() => { n++; seen.add(b.act?.kind); if (b.eye.alive) seen.add('eye'); if (seen.has('eye') || n > 250) { clearInterval(iv); res([...seen]); } }, 100);
+    const iv = setInterval(() => { n++; seen.add(b.act?.kind); if (b.eye.alive) seen.add('eye'); if (seen.has('eye') || n > 250 * (window.__SLOW || 1)) { clearInterval(iv); res([...seen]); } }, 100);
   }));
   check('l10: the Wyrm rises (telegraph), aims (line), lunges, gets stuck with its eye exposed', ['rise', 'aim', 'lunge', 'stuck', 'eye'].every((k) => lunge.includes(k)), JSON.stringify(lunge));
   await wait(400); await shot('l10_stuck');
@@ -697,7 +708,7 @@ async function suiteL15() {
     p.place(p.pos.clone().set(0, 0, -8), 0);
     const seen = new Set(); let n = 0;
     b.act = { kind: 'glide', t: 0, dur: 0 };
-    const iv = setInterval(() => { n++; seen.add(b.act?.kind); if ((seen.has('dash') && seen.has('volley')) || n > 300) { clearInterval(iv); res([...seen]); } if (b.act?.kind === 'glide' && b.act.dur > 0.2) b.act.dur = 0.1; }, 100);
+    const iv = setInterval(() => { n++; seen.add(b.act?.kind); if ((seen.has('dash') && seen.has('volley')) || n > 300 * (window.__SLOW || 1)) { clearInterval(iv); res([...seen]); } if (b.act?.kind === 'glide' && b.act.dur > 0.2) b.act.dur = 0.1; }, 100);
   }));
   check('l15: phase 1 attacks: cane volleys and telegraphed dashes', atk.includes('volley') && atk.includes('dashWind') && atk.includes('dash'), JSON.stringify(atk));
   for (const id of ['e1', 'e2', 'e3']) {

@@ -174,7 +174,7 @@ export function buildHub2(c, story) {
   walls(c, -16, 16, -12, 14, -1, 10, {}, Wm);
   hatchArc(c, SECTORS[1].levels, [[-11, 4], [-7, -2.6], [0, -4.2], [7, -2.6], [11, 4]]);
   c.exit([-13.4, 0, 11.4], Math.PI / 2, 'hub', 'Ride the lift back up to the <b>hideout</b>');
-  c.spawnAt([-10.6, 0, 9.6], 2.3);
+  c.spawnAt([-6.5, 0, 7], 2.3);
   c.npc('terminal', [12.6, 0, 11.2], Math.PI - 0.6);
   c.box([11.7, 0, 10.3], [13.5, 1.3, 12.1], { render: false, paintable: false });
   c.npc('book', [8.6, 0, 12.8], Math.PI);
@@ -211,7 +211,7 @@ export function buildHub3(c, story) {
   part(c.decor, new THREE.BoxGeometry(5.2, 0.4, 0.3), c.mat('brass', () => std(0x8a7a5a, 0.35, 0.8)), { pos: [0, 6.4, -11.5], shadow: false });
   hatchArc(c, SECTORS[2].levels, [[-10.5, 4], [-6.8, -3], [0, -5], [6.8, -3], [10.5, 4]]);
   c.exit([-12.4, 0, 11.4], Math.PI / 2, 'hub', 'Ride the lift back down to the <b>hideout</b>');
-  c.spawnAt([-9.8, 0, 9.6], 2.3);
+  c.spawnAt([-6.5, 0, 7], 2.3);
   c.npc('terminal', [11.8, 0, 11.2], Math.PI - 0.6);
   c.box([10.9, 0, 10.3], [12.7, 1.3, 12.1], { render: false, paintable: false });
   c.npc('book', [8.2, 0, 12.8], Math.PI);
@@ -230,6 +230,6 @@ export function buildHub3(c, story) {
   curtain(c, [9, 5.5, -11.5], 4, 6, 0, 0x4a3a50);
   sign(c, 'GRISAILLE MANOR · SERVANTS\' STAIR', [0, 8.2, -11.55], 9, 1.2, 0, { accent: '#b9a6ff', bg: '#141018' });
   sign(c, '▼ HIDEOUT', [-14.9, 3.6, 11.4], 2.6, 0.8, Math.PI / 2, { accent: '#ffc83d' });
-  if (st.cleared.length < 15) for (const [x, z, r] of [[6, 5, 1.3], [-6, 7, 1.1]]) c.gooAt([x, 0.02, z], r);
+  if (st.cleared.length < 15) for (const [x, z, r] of [[6, 5, 1.3], [-2.5, 9.8, 1.1]]) c.gooAt([x, 0.02, z], r);
   c.level.killY = -6;
 }

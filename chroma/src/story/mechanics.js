@@ -684,7 +684,7 @@ export class Mechanics {
   // ================================================================ membranes
   initGate(g) {
     const sz = _v.subVectors(g.max, g.min);
-    const mat = new THREE.MeshPhysicalMaterial({ color: this.ink, emissive: this.ink, emissiveIntensity: 0.55, transparent: true, opacity: 0.42, roughness: 0.1, clearcoat: 1, side: THREE.DoubleSide, depthWrite: false });
+    const mat = new THREE.MeshPhysicalMaterial({ color: this.ink, emissive: this.ink, emissiveIntensity: 0.32, transparent: true, opacity: 0.34, roughness: 0.1, clearcoat: 1, side: THREE.DoubleSide, depthWrite: false });
     this.disposables.push(mat);
     const geo = g.axis === 'x' ? new THREE.PlaneGeometry(sz.z, sz.y, 12, 8).rotateY(Math.PI / 2) : new THREE.PlaneGeometry(sz.x, sz.y, 12, 8);
     const mesh = part(this.root, geo, mat, { pos: [(g.min.x + g.max.x) / 2, (g.min.y + g.max.y) / 2, (g.min.z + g.max.z) / 2], shadow: false });
@@ -706,7 +706,7 @@ export class Mechanics {
     const pass = p.alive && (p.form === 'goo' || p.intent.goo);
     for (const g of this.gates) {
       g.solid.collide = !pass;
-      g.mat.opacity = pass ? 0.22 : 0.42 + Math.sin(this.t * 3) * 0.05;
+      g.mat.opacity = pass ? 0.18 : 0.34 + Math.sin(this.t * 3) * 0.05;
       const a = g.geo.attributes.position, b = g.base;
       for (let i = 0; i < a.count; i++) {
         const x = b[i * 3], y = b[i * 3 + 1], z = b[i * 3 + 2];
