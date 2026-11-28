@@ -357,6 +357,7 @@ export class Battle {
     this.hud.cover(false);
     if (this.scene.fog) this.scene.fog.density *= 0.35;
     this.hud.hideBanner();
+    if (this.rules) { this.hud.splat.classList.remove('on'); this.rules.hud.status(null); }
     if (given) this.result = given;
     else if (this.rules) this.result = this.rules.result();
     else {

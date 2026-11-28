@@ -418,6 +418,7 @@ function buildSkylineDecor(scene, def, env) {
     board.position.set(0, 4.2, 6.4 * s); group.add(board);
     const rim = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.03, 6, 16), std(0xff6a1f, 0.4, 0.4));
     rim.rotation.x = Math.PI / 2; rim.position.set(0, 3.75, 6.05 * s); group.add(rim);
+    pole.name = board.name = rim.name = 'decorHoop'; // hidden in Hue Hoops (real hoops are placed there)
   }
   // string lights over the court
   const bulbMat = new THREE.MeshStandardMaterial({ color: 0xffe2a8, emissive: 0xffe2a8, emissiveIntensity: 5 });

@@ -41,12 +41,12 @@ const CSS = `
 .mh-chip .bar s { position: absolute; top: -1px; bottom: -1px; width: 2px; background: #fff; }
 .mh-ot { font-size: 22px; color: var(--sun); -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill; animation: pulse .5s ease-in-out infinite alternate; display: none; }
 .mh-ot.on { display: block; }
-.mh-status { left: 50%; bottom: 74px; transform: translateX(-50%); padding: 7px 18px; border-radius: 999px; background: rgba(27,21,48,.85); font-family: var(--bfont); font-weight: 900; font-size: 15px; white-space: nowrap; opacity: 0; transition: opacity .25s; box-shadow: 0 0 0 2px var(--c, transparent); }
+.mh-status { z-index: 3; left: 50%; bottom: 74px; transform: translateX(-50%); padding: 7px 18px; border-radius: 999px; background: rgba(27,21,48,.85); font-family: var(--bfont); font-weight: 900; font-size: 15px; white-space: nowrap; opacity: 0; transition: opacity .25s; box-shadow: 0 0 0 2px var(--c, transparent); }
 .mh-status.on { opacity: 1; }
 .mh-status b { font-family: var(--hfont); font-weight: 400; color: var(--c, var(--sun)); letter-spacing: .5px; }
 .mh-status.alert { animation: mhshake .4s ease-in-out infinite alternate; }
 @keyframes mhshake { to { transform: translateX(-50%) scale(1.06); } }
-.mh-mark { left: 0; top: 0; width: 0; height: 0; display: none; }
+.mh-mark { z-index: 1; left: 0; top: 0; width: 0; height: 0; display: none; }
 .mh-mark.on { display: block; }
 .mh-mark .pin { position: absolute; left: -16px; top: -16px; width: 32px; height: 32px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff, var(--c) 62%); box-shadow: 0 0 0 3px var(--ink), 0 0 14px 3px var(--c); }
 .mh-mark .pin.hoop { border-radius: 8px; background: var(--c); }
@@ -176,7 +176,7 @@ export class ModeHUD {
   }
 
   // A world-space marker; off screen it sticks to the edge with an arrow.
-  marker(i, pos, camera, { color = '#ffd21a', label = '', hoop = false, show = true } = {}) {
+  marker(i, pos, camera, { color = '#ffd21a', label = '', hoop = false, show = true, edgeOnly = false } = {}) {
     let m = this.marks[i];
     if (!m) {
       m = this.marks[i] = document.createElement('div');
@@ -206,8 +206,10 @@ export class ModeHUD {
       x = Math.cos(ang) * 0.88; y = Math.sin(ang) * 0.8;
       edge = true;
     }
+    if (edgeOnly && !edge) { m.classList.remove('on'); return; }
     m.classList.toggle('edge', edge);
-    const sx = (x * 0.5 + 0.5) * W, sy = (-y * 0.5 + 0.5) * H;
+    // keep clear of the scoreboard at the top and the status line at the bottom
+    const sx = (x * 0.5 + 0.5) * W, sy = clamp((-y * 0.5 + 0.5) * H, Math.min(165, H * 0.34), H - 110);
     m.style.transform = `translate(${sx}px, ${sy}px)`;
     if (edge) m.querySelector('.arw').style.transform = `rotate(${-ang}rad)`;
   }

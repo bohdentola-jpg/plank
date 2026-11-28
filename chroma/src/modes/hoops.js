@@ -21,13 +21,17 @@ const TUBE = 0.05;
 const BOARD_OFF = 0.62, BOARD_W = 2.1, BOARD_H = 1.3, BOARD_T = 0.1, BOARD_Y0 = -0.35;
 const SHIELD_R = 1.75;
 export const HOOP_OPEN = 0.4;  // attackers' share of the pad that opens the hoop
-const HOOP_CLOSE = 0.28;       // ...and below this it closes again
+const HOOP_CLOSE = 0.2;        // ...and below this it closes again
 const RESET_T = 3.0;
 const HOLD_MAX = 15;
+// a dunk needs the carrier airborne with their feet ~0.75 m up (any real jump, at any frame rate)
+const DUNK_REACH = 2.25;
+const CARRY_ARMOR = 0.55;      // the Glowball's glow soaks up ink: carriers take 45% less damage
 const OT_MAX = 60;
 const ST = { reset: 0, free: 1, held: 2 };
 const ST_NAME = ['reset', 'free', 'held'];
 const GOLD = new THREE.Color(0xffd21a);
+const WHITE_C = new THREE.Color(0xffffff), _col = new THREE.Color();
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _d = new THREE.Vector3(), _n = new THREE.Vector3(), _q = new THREE.Vector3();
 const _down = new THREE.Vector3(0, -1, 0);
 const V = (a) => new THREE.Vector3(a[0], a[1], a[2]);
@@ -113,6 +117,7 @@ export class HoopsRules {
     this.render = new THREE.Vector3().copy(this.hover);
     this.stats = { grabs: 0, throws: 0, scores: 0, dunks: 0, drops: 0, tips: 0, blocks: 0, opens: 0 };
     this.cssColors = { 1: hexToCss(b.colors[1]), 2: hexToCss(b.colors[2]) };
+    st.decor?.group?.traverse((o) => { if (o.name === 'decorHoop') o.visible = false; }); // no look-alike decor hoops
     this.buildVisuals();
     this.hud = new ModeHUD(b.hudRoot, 'hoops', b.player.team);
   }
@@ -378,6 +383,7 @@ export class HoopsRules {
     const vn = v.dot(nrm);
     if (vn >= 0) return;
     const speed = -vn;
+    if (speed < 0.6) { v.addScaledVector(nrm, -vn); return; } // resting contact: just stop sinking in
     _n.copy(nrm).multiplyScalar(vn);
     v.sub(_n).multiplyScalar(fr).addScaledVector(nrm, -vn * e);
     if (speed > 2.5 && this.time - (this.lastBounceT || 0) > 0.12) {
@@ -456,6 +462,8 @@ export class HoopsRules {
     const ball = this.ball;
     ball.st = ST.held; ball.carrier = f; ball.holdT = 0; ball.restT = 0;
     f.canFight = false;
+    this.armor(f, true);
+    f.invuln = Math.max(f.invuln || 0, 1.2); // a moment to get away after the catch
     f.cancelWeapon?.();
     if (f === this.b.player) { this.armed = false; this.charge = 0; }
     this.stats.grabs++;
@@ -463,7 +471,20 @@ export class HoopsRules {
     this.fxGrab(f);
   }
 
-  release(f) { if (f) f.canFight = true; if (f === this.b.player) this.charge = 0; }
+  release(f) { if (f) { f.canFight = true; this.armor(f, false); } if (f === this.b.player) this.charge = 0; }
+
+  // host-side damage reduction while carrying (the host applies all damage)
+  armor(f, on) {
+    if (this.client) return;
+    if (on && !f._carryTD) {
+      const base = f.takeDamage;
+      f._carryTD = base;
+      f.takeDamage = (dmg, attacker, kind) => base.call(f, dmg * CARRY_ARMOR, attacker, kind);
+    } else if (!on && f._carryTD) {
+      f.takeDamage = f._carryTD;
+      delete f._carryTD;
+    }
+  }
 
   doThrow(f, p, v) {
     const ball = this.ball;
@@ -535,7 +556,7 @@ export class HoopsRules {
     const h = this.hoops[3 - f.team];
     const dx = f.pos.x - h.rim.x, dz = f.pos.z - h.rim.z;
     if (dx * dx + dz * dz > 1.5 * 1.5) return;
-    if (f.pos.y + 2.05 < h.rim.y || f.pos.y > h.rim.y + 0.4) return;
+    if (f.pos.y + DUNK_REACH < h.rim.y || f.pos.y > h.rim.y + 0.4) return;
     if (h.open) this.scored(f.team, 3, f, true);
     else this.bump(f, h);
   }
@@ -633,7 +654,7 @@ export class HoopsRules {
     if (f.onGround || f.climbing || this.time < this.dunkReqT) return;
     const h = this.hoops[3 - f.team];
     const dx = f.pos.x - h.rim.x, dz = f.pos.z - h.rim.z;
-    if (dx * dx + dz * dz > 1.5 * 1.5 || f.pos.y + 2.05 < h.rim.y || f.pos.y > h.rim.y + 0.4) return;
+    if (dx * dx + dz * dz > 1.5 * 1.5 || f.pos.y + DUNK_REACH < h.rim.y || f.pos.y > h.rim.y + 0.4) return;
     this.dunkReqT = this.time + 0.6;
     if (h.open) this.b.net.action({ m: 'md', k: 'dunk', h: h.team, p: v3a(f.pos) }, f);
     else { this.applyBump(f, h); this.fxBlock(h); }
@@ -653,6 +674,7 @@ export class HoopsRules {
         ball.st = ST.held; ball.carrier = p; ball.holdT = 0;
         this.armed = false;
         this.pred = { k: 'grab', until: this.time + 0.5 };
+        this.grabFxT = this.time;
         this.fxGrab(p);
       }
     }
@@ -699,7 +721,10 @@ export class HoopsRules {
     const w = this.b.world, me = this.b.player, ball = this.ball;
     const f = e.f >= 0 ? w.fighters[e.f] : null;
     switch (e.k) {
-      case 'grab': if (f !== me) { this.stats.grabs++; this.fxGrab(f); } break;
+      case 'grab':
+        this.stats.grabs++;
+        if (f !== me || this.time - (this.grabFxT || -9) > 1) this.fxGrab(f); // (our own predicted grab already showed it)
+        break;
       case 'thr':
         if (f === me) break;
         this.stats.throws++;
@@ -751,7 +776,7 @@ export class HoopsRules {
       const p = V(a.p);
       if (!h.open || !p.toArray().every(Number.isFinite)) return;
       const dx = p.x - h.rim.x, dz = p.z - h.rim.z;
-      if (dx * dx + dz * dz < 2.0 * 2.0 && p.y + 2.05 >= h.rim.y - 0.3 && p.distanceTo(f.pos) < 3.5) this.scored(f.team, 3, f, true);
+      if (dx * dx + dz * dz < 2.0 * 2.0 && p.y + DUNK_REACH >= h.rim.y - 0.3 && p.distanceTo(f.pos) < 3.5) this.scored(f.team, 3, f, true);
     }
   }
 
@@ -831,7 +856,7 @@ export class HoopsRules {
       h.beam.visible = h.open;
       h.discMat.color.copy(h.open ? colors[3 - t] : colors[t]);
       h.discMat.opacity = h.open ? 0.12 + Math.sin(this.time * 6) * 0.04 : 0.06;
-      h.sign.setText(h.open ? 'OPEN!' : 'SHIELDED', hexToCss(h.open ? colors[3 - t] : colors[t]));
+      h.sign.setText(h.open ? 'OPEN!' : 'SHIELDED', hexToCss(_col.copy(h.open ? colors[3 - t] : colors[t]).lerp(WHITE_C, 0.35)));
       const sw = h.swishT;
       h.net.scale.set(1, 1 + Math.sin(sw * 20) * sw * 0.6, 1);
     }
@@ -854,7 +879,7 @@ export class HoopsRules {
     const bp = _v.copy(this.render).setY(this.render.y + 0.7);
     const bcol = carrierTeam ? css[carrierTeam] : '#ffd21a';
     const blabel = ball.st === ST.held && ball.carrier ? (ball.carrier.team === my ? ball.carrier.name : `${ball.carrier.name}!`) : ball.st === ST.reset ? 'TIP-OFF' : `BALL ${Math.round(this.render.distanceTo(me.pos))}m`;
-    this.hud.marker(0, bp, cam, { color: bcol, label: blabel, show: playing && !mine });
+    this.hud.marker(0, bp, cam, { color: bcol, label: blabel, show: playing && !mine, edgeOnly: this.render.distanceToSquared(me.pos) < 49 });
     const attack = carrierTeam === my;
     this.hud.marker(1, _w.copy(enemyHoop.rim).setY(enemyHoop.rim.y + 1.2), cam, {
       color: enemyHoop.open ? css[my] : css[3 - my], hoop: true, label: enemyHoop.open ? (mine ? 'DUNK / SHOOT!' : 'HOOP OPEN') : 'SHIELDED', show: playing && attack,
@@ -954,26 +979,30 @@ export class HoopsRules {
   botPlan(bot) {
     const f = bot.f, team = f.team, ball = this.ball;
     const enemyHoop = this.hoops[3 - team], myHoop = this.hoops[team];
-    if (ball.st === ST.held && ball.carrier === f) return this.carrierPlan(bot, enemyHoop);
-    const bp = this.ballWorld(_w).clone();
+    if (ball.st === ST.held && ball.carrier === f) { bot.hoopRole = null; return this.carrierPlan(bot, enemyHoop); }
+    const c = ball.st === ST.held ? ball.carrier : null;
+    const target = c ? c.pos : ball.st === ST.reset ? this.tips[this.tipSide] : this.ballWorld(_w);
     const threat = myHoop.open || myHoop.prog > 0.2;
-    if (ball.st === ST.held && ball.carrier) {
-      const c = ball.carrier;
-      if (c.team === team) {
-        if (!enemyHoop.open) return this.padPlan(bot, enemyHoop, true) || { key: 'escort', goal: this.escortPoint(f, c, enemyHoop) };
-        return { key: 'escort', goal: this.escortPoint(f, c, enemyHoop) };
-      }
-      const r = this.rank(f, c.pos);
-      if (r < 2 || (myHoop.open && r < 3)) return { key: 'chase', goal: c.pos.clone(), urgent: true, prefer: c };
-      if (threat) return this.padPlan(bot, myHoop, false) || this.padPlan(bot, enemyHoop, true);
-      return this.padPlan(bot, enemyHoop, true);
+    const r = this.rank(f, target), d = f.pos.distanceTo(target);
+    // the role this bot would take right now: the closest go for the ball / carrier,
+    // one guards a threatened pad, everyone else paints the enemy pad open
+    let want;
+    if (c && c.team === team) want = enemyHoop.open ? 'escort' : 'attack';
+    else if (c) want = r < 2 || (myHoop.open && r < 3) ? 'chase' : threat && r >= 2 ? 'defend' : 'attack';
+    else want = r === 0 || (r === 1 && d < 12) ? 'ball' : threat && r === 3 ? 'defend' : 'attack';
+    // roles stick for a while so deaths (which reshuffle the ranks) don't flip everyone around
+    const valid = (role) => (role === 'chase' ? !!c && c.team !== team : role === 'ball' ? !c : role === 'escort' ? !!c && c.team === team : !!role);
+    let role = bot.hoopRole;
+    const age = this.time - (bot.hoopRoleT || -99);
+    if (role !== want && (!valid(role) || age > 7 || ((want === 'ball' || want === 'chase') && d < 9))) { role = want; bot.hoopRoleT = this.time; }
+    bot.hoopRole = role;
+    switch (role) {
+      case 'ball': return { key: 'ball', goal: target.clone(), urgent: true };
+      case 'chase': return { key: 'chase', goal: c.pos.clone(), urgent: true, prefer: c };
+      case 'escort': return { key: 'escort', goal: this.escortPoint(f, c, enemyHoop) };
+      case 'defend': return this.padPlan(bot, myHoop, false) || this.padPlan(bot, enemyHoop, true);
+      default: return this.padPlan(bot, enemyHoop, true) || (c && c.team === team ? { key: 'escort', goal: this.escortPoint(f, c, enemyHoop) } : null);
     }
-    // loose ball or tip-off: the two closest go for it, one guards a threatened pad, the rest paint
-    const target = ball.st === ST.reset ? this.tips[this.tipSide].clone() : bp;
-    const r = this.rank(f, target);
-    if (r === 0 || (r === 1 && f.pos.distanceTo(target) < 22)) return { key: 'ball', goal: target, urgent: true };
-    if (threat && r === 3) return this.padPlan(bot, myHoop, false) || this.padPlan(bot, enemyHoop, true);
-    return this.padPlan(bot, enemyHoop, true);
   }
 
   // 0 = closest living teammate to p (including humans)
@@ -1005,10 +1034,11 @@ export class HoopsRules {
       const d = pt.p.distanceToSquared(f.pos);
       if (d < bd && wanted(pt)) { bd = d; aim = pt.p; }
     }
-    let goal = null;
+    // travel to the pad centre, then wander between unpainted spots on it
     const near = f.pos.distanceToSquared(h.base) < (h.r + 1) ** 2;
-    if (!near || !aim || bot.goalT > 4) { for (let i = 0; i < 12 && !goal; i++) { const pt = pick(pts); if (wanted(pt)) goal = pt.p; } goal ||= h.base; }
-    return { key: 'pad' + h.team, goal, aim, keep: near, urgent: !attack && h.open };
+    let goal = near ? null : h.base;
+    if (near && (!aim || bot.goalT > 3 || !bot.path)) { for (let i = 0; i < 12 && !goal; i++) { const pt = pick(pts); if (wanted(pt)) goal = pt.p; } }
+    return { key: 'pad' + h.team, goal, aim, keep: near, urgent: attack || h.open || h.prog > 0.3 };
   }
 
   carrierPlan(bot, h) {
@@ -1092,7 +1122,7 @@ export class HoopsRules {
   }
 
   dispose() {
-    for (const f of this.b.world.fighters) f.canFight = true;
+    for (const f of this.b.world.fighters) { f.canFight = true; this.armor(f, false); }
     this.hud.dispose();
     this.group.parent?.remove(this.group);
     const mats = new Set();
