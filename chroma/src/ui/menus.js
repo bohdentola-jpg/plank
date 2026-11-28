@@ -332,12 +332,16 @@ export class Menus {
   closeNetRoom() { this._netRoomClose?.(); }
 
   // ------------------------------------------------------------ lobby
-  lobby({ onStart, onClose }) {
+  // mode: optional preset ('turf' | 'zones' | 'hoops'), e.g. from a tower floor
+  lobby({ onStart, onClose, mode: preset }) {
     const p = this.app.profile;
     const rot = currentRotation();
     let weapon = p.weapon, skill = p.lastSkill || 'normal', stage = ['random', ...rot.ids].includes(p.lastStage) ? p.lastStage : 'rotation';
+    let mode = MODES[preset] ? preset : MODES[p.lastMode] ? p.lastMode : 'turf';
+    const pill = () => `${MODES[mode].name.toUpperCase()} · 4v4 · 3:00`;
     const node = el(`<div class="overlay dim lobby"><div class="panel wide">
-      <div class="lobby-head"><h2>CLASH TOWER</h2><div class="mode-pill">TURF RUSH · 4v4 · 3:00</div></div>
+      <div class="lobby-head"><h2>CLASH TOWER</h2><div class="mode-pill">${pill()}</div></div>
+      <div class="lobby-modes" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${Object.entries(MODES).map(([id, m]) => `<button class="chip ${id === mode ? 'sel' : ''}" data-md="${id}" title="${m.desc}">${m.name.toUpperCase()}</button>`).join('')}<span class="hint mode-desc" style="margin:0 0 0 6px">${MODES[mode].desc}</span></div>
       <div class="lobby-grid">
         <div>
           <h3>Your weapon</h3>
@@ -363,10 +367,15 @@ export class Menus {
     node.querySelectorAll('[data-st]').forEach((b) => b.onclick = () => { stage = b.dataset.st; sel('st', stage); this.sfx('ui_select'); });
     node.querySelectorAll('[data-w]').forEach((b) => b.onclick = () => { weapon = b.dataset.w; sel('w', weapon); this.sfx('ui_select'); });
     node.querySelectorAll('[data-k]').forEach((b) => b.onclick = () => { skill = b.dataset.k; sel('k', skill); this.sfx('ui_select'); });
+    node.querySelectorAll('[data-md]').forEach((b) => b.onclick = () => {
+      mode = b.dataset.md; sel('md', mode); this.sfx('ui_select');
+      node.querySelector('.mode-pill').textContent = pill();
+      node.querySelector('.mode-desc').textContent = MODES[mode].desc;
+    });
     node.querySelector('[data-back]').onclick = () => { this.sfx('ui_back'); close(); onClose(); };
     node.querySelector('[data-a="go"]').onclick = () => {
       this.sfx('ui_select');
-      p.weapon = weapon; p.lastSkill = skill; p.lastStage = stage; this.app.save();
+      p.weapon = weapon; p.lastSkill = skill; p.lastStage = stage; p.lastMode = mode; this.app.save();
       const chosen = stage === 'random' ? STAGE_IDS[Math.floor(Math.random() * STAGE_IDS.length)] : stage === 'rotation' ? rot.ids[Math.floor(Math.random() * rot.ids.length)] : stage;
       node.querySelector('.lobby-actions').innerHTML = '<div class="searching">Finding players<span>.</span><span>.</span><span>.</span></div>';
       const slots = node.querySelector('.lobby-slots');
@@ -379,7 +388,7 @@ export class Menus {
           clearInterval(iv);
           node.querySelector('.searching').textContent = 'MATCH FOUND!';
           this.sfx('special_ready');
-          setTimeout(() => { close(); onStart({ weapon, skill, stage: chosen }); }, 900);
+          setTimeout(() => { close(); onStart({ weapon, skill, stage: chosen, mode }); }, 900);
           return;
         }
         const s = slots.children[k];
@@ -555,6 +564,7 @@ export class Menus {
 
   // ------------------------------------------------------------ judge
   judge(r, colors, myTeam, done) {
+    if (r.mode === 'zones' || r.mode === 'hoops') return this.judgeScore(r, colors, myTeam, done);
     const ca = hexToCss(colors[1]), cb = hexToCss(colors[2]);
     const node = el(`<div class="overlay judge" style="--a:${ca};--b:${cb}">
       <div class="jd-title">JUDGING…</div>
@@ -584,6 +594,39 @@ export class Menus {
     }, 50);
   }
 
+  // Zone Clash shows what each team counted down (100 -> count), Hue Hoops the points
+  judgeScore(r, colors, myTeam, done) {
+    const ca = hexToCss(colors[1]), cb = hexToCss(colors[2]);
+    const zones = r.mode === 'zones';
+    const prog = (v) => (zones ? 100 - v : v);
+    const full = zones ? 100 : Math.max(r.target || 12, r.a, r.b, 1);
+    const node = el(`<div class="overlay judge" style="--a:${ca};--b:${cb}">
+      <div class="jd-title">${zones ? 'COUNTING…' : 'FINAL BUZZER…'}</div>
+      <div class="jd-bar" style="background:rgba(27,21,48,.85)"><div class="jd-a"></div><div class="jd-b" style="margin-left:auto"></div></div>
+      <div class="jd-nums"><div class="na">${zones ? 100 : 0}</div><div class="nb">${zones ? 100 : 0}</div></div>
+      <div class="jd-win"></div>
+    </div>`);
+    const close = this.open(node);
+    let t = 0;
+    const iv = setInterval(() => {
+      t += 0.05;
+      const k = Math.min(1, Math.max(0, (t - 1.2) / 1.6));
+      const e = 1 - Math.pow(1 - k, 3);
+      node.querySelector('.jd-a').style.width = `${(prog(r.a) / full) * 50 * e}%`;
+      node.querySelector('.jd-b').style.width = `${(prog(r.b) / full) * 50 * e}%`;
+      node.querySelector('.na').textContent = zones ? Math.round(100 - prog(r.a) * e) : Math.round(r.a * e);
+      node.querySelector('.nb').textContent = zones ? Math.round(100 - prog(r.b) * e) : Math.round(r.b * e);
+      if (k >= 1 && !node.classList.contains('done')) {
+        node.classList.add('done');
+        const won = r.winner === myTeam;
+        node.querySelector('.jd-title').textContent = r.ko ? 'KNOCKOUT!' : zones ? 'FINAL COUNT' : 'FINAL SCORE';
+        node.querySelector('.jd-win').innerHTML = `<span style="color:${r.winner === 1 ? ca : cb}">${won ? 'YOUR TEAM WINS!' : 'YOUR TEAM LOST…'}</span>`;
+        node.classList.add(won ? 'won' : 'lost');
+      }
+      if (t > 5.4) { clearInterval(iv); close(); done(); }
+    }, 50);
+  }
+
   // ------------------------------------------------------------ results
   results(s, { onPlaza, onAgain }) {
     const c = (t) => hexToCss(s.colors[t]);
@@ -593,7 +636,7 @@ export class Menus {
     const pg = s.prog;
     const node = el(`<div class="overlay results ${s.won ? 'won' : 'lost'}">
       <div class="panel wide">
-        <div class="rs-head"><h2>${s.won ? 'VICTORY!' : 'DEFEAT'}</h2><div class="rs-pct"><b style="color:${c(1)}">${s.result.a.toFixed(1)}%</b> vs <b style="color:${c(2)}">${s.result.b.toFixed(1)}%</b></div></div>
+        <div class="rs-head"><h2>${s.won ? 'VICTORY!' : 'DEFEAT'}</h2><div class="rs-pct">${s.scoreHTML || `<b style="color:${c(1)}">${s.result.a.toFixed(1)}%</b> vs <b style="color:${c(2)}">${s.result.b.toFixed(1)}%</b>`}</div></div>
         <table class="rs-table">
           <thead><tr><th>Your team</th><th>Weapon</th><th>Turf</th><th>Splashes</th><th>Splashed</th></tr></thead>
           <tbody>${team(my)}</tbody>

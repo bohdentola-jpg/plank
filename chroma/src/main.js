@@ -19,6 +19,7 @@ if (!audio) audio = { init: noop, sfx: noop, loop: () => ({ setVolume: noop, set
 
 const SAVE_KEY = 'chroma-clash-profile-v1';
 const params = new URLSearchParams(location.search);
+const SIM_STEPS = Math.max(1, Math.min(12, parseInt(params.get('sim') || '1', 10) || 1));
 
 function defaultProfile() {
   return {
@@ -327,6 +328,8 @@ class App {
       try {
         const t0 = performance.now();
         this.mode.update(dt);
+        // QA: &sim=N runs N simulation steps per rendered frame (headless runs are GPU-bound)
+        for (let i = 1; i < SIM_STEPS && this.mode && !this.loadingNow; i++) this.mode.update(dt);
         const t1 = performance.now();
         this.mode.render(dt);
         const t2 = performance.now();
@@ -348,7 +351,7 @@ const app = new App();
 window.__chroma = app;
 if (params.has('quick')) {
   app.profile.created = true;
-  app.startBattle({ weapon: params.get('weapon') || app.profile.weapon, skill: params.get('skill') || 'normal', stage: params.get('stage') || STAGE_IDS[Math.floor(Math.random() * STAGE_IDS.length)] });
+  app.startBattle({ weapon: params.get('weapon') || app.profile.weapon, skill: params.get('skill') || 'normal', stage: params.get('stage') || STAGE_IDS[Math.floor(Math.random() * STAGE_IDS.length)], mode: params.get('mode') || 'turf' });
 } else if (params.has('plaza')) {
   app.profile.created = true;
   app.goPlaza();
