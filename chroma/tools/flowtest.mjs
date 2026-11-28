@@ -13,6 +13,7 @@ const server = createServer(async (req, res) => { try { let p = decodeURICompone
 await new Promise((r) => server.listen(0, r));
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
 const page = await browser.newPage({ viewport: { width: 1100, height: 620 } });
+page.setDefaultTimeout(180000); // software GL on a busy machine can stall for a while after heavy clicks
 const errors = [];
 page.on('pageerror', (e) => { errors.push(e.message); console.log('[pageerror]', e.message); });
 page.on('console', (m) => { if (m.type() === 'error') console.log('[console]', m.text().slice(0, 300)); });
@@ -54,7 +55,7 @@ step('tower prompt: ' + await page.evaluate(() => document.getElementById('promp
 await page.keyboard.press('KeyE'); await page.waitForTimeout(1200);
 await page.screenshot({ path: join(qa, 'flow_lobby.png') });
 await page.click('.lobby [data-k="hard"]');
-await page.click('.lobby [data-st="skyline"]');
+await page.click('.lobby .stages [data-st]:nth-child(2)'); // first stage in the current rotation
 await page.click('.lobby [data-a="go"]');
 step('matchmaking');
 await page.waitForFunction(() => window.__chroma.mode?.constructor.name === 'Battle' && !window.__chroma.loadingNow, null, { timeout: 240000 });
