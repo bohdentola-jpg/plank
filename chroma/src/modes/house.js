@@ -949,15 +949,24 @@ class Decorator {
     const px = inp.axis(0), py = inp.axis(1);
     if (inp.usingPad && (px || py)) {
       this.padCursor = true;
-      this.vc.x = clamp(this.vc.x + px * dt * 700, 0, innerWidth); this.vc.y = clamp(this.vc.y + py * dt * 700, 0, innerHeight * 0.78);
+      this.vc.x = clamp(this.vc.x + px * dt * 700, 0, innerWidth); this.vc.y = clamp(this.vc.y + py * dt * 700, 0, innerHeight);
     }
-    if (this.padCursor) { this.mouse.set((this.vc.x / innerWidth) * 2 - 1, -(this.vc.y / innerHeight) * 2 + 1); this.overCanvas = true; }
+    let padEl = null;
+    if (this.padCursor) {
+      this.mouse.set((this.vc.x / innerWidth) * 2 - 1, -(this.vc.y / innerHeight) * 2 + 1);
+      padEl = document.elementFromPoint(this.vc.x, this.vc.y);
+      this.overCanvas = padEl === app.canvas;
+    }
     if (this.cursorEl) { this.cursorEl.style.display = this.padCursor ? 'block' : 'none'; this.cursorEl.style.transform = `translate(${this.vc.x}px, ${this.vc.y}px)`; }
     this.ray.setFromCamera(this.mouse, h.camera);
     // keys
     if (inp.pressed('KeyR') || inp.padPressed(3)) this.rotate();
     if (inp.pressed('KeyX') || inp.pressed('Delete') || inp.pressed('Backspace') || inp.padPressed(2)) this.putAway(this.hold ? this.hold.inst : this.hover);
-    if (inp.padPressed(0)) this.click();
+    if (inp.padPressed(0)) {
+      // the pad cursor can press the storage tray's buttons too
+      const btn = padEl?.closest?.('#house-deco button');
+      if (btn) btn.click(); else this.click();
+    }
     if (inp.pressed('Escape') || inp.padPressed(1)) { if (this.hold) this.cancel(); else { this.exit(); return; } }
     if (inp.pressed('KeyF') || inp.padPressed(9)) { this.exit(); return; }
     // hover / hold

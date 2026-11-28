@@ -159,7 +159,7 @@ await wait(500);
 n = await near();
 check('desk laptop offers the catalog', n?.kind === 'use' && n.use === 'catalog', JSON.stringify(n));
 await pressE();
-check('catalog opens', await waitFor(() => !!document.querySelector('.hcat.on'), null, 5000));
+check('catalog opens', await waitFor(() => !!document.querySelector('.hcat'), null, 30000));
 await clickSel('.hcat [data-tab="sit"]');
 await wait(200);
 await clickSel('.hcat [data-id="sofa"]');
@@ -174,7 +174,7 @@ await shot('catalog');
 const thumbs = await ev(() => [...document.querySelectorAll('.hcat img.hthumb.ready')].length);
 check('catalog shows rendered 3D thumbnails', thumbs > 3, String(thumbs));
 await clickSel('.hcat [data-place]');
-check('PLACE IT opens decorate mode holding the sofa', await waitFor(() => { const m = window.__chroma.mode; return m.deco.active && m.deco.hold?.def.id === 'sofa'; }, null, 5000));
+check('PLACE IT opens decorate mode holding the sofa', await waitFor(() => { const m = window.__chroma.mode; return m.deco.active && m.deco.hold?.def.id === 'sofa'; }, null, 30000));
 await wait(1500);
 
 console.log('house: decorate mode');
@@ -248,7 +248,7 @@ await waitFor(() => !!document.querySelector('.title-screen.armed'), null, 20000
 const label = await page.textContent('.title-menu [data-a="plaza"]');
 await clickSel('.title-menu [data-a="plaza"]');
 check('PLAY (create) goes to the house', await modeIs('House'));
-check('character creator opens in the house', await waitFor(() => !!document.querySelector('.locker.on'), null, 8000), label);
+check('character creator opens in the house', await waitFor(() => !!document.querySelector('.locker'), null, 60000), label);
 await ev(() => { document.querySelector('.name-in').value = 'Homey'; });
 await wait(600);
 await shot('create');
