@@ -174,18 +174,22 @@ await wait(1500);
 
 console.log('house: decorate mode');
 // fixed overhead view from the south-east so screen positions are deterministic
-await ev(() => { const d = window.__chroma.mode.deco; d.cam.yaw = d.cam.yawT = Math.PI / 4; d.cam.target.set(0, 0, 0); d.cam.dist = d.cam.distT = 18; });
-await wait(1500);
+await ev(() => { const d = window.__chroma.mode.deco; d.cam.yaw = d.cam.yawT = Math.PI / 4; d.cam.target.set(0, 0, 0); d.cam.dist = d.cam.distT = 18; for (let i = 0; i < 6; i++) d.placeCamera(1); });
+await wait(800);
+// move the mouse over a floor point and wait until the ghost follows it there
+const hoverAt = async (x, z, tol = 1.4) => {
+  const xy = await screenOf(x, 0, z);
+  await page.mouse.move(xy[0], xy[1]);
+  await waitFor(([x, z, tol]) => { const p = window.__chroma.mode.deco.hold?.place; return p && Math.abs(p.x - x) < tol && Math.abs(p.z - z) < tol; }, [x, z, tol], 10000);
+  return xy;
+};
 // a reserved spot (the strip in front of the weapon wall) is invalid
-let xy = await screenOf(-7.2, 0, 2.0);
-await page.mouse.move(xy[0], xy[1]);
-await waitFor(() => !!window.__chroma.mode.deco.hold?.place, null, 10000);
+let xy = await hoverAt(-7.2, 2.0);
 s = await ev(() => window.__chroma.mode.deco.hold?.place);
 check('ghost is red over the weapon-wall strip', s && s.valid === false, JSON.stringify(s));
 await page.mouse.click(xy[0], xy[1]); await wait(300);
 check('clicking an invalid spot does not place', await ev(() => !window.__chroma.profile.house.items.some((i) => i.id === 'sofa') && !!window.__chroma.mode.deco.hold));
-xy = await screenOf(2.0, 0, -2.0);
-await page.mouse.move(xy[0], xy[1]); await wait(500);
+xy = await hoverAt(2.0, -2.0);
 await page.keyboard.press('KeyR');
 await waitFor(() => window.__chroma.mode.deco.hold?.r === 1, null, 10000);
 await page.mouse.move(xy[0] + 2, xy[1] + 1);
@@ -209,8 +213,7 @@ await page.keyboard.press('KeyX');
 await waitFor(() => !window.__chroma.profile.house.items.some((i) => i.id === 'beanbag'), null, 10000);
 check('X puts it in storage', await ev(() => !window.__chroma.profile.house.items.some((i) => i.id === 'beanbag') && !!document.querySelector('#house-deco [data-id="beanbag"]')));
 await clickSel('#house-deco [data-id="beanbag"]'); await wait(300);
-xy = await screenOf(-0.5, 0, 1.5);
-await page.mouse.move(xy[0], xy[1]);
+xy = await hoverAt(-0.5, 1.5);
 await waitFor(() => window.__chroma.mode.deco.hold?.place?.valid === true, null, 10000);
 await page.mouse.click(xy[0], xy[1]);
 await waitFor(() => window.__chroma.profile.house.items.some((i) => i.id === 'beanbag'), null, 10000);

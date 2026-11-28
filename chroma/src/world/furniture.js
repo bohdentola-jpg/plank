@@ -1371,6 +1371,7 @@ export function migrateHouse(h) {
     const o = { uid: it.uid, id: it.id, x: it.x };
     if (def.kind === 'wall') { if (!num(it.wall) || it.wall < 0 || it.wall > 3 || !num(it.y)) continue; o.wall = it.wall | 0; o.y = it.y; }
     else { if (!num(it.z)) continue; o.z = it.z; o.r = ((it.r | 0) % 4 + 4) % 4; if (num(it.on)) o.on = it.on; }
+    if (it.off === true) o.off = true; // lamps / TV switched off
     seen.add(it.uid);
     out.items.push(o);
   }
