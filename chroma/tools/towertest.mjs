@@ -105,6 +105,15 @@ await page.waitForSelector('.lobby', { timeout: 30000 });
 check('CPU lobby opens from the lobby terminal', true, await page.evaluate(() => String(window.__chroma.towerFloor)));
 await page.click('.lobby [data-back]').catch(() => {});
 await page.waitForTimeout(400);
+// the Zone Clash and Hue Hoops floors open the lobby with their mode picked
+for (const [f, md] of [[3, 'zones'], [4, 'hoops']]) {
+  await page.evaluate((i) => window.__chroma.mode.useKiosk(i), f);
+  await page.waitForSelector('.lobby', { timeout: 30000 });
+  const sel = await page.evaluate(() => document.querySelector('.lobby [data-md].sel')?.dataset.md);
+  check(`floor ${f + 1} lobby preselects ${md}`, sel === md, sel);
+  await page.click('.lobby [data-back]').catch(() => {});
+  await page.waitForTimeout(400);
+}
 // exit to the plaza
 await page.evaluate(() => { const m = window.__chroma.mode; m.player.place(new (m.player.pos.constructor)(0, 0, 13.2), 0); });
 await page.waitForTimeout(300);
